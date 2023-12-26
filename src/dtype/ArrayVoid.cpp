@@ -4,8 +4,8 @@
 
 #include <memory.h>
 #include <new>
-#include <sys/_types/_int16_t.h>
-#include <sys/_types/_int8_t.h>
+
+
 #include <utility>
 
 #include "../Tensor.h"

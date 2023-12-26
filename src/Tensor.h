@@ -10,7 +10,7 @@ class Tensor;
 
 #include <memory.h>
 #include <memory>
-#include <sys/_types/_int8_t.h>
+
 #include <vector>
 #include <iostream>
 #include "refs/SizeRef.h"

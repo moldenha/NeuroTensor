@@ -2,7 +2,7 @@
 #define _NT_FUNCTIONAL_H_
 #include "../Tensor.h"
 
-#include <sys/_types/_int32_t.h>
+
 #include <vector>
 
 namespace nt{

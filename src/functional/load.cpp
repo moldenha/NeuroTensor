@@ -10,7 +10,7 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
-#include <sys/_types/_int8_t.h>
+
 #include <vector>
 #include <deque>
 #include "../dtype/DType_enum.h"

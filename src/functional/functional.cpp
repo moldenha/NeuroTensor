@@ -1,5 +1,5 @@
 #include <cstdint>
-#include <sys/_types/_size_t.h>
+
 #include "../Tensor.h"
 #include "../dtype/DType_list.h"
 #include "../refs/SizeRef.h"
@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <numeric>
 #include <ratio>
-#include <sys/_types/_int8_t.h>
+
 #include <cassert>
 #include <format>
 #include <sys/types.h>

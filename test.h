@@ -11,7 +11,7 @@
 #include <ostream>
 #include <chrono>
 #include <functional>
-#include <sys/_types/_size_t.h>
+
 #include <type_traits>
 #include "src/dtype/Scalar.h"
 #include "src/dtype/ranges.h"
