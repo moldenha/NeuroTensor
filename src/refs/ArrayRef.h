@@ -5,6 +5,7 @@
 
 #include <iterator>
 #include <memory.h>
+#include <memory>
 #include <vector>
 #include <array>
 #include <initializer_list>
