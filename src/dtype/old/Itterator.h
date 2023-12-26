@@ -8,7 +8,7 @@ class static_tensor_iterator;
 #include "Tensor.h"
 #include "SizeRef.h"
 #include "dtype/DType.h"
-#include <_types/_uint32_t.h>
+
 
 
 namespace nt{

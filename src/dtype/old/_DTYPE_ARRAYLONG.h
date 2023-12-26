@@ -5,7 +5,7 @@ class ArrayLongTypes;
 }
 #include "DType.h"
 #include "_DTYPE_ARRAYINT.h"
-#include <_types/_uint32_t.h>
+
 #include <memory.h>
 
 namespace nt{

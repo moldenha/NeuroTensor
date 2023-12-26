@@ -5,7 +5,7 @@ class ArrayIntTypes;
 }
 
 #include "DType.h"
-#include <_types/_uint32_t.h>
+
 #include <cstddef>
 #include <iterator>
 #include <memory.h>

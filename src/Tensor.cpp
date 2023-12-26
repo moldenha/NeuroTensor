@@ -6,10 +6,10 @@
 #include "dtype/ArrayVoid.h"
 #include "dtype/DType.h"
 #include "dtype/DType_enum.h"
-#include <_types/_uint32_t.h>
-#include <_types/_uint32_t.h>
-#include <_types/_uint64_t.h>
-#include <_types/_uint8_t.h>
+
+
+
+
 #include <functional>
 #include <i386/types.h>
 #include <memory.h>

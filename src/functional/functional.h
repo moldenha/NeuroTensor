@@ -1,7 +1,7 @@
 #ifndef _NT_FUNCTIONAL_H_
 #define _NT_FUNCTIONAL_H_
 #include "../Tensor.h"
-#include <_types/_uint32_t.h>
+
 #include <sys/_types/_int32_t.h>
 #include <vector>
 

@@ -1,5 +1,5 @@
 #include "ArrayRef.h"
-#include <_types/_uint16_t.h>
+
 #include <iterator>
 #include <memory.h>
 #include <memory>
@@ -9,7 +9,7 @@
 #include <initializer_list>
 #include <numeric>
 #include <execution>
-#include <_types/_uint32_t.h>
+
 #include <algorithm>
 #include <iostream>
 #include <assert.h>

@@ -5,7 +5,7 @@ namespace nt {
 class ArrayVoid;
 }
 
-#include <_types/_uint32_t.h>
+
 #include <memory>
 #include <cstdio>
 #include <type_traits>

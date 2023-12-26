@@ -3,8 +3,8 @@
 #include "../types/Types.h"
 #include "../types/Cast16.h"
 #include "../Tensor.h"
-#include <__config>
-#include <_types/_uint8_t.h>
+
+
 #include "../dtype/compatible/DType_compatible.h"
 
 namespace nt{

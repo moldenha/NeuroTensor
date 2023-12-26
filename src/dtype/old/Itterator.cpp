@@ -1,6 +1,6 @@
 #include "Itterator.h"
 #include "dtype/DType.h"
-#include <_types/_uint32_t.h>
+
 #include <iostream>
 
 namespace nt{

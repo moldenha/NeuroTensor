@@ -9,9 +9,9 @@ class ConstScalarRef;
 #include "DType_enum.h"
 #include "DType.h"
 #include "compatible/DType_compatible_all.h"
-#include <_types/_uint16_t.h>
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
+
+
+
 #include <functional>
 #include <sys/_types/_int16_t.h>
 #include <type_traits>

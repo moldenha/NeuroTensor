@@ -1,8 +1,8 @@
 #ifndef ARRAY_REF_H_
 #define ARRAY_REF_H_
 
-#include <_types/_uint16_t.h>
-#include <_types/_uint32_t.h>
+
+
 #include <iterator>
 #include <memory.h>
 #include <vector>

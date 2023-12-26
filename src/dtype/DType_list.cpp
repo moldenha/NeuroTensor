@@ -2,9 +2,9 @@
 #include "DType.h"
 #include "DType_enum.h"
 #include "Scalar.h"
-#include <_types/_uint16_t.h>
-#include <_types/_uint32_t.h>
-#include <_types/_uint64_t.h>
+
+
+
 #include <vector>
 
 namespace nt{

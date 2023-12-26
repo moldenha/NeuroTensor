@@ -1,5 +1,5 @@
 CC = g++
-STL_VER = -std=c++17
+STL_VER = -std=c++17 -ferror-limit=1
 USE_ENCRYPTION := 0
 USE_TBB_PARALLEL := 1
 

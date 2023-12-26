@@ -1,8 +1,8 @@
 #ifndef _DTYPE_LIST_H_
 #define _DTYPE_LIST_H_
 
-#include <_types/_uint32_t.h>
-#include <_types/_uint64_t.h>
+
+
 #include <iterator>
 #include <vector>
 

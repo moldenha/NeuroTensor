@@ -6,8 +6,8 @@ class Tensor;
 }
 
 
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
+
+
 #include <memory.h>
 #include <memory>
 #include <sys/_types/_int8_t.h>

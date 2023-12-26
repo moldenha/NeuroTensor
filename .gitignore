@@ -1,0 +1,20 @@
+#APPLE FILES
+*.DS_Store
+
+#temporary files
+*.tmp
+
+#object files
+*.o
+
+#swap files
+*.swp
+
+#object files
+objcs/
+
+#testing files
+testing/
+
+#backup files
+*.bak

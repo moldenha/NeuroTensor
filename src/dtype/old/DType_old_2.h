@@ -40,8 +40,8 @@ namespace detect_not_tensor {
 
 }
 
-#include <_types/_uint16_t.h>
-#include <_types/_uint32_t.h>
+
+
 #include <functional>
 #include <iostream>
 #include <typeinfo>

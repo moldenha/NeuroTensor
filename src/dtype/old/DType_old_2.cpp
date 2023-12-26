@@ -1,7 +1,7 @@
 #include "DType.h"
 #include "DType_enum.h"
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
+
+
 #include <complex>
 #include <functional>
 #include <typeinfo>

@@ -2,8 +2,8 @@
 #include "DType_enum.h"
 #include "../convert/Convert.h"
 #include "compatible/DType_compatible.h"
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
+
+
 #include <complex>
 #include <functional>
 #include <sys/_types/_int64_t.h>

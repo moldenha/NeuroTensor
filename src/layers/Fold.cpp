@@ -1,5 +1,5 @@
 #include "layers.h"
-#include <_types/_uint32_t.h>
+
 #include <sys/_types/_int32_t.h>
 #include <sys/types.h>
 #include <variant>
@@ -60,7 +60,9 @@ Unfold::Unfold(utils::my_tuple kernel_size,
 /* } */
 
 
-inline static constexpr auto im2col_nn_layer_2d = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c){
+//%s/const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c/const uint32_t\& k_r, const uint32_t\& k_c, const uint32_t\& s_r, const uint32_t\& s_c, const uint32_t\& d_r, const uint32_t\& d_c/g
+
+inline static constexpr auto im2col_nn_layer_2d = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c){
 	uint32_t a_current_add = ((t_c * d_r) - (k_c*d_c)); 
 	for(uint32_t r = 0; r < t_r - ((k_r-1)*d_c); r += s_r){
 		for(uint32_t c = 0; c < t_c - ((k_c-1)*d_c); c += s_c){
@@ -74,7 +76,9 @@ inline static constexpr auto im2col_nn_layer_2d = [](auto a_begin, auto a_end, a
 	}
 };
 
-inline static constexpr auto im2col_nn_layer_2d_pad = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c){
+
+//%s/const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c/const uint32_t\& k_r, const uint32_t\& k_c, const uint32_t\& s_r, const uint32_t\& s_c, int32_t d_r, const uint32_t\& d_c
+inline static constexpr auto im2col_nn_layer_2d_pad = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - ((k_r-1)*d_r) + (p_r * 2);
 	uint32_t upper_col2 = t_c - ((k_c-1)*d_c) + (p_c * 2);
@@ -113,7 +117,7 @@ inline static constexpr auto im2col_nn_layer_2d_pad = [](auto a_begin, auto a_en
 };
 
 
-inline static constexpr auto im2col_nn_layer_2d_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c){
+inline static constexpr auto im2col_nn_layer_2d_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c){
 	uint32_t a_current_add = ((t_c * d_r) - (k_c*d_c)); 
 	for(uint32_t r = 0; r < t_r - ((k_r-1)*d_c); r += s_r){
 		for(uint32_t c = 0; c < t_c - ((k_c-1)*d_c); c += s_c){
@@ -127,7 +131,7 @@ inline static constexpr auto im2col_nn_layer_2d_backward = [](auto a_begin, auto
 	}
 };
 
-inline static constexpr auto im2col_nn_layer_2d_pad_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c){
+inline static constexpr auto im2col_nn_layer_2d_pad_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - ((k_r-1)*d_r) + (p_r * 2);
 	uint32_t upper_col2 = t_c - ((k_c-1)*d_c) + (p_c * 2);
@@ -320,7 +324,7 @@ inline static constexpr auto im2col_nn_layer_nd_dilation = [](auto a_begin, auto
 				for(uint32_t ch = range.pages().begin(); ch < range.pages().end(); ++ch){
 					auto a_current = a_begin + (r * t_c + c) + (mat_size * ch) + batch_add;
 					for(uint32_t rr = 0; rr < upper_row2; rr += d_r, a_current += a_current_add){
-						for(uint32_t cc = 0; cc < uper_col2; cc += d_c, a_current += d_c, ++m_begin){
+						for(uint32_t cc = 0; cc < upper_col2; cc += d_c, a_current += d_c, ++m_begin){
 							*m_begin = *a_current;
 						}
 					}
@@ -387,7 +391,7 @@ inline static constexpr auto im2col_nn_layer_nd_none = [](auto a_begin, auto a_e
 		m_begin_index += range.pages().begin() * LKern;
 		auto m_begin = b_begin + m_begin_index;
 		for(uint32_t r = range.rows().begin(); r < range.rows().end(); ++r){
-			for(uint32_t c = col_begin; c < range.cols().end(); ++c){
+			for(uint32_t c = range.cols().begin(); c < range.cols().end(); ++c){
 				for(uint32_t ch = range.pages().begin(); ch < range.pages().end(); ++ch){
 					auto a_current = a_begin + (r * t_c + c) + (mat_size * ch) + batch_add;
 					for(uint32_t rr = 0; rr < upper_row2; ++rr, a_current += a_current_add){
@@ -409,7 +413,7 @@ inline static constexpr auto im2col_nn_layer_nd_none = [](auto a_begin, auto a_e
 #endif
 
 #ifndef USE_PARALLEL
-inline static constexpr auto im2col_nn_layer_nd_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = ((t_c * d_r) - (k_c*d_c));
 	const uint32_t mat_size = t_c * t_r;
 	for(uint32_t ba = 0; ba < batches; ++ba){
@@ -429,7 +433,7 @@ inline static constexpr auto im2col_nn_layer_nd_backward = [](auto a_begin, auto
 	}
 };
 #else
-inline static constexpr auto im2col_nn_layer_nd_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 
 	uint32_t row_max = (t_r - ((k_r-1) * d_r));
 	uint32_t col_max = t_c - ((k_c-1) * d_c);
@@ -860,7 +864,7 @@ inline static constexpr auto im2col_nn_layer_nd_pad_none = [](auto a_begin, auto
 
 #ifndef USE_PARALLEL
 
-inline static constexpr auto im2col_nn_layer_nd_pad_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_pad_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - ((k_r-1) * d_r) + (p_r * 2);
 	uint32_t upper_col2 = t_c - ((k_c-1) * d_c) + (p_c * 2);
@@ -909,7 +913,7 @@ inline static constexpr auto im2col_nn_layer_nd_pad_backward = [](auto a_begin, 
 
 #else
 
-inline static constexpr auto im2col_nn_layer_nd_pad_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_pad_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t row_max = t_r - ((k_r-1) * d_r) + (p_r * 2);
 	uint32_t col_max = t_c - ((k_c-1) * d_c) + (p_c * 2);
@@ -1044,7 +1048,7 @@ class im2col_nn_layer_transpose_index{
 
 };
 
-inline static constexpr auto im2col_nn_layer_2d_T = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L){
+inline static constexpr auto im2col_nn_layer_2d_T = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L){
 	im2col_nn_layer_transpose_index b_indexer(LKern, L);
 	uint32_t a_current_add = ((t_c * d_r) - (k_c/d_c)); 
 	for(uint32_t r = 0; r < t_r - (k_r-1); r += s_r){
@@ -1059,7 +1063,7 @@ inline static constexpr auto im2col_nn_layer_2d_T = [](auto a_begin, auto a_end,
 	}
 };
 
-inline static constexpr auto im2col_nn_layer_2d_T_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L){
+inline static constexpr auto im2col_nn_layer_2d_T_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t& LKern, const uint32_t& L){
 	im2col_nn_layer_transpose_index b_indexer(LKern, L);
 	uint32_t a_current_add = ((t_c * d_r) - (k_c/d_c)); 
 	for(uint32_t r = 0; r < t_r - (k_r-1); r += s_r){
@@ -1186,7 +1190,7 @@ inline static constexpr auto im2col_nn_layer_nd_T_none = [](auto a_begin, auto a
 
 #else
 
-inline static constexpr auto im2col_nn_layer_nd_T = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_T = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	im2col_nn_layer_transpose_index b_indexer(LKern, L);
 	uint32_t row_max = (t_r - ((k_r-1) * d_r));
 	uint32_t col_max = t_c - ((k_c-1) * d_c);
@@ -1224,7 +1228,7 @@ inline static constexpr auto im2col_nn_layer_nd_T = [](auto a_begin, auto a_end,
 
 
 #ifndef USE_PARALLEL
-inline static constexpr auto im2col_nn_layer_nd_T_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_T_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	im2col_nn_layer_transpose_index b_indexer(LKern, L);
 	uint32_t a_current_add = ((t_c * d_r) - (k_c*d_c));
 	const uint32_t mat_size = t_c * t_r;
@@ -1249,7 +1253,7 @@ inline static constexpr auto im2col_nn_layer_nd_T_backward = [](auto a_begin, au
 
 #else
 
-inline static constexpr auto im2col_nn_layer_nd_T_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, uint32_t& d_r, uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_T_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_r, const uint32_t& d_c, const uint32_t& t_r, const uint32_t& t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	im2col_nn_layer_transpose_index b_indexer(LKern, L);
 	uint32_t row_max = (t_r - ((k_r-1) * d_r));
 	uint32_t col_max = t_c - ((k_c-1) * d_c);
@@ -1286,8 +1290,8 @@ inline static constexpr auto im2col_nn_layer_nd_T_backward = [](auto a_begin, au
 #endif
 
 
-
-inline static constexpr auto im2col_nn_layer_2d_T_pad = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L){
+//%s/const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c/const uint32_t\& k_r, const uint32_t\& k_c, const uint32_t\& s_r, const uint32_t\& s_c, int32_t d_r, const uint32_t\& d_c
+inline static constexpr auto im2col_nn_layer_2d_T_pad = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - (k_r-1) + (p_r * 2);
 	uint32_t upper_col2 = t_c - (k_c-1) + (p_c * 2);
@@ -1326,7 +1330,7 @@ inline static constexpr auto im2col_nn_layer_2d_T_pad = [](auto a_begin, auto a_
 };
 
 
-inline static constexpr auto im2col_nn_layer_2d_T_pad_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L){
+inline static constexpr auto im2col_nn_layer_2d_T_pad_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t& LKern, const uint32_t& L){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - (k_r-1) + (p_r * 2);
 	uint32_t upper_col2 = t_c - (k_c-1) + (p_c * 2);
@@ -1366,12 +1370,7 @@ inline static constexpr auto im2col_nn_layer_2d_T_pad_backward = [](auto a_begin
 
 
 #ifndef USE_PARALLEL
-inline static constexpr auto im2col_nn_layer_nd_T_pad = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, const uint32_t& d_ra, const uint32_t& d_c, const uint32_t& p_r, const uint32_t& p_c, const uint32_t& t_r, const uint32_t& t_c, uint32_t LKern, uint32_t& L, const uint32_t& channels, const uint32_t& batches){
-	int32_t d_r = d_ra;
-	int32_t p_r = p_ra;
-	int32_t p_c = p_ca;
-	int32_t t_r =  t_ra;
-	int32_t t_c = t_ca;
+inline static constexpr auto im2col_nn_layer_nd_T_pad = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, uint32_t LKern, uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - ((k_r-1) * d_r) + (p_r * 2);
 	uint32_t upper_col2 = t_c - ((k_c-1) * d_c) + (p_c * 2);
@@ -1423,7 +1422,7 @@ inline static constexpr auto im2col_nn_layer_nd_T_pad = [](auto a_begin, auto a_
 
 #else
 
-inline static constexpr auto im2col_nn_layer_nd_T_pad = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_T_pad = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, uint32_t LKern, uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t row_max = t_r - ((k_r-1) * d_r) + (p_r * 2);
 	uint32_t col_max = t_c - ((k_c-1) * d_c) + (p_c * 2);
@@ -1485,7 +1484,7 @@ inline static constexpr auto im2col_nn_layer_nd_T_pad = [](auto a_begin, auto a_
 
 
 #ifndef USE_PARALLEL
-inline static constexpr auto im2col_nn_layer_nd_T_pad_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_T_pad_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t upper_row2 = t_r - ((k_r-1) * d_r) + (p_r * 2);
 	uint32_t upper_col2 = t_c - ((k_c-1) * d_c) + (p_c * 2);
@@ -1537,7 +1536,7 @@ inline static constexpr auto im2col_nn_layer_nd_T_pad_backward = [](auto a_begin
 
 #else
 
-inline static constexpr auto im2col_nn_layer_nd_T_pad_backward = [](auto a_begin, auto a_end, auto b_begin, uint32_t& k_r, uint32_t& k_c, uint32_t& s_r, uint32_t& s_c, int32_t d_r, uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
+inline static constexpr auto im2col_nn_layer_nd_T_pad_backward = [](auto a_begin, auto a_end, auto b_begin, const uint32_t& k_r, const uint32_t& k_c, const uint32_t& s_r, const uint32_t& s_c, int32_t d_r, const uint32_t& d_c, int32_t p_r, int32_t p_c, int32_t t_r, int32_t t_c, const uint32_t LKern, const uint32_t& L, const uint32_t& channels, const uint32_t& batches){
 	uint32_t a_current_add = (t_c * d_r); 
 	uint32_t row_max = t_r - ((k_r-1) * d_r) + (p_r * 2);
 	uint32_t col_max = t_c - ((k_c-1) * d_c) + (p_c * 2);
