@@ -154,7 +154,7 @@ ifeq ($(USE_TBB_PARALLEL), 1)
 endif
 
 build: $(OUT_DIRS) $(OBJCS) $(MAIN_OBJ)
-	$(CC) $(CC_FLAGS) $(OBJCS) $(MAIN_OBJ) -o main
+	$(CC) $(CC_FLAGS) $(OBJCS) $(MAIN_OBJ) -o main.out
 #	$(CC) $(CC_FLAGS) $(OBJCS) $(MAIN_OBJ) -fsanitize=address -o main
 
 # output: $(OBJCS) $(FILE_DEPENDENCES)

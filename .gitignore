@@ -21,3 +21,6 @@ testing/
 
 #the main test object
 main
+
+#outfiles
+*.out
