@@ -1443,8 +1443,13 @@ ArrayVoid ArrayVoid::exp() const{
 
 				}, *this);
 #ifdef _128_FLOAT_SUPPORT_
+#if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
 	else if(dtype == DType::Float128)
 		output.transform_function<DType::Float128>([](auto& outp, const auto& a){return std::exp(a);}, *this);
+#else
+	else if(dtype == DType::Float128)
+		output.transform_function<DType::Float128>([](auto& outp, const auto& a){return std::exp(static_cast<long double>(a));}, *this);
+#endif
 #endif
 #ifdef _HALF_FLOAT_SUPPORT_
 	else if(dtype == DType::Complex32)
@@ -1462,9 +1467,14 @@ ArrayVoid& ArrayVoid::exp_(){
 		this->for_each<WRAP_DTYPES<IntegerTypesL, DTypeEnum<DType::Float, DType::Double>>>([](auto& a){a = std::exp(a);});
 	else if(dtype == DType::Complex64 || dtype == DType::Complex128)
 		this->for_each<DType::Complex64, DType::Complex128>([](auto& a){a = typename std::remove_reference<typename std::remove_const<decltype(a)>::type>::type(std::exp(a.real()), std::exp(a.imag()));});
-#ifdef _128_FLOAT_SUPPORT_
+#ifdef _128_FLOAT_SUPPORT
+#if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
 	else if(dtype == DType::Float128)
 		this->for_each<DType::Float128>([](auto& a){a = std::exp(a);});
+#else
+	else if(dtype == DType::Float128)
+		this->for_each<DType::Float128>([](auto& a){a = std::exp(static_cast<long double>(a));});
+#endif
 #endif
 #ifdef _HALF_FLOAT_SUPPORT_
 	else if(dtype == DType::Complex32)

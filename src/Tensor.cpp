@@ -11,15 +11,16 @@
 
 
 #include <functional>
-#include <i386/types.h>
+//#include <i386/types.h>
 #include <memory.h>
 #include <algorithm>
 #include <numeric>
 #include <ratio>
-
+#include <memory>
+#include <sys/wait.h>
 
 #include <cassert>
-#include <format>
+//#include <format>
 #include <vector>
 #include "types/Types.h"
 #include "utils/utils.h"
@@ -432,6 +433,7 @@ Scalar Tensor::toScalar() const{
 			return Scalar(*reinterpret_cast<uint128_t*>(_vals.strides_cbegin()[0]));
 #endif
 	}
+	return Scalar();
 }
 
 

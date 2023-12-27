@@ -3,8 +3,6 @@
 #include "src/dtype/DType.h"
 #include "src/dtype/DType_enum.h"
 #include "src/dtype/DType_list.h"
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
 #include <ios>
 #include <iterator>
 #include <numeric>
@@ -723,6 +721,7 @@ void unfold_layer_test(nt::Tensor a){
 	auto layer = nt::layers::Unfold(3, 1, 0, 1, false);
 	std::cout<<"unfolding"<<std::endl;
 	nt::Tensor x = layer.forward(a);
+	x.print();
 }
 
 

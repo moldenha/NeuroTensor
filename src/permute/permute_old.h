@@ -3,6 +3,7 @@
 #include <numeric>
 #include <vector>
 #include <memory.h>
+#include <memory>
 
 namespace nt{
 namespace permute{

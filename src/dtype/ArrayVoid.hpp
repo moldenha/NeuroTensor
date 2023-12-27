@@ -7,7 +7,6 @@
 #include "DType_enum.h"
 #include "DType_list.h"
 #include "compatible/DType_compatible_all.h"
-#include <_types/_uint8_t.h>
 #include <regex>
 #include <stdexcept>
 #include <type_traits>

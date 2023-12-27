@@ -106,10 +106,10 @@ inline constexpr bool is_in_v<dt, DType::Bool> = false;
 #include "compatible/DType_compatible.h"
 #include "../utils/utils.h"
 #include "../types/Types.h"
-#include "Scalar.h"
 #include <complex>
 #include <type_traits>
 #include <stdlib.h>
+#include <memory>
 
 namespace nt{
 std::ostream& operator<< (std::ostream &out, DType const& data);

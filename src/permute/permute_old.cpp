@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory.h>
 #include "../utils/utils.h"
+#include <memory>
+#include <algorithm>
 
 namespace nt{
 namespace permute{

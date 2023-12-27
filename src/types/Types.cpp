@@ -13,6 +13,13 @@ std::ostream& operator<<(std::ostream& os, const float16_t& val){
 	return os;
 }
 
+#endif
+
+#ifdef _128_FLOAT_SUPPORT_
+std::ostream& operator<<(std::ostream& os, const float128_t& val){
+	os << convert::convert<float>(val);
+	return os;
+}
 
 #endif
 

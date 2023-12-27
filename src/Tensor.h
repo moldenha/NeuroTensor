@@ -5,7 +5,7 @@ namespace nt{
 class Tensor;
 }
 
-
+#include "dtype/compatible/DType_compatible.h"
 
 
 #include <memory.h>

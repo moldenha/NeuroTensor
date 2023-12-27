@@ -1,8 +1,8 @@
 CC = g++
 #STL_VER = -std=c++17 -ferror-limit=1
-STL_VER = -std=c++17
+STL_VER = -std=c++17 -fmax-errors=10
 USE_ENCRYPTION := 0
-USE_TBB_PARALLEL := 1
+USE_TBB_PARALLEL := 0
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 mkfile_dir := $(dir $(mkfile_path))
@@ -76,7 +76,7 @@ TYPES_OBJCS := $(OBJCS_DIR)/types/Types.o
 BF_FILES := $(SRC_DIR)functional/bf.cpp $(SRC_DIR)functional/bf.h 
 BF_OBJCS := $(OBJCS_DIR)/functional/bf.o
 
-CONVERT_FILES := $(SRC_DIR)convert/Convert.h $(SRC_DIR)convert/std_convert.h $(SRC_DIR)convert/convert.cpp
+CONVERT_FILES := $(SRC_DIR)convert/Convert.h $(SRC_DIR)convert/std_convert.h $(SRC_DIR)convert/Convert.cpp
 CONVERT_OBJCS := $(OBJCS_DIR)/convert/Convert.o
 
 #these are the layer files:
@@ -222,6 +222,7 @@ $(SCALAR_OBJCS): $(SCALAR_FILES)
 
 $(PERMUTE_OLD_OBJCS): $(PERMUTE_OLD_FILES)
 	$(REG_COMPILE) $(SRC_DIR)permute/permute_old.cpp -o $@
+
 $(PERMUTE_OBJCS): $(PERMUTE_FILES)
 	$(REG_COMPILE) $(SRC_DIR)permute/permute.cpp -o $@
 $(TYPES_OBJCS): $(TYPES_FILES)

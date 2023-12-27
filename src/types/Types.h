@@ -60,9 +60,11 @@ using float128_t = long double;
 	#if __has_keyword(__float128)
 	#define _128_FLOAT_SUPPORT_
 		using float128_t = __float128;
+		std::ostream& operator<<(std::ostream& os, const float128_t& val);
 	#elif __has_keyword(__fp128)
 	#define _128_FLOAT_SUPPORT_
 		using float128_t = __fp128;
+		std::ostream& operator<<(std::ostream& os, const float128_t& val);
 	#else
 	#define _NO_128_SUPPORT_
 	#endif
@@ -71,19 +73,27 @@ using float128_t = long double;
 	#if defined(__STDC_IEC_559__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 		// C11 standard with IEC 559 (floating-point arithmetic) support
 		// You can use __float128 here
+		#define _128_FLOAT_SUPPORT_
 		using float128_t = __float128;
+		std::ostream& operator<<(std::ostream& os, const float128_t& val);
 	#elif defined(__GNUC__) && defined(__SIZEOF_FLOAT128__)
 		// GCC with support for __float128
 		// You can use __float128 here
-		using float128_t = __fp128;
+		#define _128_FLOAT_SUPPORT_
+		using float128_t = __float128;
+		std::ostream& operator<<(std::ostream& os, const float128_t& val);
 	#elif defined(_MSC_VER) && defined(_M_AMD64) && defined(_MSC_VER) && (_MSC_VER >= 1920)
 		// Visual Studio 2019 and later with AMD64 architecture
 		// You can use __float128 here
+		#define _128_FLOAT_SUPPORT_
 		using float128_t = __float128;
+		std::ostream& operator<<(std::ostream& os, const float128_t& val);
 	#elif defined(__clang__) && defined(__SIZEOF_FLOAT128__)
 		// Clang with support for __float128
 		// You can use __float128 here
+		#define _128_FLOAT_SUPPORT_
 		using float128_t = __float128;
+		std::ostream& operator<<(std::ostream& os, const float128_t& val);
 	#else
 		#define _NO_128_SUPPORT_
 		// Handle the case when __float128 is not supported
