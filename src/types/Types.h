@@ -1,5 +1,5 @@
-#ifndef _MY_TYPES_H_
-#define _MY_TYPES_H_
+#ifndef _NT_MY_TYPES_H_
+#define _NT_MY_TYPES_H_
 
 //#if defined(_HALF_FLOAT_SUPPORT_) && defined(_128_FLOAT_SUPPORT_) && defined(__SIZEOF_INT128__)
 
@@ -24,7 +24,11 @@ namespace nt{
 		using float16_t = __fp16;
 	std::ostream& operator<<(std::ostream& os, const float16_t& val);
 	#else
-	#define _NO_HALF_FLOAT_SUPPORT_
+		#define _HALF_FLOAT_SUPPORT_
+		#include <half/half.hpp>
+		using float16_t = half_float::half;
+		std::ostream& operator<<(std::ostream& os, const float16_t& val);
+	/* #define _NO_HALF_FLOAT_SUPPORT_ */
 	#endif
 #else
 	#if defined(__STDC_IEC_559__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
@@ -45,8 +49,11 @@ namespace nt{
 	#define _HALF_FLOAT_SUPPORT_
 		using float16_t = _Float16;
 	std::ostream& operator<<(std::ostream& os, const float16_t& val);
-	
 	#else
+		#define _HALF_FLOAT_SUPPORT_
+		#include <half/half.hpp>
+		using float16_t = half_float::half;
+		std::ostream& operator<<(std::ostream& os, const float16_t& val);
 	// Handle the case when _Float16 is not supported
 	#define _NO_HALF_FLOAT_SUPPORT_
 	#endif
@@ -335,6 +342,7 @@ class my_complex{
 		my_complex(const T&, const T&);
 		my_complex(const std::complex<T>&);
 		my_complex();
+		using value_type = T;
 
 		my_complex<T>& operator+=(T);
 		my_complex<T>& operator*=(T);
@@ -469,7 +477,7 @@ using complex_32 = my_complex<float16_t>;
 
 
 struct uint_bool_t{
-	unsigned value : 1;
+	uint8_t value : 1;
 	uint_bool_t();
 	uint_bool_t(const bool& val);
 	uint_bool_t(const uint_bool_t& val);
@@ -487,4 +495,4 @@ struct uint_bool_t{
 }
 
 
-#endif
+#endif // _NT_MY_TYPES_H_

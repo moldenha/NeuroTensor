@@ -1,7 +1,8 @@
-#ifndef ARRAY_REF_H_
-#define ARRAY_REF_H_
+#ifndef _NT_ARRAY_REF_H_
+#define _NT_ARRAY_REF_H_
 
-
+//I believe the C10 library has something similar
+//this is to handle the shape variable inside of tensors
 
 #include <iterator>
 #include <memory.h>
@@ -9,8 +10,11 @@
 #include <vector>
 #include <array>
 #include <initializer_list>
+#include "../intrusive_ptr/intrusive_ptr.hpp"
 
 namespace nt{
+
+
 
 template<typename T>
 class ArrayRef;
@@ -40,7 +44,8 @@ class ArrayRef{
 		template<size_t N>
 		ArrayRef(const T (&Arr)[N]);
 		ArrayRef(const std::initializer_list<T> &Vec);
-		ArrayRef(std::unique_ptr<T[]>, size_t);
+		ArrayRef(const std::unique_ptr<T[]>&, size_t);
+		ArrayRef(std::unique_ptr<T[]>&&, size_t);
 		ArrayRef<T>& operator=(const ArrayRef<T>&);
 		ArrayRef<T>& operator=(ArrayRef<T>&&);
 		const bool operator==(const ArrayRef<T>&) const;
@@ -49,6 +54,7 @@ class ArrayRef{
 		size_t size() const;
 		const T& front() const;
 		const T& back() const;
+		ArrayRef<T> clone() const;
 		T& front();
 		T& back();
 		iterator begin() const;
@@ -67,8 +73,32 @@ class ArrayRef{
 		ArrayRef<T> permute(const std::vector<uint32_t>&) const;
 		value_type* d_data();
 		friend std::ostream& operator<< <> (std::ostream& out, const ArrayRef& obj);
+		inline void nullify(){
+			_vals.reset(nullptr);
+			_total_size = 0;
+			_empty = true;
+		}
+		inline void swap(ArrayRef& other){
+			std::swap(other._vals, _vals);
+			std::swap(_total_size, other._total_size);
+			std::swap(_empty, other._empty);
+		}
+		inline static ArrayRef<T> zeros(size_t len){
+			std::unique_ptr<T[]> ptr = std::make_unique<T[]>(len);
+			std::fill(ptr.get(), ptr.get() + len, 0);
+			return ArrayRef<T>(std::move(ptr), len);
+		}
 };
 
 
+}
+
+
+// Specialization of std::swap for nt::ArrayRef
+namespace std {
+    template<typename T>
+    inline void swap(::nt::ArrayRef<T>& lhs, ::nt::ArrayRef<T>& rhs) {
+        lhs.swap(rhs); // Call your custom swap function
+    }
 }
 #endif

@@ -9,18 +9,18 @@ namespace permute{
 
 class Permuter{
 	void** strides_old;
-	const std::vector<uint32_t>& strides;
-	const std::vector<uint32_t>& shape;
-	std::vector<uint32_t> shape_accumulate;
+	const std::vector<int64_t>& strides;
+	const std::vector<int64_t>& shape;
+	std::vector<int64_t> shape_accumulate;
 	public:
-		Permuter(void**, const std::vector<uint32_t>&, const std::vector<uint32_t>&);
-		uint32_t get_index(uint32_t) const;
-		void* get_ptr(uint32_t);
+		Permuter(void**, const std::vector<int64_t>&, const std::vector<int64_t>&);
+		int64_t get_index(int64_t) const;
+		void* get_ptr(int64_t);
 
 };
 
 
-void Permute(void** ar, void** n_str, uint32_t size, const std::vector<uint32_t>& new_shape, const std::vector<uint32_t>& new_strides);
+void Permute(void** ar, void** n_str, uint32_t size, const std::vector<int64_t>& new_shape, const std::vector<int64_t>& new_strides);
 
 }
 }

@@ -10,8 +10,26 @@
 #swap files
 *.swp
 
+#text files
+*.txt
+
 #object files
 objcs/
+
+#build files
+build/
+
+#tda old files
+src/tda/old_N
+#tda refinement
+src/tda/refinement
+#old layer stuff
+src/layers/old_layers
+#old intrusive ptr files
+src/intrusive_ptr/old
+src/dtyp/old
+old_tests/
+
 
 #testing files
 testing/

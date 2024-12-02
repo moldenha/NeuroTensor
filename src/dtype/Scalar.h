@@ -8,7 +8,7 @@ class ConstScalarRef;
 
 #include "DType_enum.h"
 #include "DType.h"
-#include "compatible/DType_compatible_all.h"
+#include "compatible/DType_compatible.h"
 
 
 
@@ -107,6 +107,17 @@ class Scalar{
 		bool isFloatingPoint() const;
 		bool isIntegral() const;
 		bool isBoolean() const;
+		bool isZero() const;
+
+		/* Scalar operator+(const Scalar&) const; */
+		/* Scalar operator-(const Scalar&) const; */
+		/* Scalar operator/(const Scalar&) const; */
+		/* Scalar operator*(const Scalar&) const; */
+		
+		/* Scalar& operator+=(const Scalar&); */
+		/* Scalar& operator-=(const Scalar&); */
+		/* Scalar& operator/=(const Scalar&); */
+		/* Scalar& operator*=(const Scalar&); */
 		
 		Scalar& operator=(const Scalar&);
 

@@ -120,7 +120,7 @@ void save(const Tensor &t, const char* filename){
 	if(!check){std::cout<<"problem writing shape list"<<std::endl;}
 	f1<<"{";
 	t.arr_void().cexecute_function([&f1](auto a_begin, auto a_end){
-			using value_t = typename std::remove_const<typename decltype(a_begin)::value_type>::type;
+			using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
 			std::for_each(a_begin, a_end, appender<value_t>(f1));
 			});
 	f1<<"}";

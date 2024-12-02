@@ -72,7 +72,7 @@ DType get_dtype(uint8_t dt_i){
 
 
 static inline constexpr auto read_nums_binary = [](auto a_begin, auto a_end, size_t& total, std::ifstream& in, const char* filename) -> bool{
-	using value_t = typename decltype(a_begin)::value_type;
+	using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
 	reader<value_t> reader_2;
 	uint32_t counter = 0;
 	while(in.good()){

@@ -154,24 +154,70 @@ inline static constexpr bool dtype_is_num = is_in_v<dt, DType::uint128, DType::i
 
 
 //this is an iterator of dtypes (think like the next dtype to be checked, implemented below)
-template<DType dt>
-constexpr DType next_dtype_it = (dt == DType::Bool ? DType::Integer
-					: dt == DType::Integer ? DType::int128
-					: dt == DType::int128 ? DType::uint128
-					: dt == DType::uint128 ? DType::Float16
-					: dt == DType::Float16 ? DType::Float128
-					: dt == DType::Float128 ? DType::Complex32
-					: dt == DType::Complex32 ? DType::Double
-					: dt == DType::Double ? DType::Float
-					: dt == DType::Float ? DType::Long
-					: dt == DType::Long ? DType::cfloat
-					: dt == DType::cfloat ? DType::cdouble
-					: dt == DType::cdouble ? DType::uint8
-					: dt == DType::uint8 ? DType::int8
-					: dt == DType::int8 ? DType::int16
-					: dt == DType::int16 ? DType::int64
-					: dt == DType::int64 ? DType::TensorObj
-					: dt == DType::TensorObj ? DType::uint16 : DType::Bool);
+template<DType dtype>
+constexpr DType next_dtype_it = []() {
+    switch (dtype) {
+        case DType::Float:
+            return DType::Double;
+        case DType::Double:
+            return DType::Complex64;
+        case DType::Complex64:
+            return DType::Complex128;
+        case DType::Complex128:
+            return DType::uint8;
+        case DType::uint8:
+            return DType::int8;
+        case DType::int8:
+            return DType::int16;
+        case DType::int16:
+            return DType::uint16;
+        case DType::uint16:
+            return DType::int32;
+        case DType::int32:
+            return DType::uint32;
+        case DType::uint32:
+            return DType::int64;
+        case DType::int64:
+            return DType::Bool;
+        case DType::Bool:
+            return DType::TensorObj;
+	case DType::TensorObj:
+	    return DType::Float16;
+	case DType::Float16:
+	    return DType::Complex32;
+	case DType::Complex32:
+	    return DType::Float128;
+	case DType::Float128:
+	    return DType::int128;
+	case DType::int128:
+	    return DType::uint128;
+	case DType::uint128:
+		return DType::Float;
+        default:
+            return DType::Float; // Handle other cases if needed
+    }
+}();
+
+
+/* template<DType dt> */
+/* constexpr DType next_dtype_it = (dt == DType::Bool ? DType::Integer */
+/* 					: dt == DType::Integer ? DType::int128 */
+/* 					: dt == DType::int128 ? DType::uint128 */
+/* 					: dt == DType::uint128 ? DType::Float16 */
+/* 					: dt == DType::Float16 ? DType::Float128 */
+/* 					: dt == DType::Float128 ? DType::Complex32 */
+/* 					: dt == DType::Complex32 ? DType::Double */
+/* 					: dt == DType::Double ? DType::Float */
+/* 					: dt == DType::Float ? DType::Long */
+/* 					: dt == DType::Long ? DType::cfloat */
+/* 					: dt == DType::cfloat ? DType::cdouble */
+/* 					: dt == DType::cdouble ? DType::uint8 */
+/* 					: dt == DType::uint8 ? DType::int8 */
+/* 					: dt == DType::int8 ? DType::int16 */
+/* 					: dt == DType::int16 ? DType::int64 */
+/* 					: dt == DType::int64 ? DType::TensorObj */
+/* 					: dt == DType::TensorObj ? DType::uint16 */ 
+/* 					: dt == DType::uint16 ? DType::uint8 : DType::Bool); */
 
 
 

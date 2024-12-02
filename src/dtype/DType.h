@@ -53,6 +53,19 @@ struct WRAP_DTYPES<T>{
 };
 
 
+template<typename T>
+inline constexpr bool is_in_dtype_enum(DType dt){
+	if (dt != T::next){
+		if (T::done){
+			return false;
+		}
+		return is_in_dtype_enum<typename T::next_wrapper>(dt);
+	}
+	else{
+		return true;
+	}
+}
+
 namespace DTypeFuncs{
 template<typename Test, template<typename...> class Ref>
 struct is_specialization : std::false_type {};
@@ -110,6 +123,7 @@ inline constexpr bool is_in_v<dt, DType::Bool> = false;
 #include <type_traits>
 #include <stdlib.h>
 #include <memory>
+#include <sys/ipc.h>
 
 namespace nt{
 std::ostream& operator<< (std::ostream &out, DType const& data);
@@ -155,9 +169,7 @@ std::size_t size_of_dtype_p(const DType& d);
 
 template <class... DTs>
 bool is_in(DType dt, DTs... dts){
-	if constexpr(!all_dtype_v<DTs...>){
-		throw std::runtime_error("expected only DType types");
-	}
+	static_assert(all_dtype_v<DTs...>, "Expected to only get DType types");
 	bool outp = false;
 	(is_same(dt, outp, dts), ...);
 	return outp;
@@ -170,7 +182,15 @@ template<DType F, DType T>
 bool convert_this_typed_array(void* arr, void* arr2, const DType& from, const DType& to, const std::size_t& total);
 void convert_to_dtype_array(void* arr, void* arr2, const DType& from, const DType& to, const std::size_t& total);
 
+
+
 std::shared_ptr<void> make_shared_array(size_t size, const DType& dt);
+std::shared_ptr<void> make_shared_array(size_t size, const DType& dt, void** original_mem);
+#ifdef USE_PARALLEL
+std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, key_t key = IPC_PRIVATE);
+std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, void** original_mem, key_t key = IPC_PRIVATE);
+std::shared_ptr<void*> make_shared_memory_shared_stride_array(size_t size, const DType& dt, key_t key = IPC_PRIVATE);
+#endif
 template<DType dt = DType::Integer>
 std::shared_ptr<void> share_part_ptr(const uint32_t& index, const DType& m_dt, const std::shared_ptr<void>& ptr);
 
@@ -187,6 +207,8 @@ DType complex_size(const std::size_t& s);
 DType floating_size(const std::size_t& s);
 DType integer_size(const std::size_t& s);
 DType unsigned_size(const std::size_t& s);
+uint8_t dtype_int_code(const DType&);
+DType code_int_dtype(const uint8_t&);
 
 }
 }

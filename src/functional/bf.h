@@ -1,4 +1,5 @@
-
+#ifndef _NT_BF_FILES_H_
+#define _NT_BF_FILES_H_
 
 #include <fstream>
 #include <iostream>
@@ -76,3 +77,5 @@ class BFGenerator{
 
 }
 }
+
+#endif //_NT_BF_FILES_H_

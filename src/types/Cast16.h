@@ -1,7 +1,8 @@
-#ifndef _MY_CAST_16_H_
-#define _MY_CAST_16_H_
+#ifndef _NT_MY_CAST_16_H_
+#define _NT_MY_CAST_16_H_
 #ifdef __x86_64__
 
+//https://gist.github.com/whchung/25875271922806e58ac21ad7d707e3cd
 #include <limits.h>
 #include <stdint.h>
 
@@ -16,8 +17,8 @@ typedef uint32_t dst_rep_t;
 #define DST_REP_C UINT32_C
 static const int dstSigBits = 23;
 
-// End of specialization parameters.  Two helper routines for conversion to and
-// from the representation of floating-point data as integer values follow.
+//end of specialization parameters.  Two helper routines for conversion to and
+//from the representation of floating-point data as integer values follow.
 
 static __inline src_rep_t srcToRep(src_t x) {
     const union { src_t f; src_rep_t i; } rep = {.f = x};

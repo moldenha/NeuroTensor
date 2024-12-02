@@ -4,13 +4,19 @@
 #include "compatible/DType_compatible.h"
 
 
+#include <_types/_uint32_t.h>
 #include <complex>
+#include <cstddef>
 #include <functional>
 
 #include <typeinfo>
 #include <iostream>
 #include <type_traits>
 #include <utility>
+
+#include <sys/shm.h>
+#include <sys/ipc.h>
+
 
 namespace nt{
 
@@ -606,6 +612,64 @@ std::shared_ptr<void> make_shared_array(size_t size, const DType& dt){
 
 }
 
+#ifdef USE_PARALLEL
+std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
+	const uint32_t n_size = size * size_of_dtype(dt);
+	utils::throw_exception(utils::get_shared_memory_max() >= n_size, "Expected to allocate at most $ bytes of shared memory, but was asked to allocate $ bytes of shared memory", utils::get_shared_memory_max(), n_size);
+	int shmid = shmget(key, size_of_dtype(dt) * size, IPC_CREAT | 0666);
+	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
+	void* sharedArray = shmat(shmid, nullptr, 0);
+	utils::throw_exception(sharedArray != (void*)-1, "Making shared memory failed (shmat)");
+	std::cout << "successfully created shared memory"<<std::endl;
+	return std::shared_ptr<void>(sharedArray, [shmid](void* ptr){
+				shmdt(ptr);
+				shmctl(shmid, IPC_RMID, nullptr);
+			});
+}
+
+template<DType dt>
+void copy_strides_to_memory(size_t size, const DType& m_dt, void** original_mem, void* sharedMem){
+	if(dt != m_dt){return copy_strides_to_memory<DTypeFuncs::next_dtype_it<dt>>(size, m_dt, original_mem, sharedMem);}
+	using value_t = dtype_to_type_t<dt>;
+	value_t* shMem = reinterpret_cast<value_t*>(sharedMem);
+	value_t** strideMem = reinterpret_cast<value_t**>(original_mem);
+	for(uint32_t i = 0; i < size; ++i, ++shMem, ++strideMem)
+		*shMem = *(*strideMem);
+	return;
+}
+
+
+std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, void** original_mem, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
+	int shmid = shmget(key, size_of_dtype(dt) * size, IPC_CREAT | 0666);
+	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
+	void* sharedArray = shmat(shmid, nullptr, 0);
+	utils::throw_exception(sharedArray != (void*)-1, "Making shared memory failed (shmat)");
+	copy_strides_to_memory<DType::Float>(size, dt, original_mem, sharedArray);
+	return std::shared_ptr<void>(sharedArray, [shmid](void* ptr){
+				shmdt(ptr);
+				shmctl(shmid, IPC_RMID, nullptr);
+			});
+}
+
+std::shared_ptr<void*> make_shared_memory_shared_stride_array(size_t size, const DType& dt, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
+	int shmid = shmget(key, size_of_dtype_p<DType::Float>(dt) * size, IPC_CREAT | 0666);
+	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
+	void** sharedArray = static_cast<void**>(shmat(shmid, nullptr, 0));
+	utils::throw_exception(sharedArray != reinterpret_cast<void**>(-1), "Making shared memory failed (shmat)");
+	return std::shared_ptr<void*>(sharedArray, [shmid](void** ptr){
+				shmdt(ptr);
+				shmctl(shmid, IPC_RMID, nullptr);
+			});
+}
+
+std::shared_ptr<void> make_shared_array(size_t size, const DType& dt, void** original_mem){
+	std::shared_ptr<void> outp = make_shared_array(size, dt);
+	copy_strides_to_memory<DType::Float>(size, dt, original_mem, outp.get());
+	return std::move(outp);
+}
+#endif
+
+
 template<DType dt>
 std::shared_ptr<void> share_part_ptr(const uint32_t& index, const DType& m_dt, const std::shared_ptr<void>& ptr){
 	if(dt != m_dt){return share_part_ptr<DTypeFuncs::next_dtype_it<dt>>(index, m_dt, ptr);}
@@ -613,6 +677,8 @@ std::shared_ptr<void> share_part_ptr(const uint32_t& index, const DType& m_dt, c
 	const std::shared_ptr<value_t[]> *p = reinterpret_cast<const std::shared_ptr<value_t[]>*>(&ptr);
 	return std::shared_ptr<value_t>((*p), &(*p)[index]);
 }
+
+
 
 template std::shared_ptr<void> share_part_ptr<DType::Float>(const uint32_t& index, const DType& m_dt, const std::shared_ptr<void>& ptr);
 template std::shared_ptr<void> share_part_ptr<DType::Double>(const uint32_t& index, const DType& m_dt, const std::shared_ptr<void>& ptr);
@@ -684,6 +750,103 @@ std::size_t size_of_dtype(const DType& dt){
 			return sizeof(Tensor);
 		case DType::Bool:
 			return sizeof(uint_bool_t);
+	}
+}
+
+
+uint8_t dtype_int_code(const DType& dt){
+	switch(dt){
+		case DType::Integer:
+			return 0;
+#ifdef __SIZEOF_INT128__
+		case DType::int128:
+			return 1;
+		case DType::uint128:
+			return 2;
+#endif
+#ifdef _HALF_FLOAT_SUPPORT_
+		case DType::Float16:
+			return 3;
+		case DType::Complex32:
+			return 4;
+#endif
+#ifdef _128_FLOAT_SUPPORT_
+		case DType::Float128:
+			return 5;
+#endif
+		case DType::Double:
+			return 6;
+		case DType::Float:
+			return 7;
+		case DType::Long:
+			return 8;
+		case DType::cfloat:
+			return 9;
+		case DType::cdouble:
+			return 10;
+		case DType::uint8:
+			return 11;
+		case DType::int8:
+			return 12;
+		case DType::int16:
+			return 13;
+		case DType::uint16:
+			return 14;
+		case DType::int64:
+			return 15;
+		case DType::TensorObj:
+			return 16;
+		case DType::Bool:
+			return 17;
+	}
+}
+DType code_int_dtype(const uint8_t& i){
+	switch(i){
+		case 0:
+			return DType::Integer;
+#ifdef __SIZEOF_INT128__
+		case 1:
+			return DType::int128;
+		case 2:
+			return DType::uint128;
+#endif
+#ifdef _HALF_FLOAT_SUPPORT_
+		case 3:
+			return DType::Float16;
+		case 4:
+			return DType::Complex32;
+#endif
+#ifdef _128_FLOAT_SUPPORT_
+		case 5:
+			return DType::Float128;
+#endif
+		case 6:
+			return DType::Double;
+		case 7:
+			return DType::Float;
+		case 8:
+			return DType::Long;
+		case 9:
+			return DType::cfloat;
+		case 10:
+			return DType::cdouble;
+		case 11:
+			return DType::uint8;
+		case 12:
+			return DType::int8;
+		case 13:
+			return DType::int16;
+		case 14:
+			return DType::uint16;
+		case 15:
+			return DType::int64;
+		case 16:
+			return DType::TensorObj;
+		case 17:
+			return DType::Bool;
+		default:
+			utils::throw_exception(i == 0, "Got unexpected number code $ for code int to dtype", i);
+			return DType::Integer;
 	}
 }
 

@@ -121,19 +121,39 @@ template<> float128_t convert<DType::Float128>(const bool &v){return float128_t(
 #endif
 
 #ifdef __SIZEOF_INT128__
+int128_t float32_to_int128(float value) {
+    // Handle special cases
+    if (std::isnan(value)) {
+        throw std::invalid_argument("Cannot convert NaN to int128");
+    }
+    if (std::isinf(value)) {
+        throw std::overflow_error("Cannot convert infinity to int128");
+    }
+    if (value > static_cast<float>(std::numeric_limits<int128_t>::max())) {
+        throw std::overflow_error("Float value is too large for int128");
+    }
+    if (value < static_cast<float>(std::numeric_limits<int128_t>::min())) {
+        throw std::overflow_error("Float value is too small for int128");
+    }
+
+    // Convert the float to int128
+    return static_cast<int128_t>(value);
+}
 template<> int128_t convert<DType::int128>(const float& v){return static_cast<int128_t>(v);}
 template<> int128_t convert<DType::int128>(const double& v){return static_cast<int128_t>(v);}
 #ifdef _HALF_FLOAT_SUPPORT_
-template<> int128_t convert<DType::int128>(const float16_t& v){return static_cast<int128_t>(float(v));}
-template<> int128_t convert<DType::int128>(const complex_32& v){return static_cast<int128_t>(float(v.real()));}
-#endif
+template<> int128_t convert<DType::int128>(const float16_t& v){
+	return float32_to_int128(convert<DType::Float32>(v));
+}
+template<> int128_t convert<DType::int128>(const complex_32& v){
+	return float32_to_int128(convert<DType::Float32>(v));
+}
+#endif //half float support
 #ifdef _128_FLOAT_SUPPORT_
 template<> int128_t convert<DType::int128>(const float128_t& v){return static_cast<int128_t>(v);}
-#endif
-#ifdef __SIZEOF_INT128__
+#endif //128 bit float support
 template<> int128_t convert<DType::int128>(const int128_t& v){return v;}
 template<> int128_t convert<DType::int128>(const uint128_t& v){return static_cast<int128_t>(v);}
-#endif
 template<> int128_t convert<DType::int128>(const complex_64& v){return static_cast<int128_t>(v.real());}
 template<> int128_t convert<DType::int128>(const complex_128& v){return static_cast<int128_t>(v.real());}
 template<> int128_t convert<DType::int128>(const int64_t& v){return static_cast<int128_t>(v);}
@@ -149,11 +169,33 @@ template<> int128_t convert<DType::int128>(const bool &v){return int128_t(0 ? v 
 #endif
 
 #ifdef __SIZEOF_INT128__
+uint128_t float32_to_uint128(float value) {
+    // Handle special cases
+    if (std::isnan(value)) {
+        throw std::invalid_argument("Cannot convert NaN to uint128");
+    }
+    if (std::isinf(value)) {
+        throw std::overflow_error("Cannot convert infinity to uint128");
+    }
+    if (value > static_cast<float>(std::numeric_limits<uint128_t>::max())) {
+        throw std::overflow_error("Float value is too large for uint128");
+    }
+    if (value < static_cast<float>(std::numeric_limits<uint128_t>::min())) {
+        throw std::overflow_error("Float value is too small for uint128");
+    }
+
+    // Convert the float to int128
+    return static_cast<uint128_t>(value);
+}
 template<> uint128_t convert<DType::uint128>(const float& v){return static_cast<uint128_t>(v);}
 template<> uint128_t convert<DType::uint128>(const double& v){return static_cast<uint128_t>(v);}
 #ifdef _HALF_FLOAT_SUPPORT_
-template<> uint128_t convert<DType::uint128>(const float16_t& v){return static_cast<uint128_t>(float(v));}
-template<> uint128_t convert<DType::uint128>(const complex_32& v){return static_cast<uint128_t>(float(v.real()));}
+template<> uint128_t convert<DType::uint128>(const float16_t& v){
+	return float32_to_uint128(convert<DType::Float32>(v));
+}
+template<> uint128_t convert<DType::uint128>(const complex_32& v){
+	return float32_to_uint128(convert<DType::Float32>(v));
+}
 #endif
 #ifdef _128_FLOAT_SUPPORT_
 template<> uint128_t convert<DType::uint128>(const float128_t& v){return static_cast<uint128_t>(v);}

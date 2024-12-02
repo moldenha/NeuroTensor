@@ -147,7 +147,18 @@ bool Scalar::isComplex() const{return DTypeFuncs::is_complex(dtype);}
 bool Scalar::isFloatingPoint() const{return DTypeFuncs::is_floating(dtype);}
 bool Scalar::isIntegral() const{return DTypeFuncs::is_integer(dtype);}
 bool Scalar::isBoolean() const{return dtype == DType::Bool;}
-
+bool Scalar::isZero() const {
+	if(isComplex()){
+		return v.c == complex_64(0,0);
+	}
+	else if(isFloatingPoint()){
+		return v.d == 0;
+	}
+	else if(isIntegral()){
+		return v.i == 0;
+	}
+	return v.i == 0;
+}
 
 DType Scalar::type() const{
 	if(isComplex())
@@ -171,6 +182,228 @@ DType Scalar::type() const{
 	else
 		throw std::runtime_error("Unknown scalar type");
 }
+
+
+
+/* Scalar Scalar::operator+(const Scalar& s) const{ */
+/* 	if(isZero()){return s;} */
+/* 	if(s.isZero()){return *this;} */
+/* 	if(isComplex()){ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>() + v.c; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>() + v.d; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>() + v.d; */
+/* #endif */
+
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>() + v.i; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>() + v.i; */
+/* #endif */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+/* Scalar Scalar::operator-(const Scalar& s) const{ */
+/* 	if(isZero()){return s;} */
+/* 	if(s.isZero()){return *this;} */
+/* 	if(isComplex()){ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>() - v.c; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>() - v.d; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>() - v.d; */
+/* #endif */
+
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>() - v.i; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>() - v.i; */
+/* #endif */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+/* Scalar Scalar::operator*(const Scalar& s) const{ */
+/* 	if(isZero()){return *this;} */
+/* 	if(s.isZero()){return s;} */
+/* 	if(isComplex()){ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>() * v.c; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>() * v.d; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>() * v.d; */
+/* #endif */
+
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>() * v.i; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>() * v.i; */
+/* #endif */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+
+/* Scalar Scalar::operator/(const Scalar& s) const{ */
+/* 	if(isZero()){return s;} */
+/* 	if(s.isZero()){return *this;} */
+/* 	if(isComplex()){ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>() / v.c; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>() / v.d; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>() / v.d; */
+/* #endif */
+
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>() / v.i; */
+/* #else */
+/* 		return s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>() / v.i; */
+/* #endif */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+
+/* Scalar& Scalar::operator+=(const Scalar& s){ */
+/* 	if(isZero()){*this = s;} */
+/* 	if(s.isZero()){return *this;} */
+/* 	if(isComplex()){ */
+/* 		v.c += s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>(); */
+/* 		return *this; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		v.d +=  s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>(); */ 
+/* #else */
+/* 		v.d += s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>(); */ 
+/* #endif */
+/* 		return *this; */
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		v.i += s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>(); */ 
+/* #else */
+/* 		v.i += s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>(); */
+/* #endif */
+/* 		return *this; */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+/* Scalar& Scalar::operator-=(const Scalar& s){ */
+/* 	if(isZero()){*this = s;} */
+/* 	if(s.isZero()){return *this;} */
+/* 	if(isComplex()){ */
+/* 		v.c -= s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>(); */
+/* 		return *this; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		v.d -=  s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>(); */ 
+/* #else */
+/* 		v.d -= s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>(); */ 
+/* #endif */
+/* 		return *this; */
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		v.i -= s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>(); */ 
+/* #else */
+/* 		v.i -= s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>(); */
+/* #endif */
+/* 		return *this; */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+/* Scalar& Scalar::operator*=(const Scalar& s){ */
+/* 	if(isZero()){return *this;} */
+/* 	if(isComplex()){ */
+/* 		v.c *= s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>(); */
+/* 		return *this; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		v.d *=  s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>(); */ 
+/* #else */
+/* 		v.d *= s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>(); */ 
+/* #endif */
+/* 		return *this; */
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		v.i *= s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>(); */ 
+/* #else */
+/* 		v.i *= s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>(); */
+/* #endif */
+/* 		return *this; */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
+
+/* Scalar& Scalar::operator/=(const Scalar& s){ */
+/* 	if(isZero()){return *this;} */
+/* 	if(s.isZero()){ */
+/* 		throw std::runtime_error("Cannot divide by 0"); */
+/* 		return *this; */
+/* 	} */
+/* 	if(isComplex()){ */
+/* 		v.c /= s.to<DTypeFuncs::dtype_to_type_t<DType::cdouble>>(); */
+/* 		return *this; */
+/* 	} */
+/* 	if(isFloatingPoint()){ */
+/* #ifdef _128_FLOAT_SUPPORT_ */
+/* 		v.d /=  s.to<DTypeFuncs::dtype_to_type_t<DType::Float128>>(); */ 
+/* #else */
+/* 		v.d /= s.to<DTypeFuncs::dtype_to_type_t<DType::Float64>>(); */ 
+/* #endif */
+/* 		return *this; */
+/* 	} */
+/* 	if(isIntegral()){ */
+/* #ifdef __SIZEOF_INT128__ */
+/* 		v.i /= s.to<DTypeFuncs::dtype_to_type_t<DType::int128>>(); */ 
+/* #else */
+/* 		v.i /= s.to<DTypeFuncs::dtype_to_type_t<DType::LongLong>>(); */
+/* #endif */
+/* 		return *this; */
+
+/* 	} */
+/* 	throw std::runtime_error("Cannot perform operation on boolean"); */
+/* 	return *this; */
+/* } */
 
 template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_integer_v<DTypeFuncs::type_to_dtype<T>>, bool>>
 T Scalar::to() const{

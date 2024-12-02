@@ -1,5 +1,5 @@
-#ifndef _MY_STD_CONVERT_DTYPE_H
-#define _MY_STD_CONVERT_DTYPE_H
+#ifndef _NT_STD_CONVERT_DTYPE_H_
+#define _NT_STD_CONVERT_DTYPE_H_
 
 #include "../dtype/DType_enum.h"
 
@@ -58,4 +58,4 @@ T convert(const A& val);
 }
 }
 
-#endif
+#endif //_NT_STD_CONVERT_DTYPE_H_

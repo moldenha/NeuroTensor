@@ -8,6 +8,9 @@
 #include <string>
 #include <string_view>
 
+#ifdef USE_PARALLEL
+#include <tbb/mutex.h>
+#endif
 
 
 /* #include "../refs/SizeRef.h" */
@@ -38,6 +41,101 @@ namespace utils{
 /* template<> void print_format_inner<uint32_t>(std::ostringstream&, std::string_view&, size_t&, const uint32_t&); */
 /* template<> void print_format_inner<SizeRef>(std::ostringstream&, std::string_view&, size_t&, const SizeRef&); */
 /* template<> void print_format_inner<DType>(std::ostringstream&, std::string_view&, size_t&, const DType&); */
+
+
+namespace memory_details{
+int64_t cpu_memory_allocated = 0;
+int64_t shared_cpu_memory_allocated = 0;
+int64_t meta_memory_allocated = 0;
+}
+
+#ifdef USE_PARALLEL
+bool isPipeReadable(int pipefd) {
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(pipefd, &rfds);
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+
+    // Use select to check if the file descriptor is ready for reading
+    int ready = select(pipefd + 1, &rfds, nullptr, nullptr, &timeout);
+    if (ready == -1) {
+        // Error occurred
+        perror("select");
+        return false;
+    } else if (ready == 0) {
+        // No data to read
+        return false;
+    } else {
+        // Data is available to read
+        return true;
+    }
+}
+
+
+void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string add, uint32_t width) {
+    float percentage = static_cast<float>(progress) / total;
+    int numChars = static_cast<int>(percentage * width);
+
+    static tbb::mutex printMutex;
+    tbb::mutex::scoped_lock lock(printMutex);
+    std::cout << "\r[";
+    for (int i = 0; i < numChars; ++i) {
+        std::cout << "=";
+    }
+    for (int i = numChars; i < width; ++i) {
+        std::cout << " ";
+    }
+    std::cout << "] " << static_cast<int>(percentage * 100.0) << "% "<<progress<<'/'<<total << add;
+    std::cout.flush();
+    lock.release();
+}
+
+#endif
+
+
+void printProgressBar(uint32_t progress, uint32_t total, std::string add, uint32_t width) {
+    float percentage = static_cast<float>(progress) / total;
+    int numChars = static_cast<int>(percentage * width);
+
+    std::cout << "\r[";
+    for (int i = 0; i < numChars; ++i) {
+        std::cout << "=";
+    }
+    for (int i = numChars; i < width; ++i) {
+        std::cout << " ";
+    }
+    std::cout << "] " << static_cast<int>(percentage * 100.0) << "% "<<progress<<'/'<<total << add;
+    std::cout.flush();
+}
+
+void beginDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width){
+	std::cout << "[";
+	for(int i = 0; i < width; ++i)
+		std::cout << ' ';
+	std::cout << "] 0% 0/"<<total_a << "\n";
+	std::cout << "[";
+	for(int i = 0; i < width; ++i)
+		std::cout << ' ';
+	std::cout << "] 0% 0/"<<total_b;
+	std::cout.flush();
+}
+void printDualProgressBar(uint32_t progress_a, uint32_t total_a, uint32_t progress_b, uint32_t total_b, uint32_t width){
+	std::cout << "\033[F";
+	printProgressBar(progress_a, total_a, "", width);
+	std::cout << "\n";
+	printProgressBar(progress_b, total_b, "", width);
+
+}
+void endDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width){
+	std::cout << "\033[F";
+	printProgressBar(total_a, total_a, "", width);
+	std::cout << "\n";
+	printProgressBar(total_b, total_b, "", width);
+	
+}
 
 
 }

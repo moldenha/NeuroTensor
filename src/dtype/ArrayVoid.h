@@ -3,6 +3,22 @@
 #include "ranges.h"
 namespace nt {
 class ArrayVoid;
+template<typename First, typename... Rest>
+struct IsFirstVectorArrayVoid {
+    static constexpr bool value = false;
+};
+
+// Specialization for when the first argument is a std::vector
+template<typename... Args>
+struct IsFirstVectorArrayVoid<std::vector<ArrayVoid>, Args...> {
+    static constexpr bool value = true;
+};
+
+template<typename... Args>
+struct IsFirstVectorArrayVoid<std::vector<std::reference_wrapper<const ArrayVoid> >, Args...> {
+    static constexpr bool value = true;
+};
+
 }
 
 
@@ -11,64 +27,122 @@ class ArrayVoid;
 #include <type_traits>
 
 #include "DType_enum.h"
-#include "DType_list.h"
 #include <vector>
 #include <cstdlib>
 #include "Scalar.h"
 #include "../Tensor.h"
+#include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../memory/bucket.h"
+#include "../memory/iterator.h"
+#include <type_traits>
+#include <functional>
 
 namespace nt{
 
-
 class ArrayVoid{
-	std::shared_ptr<void> _vals;
-	std::shared_ptr<void*> _strides;
-	size_t size, _last_index, _start, type_size, available_size;
+	friend class Bucket;
+	Bucket bucket;
+	uint64_t size;
 	
-	void unique_strides(bool pre_order=true);
-	std::shared_ptr<void*> make_unique_strides(bool pre_order=true) const;
-	std::shared_ptr<void*> make_unique_strides(std::size_t start, std::size_t end) const;
-	std::shared_ptr<void> make_shared(size_t, DType) const;
+	/* void unique_strides(bool pre_order=true); */
+	/* intrusive_ptr<void*> make_unique_strides(bool pre_order=true) const; */
+	/* intrusive_ptr<void*> make_unique_strides(std::size_t start, std::size_t end, bool copy=true) const; */
 	const size_t dtype_size(DType) const;
-	ArrayVoid(const std::shared_ptr<void>&, std::shared_ptr<void*>&&, const std::size_t, const std::size_t, const std::size_t, DType);
+	/* ArrayVoid(intrusive_ptr<void*>&&, const std::size_t, const std::size_t, const std::size_t, DType); */
+	/* ArrayVoid(const intrusive_ptr<void*>&, const std::size_t, const std::size_t, const std::size_t, DType); */
+	ArrayVoid(Bucket&&, uint64_t, DType);
+	ArrayVoid(const Bucket&, uint64_t, DType);
+	ArrayVoid(const Bucket&);
+	ArrayVoid(Bucket&&);
+	inline static ArrayVoid catV(const std::vector<ArrayVoid>& v){
+		std::vector<std::reference_wrapper<const Bucket> > buckets;
+		buckets.reserve(v.size());
+		for(const ArrayVoid& arr : v){
+			buckets.push_back(std::cref(arr.bucket));
+		}
+		return Bucket::cat(buckets);
+	}
+	inline static ArrayVoid catV(const std::vector<std::reference_wrapper<const ArrayVoid> >& v){
+		std::vector<Bucket> buckets;
+		for(const std::reference_wrapper<const ArrayVoid>& arr : v){
+			buckets.push_back(arr.get().bucket);
+		}
+		return Bucket::cat(buckets);
+	}
+
 	public:
 		DType dtype;
-		ArrayVoid(uint32_t, DType);
-		ArrayVoid(const std::shared_ptr<void>&, const std::shared_ptr<void*>&,  const std::size_t, const std::size_t, const std::size_t, DType);
+		ArrayVoid(int64_t, DType);
+		ArrayVoid(int64_t, DType, void*, DeleterFnPtr);
+#ifdef USE_PARALLEL
+		ArrayVoid(int64_t, DTypeShared);
+#endif
 		ArrayVoid& operator=(const ArrayVoid&);
 		ArrayVoid& operator=(ArrayVoid&&);
 		ArrayVoid(const ArrayVoid&);
 		ArrayVoid(ArrayVoid&&);
-		const std::size_t Size() const;
-		const void* data_ptr() const;
-		void* data_ptr();
+		inline Bucket& get_bucket() {return bucket;}
+		inline const DeviceType& device_type() const noexcept {return bucket.device_type();}
+		inline const Bucket& get_bucket() const {return bucket;}
+		inline void nullify() {size = 0; bucket.nullify();}
+		inline const uint64_t& Size() const {return size;}
+		inline const void* data_ptr() const {return bucket.data_ptr();}
+		inline void* data_ptr() {return bucket.data_ptr();}
 		const void* data_ptr_end() const;
 		void* data_ptr_end();
-		void** strides_cbegin() const;
-		void** strides_begin();
-		void** strides_cend() const;
-		void** strides_end();
-		void operator=(Scalar);
+		void swap(ArrayVoid&);
+		/* void** strides_cbegin() const; */
+		void** stride_begin() const {return bucket.stride_begin();}
+		/* void** strides_cend() const; */
+		void** stride_end() const {return bucket.stride_end();}
+		inline const bool is_shared() const {return bucket.is_shared();}
+		inline const bool is_empty() const {return size == 0;}
+		inline const bool is_null() const {return bucket.is_null();}
+		ArrayVoid& operator=(Scalar);
 		ArrayVoid& fill_ptr_(Scalar);
-		std::shared_ptr<void> share_part(uint32_t) const;
-		ArrayVoid share_array(uint32_t) const;
-		ArrayVoid share_array(uint32_t, uint32_t) const;
-		template<typename T>
-		tdtype_list<T> tbegin();
-		template<typename T>
-		tdtype_list<T> tend();
-		template<typename T>
-		tdtype_list<const T> tcbegin() const;
-		template<typename T>
-		tdtype_list<const T> tcend() const;
-		ArrayVoid change_stride(const std::vector<std::size_t>&);
-		ArrayVoid range(std::vector<my_range>) const;
-		bool is_contiguous() const;
-		ArrayVoid contiguous() const;
-		/* template<DType dt = DType::Integer> */
-		ArrayVoid copy_strides(bool copy=true) const;
-		ArrayVoid new_stride(uint32_t size) const;
+		/* std::shared_ptr<void> share_part(uint32_t) const; */ //not used anymore
+		ArrayVoid share_array(uint64_t) const;
+		ArrayVoid share_array(uint64_t, uint64_t) const;
+		inline ArrayVoid force_contiguity(int64_t n_size=-1) const {return ArrayVoid(bucket.force_contiguity(n_size == -1 ? size : n_size));}
+		inline ArrayVoid bucket_all_indices() const {return ArrayVoid(bucket.bucket_all_indices(), size, dtype);}
+		inline ArrayVoid force_contiguity_and_bucket() const {
+			Bucket b = bucket.force_contiguity_and_bucket();
+			int64_t n_size = b.size();
+			return ArrayVoid(std::move(b), n_size, dtype);
+		}
+		inline ArrayVoid bound_force_contiguity_bucket() const {
+			Bucket b = bucket.bound_force_contiguity_bucket();
+			int64_t n_size = b.size();
+			return ArrayVoid(std::move(b), n_size, dtype);
+		}
 
+		ArrayVoid change_stride(const std::vector<std::pair<uint64_t, uint64_t> >&) const;
+		ArrayVoid change_stride(const std::vector<uint64_t>&) const;
+		ArrayVoid range(std::vector<my_range>) const;
+		inline bool is_contiguous() const {return bucket.is_contiguous();}
+		inline ArrayVoid contiguous() const {return ArrayVoid(bucket.contiguous());}
+		inline ArrayVoid clone() const {return ArrayVoid(bucket.clone());}
+		/* template<DType dt = DType::Integer> */
+		/* ArrayVoid copy_strides(bool copy=true) const; */ 
+		inline ArrayVoid new_strides(uint64_t nsize) const{return ArrayVoid(bucket.new_stride_size(nsize), nsize, dtype);}
+		ArrayVoid copy_strides(bool copy=false) const;
+#ifdef USE_PARALLEL
+		ArrayVoid shared_memory() const; // this is going to use shmem to create a shared memory version of ArrayVoid so that the memory can be shared across multiple processes, making functions like Queue possible, enacting a shared-memory version of the pointers.
+		ArrayVoid from_shared_memory() const;
+#endif
+		/* static intrusive_ptr<void[]> MakeContiguousMemory(uint32_t _size, DType _type); */
+		/* static intrusive_ptr<void[]> MakeContiguousMemory(uint32_t _size, DType _type, Scalar s); */
+/* #ifdef USE_PARALLEL */
+		/* static intrusive_ptr<void[]> MakeContiguousMemory(uint32_t _size, DTypeShared _type, Scalar s); */
+		/* static intrusive_ptr<void[]> MakeContiguousMemory(uint32_t _size, DTypeShared _type); */
+		/* static ArrayVoid FromShared(intrusive_ptr<void[]> ptr, uint64_t s, DType d) { return ArrayVoid(Bucket::FromShared(ptr, s, d));} */
+		/* inline static ArrayVoid FromShared(intrusive_ptr<void[]> ptr, uint32_t _size, DTypeShared _type){return ArrayVoid(Bucket::FromShared(ptr, _size, _type));} */
+/* #endif */
+
+
+		inline static ArrayVoid makeEmptyArray(DType dtype = DType::Float32){
+			return ArrayVoid(Bucket::makeNullBucket(dtype), 0, dtype);
+		}		
 		ArrayVoid& operator*=(Scalar);
 		ArrayVoid& operator/=(Scalar);
 		ArrayVoid& operator+=(Scalar);
@@ -99,6 +173,7 @@ class ArrayVoid{
 		ArrayVoid operator+(const Tensor&) const;
 		ArrayVoid operator-(const Tensor&) const;
 
+		ArrayVoid operator!=(Scalar) const;
 		ArrayVoid operator==(Scalar) const;
 		ArrayVoid operator>=(Scalar) const;
 		ArrayVoid operator<=(Scalar) const;
@@ -106,7 +181,7 @@ class ArrayVoid{
 		ArrayVoid operator<(Scalar) const;
 		ArrayVoid inverse() const;
 		ArrayVoid& inverse_();
-		void resize(const size_t);
+		ArrayVoid pow(int64_t) const;
 
 		
 		/* const std::size_t* stride_cbegin() const; */
@@ -122,7 +197,7 @@ class ArrayVoid{
 		/* dtype_list end(); */
 		/* const_dtype_list cbegin() const; */
 		/* const_dtype_list cend() const; */
-		const uint32_t use_count() const;
+		inline const int64_t use_count() const {return bucket.use_count();}
 		ArrayVoid& iota(Scalar);
 		void copy(ArrayVoid&, unsigned long long i=0) const;
 		ArrayVoid uint32() const;
@@ -139,6 +214,7 @@ class ArrayVoid{
 		ArrayVoid int64() const;
 		ArrayVoid Bool() const;
 		ArrayVoid to(DType) const;
+		ArrayVoid to(DeviceType) const;
 #ifdef _HALF_FLOAT_SUPPORT_
 		ArrayVoid Float16() const;
 		ArrayVoid Complex32() const;
@@ -156,6 +232,20 @@ class ArrayVoid{
 		ArrayVoid& floating_();
 		ArrayVoid& integer_();
 		ArrayVoid& unsigned_();
+		Tensor split(const uint64_t) const;
+		Tensor split(const uint64_t, SizeRef) const;
+		
+		template<typename... arrVds>
+		inline static ArrayVoid cat(const arrVds&... arrs){
+			if constexpr(IsFirstVectorArrayVoid<arrVds...>::value && sizeof...(arrs) == 1){
+				return ArrayVoid::catV(arrs...);	
+			}
+			else{
+				static_assert(utils::SameType<ArrayVoid, arrVds...>::value, "Expected to only get ArrayVoids");
+				return ArrayVoid(Bucket::cat(arrs.bucket...));
+
+			}
+		}
 	
 		template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 		auto execute_function(UnaryFunction&& unary_op, Args&&... args);
@@ -180,6 +270,63 @@ class ArrayVoid{
 		auto execute_function(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args); 
 		template<typename WrappedTypes, std::enable_if_t<DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool> = true>
 		auto execute_function(bool throw_error=true, const char* func_name = __builtin_FUNCTION()); 
+
+		//this is where the execute function parallel is
+/* #ifdef USE_PARALLEL */
+		
+/* 		template<DType dt, typename UnaryFunction, typename... Args> */
+/* 		void sub_handle_execute_function_parallel_1(UnaryFunction&& unary_op, bool& called, Args&&... args); */
+/* 		template<DType dt, typename UnaryFunction, typename... Args> */
+/* 		void sub_handle_execute_function_parallel_2(UnaryFunction&& unary_op, bool& called, Args&&... args); */
+/* 		template<DType dt, typename UnaryFunction, typename... Args> */
+/* 		void sub_handle_execute_function_parallel_3(UnaryFunction&& unary_op, bool& called, Args&&... args); */
+
+/* 		template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::enable_if_t< */
+/* 			DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value */
+/* 			&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool> = true> */
+/* 		void execute_function_parallel(UnaryFunction&& unary_op, Args&&... args); */
+/* #endif */
+
+		//this is to basically chunk up the data when the order in which the data is recieved, and the index of the data does not matter
+		//you want to use the execute_function_chunk when can and appropriate
+		//these have been the most optimized based on the way the memory is stored
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_1(UnaryFunction&& unary_op, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_2(UnaryFunction&& unary_op, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_3(UnaryFunction&& unary_op, bool& called, Args&&... args);	
+		template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::enable_if_t<
+			DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value
+			&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool> = true>
+		void execute_function_chunk(UnaryFunction&& unary_op, Args&&... args);
+
+		//execute 2 ArrayVoids at the same time
+		//assumes ArrayVoids are same dtype (this will probably change in the future, no real reason for it other than easier to code)
+		//if not bucketed, must be the same size
+		//if is bucketed, must be the same size, or, same bucket_amt
+		template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::enable_if_t<
+			DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value
+			&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool> = true>
+		void execute_function_chunk_execute(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args); 
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_1_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_1_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_1_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_3_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_3_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_3_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_2_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_2_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
+		template<DType dt, typename UnaryFunction, typename... Args>
+		void sub_handle_execute_function_chunk_2_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args);
 
 		
 		template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
@@ -316,6 +463,14 @@ class ArrayVoid{
 
 
 };
+}
+
+
+// Specialization of std::swap for nt::ArrayVoid
+namespace std {
+    inline void swap(::nt::ArrayVoid& lhs, ::nt::ArrayVoid& rhs) {
+        lhs.swap(rhs); // Call your custom swap function
+    }
 }
 
 #endif

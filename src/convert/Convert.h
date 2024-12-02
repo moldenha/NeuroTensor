@@ -1,5 +1,5 @@
-#ifndef _MY_CONVERT_DTYPE_H
-#define _MY_CONVERT_DTYPE_H
+#ifndef _NT_CONVERT_DTYPE_H_
+#define _NT_CONVERT_DTYPE_H_
 
 #include "std_convert.h"
 #include "../Tensor.h"
@@ -12,4 +12,4 @@ Tensor convert(const A&);
 }
 }
 
-#endif
+#endif // _NT_CONVERT_DTYPE_H_
