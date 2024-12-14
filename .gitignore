@@ -13,6 +13,9 @@
 #text files
 *.txt
 
+#But do not ignore CMakeLists.txt
+!CMakeLists.txt
+
 #object files
 objcs/
 
@@ -30,7 +33,7 @@ src/intrusive_ptr/old
 src/dtyp/old
 old_tests/
 
-#testing files
+#testing development files
 testing/
 
 #backup files
