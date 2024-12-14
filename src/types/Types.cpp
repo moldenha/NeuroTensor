@@ -6,14 +6,15 @@
 #include "../convert/std_convert.h"
 
 namespace nt{
-#ifdef _HALF_FLOAT_SUPPORT_
+//already defined
+/* #ifdef _HALF_FLOAT_SUPPORT_ */
 
-std::ostream& operator<<(std::ostream& os, const float16_t& val){
-	os << convert::convert<float>(val);
-	return os;
-}
+/* std::ostream& operator<<(std::ostream& os, const float16_t& val){ */
+/* 	os << convert::convert<float>(val); */
+/* 	return os; */
+/* } */
 
-#endif
+/* #endif */
 
 #ifdef _128_FLOAT_SUPPORT_
 std::ostream& operator<<(std::ostream& os, const float128_t& val){

@@ -13,6 +13,28 @@ namespace nt{
 namespace reflect{
 namespace detail{
 
+template<typename T, typename Arg>
+inline constexpr decltype(auto) add_cv_like(Arg& arg) noexcept {
+    if constexpr (std::is_const<T>::value && std::is_volatile<T>::value) {
+        return const_cast<const volatile Arg&>(arg);
+    }
+    else if constexpr (std::is_const<T>::value) {
+        return const_cast<const Arg&>(arg);
+    }
+    else if constexpr (std::is_volatile<T>::value) {
+        return const_cast<volatile Arg&>(arg);
+    }
+    else {
+        return const_cast<Arg&>(arg);
+    }
+}
+
+template<typename T, typename Sb, typename Arg>
+constexpr decltype(auto) workaround_cast(Arg& arg) noexcept {
+    using output_arg_t = std::conditional_t<!std::is_reference<Sb>(), decltype(add_cv_like<T>(arg)), Sb>;
+    return const_cast<output_arg_t>(arg);
+}
+
 
 
 //this might be a good place for std::any
@@ -37,7 +59,7 @@ using RegistryType = std::vector<RegistryEntry>;
 
 
 
-RegistryType& getRegistry() {
+inline RegistryType& getRegistry() {
     static RegistryType registry;
     return registry;
 }

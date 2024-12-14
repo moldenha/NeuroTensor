@@ -6,14 +6,7 @@
 namespace nt{
 namespace functional{
 namespace std_functional{
-template <>
-uint128_t* get_blockA_packed<uint128_t>() {
-	return nullptr;
-}
-
-template void nt_matmult<uint128_t>(const uint128_t* A, const uint128_t* B, uint128_t* C, int64_t a_rows, int64_t a_cols, int64_t b_rows, int64_t b_cols, bool transpose_a, bool transpose_b);
-template void nt_matmult_batch<uint128_t>(const uint128_t** A, const uint128_t** B, uint128_t** C, int64_t batches, int64_t a_rows, int64_t a_cols, int64_t b_rows, int64_t b_cols, bool transpose_a, bool transpose_b);
-
+_NT_MATMULT_DO_NOT_DECLARE_STATIC_BLOCK_(uint128_t)
 
 }}} // nt::functional::std_functional::
 

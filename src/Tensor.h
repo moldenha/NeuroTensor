@@ -1,5 +1,5 @@
-#ifndef TENSOR_H_
-#define TENSOR_H_
+#ifndef _NT_TENSOR_H_
+#define _NT_TENSOR_H_
 
 namespace nt{
 class Tensor;
@@ -10,6 +10,7 @@ class Tensor;
 
 #include <memory.h>
 #include <memory>
+#include <cmath>
 
 #include <vector>
 #include <iostream>
@@ -22,7 +23,7 @@ class Tensor;
 #include "dtype/ArrayVoid.h"
 #include "dtype/Scalar.h"
 #include "utils/utils.h"
-#include "CustomOperator.h"
+/* #include "CustomOperator.h" */
 #include <type_traits>
 /* #include "Itterator.h" */
 
@@ -295,7 +296,8 @@ class Tensor final{
 		result_types::max<Tensor, Tensor> max(size_value_t) const;
 		Tensor exp() const;
 		Tensor& exp_();
-		Tensor pow(size_value_t) const;
+		Tensor pow(Scalar) const;
+		Tensor& pow_(Scalar);
 		Tensor& inverse_();
 		Tensor inverse() const;
 		Tensor clip(Scalar, Scalar) const;
@@ -388,7 +390,9 @@ namespace std {
     inline void swap(::nt::Tensor& lhs, ::nt::Tensor& rhs) {
         lhs.swap(rhs); // Call your custom swap function
     }
+    inline ::nt::Tensor exp(const ::nt::Tensor& x){return x.exp();}
+    inline ::nt::Tensor pow(const ::nt::Tensor& x, ::nt::Scalar s){return x.pow(s);}
 }
 
 #include "functional/functional.h"
-#endif
+#endif // _NT_TENSOR_H_

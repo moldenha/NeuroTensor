@@ -95,7 +95,7 @@ Tensor::Tensor(Tensor&& t)
 Tensor::Tensor(Scalar s)
 	:_vals(1, specify_dtype_from_scalar(s)), _total_size(1), _size({1}), sub_tensor(false), dtype(specify_dtype_from_scalar(s)), stored_strides(nullptr)
 {
-	if(s.isZero()){_vals.fill_ptr_(0);}
+	if(s.isZero()){_vals.fill_(0);}
 	else{*this = s;}
 }
 
@@ -3402,8 +3402,7 @@ Tensor Tensor::repeat_(size_value_t amt) const{
 Tensor Tensor::repeat_(size_value_t dim, size_value_t amt) const{
 	dim = dim < 0 ? dim + dims() : dim;
 	if(dim == 0){
-		return functional::cat(this->repeat_(amt));
-		
+		return this->repeat_(amt);
 	}
 	SizeRef n_shape = shape().redo_index(dim, amt * shape()[dim]);
 	return functional::cat(split_axis(dim).repeat_(amt)).view(n_shape);
@@ -3609,7 +3608,7 @@ Tensor Tensor::sum(size_value_t dim) const{
 		return std::move(outp);
 	}
 	if(dim != 0){
-		return transpose(0,dim).sum(0);
+		return transpose(0,dim).sum(0).unsqueeze(0).transpose(0, dim);
 	}
 	size_value_t total_size = shape()[0];
 	Tensor split = this->split_axis(0);
@@ -3746,10 +3745,15 @@ Tensor Tensor::inverse() const{
 	return Tensor(_vals.inverse(), shape());
 }
 
-Tensor Tensor::pow(size_value_t i) const {
+Tensor Tensor::pow(Scalar i) const {
 	return Tensor(_vals.pow(i), shape());
 }
 
+Tensor& Tensor::pow_(Scalar i) {
+	_vals.pow_(i);
+	dtype = _vals.dtype;
+	return *this;
+}
 
 Tensor& Tensor::clip_(Scalar a, Scalar b){
 	/* std::cout << "clip min: "<<a << */ 

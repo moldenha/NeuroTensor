@@ -28,8 +28,12 @@ TensorGrad matmult(const TensorGrad& a, const TensorGrad& b){
 	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 					intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
 
-		parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true);
-		parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false);
+		/* parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true); */
+		//TODO: transposing during matmult not working
+		parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor.transpose(-1,-2).clone(), false, false);
+
+		/* parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false); */
+		parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor.transpose(-1,-2).clone(), grad, false, false);
 	}, a_c, b_c);
 	return result;
 }

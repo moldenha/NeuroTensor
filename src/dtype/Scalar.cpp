@@ -1,3 +1,4 @@
+#include "../Tensor.h"
 #include "Scalar.h"
 #include "../types/Types.h"
 #include "../convert/Convert.h"
@@ -149,7 +150,7 @@ bool Scalar::isIntegral() const{return DTypeFuncs::is_integer(dtype);}
 bool Scalar::isBoolean() const{return dtype == DType::Bool;}
 bool Scalar::isZero() const {
 	if(isComplex()){
-		return v.c == complex_64(0,0);
+		return v.c == complex_128(0,0);
 	}
 	else if(isFloatingPoint()){
 		return v.d == 0;
@@ -158,6 +159,31 @@ bool Scalar::isZero() const {
 		return v.i == 0;
 	}
 	return v.i == 0;
+}
+
+bool Scalar::isNegative() const {
+	if(isComplex()){
+		return std::get<0>(v.c) < 0 && std::get<1>(v.c) < 0; //both have to be less than zero for negative status
+	}else if(isFloatingPoint()){
+		return v.d < 0;
+	}else if(isIntegral()){
+		return v.i < 0;
+	}
+	return v.i < 0;
+}
+
+Scalar Scalar::operator-() const {
+	if(isComplex()){
+		return Scalar(-v.c);
+	}
+	else if(isFloatingPoint()){
+		return Scalar(-v.d);
+	}
+	else if(isIntegral()){
+		return Scalar(-v.i);
+	}
+	return Scalar(-v.i);
+
 }
 
 DType Scalar::type() const{

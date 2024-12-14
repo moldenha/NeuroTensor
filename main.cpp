@@ -8,24 +8,16 @@
 /* #include "autograd_test.h" */
 #include "src/dtype/ArrayVoid.hpp"
 #include "src/mp/Threading.h" //testing this at the moment
-#include "tda_test.h"
+/* #include "tda_test.h" */
 #include <chrono>
 #include <random>
 
 #include <immintrin.h>
 #include <mutex>
+#include "tests/tensor_test.h"
+#include "tests/tensorgrad_test.h"
 
 
-
-/* #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__) */
-/* void print_working_simd(){ */
-/* 	std::cout << "simd is supported"<<std::endl; */
-/* } */
-/* #else */
-/* void print_working_simd(){ */
-/* 	std::cout << "simd is not supported"<<std::endl; */
-/* } */
-/* #endif */
 
 
 
@@ -59,9 +51,6 @@ int64_t generateRandomInt() {
 
 
 
-
-
-
 void conv_test(){
 	nt::Tensor a_1d = nt::functional::randn({3,400,500});
 	nt::Tensor k_1d = nt::functional::randn({500,400,10});
@@ -85,65 +74,24 @@ void conv_test(){
 }
 
 
-void mkl_matmult(const nt::Tensor& a, const nt::Tensor& b){
-	std::cout << "made tensor a and tensor b, now going to measure speed of matmult on mkl..."<<std::endl;
-	auto start = std::chrono::high_resolution_clock::now();
-	nt::Tensor out = nt::functional::matmult(a, b);
-	auto stop = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> duration = stop - start;
-	std::cout << "finished execution of function successfully in "<<duration.count() << " seconds"<<std::endl;
-	std::cout << "of mkl (3,2000,2000) x (3,2000,3000)"<<std::endl;
-}
-
-void std_matmult(const nt::Tensor& a, const nt::Tensor& b){
-	std::cout << "made tensor a and tensor b, now going to measure speed of matmult on std..."<<std::endl;
-	auto start = std::chrono::high_resolution_clock::now();
-	nt::Tensor out = nt::functional::matmult_std(a, b);
-	auto stop = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> duration = stop - start;
-	std::cout << "finished execution of function successfully in "<<duration.count() << " seconds"<<std::endl;
-	std::cout << "of std (3,2000,2000) x (3,2000,3000)"<<std::endl;	
-}
-
-
-void mkl_vs_std_matmult(){
-	nt::Tensor a = nt::functional::randn({3, 2000, 2000});
-	nt::Tensor b = nt::functional::randn({3, 2000, 3000});
-	mkl_matmult(a, b);
-	std_matmult(a, b);
-
-
-}
 
 
 
-//1-800-318-2596
+
+
+
+
 
 int main(){
 	
-	/* new_batched_tda_refinement_numpy<2>("/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/outputs.npy", */
-	/* 		"/Users/sammoldenhauer/Downloads/new_tensor/tda_outputs_2log", */
-	/* 		"/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/names.txt"); */
-		
-	/* new_batched_tda_refinement_numpy<4>("/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/outputs.npy", */
-	/* 		"/Users/sammoldenhauer/Downloads/new_tensor/tda_outputs_4log", */
-	/* 		"/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/names.txt"); */
-	
-	/* new_batched_tda_refinement_numpy<0>("/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/outputs.npy", */
-	/* 		"/Users/sammoldenhauer/Downloads/new_tensor/tda_outputs", */
-	/* 		"/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/names.txt"); */
-	
 
-	/* new_batched_tda_refinement_numpy<8>("/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/outputs.npy", */
-	/* 		"/Users/sammoldenhauer/Downloads/new_tensor/tda_outputs_8log", */
-	/* 		"/Users/sammoldenhauer/Downloads/college/southwell/presentations/NeuroRetreat_3/names.txt"); */
-	tda_test();
-
-	//there is an issue with =(Scalar) when the tensor is uint8_t (it was originally set to only work with floats)
+	tensor_test_working();
+	std::cout << "doing exp test:"<<std::endl;
+	exp_test();
+	std::cout << "doing autograd test:"<<std::endl;
+	test_autograd();
 	/* nt::Tensor a = nt::functional::randn({20,20}); */
 
-
-	
 
 	/* force_contiguity_and_bucket_test(); */
 
@@ -173,20 +121,7 @@ int main(){
 	/* nt::Tensor rand_c = current_test(test_transpose, rand_b, -1, -2); */
 	/* std::cout << "rand_c was transposed"<<std::endl; */
 
-	/* current_test(pool_multi_processing_test); */
-	/* print_working_simd(); */
-	/* test_working(); */
-	/* const nt::Tensor a = nt::functional::randint(0, 5, {1,7744,1800}, nt::DType::Float32); */
-	/* const nt::Tensor b = nt::functional::randint(0, 5, {400,1800}, nt::DType::Float32); */
-	/* const nt::Tensor a = nt::functional::randint(0, 5, {1,70,18}, nt::DType::Float32); */
-	/* const nt::Tensor b = nt::functional::randint(0, 5, {40,18}, nt::DType::Float32); */
-	/* nt::Tensor a({1,70,18}, nt::DType::Float32); */
-	/* nt::Tensor b({40,18}, nt::DType::Float32); */
 
-	/* std::cout << "done making a and b"<<std::endl; */
-	/* std::cout << a[0] <<std::endl; */
-	/* std::cout << b[0] << std::endl; */
-	/* current_testT<const nt::Tensor&, const nt::Tensor&>(std::function<void (const nt::Tensor &, const nt::Tensor &)>(better_matMult), a, b); */
 	return 0;
 }
 

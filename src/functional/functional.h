@@ -30,8 +30,8 @@ Tensor& subtract_(Tensor&, const Tensor&);
 Tensor divide(const Tensor&, const Tensor&);
 Tensor& divide_(Tensor&, const Tensor&);
 
-Tensor arange(typename Tensor::size_value_t total_size, DType dt = DType::Float);
-Tensor arange(SizeRef, DType dt = DType::Float);
+Tensor arange(typename Tensor::size_value_t total_size, DType dt = DType::Float, Scalar start = 0);
+Tensor arange(SizeRef, DType dt = DType::Float, Scalar start = 0);
 bool all(const Tensor&);
 bool any(const Tensor&);
 void save(const Tensor&, const char*);
@@ -44,6 +44,14 @@ void softmax_stable_(Tensor&);
 void softmax_stable_(Tensor&, uint32_t);
 Tensor sigmoid(const Tensor&);
 Tensor dsigmoid(const Tensor&, bool apply_sigmoid=true);
+Tensor tan(const Tensor&);
+Tensor tanh(const Tensor&);
+Tensor sin(const Tensor&);
+Tensor sinh(const Tensor&);
+Tensor cos(const Tensor&);
+Tensor cosh(const Tensor&);
+Tensor dtan(const Tensor&);
+Tensor dtanh(const Tensor&);
 Tensor softmax(Tensor&);
 Tensor softmax(Tensor&, uint32_t);
 Tensor softmax_stable(Tensor&);
@@ -71,5 +79,15 @@ Tensor as_strided(const Tensor& input, const SizeRef n_size, SizeRef n_stride, c
 
 }
 }
+
+namespace std{
+inline ::nt::Tensor cos(const ::nt::Tensor& t){return ::nt::functional::cos(t);}
+inline ::nt::Tensor sin(const ::nt::Tensor& t){return ::nt::functional::sin(t);}
+inline ::nt::Tensor tan(const ::nt::Tensor& t){return ::nt::functional::tan(t);}
+inline ::nt::Tensor cosh(const ::nt::Tensor& t){return ::nt::functional::cosh(t);}
+inline ::nt::Tensor sinh(const ::nt::Tensor& t){return ::nt::functional::sinh(t);}
+inline ::nt::Tensor tanh(const ::nt::Tensor& t){return ::nt::functional::tanh(t);}
+}
+
 
 #endif

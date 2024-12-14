@@ -1,5 +1,5 @@
-#ifndef BUCKET_ITERATOR_H
-#define BUCKET_ITERATOR_H
+#ifndef _NT_BUCKET_ITERATOR_H_
+#define _NT_BUCKET_ITERATOR_H_
 
 #include <iterator>
 #include <unistd.h>
@@ -80,12 +80,15 @@ class BucketIterator_list{
 		inline const bool operator!=(const BucketIterator_blocked<T>& b) const noexcept {return *m_ptr != b.current_ptr;}
 		inline const bool operator==(const BucketIterator_blocked<T>& b) const noexcept {return *m_ptr == b.current_ptr;}
 		inline const bool operator<(const BucketIterator_list& b) const noexcept {return m_ptr < b.m_ptr;}
+		inline const bool operator<=(const BucketIterator_list& b) const noexcept {return m_ptr <= b.m_ptr;}
 		inline std::ptrdiff_t operator-(const BucketIterator_list& b) const noexcept {return m_ptr - b.m_ptr;}
 		inline reference operator*() noexcept {return **m_ptr;}
 		inline pointer operator->() const noexcept {return *m_ptr;}
-		inline reference operator[](const uint64_t i) noexcept {return *m_ptr[i];}
-		inline BucketIterator_list& operator+=(const uint64_t i) noexcept {m_ptr += i; return *this;}
-		inline BucketIterator_list operator+(const uint64_t i) noexcept {return BucketIterator_list(m_ptr+i);}
+		inline reference operator[](const std::ptrdiff_t i) noexcept {return *m_ptr[i];}
+		inline reference operator[](const std::ptrdiff_t i) const noexcept {return *m_ptr[i];}
+		inline BucketIterator_list& operator+=(const std::ptrdiff_t i) noexcept {m_ptr += i; return *this;}
+		inline BucketIterator_list operator+(std::ptrdiff_t i) noexcept {return BucketIterator_list(m_ptr + i);}
+
 		inline friend bool operator!=(const T*& a, const BucketIterator_list<T>& b) noexcept {
 			return b.current_ptr != a;
 		}
@@ -155,6 +158,7 @@ class BucketIterator_blocked{
 		inline const bool operator!=(const BucketIterator_list<T>& b) const noexcept {return m_ptr[0] != *b.m_ptr;}
 		inline const bool operator==(const BucketIterator_list<T>& b) const noexcept {return m_ptr[0] == *b.m_ptr;}
 		inline const bool operator<(const BucketIterator_blocked& b) const noexcept {return current_stride < b.current_stride || m_ptr < b.m_ptr;}
+		inline const bool operator<=(const BucketIterator_blocked& b) const noexcept {return current_stride <= b.current_stride || m_ptr <= b.m_ptr;}
 		//if they are at equal strides it is just pointer arithmatic
 		//if this stride is less than b's, just multiply the result again
 		//otherwise, get b's current block size, iterate it to the next block, and then add that to this repeated process
@@ -164,18 +168,23 @@ class BucketIterator_blocked{
 		}
 		inline reference operator*() noexcept {return *m_ptr[0];}
 		inline pointer operator->() noexcept {return m_ptr[0];}
-		inline reference operator[](uint64_t i){
+		inline reference operator[](std::ptrdiff_t i){
 			pointer store = m_ptr[0] + i;
 			const bool is_end_of_block = (store >= m_ptr[1] && current_stride <= stride_num);
 			return (is_end_of_block) ? this->get_next_block()[i - (m_ptr[1] - m_ptr[0])] : *store;
 		}
-		inline BucketIterator_blocked& operator+=(uint64_t i){
+		inline reference operator[](std::ptrdiff_t i) const{
+			const pointer store = m_ptr[0] + i;
+			const bool is_end_of_block = (store >= m_ptr[1] && current_stride <= stride_num);
+			return (is_end_of_block) ? this->get_next_block()[i - (m_ptr[1] - m_ptr[0])] : *store;
+		}
+		inline BucketIterator_blocked& operator+=(std::ptrdiff_t i){
 			pointer store = m_ptr[0];
 			m_ptr[0] += i;
 			const bool is_end_of_block = (m_ptr[0] >= m_ptr[1] && current_stride <= stride_num);
 			return (is_end_of_block) ? this->iterate_next_block() += (i - (m_ptr[1] - store)) : *this;
 		}
-		inline BucketIterator_blocked operator+(uint64_t i) noexcept {
+		inline BucketIterator_blocked operator+(std::ptrdiff_t i) const noexcept {
 			pointer store = m_ptr[0] + i;
 			const bool is_end_of_block = (store >= m_ptr[1] && current_stride <= stride_num);
 			return (is_end_of_block) ? this->get_next_block() + (i - (m_ptr[1] - m_ptr[0])) : BucketIterator_blocked(m_ptr, stride_num, current_stride);
@@ -202,6 +211,10 @@ class BucketIterator_blocked{
 		inline std::ptrdiff_t block_size(int64_t block=0) const noexcept { //gives the size of the current contiguous block
 			if(block == 0){return m_ptr[1] - m_ptr[0];} //amount left in this block
 			return m_ptr[block*2+1] - m_ptr[block*2];
+		}
+		template<size_t N>
+		inline bool block_size_left() const noexcept{
+			return (m_ptr[1] - m_ptr[0]) >= N;
 		}
 		inline friend uint64_t block_diff(const BucketIterator_blocked& a, const BucketIterator_blocked& b) noexcept {
 			if(b.current_stride == a.current_stride)
@@ -284,8 +297,6 @@ struct IteratorBaseType<const T*>{
 	using type = T;
 };
 
-
-
 /* template<typename T> */
 /* struct IteratorBaseType<BucketIterator_contiguous<const T> >{ */
 /* 	using type = T; */
@@ -310,9 +321,69 @@ template<typename T>
 using IteratorBaseType_t = typename IteratorBaseType<T>::type;
 
 
-}
+template<typename T>
+struct iterator_is_contiguous{
+	static constexpr bool value = false;
+};
+
+template<typename T>
+struct iterator_is_contiguous<T*>{
+	static constexpr bool value = true;
+};
+
+template<typename T>
+struct iterator_is_contiguous<const T*>{
+	static constexpr bool value = true;
+};
 
 
-}
+template<typename T>
+inline static constexpr bool iterator_is_contiguous_v = iterator_is_contiguous<T>::value;
 
-#endif
+
+template<typename T>
+struct iterator_is_blocked{
+	static constexpr bool value = false;
+};
+
+template<typename T>
+struct iterator_is_blocked<BucketIterator_blocked<T>>{
+	static constexpr bool value = true;
+};
+
+template<typename T>
+struct iterator_is_blocked<BucketIterator_blocked<const T>>{
+	static constexpr bool value = true;
+};
+
+
+template<typename T>
+inline static constexpr bool iterator_is_blocked_v = iterator_is_blocked<T>::value;
+
+
+template<typename T>
+struct iterator_is_list{
+	static constexpr bool value = false;
+};
+
+template<typename T>
+struct iterator_is_list<BucketIterator_list<T>>{
+	static constexpr bool value = true;
+};
+
+template<typename T>
+struct iterator_is_list<BucketIterator_list<const T>>{
+	static constexpr bool value = true;
+};
+
+
+template<typename T>
+inline static constexpr bool iterator_is_list_v = iterator_is_list<T>::value;
+
+
+} //nt::utils::
+
+
+} // nt::
+
+#endif //_NT_BUCKET_ITERATOR_H_

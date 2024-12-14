@@ -99,7 +99,7 @@ class ArrayVoid{
 		inline const bool is_empty() const {return size == 0;}
 		inline const bool is_null() const {return bucket.is_null();}
 		ArrayVoid& operator=(Scalar);
-		ArrayVoid& fill_ptr_(Scalar);
+		ArrayVoid& fill_(Scalar);
 		/* std::shared_ptr<void> share_part(uint32_t) const; */ //not used anymore
 		ArrayVoid share_array(uint64_t) const;
 		ArrayVoid share_array(uint64_t, uint64_t) const;
@@ -181,7 +181,9 @@ class ArrayVoid{
 		ArrayVoid operator<(Scalar) const;
 		ArrayVoid inverse() const;
 		ArrayVoid& inverse_();
-		ArrayVoid pow(int64_t) const;
+		ArrayVoid pow(Scalar) const;
+		ArrayVoid& pow_(Scalar);
+
 
 		
 		/* const std::size_t* stride_cbegin() const; */

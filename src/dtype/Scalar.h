@@ -108,6 +108,7 @@ class Scalar{
 		bool isIntegral() const;
 		bool isBoolean() const;
 		bool isZero() const;
+		bool isNegative() const;
 
 		/* Scalar operator+(const Scalar&) const; */
 		/* Scalar operator-(const Scalar&) const; */
@@ -120,6 +121,7 @@ class Scalar{
 		/* Scalar& operator*=(const Scalar&); */
 		
 		Scalar& operator=(const Scalar&);
+		Scalar operator-() const;
 
 		DType type() const;
 
@@ -273,7 +275,7 @@ class ScalarRef{
 		}
 
 		template<DType dt = DType::Integer>
-		ScalarRef& operator=(const Scalar val){
+		inline ScalarRef& operator=(const Scalar val) noexcept{
 			if(dt != dtype)
 				return (*this).operator=<DTypeFuncs::next_dtype_it<dt>>(val);
 			get<dt>() = val.to<dt>();

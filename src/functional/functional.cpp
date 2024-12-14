@@ -6,6 +6,7 @@
 #include "../dtype/ArrayVoid.h"
 #include "../dtype/DType.h"
 #include "../dtype/DType_enum.h"
+#include "../mp/simde_ops.h"
 
 
 
@@ -106,7 +107,7 @@ Tensor zeros(SizeRef inp, DType dt){
 	typename SizeRef::value_type total_size = inp.multiply();
 	Tensor output(std::move(inp), dt);
 	/* std::memset(output.data_ptr(), 0, total_size * DTypeFuncs::size_of_dtype(dt)); */
-	output.arr_void().fill_ptr_(0);    
+	output.arr_void().fill_(0);    
 	return std::move(output);
 }
 
@@ -127,7 +128,7 @@ Tensor ones(SizeRef inp, DType dt){
 	typename SizeRef::value_type total_size = inp.multiply();
 	Tensor output(std::move(inp), dt);
 	/* std::memset(output.data_ptr(), 0, total_size * DTypeFuncs::size_of_dtype(dt)); */
-	output.arr_void().fill_ptr_(1);    
+	output.arr_void().fill_(1);    
 	return std::move(output);
 }
 
@@ -146,21 +147,20 @@ Tensor ones_like(const Tensor& t){
 
 
 Tensor nums(SizeRef inp, const Scalar k, DType dt){
-	typename SizeRef::value_type total_size = inp.multiply();
 	Tensor output(std::move(inp), dt);
-	output.arr_void().fill_ptr_(k);
+	output.arr_void().fill_(k);
 	return std::move(output);
 }
 
-Tensor arange(typename SizeRef::value_type total_size, DType dt){
+Tensor arange(typename SizeRef::value_type total_size, DType dt, Scalar start){
 	Tensor output(total_size, dt);
-	output.arr_void().iota(0);
+	output.arr_void().iota(start);
 	return std::move(output);
 }
 
-Tensor arange(SizeRef total_size, DType dt){
+Tensor arange(SizeRef total_size, DType dt, Scalar start){
 	Tensor output(std::move(total_size), dt);
-	output.arr_void().iota(0);
+	output.arr_void().iota(start);
 	return std::move(output);
 }
 
@@ -168,7 +168,7 @@ Tensor arange(SizeRef total_size, DType dt){
 Tensor randint(Scalar lower, Scalar upper, SizeRef s, DType dt){
 	Tensor output(std::move(s), dt);
 	std::random_device rd;
-	std::mt19937 gen(rd());
+	std::minstd_rand gen(rd()); //minimal version
 	if(DTypeFuncs::is_unsigned(dt) || DTypeFuncs::is_integer(dt)){
 		output.arr_void().execute_function<WRAP_DTYPES<IntegerTypesL>>(
 			[&upper, &lower, &gen](auto begin, auto end){
@@ -261,7 +261,7 @@ Tensor randint(Scalar lower, Scalar upper, SizeRef s, DType dt){
 Tensor rand(Scalar lower, Scalar upper, SizeRef s, DType dt){
 	Tensor output(std::move(s), dt);
 	std::random_device rd;
-	std::mt19937 gen(rd());
+	std::minstd_rand gen(rd());
 	if(DTypeFuncs::is_unsigned(dt) || DTypeFuncs::is_integer(dt)){
 		output.arr_void().execute_function<WRAP_DTYPES<IntegerTypesL>>(
 			[&upper, &lower, &gen](auto begin, auto end){
@@ -484,9 +484,14 @@ bool any(const Tensor &t){
 
 //this applies a softmax function over the entire inputted tensor
 void softmax_(Tensor& inp){
-	inp.exp_();
-	Scalar element = inp.sum().toScalar();
-	inp.divide_(element);
+	inp.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
+		mp::softmax(begin, end, begin);
+	});
+	if(inp.dtype == DType::TensorObj){
+		inp.exp_();
+		Scalar element = inp.sum().toScalar();
+		inp.divide_(element);
+	}
 }
 
 void softmax_(Tensor& inp, typename SizeRef::value_type dim){
@@ -499,9 +504,8 @@ void softmax_(Tensor& inp, typename SizeRef::value_type dim){
 }
 
 Tensor softmax(const Tensor& inp){
-	Tensor outp = inp.exp();
-	Scalar element = outp.sum().toScalar();
-	outp.divide_(element);
+	Tensor outp = inp.clone();
+	softmax_(outp);
 	return std::move(outp);
 }
 
@@ -1001,19 +1005,100 @@ Tensor vectorize(std::vector<Tensor> t){
 }
 
 Tensor sigmoid(const Tensor& x){
-	Tensor a = (-1) * x;
-	a.exp_();
-	a += 1;
-	a.inverse_();
+	if(x.dtype == DType::TensorObj){
+		Tensor a = (-1) * x;
+		a.exp_();
+		a += 1;
+		a.inverse_();
+		return std::move(a);
+	}
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
+		mp::sigmoid(begin, end, begin);
+	});
 	return std::move(a);
 }
 
 Tensor dsigmoid(const Tensor & x, bool apply_sigmoid){
-	if(!apply_sigmoid)
-		return x * (1-x);
-	Tensor sigmoid_x = sigmoid(x);
-	return sigmoid_x * (1 - sigmoid_x);
+	if(x.dtype == DType::TensorObj){
+		if(!apply_sigmoid)
+			return x * (1-x);
+		Tensor sigmoid_x = sigmoid(x);
+		return sigmoid_x * (1 - sigmoid_x);	
+	}
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([&apply_sigmoid](auto begin, auto end){
+		mp::dsigmoid(begin, end, begin, apply_sigmoid);
+	});
+	return std::move(a);
+	
 }
+
+
+Tensor tanh(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::tanh(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor tan(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::tan(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor dtanh(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::dtanh(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor dtan(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::dtan(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor sinh(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::sinh(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor sin(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::sin(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor cosh(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::cosh(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor cos(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::cos(begin, end, begin);
+	});
+	return std::move(a);
+}
+
 
 size_t amount_of(const Tensor& t, Scalar s){
 	if(t.dtype == DType::Bool){

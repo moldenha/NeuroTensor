@@ -30,7 +30,6 @@ src/intrusive_ptr/old
 src/dtyp/old
 old_tests/
 
-
 #testing files
 testing/
 

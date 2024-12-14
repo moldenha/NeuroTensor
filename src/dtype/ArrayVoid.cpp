@@ -21,15 +21,7 @@
 //%s/"../convert/Convert.h"/"..\/convert\/Convert.h"
 
 
-#include <immintrin.h>
-
-#if defined(__AVX__) && defined(__AVX2__) && defined(__AVX512F__)
-    // Compiler supports AVX, AVX2, and AVX-512F instruction sets
-    #define SIMD_SUPPORTED 1
-#else
-    #define SIMD_SUPPORTED 0
-#endif
-
+#include "../mp/simde_ops.h"
 #ifdef USE_PARALLEL
 #include <tbb/parallel_for.h>
 #endif
@@ -166,18 +158,23 @@ const void* ArrayVoid::data_ptr_end() const {utils::throw_exception(is_contiguou
 ArrayVoid& ArrayVoid::operator=(Scalar val){
 	if(dtype != DType::TensorObj){
 		if(is_contiguous()){
-			fill_ptr_(val);
+			fill_(val);
 			return *this;
 		}
-		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >( [&val](auto begin, auto end){
-			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-			if(val.isZero()){
-				std::fill(begin, end, value_t(0));
-			}
-			else{
-				std::fill(begin, end, val.to<value_t>());
-			}
-		});
+		if(val.isZero()){
+			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >([&val](auto begin, auto end){
+				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+				mp::fill_zero(begin, end);
+			});
+	
+		}else{
+			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >([&val](auto begin, auto end){
+				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+				auto v = val.to<value_t>();
+				mp::fill(begin, end, v);
+			});
+		
+		}
 	}
 	else{
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&val](auto begin, auto end){
@@ -195,7 +192,7 @@ ArrayVoid& ArrayVoid::iota(Scalar s){
 		this->execute_function<WRAP_DTYPES<NumberTypesL> >([&s](auto begin, auto end){
 			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
 			auto v = s.to<value_t>();
-			std::iota(begin, end, v);
+			mp::iota(begin, end, v);
 			});
 	}else{
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&s](auto begin, auto end){
@@ -620,299 +617,28 @@ bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
 }
 
 
-ArrayVoid& ArrayVoid::fill_ptr_(Scalar c){
-	utils::throw_exception(is_contiguous(), "needed tensor to be contiguous to fill_ptr_");
-
-#if SIMD_SUPPORTED
-	uint32_t increments = DTypeFuncs::is_complex(dtype) ? (32 / DTypeFuncs::size_of_dtype(dtype) / 2) : (32 / DTypeFuncs::size_of_dtype(dtype));
-	uint32_t left = (_last_index - _start) % increments;
-	uint32_t end1 = (_last_index - _start) - left;
-#endif
-
-	switch(dtype){
-		case DType::uint32:{
-			using value_t = uint32_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi32(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
+ArrayVoid& ArrayVoid::fill_(Scalar c){
+	if(dtype != DType::TensorObj){
+		if(c.isZero()){
+			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >( [&c](auto begin, auto end){
+				mp::fill_zero(begin, end);
+			});	
+		}else{
+			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >( [&c](auto begin, auto end){
+				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+				auto v = c.to<value_t>();
+				mp::fill(begin, end, v);
+			});
 		}
-		case DType::int32:{
-			using value_t = int32_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi32(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
-		}
-		case DType::Double:{
-			using value_t = double;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256 value = _mm256_set1_pd(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_pd(begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
-		}
-		case DType::Float:{
-			using value_t = float;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256 value = _mm256_set1_ps(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_ps(begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
-		}
-		case DType::cfloat:{
-			using value_t = complex_64;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256 value_real = _mm256_set1_ps(c.to<value_t>().real());
-			__m256 value_imag = _mm256_set1_ps(c.to<value_t>().imag());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments){
-				_mm256_storeu_ps(&begin->real(), value_real);
-				_mm256_storeu_ps(&begin->imag(), value_imag);
-			}
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-		case DType::cdouble:{
-			using value_t = complex_128;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256 value_real = _mm256_set1_pd(c.to<value_t>().real());
-			__m256 value_imag = _mm256_set1_pd(c.to<value_t>().imag());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments){
-				_mm256_storeu_pd(&begin->real(), value_real);
-				_mm256_storeu_pd(&begin->imag(), value_imag);
-			}
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
-		}
-		case DType::TensorObj:{
-			return *this;
-		}
-		case DType::uint8:{
-			using value_t = uint8_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi8(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
-		}
-		case DType::int8:{
-			using value_t = int8_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi8(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;			
-		}
-		case DType::uint16:{
-			using value_t = uint16_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi16(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;			
-		}
-		case DType::int16:{
-			using value_t = int16_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi16(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif			
-			return *this;
-		}
-		case DType::int64:{
-			using value_t = int64_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-#if SIMD_SUPPORTED
-			__m256i value =_mm256_set1_epi64x(c.to<value_t>());
-			value_t* end = begin + end1;
-			for(;begin != end; begin += increments)
-				_mm256_storeu_si256((__m256i*)begin, value);
-			end += left;
-			for(;begin != end; ++begin)
-				*begin = val;
-#else
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			for(;begin != end; ++begin)
-				*begin = val;
-#endif
-			return *this;
-		}
-		case DType::Bool:{
-			using value_t = uint_bool_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			value_t val = c.to<value_t>();
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-#ifdef _HALF_FLOAT_SUPPORT_ // there is no way to do the following using SIMD instructions, but it can probably be done with a uint16_t array, and a bitset, probably
-		case DType::Float16:{
-			using value_t = float16_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-		case DType::Complex32:{
-			using value_t = complex_32;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-		case DType::Float128:{
-			using value_t = float128_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-#endif
-#ifdef __SIZEOF_INT128__
-		case DType::int128:{
-			using value_t = int128_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-		case DType::uint128:{
-			using value_t = uint128_t;
-			value_t* begin = reinterpret_cast<value_t*>(data_ptr());
-			value_t* end = reinterpret_cast<value_t*>(data_ptr_end());
-			value_t val = c.isZero() ? value_t(0) : c.to<value_t>();
-			for(;begin != end; ++begin)
-				*begin = val;
-			return *this;
-		}
-#endif
 	}
+	else{
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&c](auto begin, auto end){
+				/* using value_t = IteratorBaseType_t<decltype(begin)>; */
+				/* auto v = val.to<value_t>(); */
+				std::fill(begin, end, c);
+				});
+	}
+	return *this;
 }
 
 ArrayVoid ArrayVoid::uint32() const{
@@ -1145,24 +871,19 @@ Tensor ArrayVoid::split(const uint64_t sp, SizeRef s_outp) const{
 	return std::move(buckets);
 }
 
+
+
 ArrayVoid& ArrayVoid::operator*=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "*= operation is invalid for DType::Bool");
-	if(dtype == DType::TensorObj){
+	if(dtype != DType::TensorObj){
+		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
+			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+			auto v = c.to<value_t>();
+			mp::multiply_num(begin, end, begin, v);
+		});
+	}
+	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp *= c;});
-		return *this;
-	}
-	else if(DTypeFuncs::is_floating(dtype)){
-		double val = c.to<double>();
-		this->for_each<WRAP_DTYPES<FloatingTypesL>>([&val](auto& inp){inp *= val;});
-		return *this;
-	}
-	else if(DTypeFuncs::is_integer(dtype)){
-		int64_t val = c.to<int64_t>();
-		this->for_each<WRAP_DTYPES<IntegerTypesL>>([&val](auto& inp){inp *= val;});
-	}
-	else if(DTypeFuncs::is_complex(dtype)){
-		complex_128 val = c.to<complex_128>();
-		this->for_each<WRAP_DTYPES<ComplexTypesL>>([&val](auto& inp){inp *= val;});
 	}
 	return *this;
 }
@@ -1175,44 +896,30 @@ ArrayVoid& ArrayVoid::operator/=(Scalar c){
 
 ArrayVoid& ArrayVoid::operator-=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "-= operation is invalid for DType::Bool");
-	if(dtype == DType::TensorObj){
+	if(dtype != DType::TensorObj){
+		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
+			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+			auto v = c.to<value_t>();
+			mp::subtract_num(begin, end, begin, v);
+		});
+	}
+	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp -= c;});
-		return *this;
-	}
-	else if(DTypeFuncs::is_floating(dtype)){
-		double val = c.to<double>();
-		this->for_each<WRAP_DTYPES<FloatingTypesL>>([&val](auto& inp){inp -= val;});
-		return *this;
-	}
-	else if(DTypeFuncs::is_integer(dtype)){
-		int64_t val = c.to<int64_t>();
-		this->for_each<WRAP_DTYPES<IntegerTypesL>>([&val](auto& inp){inp -= val;});
-	}
-	else if(DTypeFuncs::is_complex(dtype)){
-		complex_128 val = c.to<complex_128>();
-		this->for_each<WRAP_DTYPES<ComplexTypesL>>([&val](auto& inp){inp -= val;});
 	}
 	return *this;
 }
 
 ArrayVoid& ArrayVoid::operator+=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "+= operation is invalid for DType::Bool");
-	if(dtype == DType::TensorObj){
+	if(dtype != DType::TensorObj){
+		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
+			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+			auto v = c.to<value_t>();
+			mp::add_num(begin, end, begin, v);
+		});
+	}
+	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp += c;});
-		return *this;
-	}
-	else if(DTypeFuncs::is_floating(dtype)){
-		double val = c.to<double>();
-		this->for_each<WRAP_DTYPES<FloatingTypesL>>([&val](auto& inp){inp += val;});
-		return *this;
-	}
-	else if(DTypeFuncs::is_integer(dtype)){
-		int64_t val = c.to<int64_t>();
-		this->for_each<WRAP_DTYPES<IntegerTypesL>>([&val](auto& inp){inp += val;});
-	}
-	else if(DTypeFuncs::is_complex(dtype)){
-		complex_128 val = c.to<complex_128>();
-		this->for_each<WRAP_DTYPES<ComplexTypesL>>([&val](auto& inp){inp += val;});
 	}
 	return *this;
 }
@@ -1220,28 +927,7 @@ ArrayVoid& ArrayVoid::operator+=(Scalar c){
 
 
 ArrayVoid ArrayVoid::operator*(Scalar c) const{
-	utils::throw_exception(dtype != DType::Bool, "* operation is invalid for DType::Bool");
-	ArrayVoid output(size, dtype);
-	if(dtype == DType::TensorObj){
-		output.transform_function<DType::TensorObj>([&c](auto& outp, auto& inp){return inp * c;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_floating(dtype)){
-		double val = c.to<double>();
-		output.transform_function<WRAP_DTYPES<FloatingTypesL>>([&val](auto& outp, auto& inp){return inp * val;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_integer(dtype)){
-		int64_t val = c.to<int64_t>();
-		output.transform_function<WRAP_DTYPES<IntegerTypesL>>([&val](auto& outp, auto& inp){return inp * val;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_complex(dtype)){
-		complex_128 val = c.to<complex_128>();
-		output.transform_function<WRAP_DTYPES<ComplexTypesL>>([&val](auto& outp, auto& inp){return inp * val;}, *this);
-		return std::move(output);
-	}
-	return std::move(output);
+	return this->clone() *= c;
 }
 
 
@@ -1251,54 +937,16 @@ ArrayVoid ArrayVoid::operator/(Scalar c) const{
 }
 
 ArrayVoid ArrayVoid::operator-(Scalar c) const{
-	utils::throw_exception(dtype != DType::Bool, "- operation is invalid for DType::Bool");
-	ArrayVoid output(size, dtype);
-	if(dtype == DType::TensorObj){
-		output.transform_function<DType::TensorObj>([&c](auto& outp, auto& inp){return inp - c;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_floating(dtype)){
-		double val = c.to<double>();
-		output.transform_function<WRAP_DTYPES<FloatingTypesL>>([&val](auto& outp, auto& inp){return inp - val;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_integer(dtype)){
-		int64_t val = c.to<int64_t>();
-		output.transform_function<WRAP_DTYPES<IntegerTypesL>>([&val](auto& outp, auto& inp){return inp - val;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_complex(dtype)){
-		complex_128 val = c.to<complex_128>();
-		output.transform_function<WRAP_DTYPES<ComplexTypesL>>([&val](auto& outp, auto& inp){return inp - val;}, *this);
-		return std::move(output);
-	}
-	return std::move(output);
+	return this->clone() -= c;
 }
 
 ArrayVoid ArrayVoid::operator+(Scalar c) const{
-	utils::throw_exception(dtype != DType::Bool, "+ operation is invalid for DType::Bool");
-	ArrayVoid output(size, dtype);
-	if(dtype == DType::TensorObj){
-		output.transform_function<DType::TensorObj>([&c](auto& outp, auto& inp){return inp + c;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_floating(dtype)){
-		double val = c.to<double>();
-		output.transform_function<WRAP_DTYPES<FloatingTypesL>>([&val](auto& outp, auto& inp){return inp + val;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_integer(dtype)){
-		int64_t val = c.to<int64_t>();
-		output.transform_function<WRAP_DTYPES<IntegerTypesL>>([&val](auto& outp, auto& inp){return inp + val;}, *this);
-		return std::move(output);
-	}
-	else if(DTypeFuncs::is_complex(dtype)){
-		complex_128 val = c.to<complex_128>();
-		output.transform_function<WRAP_DTYPES<ComplexTypesL>>([&val](auto& outp, auto& inp){return inp + val;}, *this);
-		return std::move(output);
-	}
-	return std::move(output);
+	return this->clone() += c;
 }
+
+//make a double chunk operator
+//maybe for chunks it would be most efficient to break all the chunks into seperate tensors
+//and then multiply them individually
 
 ArrayVoid ArrayVoid::operator*(const ArrayVoid& A) const{
 	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
@@ -1311,8 +959,12 @@ ArrayVoid ArrayVoid::operator*(const ArrayVoid& A) const{
 		return std::move(output);
 	}
 	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::multiplies<value_t>());}, A, output);
+		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+		mp::multiply(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
+	}, A, output);
+	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
+	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
+				/* std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::multiplies<value_t>());}, A, output); */
 	return std::move(output);
 }
 
@@ -1327,8 +979,12 @@ ArrayVoid ArrayVoid::operator/(const ArrayVoid& A) const{
 		return std::move(output);
 	}
 	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::divides<value_t>());}, A, output);
+		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+		mp::divide(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
+	}, A, output);
+	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
+	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
+	/* 			std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::divides<value_t>());}, A, output); */
 	return std::move(output);
 }
 
@@ -1343,8 +999,12 @@ ArrayVoid ArrayVoid::operator-(const ArrayVoid& A) const{
 		return std::move(output);
 	}
 	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::minus<value_t>());}, A, output);
+		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+		mp::subtract(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
+	}, A, output);
+	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
+	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
+	/* 			std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::minus<value_t>());}, A, output); */
 	return std::move(output);
 }
 
@@ -1359,50 +1019,91 @@ ArrayVoid ArrayVoid::operator+(const ArrayVoid& A) const{
 		return std::move(output);
 	}
 	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::plus<value_t>());}, A, output);
+		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+		mp::multiply(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
+	}, A, output);
+	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
+	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
+	/* 			std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::plus<value_t>());}, A, output); */
 	return std::move(output);
 }
 
 ArrayVoid& ArrayVoid::operator*=(const ArrayVoid& A){
-	if(dtype == A.dtype){
-		this->transform_function_nbool([](auto& a, auto& b){return a * b;}, A);
-		return *this;
+	if(dtype == DType::TensorObj && A.dtype != DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&A](auto begin, auto end){
+			for(;begin != end; ++begin){
+				begin->arr_void() *= A;
+			}
+		});
 	}
-	else{
+	if(dtype != A.dtype){
 		return *this *= A.to(dtype);
 	}
+	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
+	this->execute_function_nbool([](auto begin, auto end, auto begin2){
+		mp::multiply(begin, end, begin2, begin); //this array in, next array in, this array out
+	}, const_cast<ArrayVoid&>(A));
+	return *this;
+
 }
 
 ArrayVoid& ArrayVoid::operator+=(const ArrayVoid& A){
-	if(dtype == A.dtype){
-		this->transform_function_nbool([](auto& a, auto& b){return a + b;}, A);
-		return *this;
+	if(dtype == DType::TensorObj && A.dtype != DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&A](auto begin, auto end){
+			for(;begin != end; ++begin){
+				begin->arr_void() += A;
+			}
+		});
 	}
-	else{
-		return *this *= A.to(dtype);
+	if(dtype != A.dtype){
+		return *this += A.to(dtype);
 	}
+	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
+	this->execute_function_nbool([](auto begin, auto end, auto begin2){
+		mp::add(begin, end, begin2, begin); //this array in, next array in, this array out
+	}, const_cast<ArrayVoid&>(A));
+	return *this;
+
 }
+
 
 ArrayVoid& ArrayVoid::operator-=(const ArrayVoid& A){
-	if(dtype == A.dtype){
-		this->transform_function_nbool([](auto& a, auto& b){return a - b;}, A);
-		return *this;
+	if(dtype == DType::TensorObj && A.dtype != DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&A](auto begin, auto end){
+			for(;begin != end; ++begin){
+				begin->arr_void() -= A;
+			}
+		});
 	}
-	else{
-		return *this *= A.to(dtype);
+	if(dtype != A.dtype){
+		return *this -= A.to(dtype);
 	}
+	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
+	this->execute_function_nbool([](auto begin, auto end, auto begin2){
+		mp::subtract(begin, end, begin2, begin); //this array in, next array in, this array out
+	}, const_cast<ArrayVoid&>(A));
+	return *this;
 }
 
+
 ArrayVoid& ArrayVoid::operator/=(const ArrayVoid& A){
-	if(dtype == A.dtype){
-		this->transform_function_nbool([](auto& a, auto& b){return a / b;}, A);
-		return *this;
+	if(dtype == DType::TensorObj && A.dtype != DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&A](auto begin, auto end){
+			for(;begin != end; ++begin){
+				begin->arr_void() /= A;
+			}
+		});
 	}
-	else{
-		return *this *= A.to(dtype);
+	if(dtype != A.dtype){
+		return *this /= A.to(dtype);
 	}
+	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
+	this->execute_function_nbool([](auto begin, auto end, auto begin2){
+		mp::divide(begin, end, begin2, begin); //this array in, next array in, this array out
+	}, const_cast<ArrayVoid&>(A));
+	return *this;
 }
+
 
 ArrayVoid ArrayVoid::operator*(const Tensor& A) const{
 	utils::throw_exception(dtype == DType::TensorObj, "\nRuntime Error: expected DType for * of TensorObj to be TensorObj but got $", dtype);
@@ -1658,100 +1359,100 @@ ArrayVoid ArrayVoid::operator<(Scalar c) const{
 }
 
 
-template<DType dt, std::enable_if_t<dt != DType::Bool && dt != DType::TensorObj && !DTypeFuncs::is_dtype_complex_v<dt>, bool> = true>
-bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){
-	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp);
-	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>;
-	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = outp.get_bucket().iterator_type();
-	uint32_t type_b = my_arr.get_bucket().iterator_type();
-	utils::throw_exception(type_a == 1, "Expected in sub inverse for output to be contiguous, but got iterator type $, problem with creation", type_a);
-	if(type_b == 1){
-		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>();
-		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return 1.0/val;});
-	}
-	else if(type_b == 2){
-		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>();
-		auto end = my_arr.get_bucket().cend_blocked<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return 1.0/val;});
-	}
-	else if(type_b == 3){
-		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>();
-		auto end = my_arr.get_bucket().cend_list<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return 1.0/val;});
-	}
+/* template<DType dt, std::enable_if_t<dt != DType::Bool && dt != DType::TensorObj && !DTypeFuncs::is_dtype_complex_v<dt>, bool> = true> */
+/* bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){ */
+/* 	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp); */
+/* 	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	uint32_t type_a = outp.get_bucket().iterator_type(); */
+/* 	uint32_t type_b = my_arr.get_bucket().iterator_type(); */
+/* 	utils::throw_exception(type_a == 1, "Expected in sub inverse for output to be contiguous, but got iterator type $, problem with creation", type_a); */
+/* 	if(type_b == 1){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return 1.0/val;}); */
+/* 	} */
+/* 	else if(type_b == 2){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_blocked<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return 1.0/val;}); */
+/* 	} */
+/* 	else if(type_b == 3){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_list<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return 1.0/val;}); */
+/* 	} */
 
-	return true;
-}
+/* 	return true; */
+/* } */
 
-template<DType dt, std::enable_if_t<dt != DType::Bool && dt != DType::TensorObj && DTypeFuncs::is_dtype_complex_v<dt>, bool> = true>
-bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){
-	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp);
-	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>;
-	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = outp.get_bucket().iterator_type();
-	uint32_t type_b = my_arr.get_bucket().iterator_type();
-	utils::throw_exception(type_a == 1, "Expected in sub inverse for output to be contiguous, but got iterator type $, problem with creation", type_a);
-	if(type_b == 1){
-		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>();
-		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return out_value_t(1.0/val.real(), 1.0/val.imag());});
-	}
-	else if(type_b == 2){
-		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>();
-		auto end = my_arr.get_bucket().cend_blocked<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return out_value_t(1.0/val.real(), 1.0/val.imag());});
-	}
-	else if(type_b == 3){
-		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>();
-		auto end = my_arr.get_bucket().cend_list<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return out_value_t(1.0/val.real(), 1.0/val.imag());});
-	}
+/* template<DType dt, std::enable_if_t<dt != DType::Bool && dt != DType::TensorObj && DTypeFuncs::is_dtype_complex_v<dt>, bool> = true> */
+/* bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){ */
+/* 	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp); */
+/* 	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	uint32_t type_a = outp.get_bucket().iterator_type(); */
+/* 	uint32_t type_b = my_arr.get_bucket().iterator_type(); */
+/* 	utils::throw_exception(type_a == 1, "Expected in sub inverse for output to be contiguous, but got iterator type $, problem with creation", type_a); */
+/* 	if(type_b == 1){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return out_value_t(1.0/val.real(), 1.0/val.imag());}); */
+/* 	} */
+/* 	else if(type_b == 2){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_blocked<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return out_value_t(1.0/val.real(), 1.0/val.imag());}); */
+/* 	} */
+/* 	else if(type_b == 3){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_list<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return out_value_t(1.0/val.real(), 1.0/val.imag());}); */
+/* 	} */
 
-	return true;
-}
+/* 	return true; */
+/* } */
 
-template<DType dt, std::enable_if_t<dt == DType::Bool, bool> = true>
-bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){
-	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp);
-	return false;
-}
+/* template<DType dt, std::enable_if_t<dt == DType::Bool, bool> = true> */
+/* bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){ */
+/* 	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp); */
+/* 	return false; */
+/* } */
 
-template<DType dt, std::enable_if_t<dt == DType::TensorObj, bool> = true>
-bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){
-	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp);
-	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>;
-	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = outp.get_bucket().iterator_type();
-	uint32_t type_b = my_arr.get_bucket().iterator_type();
-	utils::throw_exception(type_a == 1, "Expected in sub inverse for output to be contiguous, but got iterator type $, problem with creation", type_a);
-	if(type_b == 1){
-		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>();
-		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return val.inverse();});
-	}
-	else if(type_b == 2){
-		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>();
-		auto end = my_arr.get_bucket().cend_blocked<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return val.inverse();});
-	}
-	else if(type_b == 3){
-		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>();
-		auto end = my_arr.get_bucket().cend_list<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return val.inverse();});
-	}
-	return true;
-}
+/* template<DType dt, std::enable_if_t<dt == DType::TensorObj, bool> = true> */
+/* bool _my_sub_inverse_(const ArrayVoid& my_arr, ArrayVoid& outp){ */
+/* 	if(dt != my_arr.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(my_arr, outp); */
+/* 	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	uint32_t type_a = outp.get_bucket().iterator_type(); */
+/* 	uint32_t type_b = my_arr.get_bucket().iterator_type(); */
+/* 	utils::throw_exception(type_a == 1, "Expected in sub inverse for output to be contiguous, but got iterator type $, problem with creation", type_a); */
+/* 	if(type_b == 1){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return val.inverse();}); */
+/* 	} */
+/* 	else if(type_b == 2){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_blocked<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return val.inverse();}); */
+/* 	} */
+/* 	else if(type_b == 3){ */
+/* 		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>(); */
+/* 		auto end = my_arr.get_bucket().cend_list<my_value_t>(); */
+/* 		out_value_t* o_begin = reinterpret_cast<out_value_t*>(outp.data_ptr()); */
+/* 		std::transform(begin, end, o_begin, [](const my_value_t& val){return val.inverse();}); */
+/* 	} */
+/* 	return true; */
+/* } */
 
 ArrayVoid ArrayVoid::inverse() const{
 	if(dtype == DType::LongLong){
@@ -1774,11 +1475,16 @@ ArrayVoid ArrayVoid::inverse() const{
 	}
 #endif
 	if(dtype == DType::Integer || dtype == DType::Long || dtype == DType::uint8 || dtype == DType::int8 || dtype == DType::uint16 || dtype == DType::int16){
-		ArrayVoid output(size, DType::Float);
-		this->transform_function
-			<DType::Integer,DType::Long,DType::uint8,DType::int8,DType::uint16,DType::int16>
-			([](const auto& inp) -> float {return 1.0/((float)inp);}, reinterpret_cast<float*>(output.data_ptr()));
-		return std::move(output);
+		if(dtype == DType::int64){
+			return this->to(DType::Float64).inverse(); //double is slower with the registers but works
+		}else{
+			return this->to(DType::Float32).inverse();
+		}
+		/* ArrayVoid output(size, DType::Float); */
+		/* this->transform_function */
+		/* 	<DType::Integer,DType::Long,DType::uint8,DType::int8,DType::uint16,DType::int16> */
+		/* 	([](const auto& inp) -> float {return 1.0/((float)inp);}, reinterpret_cast<float*>(output.data_ptr())); */
+		/* return std::move(output); */
 	}
 	if(dtype == DType::TensorObj){
 		ArrayVoid output(size, DType::TensorObj);
@@ -1786,114 +1492,114 @@ ArrayVoid ArrayVoid::inverse() const{
 		return std::move(output);
 	}
 	ArrayVoid output(size, dtype);
-	utils::throw_exception(_my_sub_inverse_<DType::Float>(*this, output), "\nRuntime Error: Could not do inverse() for dtype $", dtype);
+	//all svml compatible types
+	this->cexecute_function<WRAP_DTYPES<FloatingTypesL,ComplexTypesL> >(
+			[&output](auto begin, auto end){
+		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+		mp::reciprical(begin, end, output.bucket.begin_contiguous<value_t>());
+	});
+
+	/* utils::throw_exception(_my_sub_inverse_<DType::Float>(*this, output), "\nRuntime Error: Could not do inverse() for dtype $", dtype); */
 	return std::move(output);
 }
 
-ArrayVoid ArrayVoid::pow(int64_t p) const {
-	if(p < 0){return inverse().pow(-p);}
-	ArrayVoid output(size, dtype);
-	if(p == 0){output.fill_ptr_(1);}
-	this->cexecute_function<WRAP_DTYPES<RealNumberTypesL> >(
-			[&p](auto a_begin, auto a_end, void* b_begin){
-			using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
-			value_t* begin = reinterpret_cast<value_t*>(b_begin);
-			for(;a_begin != a_end; ++a_begin, ++begin){
-				if constexpr (std::is_same_v<value_t, float16_t>){
-					*begin = ::nt::convert::convert<DType::Float16>(std::pow(::nt::convert::convert<DType::Float32>(*a_begin), p));
-				}
-				else{
-					*begin = std::pow(*a_begin, p);
-				}
-			}
-			}, output.data_ptr());
-	return std::move(output);
+ArrayVoid ArrayVoid::pow(Scalar p) const {
+	return this->clone().pow_(p);
 }
 
 
-template<DType dt, std::enable_if_t<DTypeFuncs::is_dtype_floating_v<dt>, bool> = true>
-bool _my_sub_inverse_(ArrayVoid& mine){
-	if(dt != mine.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(mine);
-	mine.for_each<dt>([](auto& val){val = 1.0/val;});
-	return true;	
+ArrayVoid& ArrayVoid::pow_(Scalar p) {
+	if(p.isNegative()){return inverse_().pow_(-p);}
+	if(p.isZero()){return fill_(1);}
+	if(dtype == DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&p](auto a_begin, auto a_end){
+			for(;a_begin != a_end; ++a_begin)
+				a_begin->pow_(p);
+		});
+		
+	}else{
+		this->execute_function_chunk<WRAP_DTYPES<RealNumberTypesL, ComplexTypesL> >(
+			[&p](auto a_begin, auto a_end){
+				using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
+				mp::pow(a_begin, a_end, a_begin, p.to<value_t>());
+		});
+	}
+	return *this;
 }
 
-template<DType dt, std::enable_if_t<DTypeFuncs::is_dtype_complex_v<dt> || dt == DType::TensorObj, bool> = true>
-bool _my_sub_inverse_(ArrayVoid& mine){
-	if(dt != mine.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(mine);
-	using complex_value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	mine.for_each<dt>([](auto& val){val.inverse_();});
-	return true;	
-}
+/* template<DType dt, std::enable_if_t<DTypeFuncs::is_dtype_floating_v<dt>, bool> = true> */
+/* bool _my_sub_inverse_(ArrayVoid& mine){ */
+/* 	if(dt != mine.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(mine); */
+/* 	mine.for_each<dt>([](auto& val){val = 1.0/val;}); */
+/* 	return true; */	
+/* } */
+
+/* template<DType dt, std::enable_if_t<DTypeFuncs::is_dtype_complex_v<dt> || dt == DType::TensorObj, bool> = true> */
+/* bool _my_sub_inverse_(ArrayVoid& mine){ */
+/* 	if(dt != mine.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(mine); */
+/* 	using complex_value_t = DTypeFuncs::dtype_to_type_t<dt>; */
+/* 	mine.for_each<dt>([](auto& val){val.inverse_();}); */
+/* 	return true; */	
+/* } */
 
 
-template<DType dt, std::enable_if_t<!DTypeFuncs::is_dtype_floating_v<dt> && !DTypeFuncs::is_dtype_complex_v<dt> && dt != DType::TensorObj, bool> = true>
-bool _my_sub_inverse_(ArrayVoid& mine){
-	if(dt != mine.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(mine);
-	utils::throw_exception(false, "to inverse() scalars must be complex or floating not $", dt);
-	return false;	
-}
+/* template<DType dt, std::enable_if_t<!DTypeFuncs::is_dtype_floating_v<dt> && !DTypeFuncs::is_dtype_complex_v<dt> && dt != DType::TensorObj, bool> = true> */
+/* bool _my_sub_inverse_(ArrayVoid& mine){ */
+/* 	if(dt != mine.dtype) return _my_sub_inverse_<DTypeFuncs::next_dtype_it<dt>>(mine); */
+/* 	utils::throw_exception(false, "to inverse() scalars must be complex or floating not $", dt); */
+/* 	return false; */	
+/* } */
 
 ArrayVoid& ArrayVoid::inverse_(){
 	if(dtype != DType::TensorObj && !DTypeFuncs::is_floating(dtype) && !DTypeFuncs::is_complex(dtype))
 		floating_();
-	utils::throw_exception(_my_sub_inverse_<DType::Integer>(*this), "\nRuntime Error: Unable to perform inverse on self for DType $", dtype);
+	if(dtype == DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){ std::for_each(begin, end, [](auto& tensor){tensor.inverse_();});});
+	}
+	this->execute_function_chunk<WRAP_DTYPES<FloatingTypesL,ComplexTypesL> >([](auto begin, auto end){
+		mp::reciprical(begin, end, begin);
+	});
+	/* utils::throw_exception(_my_sub_inverse_<DType::Integer>(*this), "\nRuntime Error: Unable to perform inverse on self for DType $", dtype); */
 	return *this;
 }
 
 
 
 ArrayVoid ArrayVoid::exp() const{
-	ArrayVoid output(size, dtype);
-	if(DTypeFuncs::is_integer(dtype) || dtype ==  DType::Double || dtype == DType::Float)
-		output.transform_function<WRAP_DTYPES<IntegerTypesL, DTypeEnum<DType::Float, DType::Double>>>([](auto& outp, const auto& a){return std::exp(a);}, *this);
-	else if(dtype == DType::Complex64 || dtype == DType::Complex128)
-		output.transform_function<DType::Complex64, DType::Complex128>([](auto& outp, const auto& a){
-				return typename std::remove_reference<typename std::remove_const<decltype(a)>::type>::type(std::exp(a.real()), std::exp(a.imag()));
+	return this->clone().exp_();
+	/* ArrayVoid output(size, dtype); */
+	/* if(DTypeFuncs::is_complex(dtype) || DTypeFuncs::is_floating(dtype) || DTypeFuncs::is_integer(dtype)){ */
+	/* 	this->cexecute_function_chunk<WRAP_DTYPES<FloatingTypesL, ComplexTypesL, IntegerTypesL> >([](auto begin, auto end, void* begin_ptr){ */
+	/* 		using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
+	/* 		mp::exp(begin, end, reinterpret_cast<value_t*>(begin)); */
+	/* 	}, output.data_ptr()) */
+	/* } */
+	/* else if(dtype == DType::TensorObj){ */
 
-				}, *this);
-#ifdef _128_FLOAT_SUPPORT_
-#if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
-	else if(dtype == DType::Float128)
-		output.transform_function<DType::Float128>([](auto& outp, const auto& a){return std::exp(a);}, *this);
-#else
-	else if(dtype == DType::Float128)
-		output.transform_function<DType::Float128>([](auto& outp, const auto& a){return std::exp(static_cast<long double>(a));}, *this);
-#endif
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-	else if(dtype == DType::Complex32)
-		output.transform_function<DType::Complex32>([](auto& outp, const auto& a){return complex_32(std::exp(static_cast<float>(a.real())), std::exp(static_cast<float>(a.imag())));}, *this); 
-	else if(dtype == DType::Float16)
-		output.transform_function<DType::Float16>([](auto& outp, const auto& a){return static_cast<float16_t>(std::exp(static_cast<float>(a)));}, *this);
-#endif
-	else	
-		output.transform_function<DType::TensorObj>([](auto& outp, const auto& a){return a.exp();}, *this);
-	return std::move(output);
+	/* 	this->cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end, void* begin_ptr){ */
+	/* 		Tensor* t_ptr = reinterpret_cast<Tensor*>(begin_ptr); */
+	/* 		for(;begin != end; ++begin, ++t_ptr){ */
+	/* 			*t_ptr = begin->exp(); */
+	/* 		} */
+	/* 	}, output.data_ptr()); */
+	/* } */
+	/* return std::move(output); */
 }
 
 ArrayVoid& ArrayVoid::exp_(){
-	if(DTypeFuncs::is_integer(dtype) || dtype ==  DType::Double || dtype == DType::Float)
-		this->for_each<WRAP_DTYPES<IntegerTypesL, DTypeEnum<DType::Float, DType::Double>>>([](auto& a){a = std::exp(a);});
-	else if(dtype == DType::Complex64 || dtype == DType::Complex128)
-		this->for_each<DType::Complex64, DType::Complex128>([](auto& a){a = typename std::remove_reference<typename std::remove_const<decltype(a)>::type>::type(std::exp(a.real()), std::exp(a.imag()));});
-#ifdef _128_FLOAT_SUPPORT
-#if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
-	else if(dtype == DType::Float128)
-		this->for_each<DType::Float128>([](auto& a){a = std::exp(a);});
-#else
-	else if(dtype == DType::Float128)
-		this->for_each<DType::Float128>([](auto& a){a = std::exp(static_cast<long double>(a));});
-#endif
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-	else if(dtype == DType::Complex32)
-		this->for_each<DType::Complex32>([](auto &a){a = complex_32(std::exp(static_cast<float>(a.real())), std::exp(static_cast<float>(a.imag())));});
-	else if(dtype == DType::Float16)
-		this->for_each<DType::Float16>([](auto& a){a= static_cast<float16_t>(std::exp(static_cast<float>(a)));});
-#endif
-	else
-		this->for_each<DType::TensorObj>([](auto& a){a.exp_();});
+	ArrayVoid output(size, dtype);
+	if(DTypeFuncs::is_complex(dtype) || DTypeFuncs::is_floating(dtype) || DTypeFuncs::is_integer(dtype)){
+		this->execute_function_chunk<WRAP_DTYPES<FloatingTypesL, ComplexTypesL, IntegerTypesL> >([](auto begin, auto end){
+			mp::exp(begin, end, begin);
+		});
+	}
+	else if(dtype == DType::TensorObj){
+		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+			for(;begin != end; ++begin){
+				begin->exp_();
+			}
+		});
+	}
 	return *this;
 }
 
