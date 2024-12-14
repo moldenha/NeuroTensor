@@ -16,6 +16,6 @@ The graph below compares the performance of matrix multiplications between Neuro
 **Note:** MKL generally outperformed NeuroTensor for matrices smaller than 500x500. However, NeuroTensor exhibited significant performance gains for larger matrices.
 
 <p align="center">
-  <img src="matmult/benchmarking/NeuroTensor_vs_MKL.png" alt="NeuroTensor performance" width="85%">
+  <img src="benchmarking/NeuroTensor_vs_MKL.png" alt="NeuroTensor performance" width="85%">
 </p>
 
