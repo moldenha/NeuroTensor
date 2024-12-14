@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 
+
 void tensor_test_working(){
 
 
@@ -21,19 +22,6 @@ void tensor_test_working(){
 	std::cout<<"contig count: "<<t.contig_count()<<std::endl;
 	std::cout << "printing..."<<std::endl;
 	std::cout << t<< std::endl;
-	/* try{ */
-	/* 	std::cout << t[1][2] << std::endl; */
-	/* } */
-	/* catch(std::invalid_argument){ */
-	/* 	std::cout << "got invalid argument error"<<std::endl; */
-	/* 	void* callstack[128]; */
-	/* 	int frames = backtrace(callstack, 128); */
-	/* 	char** symbols = backtrace_symbols(callstack, frames); */
-	/* 	for (int i = 0; i < frames; ++i) { */
-	/* 	   printf("%s\n", symbols[i]); */
-	/* 	} */
-	/* 	free(symbols); */
-	/* } */
 	std::cout << "making aa"<<std::endl;
 	nt::Tensor a = t[1];
 	std::cout << "a numel: "<<a.numel()<<std::endl;
@@ -44,16 +32,6 @@ void tensor_test_working(){
 	t.print();
 	std::cout << "printed t"<<std::endl;
 	std::cout << aa.shape() << std::endl;
-
-
-	/* auto cur_c_begin = aa.arr_void().get_bucket().cbegin<float>(); */
-	/* auto cur_c_end = aa.arr_void().get_bucket().cend<float>(); */
-	/* uint32_t i = 0; */
-	/* for(;cur_c_begin != cur_c_end; ++cur_c_begin, ++i){ */
-	/* 	if(i > 10) */
-	/* 		break; */
-	/* 	std::cout << *cur_c_begin<<std::endl; */ 
-	/* } */
 	aa.arr_void().cexecute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Float32> > > (
 			[](auto abegin, auto aend){
 				uint32_t i = 0;
@@ -63,7 +41,6 @@ void tensor_test_working(){
 					std::cout << *abegin << std::endl;
 				}
 			});
-	/* return; */
 	aa.print();
 	std::cout << "printed aa"<<std::endl;
 
@@ -71,12 +48,6 @@ void tensor_test_working(){
 	std::cout << t[1][2] << std::endl; // this now works
 	std::cout << aa << std::endl;
 	std::cout << t << std::endl;
-	//t[1][2].print(); // there is also something wrong with this line
-	//std::cout << aa << std::endl; // <- this line also causes an issue
-				      // I know I looked at the printing function and changed it around
-				      // I must have fucked with the iostream out part and make it not work anymore
-	/* return; */
-	//std::cout << t[1][2] << std::endl; // <- this line is the problem for some reason?
 	nt::Tensor begin_t = t[1][2];	
 	std::cout<<"contig count: "<<t.contig_count()<<std::endl;
 	std::cout<<"contig count: "<<begin_t.contig_count()<<std::endl;
