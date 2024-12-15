@@ -1299,7 +1299,7 @@ Tensor TensorGrad::grad_value() const {
 }
 
 void TensorGrad::update() {
-	this->tensor += this->grad->tensor;
+	this->tensor -= this->grad->tensor;
 }
 
 }

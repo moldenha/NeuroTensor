@@ -75,7 +75,10 @@ int relu_autograd_test(){
 	std::cout << "now getting out..."<<std::endl;
 	nt::TensorGrad out = nt::functional::matmult(A, W);
 	std::cout << "out parent size is "<<out.parents.size()<<std::endl;
-	nt::Tensor dt = nt::functional::randn(out.shape());
+	nt::Tensor dt = nt::functional::randint(0, 1, out.shape(), nt::DType::Float32); // this acts as the error
+	/* dt[dt < 0.5] = 0; */
+	/* dt[dt != 0] = 1; */
+	std::cout << "dt: "<<dt<<std::endl;
 	std::cout << "A children size: "<<A.children->size()<<std::endl;
 	out.zero_grad();
 	std::cout << "zero gradded"<<std::endl;
@@ -91,6 +94,22 @@ int relu_autograd_test(){
 	std::cout << "Add branch grad: "<<Add_Branch.grad_value()<<std::endl;
 	std::cout << "Mult branch grad: "<<Mult_Branch.grad_value() << std::endl;
 	std::cout << "myScalar grad: "<<myScalar.grad_value() << std::endl;
+
+	std::cout << "Add branch before: "<<Add_Branch<<std::endl;
+	Add_Branch.update();
+	std::cout << "Add branch after: "<<Add_Branch<<std::endl;
+	std::cout << "Mult branch before: "<<Mult_Branch<<std::endl;
+	Mult_Branch.update();
+	std::cout << "Mult after before: "<<Mult_Branch<<std::endl;
+	std::cout << "myScalar before: "<<myScalar<<std::endl;
+	myScalar.update();
+	std::cout << "myScalar after: "<<myScalar<<std::endl;
+	std::cout << "A before: "<<A<<std::endl;
+	A.update();
+	std::cout << "A After: "<<A<<std::endl;
+
+
+
 	return 0;
 }
 

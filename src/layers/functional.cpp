@@ -30,10 +30,10 @@ TensorGrad matmult(const TensorGrad& a, const TensorGrad& b){
 
 		/* parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true); */
 		//TODO: transposing during matmult not working
-		parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor.transpose(-1,-2).clone(), false, false);
+		parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true);
 
 		/* parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false); */
-		parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor.transpose(-1,-2).clone(), grad, false, false);
+		parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false);
 	}, a_c, b_c);
 	return result;
 }

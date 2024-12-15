@@ -32,6 +32,7 @@ src/layers/old_layers
 src/intrusive_ptr/old
 src/dtyp/old
 old_tests/
+src/functional/matmult/miscellaneous
 
 #testing development files
 testing/

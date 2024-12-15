@@ -90,9 +90,9 @@ Tensor matmult_std_single(const T* A, const T* B, const SizeRef& o_a_shape, cons
 	
 	T* C = reinterpret_cast<T*>(tensor_C.data_ptr());
 
-	const int64_t& m = o_a_shape[-2]; // Number of rows in A
-	const int64_t& n = o_b_shape[-1]; // Number of columns in B
-	const int64_t& k = o_a_shape[-1]; // Number of columns in A and rows in B
+	const int64_t& m = a_shape[-2]; // Number of rows in A
+	const int64_t& n = b_shape[-1]; // Number of columns in B
+	const int64_t& k = a_shape[-1]; // Number of columns in A and rows in B
 	// Perform matrix multiplication: C = A * B
 	nt_matmult<T>(A, B, C, m, n, n, k, transpose_a, transpose_b);
 	return std::move(tensor_C);
@@ -503,8 +503,8 @@ Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_
 		C_array[counter] = C + (counter * c_matrix_size);
 	}
 	
-	int64_t group_count;
-	int64_t* group_size;
+	/* int64_t group_count; */
+	/* int64_t* group_size; */
 
 	/* std::cout << "going to calculate optimal group size..."<<std::endl; */
 	/* calculate_optimal_group_std(M, K, N, batch_size, group_count, group_size); */
@@ -512,7 +512,7 @@ Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_
 	
 /* void batched_matrix_multiplication_typed(const bool& transpose_a, const bool& transpose_b, const T* A, const T* B, T* C, int64_t A_rows, int64_t B_cols, int64_t A_cols, const int64_t& group_count, const int64_t* group_sizes) noexcept { */
 	
-	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, M, K, K, N, transpose_a, transpose_b);
+	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, a_shape[-2], a_shape[-1], b_shape[-2], b_shape[-1], transpose_a, transpose_b);
 	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
 
 	/* delete[] group_size; */
