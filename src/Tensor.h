@@ -293,6 +293,8 @@ class Tensor final{
 		Tensor mean(size_value_t) const;
 		result_types::max<Tensor, Tensor> max() const;
 		Tensor sum(size_value_t) const;
+		Tensor sum_as(const SizeRef&) const;
+		Tensor sum_as(const Tensor&) const;
 		result_types::max<Tensor, Tensor> max(size_value_t) const;
 		Tensor exp() const;
 		Tensor& exp_();

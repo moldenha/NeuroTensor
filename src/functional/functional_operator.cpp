@@ -84,6 +84,8 @@ void op_exception_shapes(const SizeRef& a, const SizeRef& b){
 }
 
 
+
+//basically, for all functions, the shape out is the same as a in no matter if b has to be expanded or summed to fit into a.
 Tensor functional_operator_out(const Tensor& a, const Tensor& b, const functional_operator_num op){
 	op_exception_dtypes(a.dtype, b.dtype);
 	if(a.shape() == b.shape()){
@@ -165,8 +167,8 @@ Tensor functional_operator_out(const Tensor& a, const Tensor& b, const functiona
 		}
 	
 	}
-	Tensor nA = a.expand_as(b);
-	return functional_operator_out(nA, b, op);	
+	Tensor nB = b.sum_as(a);
+	return functional_operator_out(a, nB, op);	
 }
 
 
@@ -227,25 +229,12 @@ void functional_operator_this(Tensor& a, const Tensor& b, const functional_opera
 		}
 		Tensor nB = b.expand_as(a);
 		functional_operator_this(a, nB, op);
-	}
-	//b.numel() > a.numel()
-	//this one is a bit different since dimensions are going to have to be summed along
-	Tensor output = functional_operator_out(a, b, op);
-	//now sum along the appropriate dimensions
-	if(a.numel() == 1){
-		output = output.sum();
-		a.fill_(output);
 		return;
+	}else{
+		//b.numel() > a.numel()
+		Tensor nB = b.sum_as(a);
+		functional_operator_this(a, nB, op);
 	}
-	
-	while(output.dims() > a.dims())
-		output = output.sum(0);
-	for(int64_t i = 0; i < output.dims(); ++i){
-		if(output.shape()[i] == a.shape()[i]){
-			output = output.sum(i);
-		}
-	}
-	a.fill_(output);
 }
 
 

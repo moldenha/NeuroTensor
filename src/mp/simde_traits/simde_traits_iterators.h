@@ -4,6 +4,7 @@
 #define _NT_SIMDE_ITERATOR_H_
 #include "../../memory/iterator.h"
 #include "../simde_traits.h"
+#include "../../utils/utils.h" // for utils::reverse_index_sequence
 #include <type_traits>
 #include <array>
 #include <iostream>
@@ -42,7 +43,8 @@ template <typename T,
 inline constexpr simde_type<utils::IteratorBaseType_t<T>> it_loadu(T& iterator) {
 	using base_type = utils::IteratorBaseType_t<T>; 
 	static_assert(simde_supported_v<base_type>, "Expected to have a supported type");
-	return load_indices_into_simd(iterator, std::make_index_sequence<pack_size_v<base_type> >{});
+	//reverse it
+	return load_indices_into_simd(iterator, utils::reverse_index_sequence<pack_size_v<base_type> >{});
 }
 
 
@@ -57,10 +59,11 @@ inline constexpr simde_type<utils::IteratorBaseType_t<T>> it_loadu(T& iterator) 
 	//otherwise use the set function
 	if constexpr (std::is_integral<base_type>::value || std::is_unsigned<base_type>::value){
 		return iterator.template block_size_left<pack_size>() ? SimdTraits<base_type>::loadu(reinterpret_cast<const simde_type<base_type>*>((const base_type*)(iterator))) : 
-			load_indices_into_simd(iterator, std::make_index_sequence<pack_size>{});
+			load_indices_into_simd(iterator, utils::reverse_index_sequence<pack_size>{});
 	}else{
+		//need to be loaded in reverse in order to have the correct order of elements to regular load and store
 		return iterator.template block_size_left<pack_size>() ? SimdTraits<base_type>::loadu((const base_type*)(iterator)) : 
-			load_indices_into_simd(iterator, std::make_index_sequence<pack_size>{});
+			load_indices_into_simd(iterator, utils::reverse_index_sequence<pack_size>{});
 	
 	}
 }
@@ -96,7 +99,7 @@ inline constexpr void it_storeu(T& iterator, const simde_type<utils::IteratorBas
 	}else{
 		SimdTraits<base_type>::storeu(arr, vector);
 	}
-	store_indices_from_simd(arr, iterator, std::make_index_sequence<pack_size>{});
+	store_indices_from_simd(arr, iterator, utils::reverse_index_sequence<pack_size>{});
 }
 
 
@@ -119,7 +122,7 @@ inline constexpr void it_storeu(T& iterator, const simde_type<utils::IteratorBas
 		}else{
 			SimdTraits<base_type>::storeu(arr, vector);
 		}
-		store_indices_from_simd(arr, iterator, std::make_index_sequence<pack_size>{});
+		store_indices_from_simd(arr, iterator, utils::reverse_index_sequence<pack_size>{});
 	}
 }
 

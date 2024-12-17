@@ -620,6 +620,18 @@ inline void DeallocateMemory(DeviceType dt, int64_t bytes){
 	AllocatedMemory(dt) -= bytes;
 }
 
+//struct to reverse an index_sequence
+template <typename Seq, std::size_t N>
+struct reverse_index_sequence_impl;
+
+template <std::size_t... Is, std::size_t N>
+struct reverse_index_sequence_impl<std::index_sequence<Is...>, N> {
+    using type = std::index_sequence<(N - 1 - Is)...>;
+};
+
+template <std::size_t N>
+using reverse_index_sequence = typename reverse_index_sequence_impl<std::make_index_sequence<N>, N>::type;
+
 
 }
 }

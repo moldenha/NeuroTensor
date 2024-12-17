@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <string>
+#include <utility>
 
 
 void tensor_test_working(){
@@ -189,6 +190,42 @@ void hadamard_test(){
 	std::cout<<"Post multiplication:"<<std::endl;
 	outp *= t;
 	std::cout << outp << std::endl;
+}
+
+// Function to demonstrate reverse iteration
+template <typename Func, std::size_t... Is>
+void iterate_reverse(Func func, std::index_sequence<Is...>) {
+    (func(Is), ...);  // Fold expression to call func for each index
+}
+
+void sum_as_test(){
+	nt::Tensor a = nt::functional::randint(0, 6, {3,4,5,6}, nt::DType::Float32);
+	std::cout << "A: "<<a<<std::endl;
+	nt::Tensor to_sum = nt::functional::randint(0, 6, {3,1,5,1}, nt::DType::Float32);
+	std::cout << "to sum: "<<to_sum<<std::endl;
+	nt::Tensor out_sum = a.sum_as(to_sum);
+	std::cout << "out sum: "<<out_sum << std::endl;
+	std::cout << "addition: "<<out_sum + to_sum << std::endl;
+	out_sum.arr_void().execute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Float32> > > (
+			[](auto abegin, auto aend, auto bbegin){
+				for(;abegin != aend; ++abegin, ++bbegin){
+					std::cout << *abegin << " + "<<*bbegin << " = "<< (*abegin + *bbegin) << std::endl;
+				}
+			}, to_sum.arr_void());
+	std::cout << "addition: "<<out_sum.clone() + to_sum << std::endl;
+
+	//this function determined the need for reverse_index_sequence, so also testing this
+	std::cout << "iterate reverse from 10 test:"<<std::endl;
+	iterate_reverse([](std::size_t i) { std::cout << i << " "; }, nt::utils::reverse_index_sequence<10>{});
+	std::cout << std::endl << "normal index sequence:"<<std::endl;
+	iterate_reverse([](std::size_t i) {std::cout << i << ' ';}, std::make_index_sequence<10>{});
+	std::cout << std::endl;
+	
+	nt::Tensor b_copy = to_sum.clone();
+	b_copy += a;
+	std::cout << "to_sum += a = "<< b_copy  << std::endl;
+	a += to_sum;
+	std::cout << "a += to_sum = "<< a << std::endl;
 }
 
 

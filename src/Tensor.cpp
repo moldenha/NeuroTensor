@@ -8,8 +8,6 @@
 #include "dtype/DType_enum.h"
 
 
-
-
 #include <_types/_uint32_t.h>
 #include <functional>
 //#include <i386/types.h>
@@ -35,6 +33,7 @@
 #include <sys/types.h>
 #include <set>
 #include "mp/Threading.h"
+#include "mp/simde_ops.h"
 
 #ifdef USE_PARALLEL
 	#include <unistd.h>
@@ -3558,7 +3557,7 @@ Tensor Tensor::sum() const{
 		return std::move(outp);
 	}
 	Tensor outp(1, dtype);
-	outp = _vals.cexecute_function<WRAP_DTYPES<NumberTypesL>>()([](auto begin, auto end) -> Scalar {return std::reduce(begin, end);});
+	outp = _vals.cexecute_function<WRAP_DTYPES<NumberTypesL>>()([](auto begin, auto end) -> Scalar {return mp::accumulate(begin, end, utils::IteratorBaseType_t<decltype(begin)>(0));});
 	return std::move(outp);
 }
 
@@ -3621,6 +3620,38 @@ Tensor Tensor::sum(size_value_t dim) const{
 	}
 	});
 	return std::move(a);
+}
+
+
+Tensor Tensor::sum_as(const SizeRef& s) const{
+	utils::THROW_EXCEPTION(s.size() == dims(), "Expected to have information about all dimensions whether to sum or not but got $ and $", s, shape());
+	if(s.multiply() == 1){return sum();}
+	Tensor output = this->clone();
+	const SizeRef& before_shape = shape();
+	std::vector<size_value_t> cur_strides(s.size(), 1);
+	for (size_value_t i = s.size() - 2; i >= 0; --i) {
+		cur_strides[i] = cur_strides[i + 1] * before_shape[i + 1];
+	}
+
+	std::vector<size_value_t> axes;
+	axes.reserve(s.size());
+	for(size_value_t i = 0; i < s.size(); ++i){
+		if(before_shape[i] != s[i]){
+			utils::THROW_EXCEPTION(s[i] == 1, "Expected for dimension $ where target shape does not equal current shape that target would be 1 but got $ and current is $", i, s[i], before_shape[i]);
+			axes.push_back(i);
+		}
+
+	}
+	for(const auto& dim : axes){
+		output = output.transpose(0, dim).sum(0).unsqueeze(0).transpose(0, dim);
+	}
+	return std::move(output);	
+}
+
+Tensor Tensor::sum_as(const Tensor& t) const {
+	utils::THROW_EXCEPTION(t.dims() == dims(), "Expected dims to be equal for sum as but got $ and $", t.dims(), dims());
+	if(t.numel() == 1){return sum();}
+	return sum_as(t.shape());
 }
 
 Tensor Tensor::mean() const{

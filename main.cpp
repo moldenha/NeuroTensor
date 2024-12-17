@@ -85,11 +85,12 @@ void conv_test(){
 int main(){
 	
 
-	tensor_test_working();
-	std::cout << "doing exp test:"<<std::endl;
-	exp_test();
-	std::cout << "doing autograd test:"<<std::endl;
-	test_autograd();
+	sum_as_test();
+	/* tensor_test_working(); */
+	/* std::cout << "doing exp test:"<<std::endl; */
+	/* exp_test(); */
+	/* std::cout << "doing autograd test:"<<std::endl; */
+	/* test_autograd(); */
 	/* nt::Tensor a = nt::functional::randn({20,20}); */
 
 
