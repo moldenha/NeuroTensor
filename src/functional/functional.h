@@ -8,6 +8,7 @@
 #include "functional_matmult.h"
 #include "functional_fold.h"
 #include "functional_conv.h"
+#include "../utils/optional_list.h"
 
 namespace nt{
 namespace functional{
@@ -50,8 +51,13 @@ Tensor sin(const Tensor&);
 Tensor sinh(const Tensor&);
 Tensor cos(const Tensor&);
 Tensor cosh(const Tensor&);
-Tensor dtan(const Tensor&);
-Tensor dtanh(const Tensor&);
+Tensor dtan(const Tensor&); // derivative of tan
+Tensor dtanh(const Tensor&); // derivative of tanh
+Tensor sqrt(const Tensor&);
+Tensor invsqrt(const Tensor&); // 1 / sqrt(x);
+Tensor dinvsqrt(const Tensor&); // derivative of invsqrt
+Tensor var(const Tensor&, utils::optional_list dim = nullptr, int64_t correction = 1, bool keepdim = false); //delta degrees of freedom (0 for population variance, 1 for sample variance).
+Tensor dvar(const Tensor& dx, const Tensor& x, utils::optional_list dim = nullptr, int64_t correction = 1); //derivative of the var function with respect to xi element of the the tensor
 Tensor softmax(Tensor&);
 Tensor softmax(Tensor&, uint32_t);
 Tensor softmax_stable(Tensor&);
@@ -87,6 +93,7 @@ inline ::nt::Tensor tan(const ::nt::Tensor& t){return ::nt::functional::tan(t);}
 inline ::nt::Tensor cosh(const ::nt::Tensor& t){return ::nt::functional::cosh(t);}
 inline ::nt::Tensor sinh(const ::nt::Tensor& t){return ::nt::functional::sinh(t);}
 inline ::nt::Tensor tanh(const ::nt::Tensor& t){return ::nt::functional::tanh(t);}
+inline ::nt::Tensor sqrt(const ::nt::Tensor& t){return ::nt::functional::sqrt(t);}
 }
 
 

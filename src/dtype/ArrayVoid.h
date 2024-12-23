@@ -36,6 +36,7 @@ struct IsFirstVectorArrayVoid<std::vector<std::reference_wrapper<const ArrayVoid
 #include "../memory/iterator.h"
 #include <type_traits>
 #include <functional>
+#include <cstddef>
 
 namespace nt{
 
@@ -81,6 +82,7 @@ class ArrayVoid{
 		ArrayVoid& operator=(ArrayVoid&&);
 		ArrayVoid(const ArrayVoid&);
 		ArrayVoid(ArrayVoid&&);
+		ArrayVoid(std::nullptr_t);
 		inline Bucket& get_bucket() {return bucket;}
 		inline const DeviceType& device_type() const noexcept {return bucket.device_type();}
 		inline const Bucket& get_bucket() const {return bucket;}
@@ -90,6 +92,10 @@ class ArrayVoid{
 		inline void* data_ptr() {return bucket.data_ptr();}
 		const void* data_ptr_end() const;
 		void* data_ptr_end();
+		inline bool occupy_same_memory(const ArrayVoid& arr) const noexcept {
+			return bucket.occupy_same_memory(arr.bucket);
+		}
+
 		void swap(ArrayVoid&);
 		/* void** strides_cbegin() const; */
 		void** stride_begin() const {return bucket.stride_begin();}

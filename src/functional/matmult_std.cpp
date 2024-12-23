@@ -86,15 +86,15 @@ Tensor matmult_std_single(const T* A, const T* B, const SizeRef& o_a_shape, cons
 	vec.back() = b_shape.back();
 	SizeRef c_shape(std::move(vec));
 
-	Tensor tensor_C(std::move(c_shape), DTypeFuncs::type_to_dtype<T>);
+	Tensor tensor_C = zeros(std::move(c_shape), DTypeFuncs::type_to_dtype<T>);
 	
 	T* C = reinterpret_cast<T*>(tensor_C.data_ptr());
 
 	const int64_t& m = a_shape[-2]; // Number of rows in A
-	const int64_t& n = b_shape[-1]; // Number of columns in B
 	const int64_t& k = a_shape[-1]; // Number of columns in A and rows in B
+	const int64_t& n = b_shape[-1]; // Number of columns in B
 	// Perform matrix multiplication: C = A * B
-	nt_matmult<T>(A, B, C, m, n, n, k, transpose_a, transpose_b);
+	nt_matmult<T>(A, B, C, m, k, k, n, transpose_a, transpose_b);
 	return std::move(tensor_C);
 
 }
@@ -460,8 +460,8 @@ Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_
 	SizeRef begin_b_shape = begin_b->shape();
 	const int64_t& batch_size = a.numel();
 	const int64_t& M = begin_shape[-2]; // Number of rows in A
-	const int64_t& N = (transpose_a && transpose_b) ? b_shape[-1] : begin_b_shape[-1]; // Number of columns in B
 	const int64_t& K = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]; // Number of columns in A and rows in B
+	const int64_t& N = (transpose_a && transpose_b) ? b_shape[-1] : begin_b_shape[-1]; // Number of columns in B
 	
 	//on transposed_b, what it generally should be for a (6,4,5) * (6,2,5) (where (6,2,5)->(6,5,2) for a transpose)
 	//int m = 4, n = 5, k = 2;

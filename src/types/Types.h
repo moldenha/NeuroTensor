@@ -540,6 +540,61 @@ inline my_complex<T> operator/(U element, my_complex<T> comp) noexcept {
 	}
 }
 
+template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
+inline my_complex<T> operator*(my_complex<T> comp, U element) noexcept {
+	if constexpr (std::is_same_v<T, float16_t>){
+		return comp * my_complex<T>(_NT_FLOAT32_TO_FLOAT16_(float(element)));
+	}else{
+		return comp * my_complex<T>(T(element));
+	}
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
+inline my_complex<T> operator*(U element, my_complex<T> comp) noexcept {
+	if constexpr (std::is_same_v<T, float16_t>){
+		return my_complex<T>(_NT_FLOAT32_TO_FLOAT16_(float(element))) * comp;
+	}else{
+		return my_complex<T>(T(element)) * comp;
+	}
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
+inline my_complex<T> operator+(my_complex<T> comp, U element) noexcept {
+	if constexpr (std::is_same_v<T, float16_t>){
+		return comp + my_complex<T>(_NT_FLOAT32_TO_FLOAT16_(float(element)));
+	}else{
+		return comp + my_complex<T>(T(element));
+	}
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
+inline my_complex<T> operator+(U element, my_complex<T> comp) noexcept {
+	if constexpr (std::is_same_v<T, float16_t>){
+		return my_complex<T>(_NT_FLOAT32_TO_FLOAT16_(float(element))) + comp;
+	}else{
+		return my_complex<T>(T(element)) + comp;
+	}
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
+inline my_complex<T> operator-(my_complex<T> comp, U element) noexcept {
+	if constexpr (std::is_same_v<T, float16_t>){
+		return comp - my_complex<T>(_NT_FLOAT32_TO_FLOAT16_(float(element)));
+	}else{
+		return comp - my_complex<T>(T(element));
+	}
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
+inline my_complex<T> operator-(U element, my_complex<T> comp) noexcept {
+	if constexpr (std::is_same_v<T, float16_t>){
+		return my_complex<T>(_NT_FLOAT32_TO_FLOAT16_(float(element))) - comp;
+	}else{
+		return my_complex<T>(T(element)) - comp;
+	}
+}
+
+
 template <std::size_t Index, typename T>
 inline constexpr T get_complex(const my_complex<T>& c) noexcept {
     static_assert(Index < 2, "Index out of bounds for nt::my_complex");

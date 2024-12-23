@@ -17,17 +17,11 @@
 #include <sys/ipc.h>
 #include "../utils/utils.h"
 #include <cstdlib> // For std::aligned_alloc
-#include <immintrin.h>
+#include <initializer_list>
 
-#ifdef __AVX512F__
-#define ALIGN_BYTE_SIZE 64
-#elif defined(__AVX2__)
-#define ALIGN_BYTE_SIZE 32
-#elif defined(__AVX__)
-#define ALIGN_BYTE_SIZE 32
-#else
-#define ALIGN_BYTE_SIZE 16
-#endif
+#define _NT_ALIGN_BYTE_SIZE_ 32
+
+
 
 /*
 
@@ -501,8 +495,17 @@ class intrusive_ptr final{
 		}
 
 		inline bool operator==(const intrusive_ptr& ptr) const noexcept{
+			if(is_null() && ptr.is_null()){return true;}
 			if(is_null() || ptr.is_null()){return false;}
 			return target_ == ptr.target_;
+		}
+
+		inline bool operator!=(TTarget* ptr) const noexcept {
+			return !(*this == ptr);
+		}
+
+		inline bool operator!=(const intrusive_ptr& ptr) const noexcept {
+			return !(*this == ptr);
 		}
 
 		inline void swap(intrusive_ptr& ptr) noexcept{
@@ -918,7 +921,7 @@ class intrusive_ptr<T[], detail::intrusive_target_default_null_type<T[]>> final{
 			return intrusive_ptr(ptr);	
 		}
 
-		static intrusive_ptr make_aligned(const uint64_t amt, const std::size_t align_byte = ALIGN_BYTE_SIZE){
+		static intrusive_ptr make_aligned(const uint64_t amt, const std::size_t align_byte = _NT_ALIGN_BYTE_SIZE_){
 			uint64_t size = amt * sizeof(T);
 			if (size % align_byte != 0) size += align_byte - (size % align_byte);
 			/* utils::throw_exception((amt * sizeof(T)) % align_byte == 0, "Cannot align $ bytes", amt * sizeof(T)); */

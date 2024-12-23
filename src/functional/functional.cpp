@@ -1099,6 +1099,62 @@ Tensor cos(const Tensor& x){
 	return std::move(a);
 }
 
+Tensor sqrt(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::sqrt(begin, end, begin);
+	});
+	return std::move(a);
+	
+}
+
+Tensor invsqrt(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::invsqrt(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+Tensor dinvsqrt(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::dinvsqrt(begin, end, begin);
+	});
+	return std::move(a);
+}
+
+
+Tensor var(const Tensor& x, utils::optional_list dim, int64_t correction, bool keepdim){
+	Tensor mean = x.mean(dim, true);
+	Tensor squared_diff = std::pow((x - mean), 2);
+	int64_t N = 0;
+	if(!dim){
+		N = x.numel();
+	}else{
+		N = 1;
+		for(const auto& ele : dim){
+			N *= x.shape()[ele];
+		}
+	}
+	Tensor variance = squared_diff.sum(dim, keepdim) / (N - correction);
+	return std::move(variance);
+}
+Tensor dvar(const Tensor& dx, const Tensor& x, utils::optional_list dim, int64_t correction){
+	//takes both the gradient, and the input given to the variance function
+	Tensor mean = x.mean(dim, true);
+	int64_t N = 0;
+	if(!dim){
+		N = x.numel();
+	}else{
+		N = 1;
+		for(const auto& ele : dim){
+			N *= x.shape()[ele];
+		}
+	}
+	return (2 / (N - correction)) * (x - mean);
+}
+
 
 size_t amount_of(const Tensor& t, Scalar s){
 	if(t.dtype == DType::Bool){

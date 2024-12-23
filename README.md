@@ -66,3 +66,40 @@ std::cout << "Mult_branch is now: "<<Mult_Branch << std::endl;
 std::cout << "myScalar is now: "<<myScalar << std::endl;
 ```
 
+## Layer Class
+
+There is an `nt::Layer` class with a built-in reflection wrapper. Each custom layer or model must be a class that inherits from `nt::Module`. Gradients are automatically tracked, but can be manually created as well by overloading the `backward` function. The `eval` function can also be overloaded if there are differences in the way that the layer or model behaves based on if it is in `eval` mode beyond just not tracking the gradient. Below is an example making of a custom layer:
+
+```C++
+//creation of a custom layer
+class Example : public nt::Module{
+	public:
+		nt::Layer l1;
+		nt::Layer b1;
+		nt::TensorGrad parameter;
+		bool normalize;
+		Example(int64_t hidden_features, int64_t out_features, bool normal = true)
+			:l1(nt::layers::Linear(hidden_features, out_features)),
+			b1(normal ? nt::Layer(nt::layers::BatchNorm1D(out_features)) : nt::Layer(nt::layers::Identity())),
+			parameter(nullptr),
+			normalize(normal)
+			{}
+
+		inline nt::TensorGrad forward(const nt::TensorGrad& x) override{
+			nt::TensorGrad out = l1(x);
+			out = b1(out);
+			if(parameter.is_null()){
+				parameter = nt::functional::zeros({x.shape()[-2], 1}, x.tensor.dtype);
+			}
+			return out + parameter;
+		}
+
+};
+
+//this adds reflection to the layer so that gradients can be tracked properly
+_NT_REGISTER_LAYER_(Example, l1, b1, parameter, normalize)
+//in the above, normalize is optional to add
+//any variable that is an NeuroTensor object should be included
+
+```
+

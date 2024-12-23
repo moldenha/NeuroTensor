@@ -16,7 +16,7 @@
 #include <mutex>
 #include "tests/tensor_test.h"
 #include "tests/tensorgrad_test.h"
-
+#include "tests/layer_test.h"
 
 
 
@@ -84,46 +84,8 @@ void conv_test(){
 
 int main(){
 	
-
-	sum_as_test();
-	/* tensor_test_working(); */
-	/* std::cout << "doing exp test:"<<std::endl; */
-	/* exp_test(); */
-	/* std::cout << "doing autograd test:"<<std::endl; */
-	/* test_autograd(); */
-	/* nt::Tensor a = nt::functional::randn({20,20}); */
-
-
-	/* force_contiguity_and_bucket_test(); */
-
-	/* nt::Tensor rand_b = nt::functional::cat(nt::functional::arange({20,30,30,4}, nt::DType::Float32), */ 
-	/* 				nt::functional::arange({30,30,30,4}, nt::DType::Float32)); */
-	/* /1* nt::Tensor rand_b({2,20,50,600,600}, nt::DType::Float32); *1/ */ 
-	/* std::cout << "rand_b numel: "<<rand_b.numel()<<std::endl; */
-	/* std::cout << "testing if they are the same:"<<std::endl; */
-	/* current_test([&rand_b](){ */
-	/* 			nt::Tensor split_a = rand_b.split_axis_experimental(2); */
-	/* 			nt::Tensor split_b = rand_b.split_axis(2); */
-	/* 			std::cout <<"they are all the same: "<<std::boolalpha<< nt::functional::all(split_a == split_b) << std::noboolalpha<< std::endl; */
-	/* 		}); */
-	
-	/* std::cout << "made rand_b, testing original split_axis():"<<std::endl; */
-	/* current_test([&rand_b](){ */
-	/* 			nt::Tensor split = rand_b.split_axis(2); */
-	/* 		}); */
-
-	/* tensor_calloc(); */
-
-
-	
-	/* std::cout << "has "<<nt::functional::count(rand_a == 1) << " ones"<<std::endl; */
-	/* nt::Tensor rand_b = current_test(test_set, rand_a, 1, 0); */
-	/* std::cout << "rand_b has "<<nt::functional::count(rand_b == 1) << " ones"<<std::endl; */
-	/* nt::Tensor rand_c = current_test(test_transpose, rand_b, -1, -2); */
-	/* std::cout << "rand_c was transposed"<<std::endl; */
-
+	test_layers();
 
 	return 0;
 }
 
-	/* current_test(shared_memory_test); */

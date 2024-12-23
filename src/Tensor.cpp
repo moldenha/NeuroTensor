@@ -77,6 +77,10 @@ Tensor::Tensor(std::string_view _sv)
 	std::transform(_sv.cbegin(), _sv.cend(), begin, [](const char& v){return v;}); 
 }
 
+Tensor::Tensor(std::nullptr_t)
+	:dtype(nt::DType::Float32), _vals(nullptr), _size(nullptr), _total_size(0), stored_strides(nullptr), sub_tensor(false)
+{}
+
 /* Tensor::Tensor(ArrayVoid ptr, std::shared_ptr<SizeRef> v) */
 /* 	:_vals(ptr), _size(v), sub_tensor(true), dtype(ptr.dtype) */
 /* { */
@@ -1361,10 +1365,10 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const{
 	//without needing to do threading to run it in parallel
 	//obviously, threading will be added to further parallelize this though
 	Tensor split = this->split_axis(_b).view(shape().range(0,_b+1)); //this split_axis function needs to be made faster
-	nt::Tensor* mine = reinterpret_cast<nt::Tensor*>(split.data_ptr());
+	Tensor* mine = reinterpret_cast<Tensor*>(split.data_ptr());
 	Tensor out = Tensor::makeNullTensorArray(shape().range(0, _b+1).multiply());
 	out._size = shape().range(0, _b + 1);
-	nt::Tensor* outp = reinterpret_cast<nt::Tensor*>(out.data_ptr());
+	Tensor* outp = reinterpret_cast<Tensor*>(out.data_ptr());
 	auto m_strides = split.shape().strides();
 	m_strides.erase(m_strides.begin());
 	const auto m_shape = split.shape().Vec();
@@ -3404,21 +3408,24 @@ Tensor Tensor::repeat_(size_value_t dim, size_value_t amt) const{
 		return this->repeat_(amt);
 	}
 	SizeRef n_shape = shape().redo_index(dim, amt * shape()[dim]);
+	Tensor split = split_axis(dim);
 	return functional::cat(split_axis(dim).repeat_(amt)).view(n_shape);
 }
 
 
 Tensor Tensor::expand(SizeRef s) const{
+	if(shape() == s){return *this;}
 	utils::THROW_EXCEPTION(s.size() >= shape().size(), "Expected to expand with same dimensions but got $ compared to $", s.size(), dims());
 	if(s.size() > shape().size())
 		return unsqueeze_as(s).expand(s);
 	std::vector<std::pair<size_value_t, size_value_t>> expandings; // which dimensions to repeat by how many
 	for(int64_t i = 0; i < s.size(); ++i){
-		if(s[i] != shape()[i]){
+		if(s[i] != shape()[i] && s[i] != 1){
 			utils::THROW_EXCEPTION(shape()[i] == 1, "The expanded size of the tensor ($) must match the existing size ($) at non-singleton dimension $.  Target sizes: $.  Tensor sizes: $", s[i], shape()[i], i, s, shape());
 			expandings.push_back({i, s[i]});
 		}
 	}
+	if(expandings.size() == 0){return *this;}
 	Tensor expanded = this->repeat_(expandings[0].first, expandings[0].second);
 	for(size_t i = 1; i < expandings.size(); ++i)
 		expanded = expanded.repeat_(expandings[i].first, expandings[i].second);
@@ -3426,6 +3433,7 @@ Tensor Tensor::expand(SizeRef s) const{
 }
 
 Tensor Tensor::expand_as(const Tensor& t) const{
+	if(shape() == t.shape()){return *this;}
 	return expand(t.shape());
 }
 
@@ -3540,9 +3548,16 @@ Tensor Tensor::unsqueeze_as(const SizeRef& s) const{
 	return view(SizeRef(std::move(Vec)));
 }
 
+
+//now gets rid of all dimensions that are 1
 Tensor Tensor::squeeze() const{
-	utils::throw_exception(shape()[0] == 1, "Expected shape[0] to be 1 but got $", shape()[0]);
-	std::vector<SizeRef::ArrayRefInt::value_type> Vec(shape().cbegin() + 1, shape().cend());
+	std::vector<SizeRef::ArrayRefInt::value_type> Vec;
+	Vec.reserve(shape().size());
+	for(const auto& element : shape()){
+		if(element > 1)
+			Vec.push_back(element);
+	}
+	if(Vec.size() == 0){Vec.push_back(1);} //make sure there is an element
 	return view(SizeRef(std::move(Vec)));
 }
 
@@ -3550,15 +3565,89 @@ inline static constexpr auto sumation_func = [](auto begin, auto end, ArrayVoid&
 	return std::reduce(begin, end);
 };
 
-Tensor Tensor::sum() const{
-	if(dtype == DType::TensorObj){
-		Tensor outp(shape(), DType::TensorObj);
-		_vals.transform_function<DType::TensorObj>([](const Tensor& output) -> Tensor {return output.sum();}, reinterpret_cast<Tensor*>(outp.data_ptr()));
+
+Tensor sum_one(const Tensor& t, Tensor::size_value_t dim){
+	if(dim == t.dims() || dim == (-1) * (t.dims() + 1))
+		return t;
+	dim = dim < 0 ? dim + t.dims() : dim;
+	if(t.dtype == DType::TensorObj){
+		Tensor outp(t.shape(), DType::TensorObj);
+		t.arr_void().transform_function<DType::TensorObj>([&dim](const Tensor& output) -> Tensor {return output.sum(dim);}, reinterpret_cast<Tensor*>(outp.data_ptr()));
 		return std::move(outp);
 	}
-	Tensor outp(1, dtype);
-	outp = _vals.cexecute_function<WRAP_DTYPES<NumberTypesL>>()([](auto begin, auto end) -> Scalar {return mp::accumulate(begin, end, utils::IteratorBaseType_t<decltype(begin)>(0));});
-	return std::move(outp);
+	if(dim != 0){
+		return t.transpose(0,dim).sum(0).unsqueeze(0).transpose(0, dim);
+	}
+	Tensor::size_value_t total_size = t.shape()[0];
+	Tensor split = t.split_axis(0);
+	Tensor a = split[0].item<Tensor>().clone();
+	const Tensor* begin = reinterpret_cast<const Tensor*>(split.data_ptr());
+	threading::preferential_parallel_for(threading::block_ranges<1>(1, split.numel()),
+			[&a, &begin](const auto& range){
+	for(int64_t i = range.begin[0]; i < range.end[0]; ++i){
+		a += begin[i];
+	}
+	});
+	return std::move(a);
+}
+
+
+Tensor Tensor::sum(utils::optional_list list, bool keepdim) const{
+	if(dtype == DType::TensorObj){
+		Tensor outp(shape(), DType::TensorObj);
+		_vals.transform_function<DType::TensorObj>([&](const Tensor& output) -> Tensor {return output.sum(list, keepdim);}, reinterpret_cast<Tensor*>(outp.data_ptr()));
+		return std::move(outp);
+	}
+	if(!list){
+		Tensor outp(1, dtype);
+		outp = _vals.cexecute_function<WRAP_DTYPES<NumberTypesL>>()([](auto begin, auto end) -> Scalar {return mp::accumulate(begin, end, utils::IteratorBaseType_t<decltype(begin)>(0));});
+		if(keepdim){
+			std::vector<SizeRef::ArrayRefInt::value_type> Vec(dims());
+			std::fill(Vec.begin(), Vec.end(), 1);
+			outp = outp.view(SizeRef(std::move(Vec)));
+		}
+		return std::move(outp);
+	}
+	std::vector<SizeRef::ArrayRefInt::value_type> Vec(shape().cbegin(), shape().cend());
+	int64_t dim = list[0] < 0 ? list[0] + dims() : list[0];
+	Tensor output = sum_one(*this, list[0]);
+	Vec[dim] = 1;
+	for(auto begin = list->cbegin()+1; begin != list->cend(); ++begin){
+		dim = *begin < 0 ? *begin + dims() : *begin;
+		output = sum_one(output, *begin);
+		Vec[dim] = 1;
+	}
+	if(!keepdim){
+		return output.squeeze();
+	}
+	return output.view(SizeRef(std::move(Vec)));
+}
+
+
+Tensor Tensor::mean(utils::optional_list list, bool keepdim) const{
+	if(dtype == DType::TensorObj){
+		Tensor outp(shape(), DType::TensorObj);
+		_vals.transform_function<DType::TensorObj>([&](const Tensor& output) -> Tensor {return output.mean(list, keepdim);}, reinterpret_cast<Tensor*>(outp.data_ptr()));
+		return std::move(outp);	
+	}
+	if(!list){
+		size_value_t total_scale = shape().multiply();
+		double div = 1.0 / (double)total_scale;
+		Tensor output = sum(nullptr, keepdim);
+		return output * div;
+	}
+	size_value_t total_scale = 0;
+	for(const auto& dim : list){
+		total_scale += shape()[dim];
+	}
+	Tensor output = sum(list, keepdim);
+	if(total_scale == 0){
+		output.arr_void().fill_(0);
+		return std::move(output);
+	}
+	double div = 1.0 / (double)total_scale;
+	output *= div;
+	return std::move(output);
 }
 
 
@@ -3595,32 +3684,7 @@ result_types::max<Tensor, Tensor> Tensor::max() const{
 	return result_types::max<Tensor,Tensor>(std::move(outp), std::move(indices));
 }
 
-//using value_t = utils::IteratorBaseType_t<decltype(begin)>;/using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-//this is going to be changed that it is summed along a specific dimension
-Tensor Tensor::sum(size_value_t dim) const{
-	if(dim == dims() || dim == (-1) * (dims() + 1))
-		return *this;
-	dim = dim < 0 ? dim + dims() : dim;
-	if(dtype == DType::TensorObj){
-		Tensor outp(shape(), DType::TensorObj);
-		_vals.transform_function<DType::TensorObj>([&dim](const Tensor& output) -> Tensor {return output.sum(dim);}, reinterpret_cast<Tensor*>(outp.data_ptr()));
-		return std::move(outp);
-	}
-	if(dim != 0){
-		return transpose(0,dim).sum(0).unsqueeze(0).transpose(0, dim);
-	}
-	size_value_t total_size = shape()[0];
-	Tensor split = this->split_axis(0);
-	Tensor a = split[0].item<Tensor>().clone();
-	const Tensor* begin = reinterpret_cast<const Tensor*>(split.data_ptr());
-	threading::preferential_parallel_for(threading::block_ranges<1>(1, split.numel()),
-			[&a, &begin](const auto& range){
-	for(int64_t i = range.begin[0]; i < range.end[0]; ++i){
-		a += begin[i];
-	}
-	});
-	return std::move(a);
-}
+
 
 
 Tensor Tensor::sum_as(const SizeRef& s) const{
@@ -3654,32 +3718,7 @@ Tensor Tensor::sum_as(const Tensor& t) const {
 	return sum_as(t.shape());
 }
 
-Tensor Tensor::mean() const{
-	if(dtype == DType::TensorObj){
-		Tensor outp(shape(), DType::TensorObj);
-		_vals.transform_function<DType::TensorObj>([](const Tensor& output) -> Tensor {return output.mean();}, reinterpret_cast<Tensor*>(outp.data_ptr()));
-		return std::move(outp);	
-	}
-	size_value_t total_scale = shape().multiply();
-	float div = 1.0 / (float)total_scale;
-	Tensor output = sum();
-	return output * div;
-}
 
-Tensor Tensor::mean(size_value_t dim) const{
-	if(dim == dims() || dim == (-1) * (dims() + 1))
-		return *this;
-	if(dtype == DType::TensorObj){
-		Tensor outp(shape(), DType::TensorObj);
-		_vals.transform_function<DType::TensorObj>([&dim](const Tensor& output) -> Tensor {return output.mean(dim);}, reinterpret_cast<Tensor*>(outp.data_ptr()));
-		return std::move(outp);	
-	}
-	size_value_t total_scale = shape()[dim];
-	double div = 1.0 / (double)total_scale;
-	Tensor output = sum(dim);
-	output *= div;
-	return std::move(output);
-}
 
 result_types::max<Tensor,Tensor> Tensor::max(size_value_t dim) const{
 	dim = dim < 0 ? dim + dims() : dim;

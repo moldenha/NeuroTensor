@@ -81,6 +81,13 @@ ArrayVoid::ArrayVoid(ArrayVoid&& Arr)
 	dtype(Arr.dtype)
 {}
 
+
+ArrayVoid::ArrayVoid(std::nullptr_t)
+	:bucket(nullptr),
+	size(0),
+	dtype(nt::DType::Float32)
+{}
+
 /* ArrayVoid::ArrayVoid(intrusive_ptr<void*>&& str, const std::size_t size, const std::size_t start, std::size_t avail, DType _dt) */
 /* 	:_strides(std::move(str)), */
 /* 	size(size), */

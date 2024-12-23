@@ -28,11 +28,8 @@ TensorGrad matmult(const TensorGrad& a, const TensorGrad& b){
 	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 					intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
 
-		/* parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true); */
-		//TODO: transposing during matmult not working
 		parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true);
 
-		/* parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false); */
 		parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false);
 	}, a_c, b_c);
 	return result;
@@ -156,6 +153,65 @@ TensorGrad clamp(const TensorGrad& x, std::optional<int64_t> min, std::optional<
 
 TensorGrad relu(const TensorGrad& x){
 	return clamp(x, 0);
+}
+
+TensorGrad var(const TensorGrad& x, utils::optional_list dim , int64_t correction, bool keepdim){
+	if(!x.do_track_grad){
+		Tensor out = var(x.tensor, dim, correction, keepdim);
+		TensorGrad result(std::move(out));
+		result.do_track_grad = false;
+		return std::move(result);
+	}
+	intrusive_ptr<tensor_holder> x_c = make_intrusive<tensor_holder>(x.tensor.clone());
+	TensorGrad result(::nt::functional::var(x_c->tensor, dim, correction, keepdim));
+	result.track_tensors(x);
+	result.create_backward_function([dim, correction](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents, intrusive_ptr<tensor_holder> x){
+		parents[0]->grad->tensor += dvar(grad, x->tensor, dim, correction);
+	}, x_c);	
+	return std::move(result);
+}
+
+
+TensorGrad invsqrt(const TensorGrad& x){
+	TensorGrad result(invsqrt(x.tensor));
+	if(!x.do_track_grad){
+		result.do_track_grad = false;
+		return std::move(result);
+	}
+
+	result.track_tensors(x);
+	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+		parents[0]->grad->tensor += dinvsqrt(grad);
+	});
+	return std::move(result);
+}
+
+TensorGrad tanh(const TensorGrad& x){
+	TensorGrad result(tanh(x.tensor));
+	if(!x.do_track_grad){
+		result.do_track_grad = false;
+		return std::move(result);
+	}
+
+	result.track_tensors(x);
+	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+		parents[0]->grad->tensor += dtanh(grad);
+	});
+	return std::move(result);
+}
+
+TensorGrad tan(const TensorGrad& x){
+	TensorGrad result(tan(x.tensor));
+	if(!x.do_track_grad){
+		result.do_track_grad = false;
+		return std::move(result);
+	}
+
+	result.track_tensors(x);
+	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+		parents[0]->grad->tensor += dtan(grad);
+	});
+	return std::move(result);
 }
 
 

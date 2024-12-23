@@ -86,10 +86,9 @@ inline void pack_threaded(const T* src_matrix_pre, T* block_matrix, const int64_
 	int64_t col_amt = src_cols - start_col;
 	tbb::parallel_for(tbb::blocked_range<int64_t>(0, max),
 			[&](const tbb::blocked_range<int64_t>& r){
-	for(int i = r.begin(); i < r.end(); ++i){
+	for(int64_t i = r.begin(); i < r.end(); ++i){
 		kpack_rowA_threaded<T, COLS>(src_matrix + (i * src_cols) + start_col, block_matrix + (COLS * i), col_amt);
-	}
-	});	
+	}});
 	zero_memory(block_matrix + (COLS * max), (ROWS - max) * COLS);
 }
 

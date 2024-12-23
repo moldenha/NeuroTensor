@@ -23,6 +23,7 @@ class Tensor;
 #include "dtype/ArrayVoid.h"
 #include "dtype/Scalar.h"
 #include "utils/utils.h"
+#include "utils/optional_list.h"
 /* #include "CustomOperator.h" */
 #include <type_traits>
 /* #include "Itterator.h" */
@@ -111,6 +112,7 @@ class Tensor final{
 		Tensor(std::string_view);
 		Tensor(const Tensor&);
 		Tensor(Tensor&&);
+		explicit Tensor(std::nullptr_t);
 		explicit Tensor(Scalar);
 		void swap(Tensor&);
 		inline const DeviceType& device() const noexcept {return _vals.device_type();}
@@ -204,6 +206,10 @@ class Tensor final{
 		const void* data_ptr() const;
 		void* data_ptr_end(); // _vals.strides()[-1] <- important distinction btwn what vals and this will return
 		const void* data_ptr_end() const;
+		inline bool occupy_same_memory(const Tensor& t) const noexcept {
+			return t._vals.occupy_same_memory(t._vals);
+		}
+
 
 		/* void** stack_data_ptr(); */
 		inline const size_value_t& numel() const {return _total_size;}
@@ -288,11 +294,9 @@ class Tensor final{
 		Tensor to_complex_from_real() const;
 		Tensor imag() const;
 		Tensor to_complex_from_imag() const;
-		Tensor sum() const;
-		Tensor mean() const;
-		Tensor mean(size_value_t) const;
+		Tensor sum(utils::optional_list list = nullptr, bool keepdim=false) const;
+		Tensor mean(utils::optional_list list = nullptr, bool keepdim=false) const;
 		result_types::max<Tensor, Tensor> max() const;
-		Tensor sum(size_value_t) const;
 		Tensor sum_as(const SizeRef&) const;
 		Tensor sum_as(const Tensor&) const;
 		result_types::max<Tensor, Tensor> max(size_value_t) const;
@@ -360,6 +364,8 @@ class Tensor final{
 			return Tensor(ArrayVoid(num, DType::TensorObj, mem, &detail::defaultCStyleDeallocator<void>), {num});
 		}
 
+		inline static Tensor Null(){ return Tensor(nullptr); }
+
 
 };
 
@@ -388,6 +394,7 @@ Tensor operator/(Scalar s, const Tensor& t);
 /*     nt::functional::matmult((a), (b)) */
 
 // Specialization of std::swap for nt::Tensor
+#include "functional/functional.h"
 namespace std {
     inline void swap(::nt::Tensor& lhs, ::nt::Tensor& rhs) {
         lhs.swap(rhs); // Call your custom swap function
@@ -396,5 +403,5 @@ namespace std {
     inline ::nt::Tensor pow(const ::nt::Tensor& x, ::nt::Scalar s){return x.pow(s);}
 }
 
-#include "functional/functional.h"
+
 #endif // _NT_TENSOR_H_

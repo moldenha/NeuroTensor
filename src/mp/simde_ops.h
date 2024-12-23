@@ -253,8 +253,28 @@ inline void func_name(T begin, T end, U begin2, O out){\
 
 _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(add, add, std::plus);
 _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(subtract, subtract, std::minus);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies);
+/* _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies); */
 _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(divide, divide, std::divides);
+
+
+template<typename T, typename U, typename O>\
+inline void multiply(T begin, T end, U begin2, O out){
+	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
+	using base_type = utils::IteratorBaseType_t<T>;
+	if constexpr (simde_supported_v<base_type>){
+		static constexpr size_t pack_size = pack_size_v<base_type>;
+		for(; begin + pack_size <= end; begin += pack_size, begin2 += pack_size, out += pack_size){
+			simde_type<base_type> a = it_loadu(begin);
+			simde_type<base_type> b = it_loadu(begin2);
+			simde_type<base_type> c = SimdTraits<base_type>::multiply(a, b);
+			it_storeu(out, c);
+		}
+		std::transform(begin, end, begin2, out, std::multiplies<>{});
+	}
+	else{
+		std::transform(begin, end, begin2, out, std::multiplies<>{});
+	}
+}
 
 
 
@@ -280,6 +300,10 @@ inline void func_name(T begin, T end, O out){\
 	}\
 }\
 \
+
+#define _NT_MAKE_INV_INLINE_FUNC_(operation, name)\
+template<typename T>\
+inline T _nt_##name(T element) noexcept {return 1.0/operation(element);}
 
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(reciprical, reciprical, 1.0/ );
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(exp, exp, std::exp);
@@ -307,27 +331,34 @@ inline void pow(T begin, T end, O out, utils::IteratorBaseType_t<T> num){
 }
 
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sqrt, sqrt, std::sqrt);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(invsqrt, invsqrt, 1.0/std::sqrt);
+_NT_MAKE_INV_INLINE_FUNC_(std::sqrt, invsqrt)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(invsqrt, invsqrt, _nt_invsqrt);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tanh, tanh, std::tanh);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tan, tan, std::tan);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(atan, atan, std::atan);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(atanh, atanh, std::atanh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotanh, cotanh, 1.0/std::tanh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotan, cotan, 1.0/std::tan);
+_NT_MAKE_INV_INLINE_FUNC_(std::tanh, cotanh)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotanh, cotanh, _nt_cotanh);
+_NT_MAKE_INV_INLINE_FUNC_(std::tan, cotan)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotan, cotan, _nt_cotanh);
 
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sinh, sinh, std::sinh);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sin, sin, std::sin);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(asin, asin, std::asin);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(asinh, asinh, std::asinh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(csch, csch, 1.0/std::sinh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(csc, csc, 1.0/std::sin);
+_NT_MAKE_INV_INLINE_FUNC_(std::sinh, csch)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(csch, csch, _nt_csch);
+_NT_MAKE_INV_INLINE_FUNC_(std::sin, csc)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(csc, csc, _nt_csc);
 
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cosh, cosh, std::cosh);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cos, cos, std::cos);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(acos, acos, std::acos);
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(acosh, acosh, std::acosh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sech, sech, 1.0/std::cosh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sec, sec, 1.0/std::cos);
+_NT_MAKE_INV_INLINE_FUNC_(std::cosh, sech)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sech, sech, _nt_sech);
+_NT_MAKE_INV_INLINE_FUNC_(std::cos, sec)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sec, sec, _nt_sec);
 
 
 template<typename T, typename U>
@@ -457,6 +488,30 @@ inline void dtanh(T begin, T end, U out){
 	}
 }
 
+
+template<typename T, typename U>
+inline void dinvsqrt(T begin, T end, U out){
+	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	using base_type = utils::IteratorBaseType_t<T>;
+	if constexpr (simde_svml_supported_v<base_type>){
+		static constexpr size_t pack_size = pack_size_v<base_type>;
+		simde_type<base_type> to_pow = SimdTraits<base_type>::set1(3.0);
+		simde_type<base_type> to_mult = SimdTraits<base_type>::set1(-0.5);
+		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
+			simde_type<base_type> current = it_loadu(begin);
+					      current = SimdTraits<base_type>::pow(current, to_pow);
+					      current = SimdTraits<base_type>::invsqrt(current);
+					      current = SimdTraits<base_type>::multiply(current, to_mult);
+			it_storeu(out, current);
+		}
+		for(;begin < end; ++begin, ++out)
+			*out = (-1 / (2 * (std::sqrt(std::pow(*begin, 3)))));
+	}else{
+		for(;begin != end; ++begin, ++out){
+			*out = (-1 / (2 * (std::sqrt(std::pow(*begin, 3)))));
+		}
+	}
+}
 
 /* template<typename T, typename U, typename O> */
 /* inline void add(T begin, T end, U begin2, O out){ */

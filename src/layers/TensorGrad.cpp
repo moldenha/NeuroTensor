@@ -121,6 +121,15 @@ TensorGrad::TensorGrad(const TensorGrad& tg)
 {}
 
 
+TensorGrad::TensorGrad(std::nullptr_t)
+	:tensor(nullptr),
+	do_track_grad(false), //default false for nullptr
+	grad(nullptr),
+	backwardFunc(nullptr),
+	parents({}),
+	children(nullptr)
+{}
+
 void TensorGrad::swap(TensorGrad& tg){
 	tensor.swap(tg.tensor);
 	grad.swap(tg.grad);
@@ -178,6 +187,13 @@ void TensorGrad::unchild() noexcept {
 }
 
 TensorGrad& TensorGrad::operator=(Scalar s){
+	if(is_null()){
+		tensor = Tensor(s);
+		do_track_grad = true;
+		backwardFunc = make_intrusive<intrusive_back_func>();
+		children = make_intrusive<intrusive_vector_tg>();
+		return *this;
+	}
 	tensor = s;
 	this->track_self_mod([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index){
@@ -189,6 +205,14 @@ TensorGrad& TensorGrad::operator=(Scalar s){
 }
 
 TensorGrad& TensorGrad::set_(const Tensor& t){
+	if(is_null()){
+		tensor = t;
+		do_track_grad = true;
+		backwardFunc = make_intrusive<intrusive_back_func>();
+		children = make_intrusive<intrusive_vector_tg>();
+		return *this;
+	}
+
 	tensor.set_(t);
 	this->track_self_mod([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index){
@@ -209,9 +233,30 @@ inline bool is_tracking_grad(const TensorGrad& t, const Args&... args) noexcept 
 	return is_tracking_grad(args...);
 }
 
+inline void handle_null_tensors(const TensorGrad& t) {
+	utils::throw_exception(!t.is_null(), "Unable to perform operations on null tensors");
+}
+
+inline void handle_null_tensors(const Tensor& t) {
+	utils::throw_exception(!t.is_null(), "Unable to perform operations on null tensors");
+}
+
+
+template<typename... Args>
+inline void handle_null_tensors(const Tensor& t, const Args&... args){
+	handle_null_tensors(t);
+	handle_null_tensors(args...);
+}
+
+template<typename... Args>
+inline void handle_null_tensors(const TensorGrad& t, const Args&... args){
+	handle_null_tensors(t);
+	handle_null_tensors(args...);
+}
 
 // Addition operation
 TensorGrad TensorGrad::operator+(const TensorGrad& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor + other.tensor);
 	result.do_track_grad = is_tracking_grad(*this, other);
 	result.track_tensors(*this, other);
@@ -228,6 +273,7 @@ TensorGrad TensorGrad::operator+(const TensorGrad& other) const {
 
 
 TensorGrad TensorGrad::operator+(const Scalar other) const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor + other);
 	result.do_track_grad = is_tracking_grad(*this);
 	result.track_tensors(*this);
@@ -241,6 +287,7 @@ TensorGrad TensorGrad::operator+(const Scalar other) const {
 }
 
 TensorGrad TensorGrad::operator+(const Tensor& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor + other);
 	result.do_track_grad = is_tracking_grad(*this);
 	result.track_tensors(*this);
@@ -255,6 +302,7 @@ TensorGrad TensorGrad::operator+(const Tensor& other) const {
 }
 
 TensorGrad operator+(const Tensor& other, const TensorGrad& tg){
+	handle_null_tensors(tg, other);
 	TensorGrad result(tg.tensor + other);
 	if(!tg.do_track_grad){
 		result.do_track_grad = false;
@@ -272,6 +320,7 @@ TensorGrad operator+(const Tensor& other, const TensorGrad& tg){
 }
 
 TensorGrad operator+(const Scalar other, const TensorGrad& tg){
+	handle_null_tensors(tg);
 	TensorGrad result(tg.tensor + other);
 	if(!tg.do_track_grad){
 		result.do_track_grad = false;
@@ -289,6 +338,7 @@ TensorGrad operator+(const Scalar other, const TensorGrad& tg){
 
 //This Addition operation
 TensorGrad& TensorGrad::operator+=(const TensorGrad& other){
+	handle_null_tensors(*this, other);
 	this->tensor += other.tensor;
 	this->track_self_mod([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index, bool first){
@@ -302,6 +352,7 @@ TensorGrad& TensorGrad::operator+=(const TensorGrad& other){
 }
 
 TensorGrad& TensorGrad::operator+=(const Tensor& other){
+	handle_null_tensors(*this, other);
 	this->tensor += other;
 	this->track_self_mod([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index, bool first){
@@ -313,6 +364,7 @@ TensorGrad& TensorGrad::operator+=(const Tensor& other){
 }
 
 TensorGrad& TensorGrad::operator+=(const Scalar other){
+	handle_null_tensors(*this);
 	this->tensor += other; //faster because I already know it is contiguous
 	this->track_self_mod([other](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index, bool first){
@@ -326,11 +378,13 @@ TensorGrad& TensorGrad::operator+=(const Scalar other){
 	return *this;
 }
 Tensor& operator+=(Tensor& t, const TensorGrad& tg){
+	handle_null_tensors(t, tg);
 	return t += tg.tensor;
 }
 
 // Subtraction operation
 TensorGrad TensorGrad::operator-(const TensorGrad& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor - other.tensor);
 	if(!is_tracking_grad(*this, other)){
 		result.do_track_grad = false;
@@ -350,6 +404,7 @@ TensorGrad TensorGrad::operator-(const TensorGrad& other) const {
 
 
 TensorGrad TensorGrad::operator-(const Scalar other) const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor - other);
 	if(!this->do_track_grad){
 		result.do_track_grad = false;
@@ -367,6 +422,7 @@ TensorGrad TensorGrad::operator-(const Scalar other) const {
 }
 
 TensorGrad TensorGrad::operator-(const Tensor& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor - other);
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -384,6 +440,7 @@ TensorGrad TensorGrad::operator-(const Tensor& other) const {
 }
 
 TensorGrad operator-(const Tensor& other, const TensorGrad& tg){
+	handle_null_tensors(tg, other);
 	TensorGrad result(other - tg.tensor);
 	if(!is_tracking_grad(tg)){
 		result.do_track_grad = false;
@@ -401,6 +458,7 @@ TensorGrad operator-(const Tensor& other, const TensorGrad& tg){
 }
 
 TensorGrad operator-(const Scalar other, const TensorGrad& tg){
+	handle_null_tensors(tg);
 	TensorGrad result(other - tg.tensor);
 	if(!is_tracking_grad(tg)){
 		result.do_track_grad = false;
@@ -420,6 +478,7 @@ TensorGrad operator-(const Scalar other, const TensorGrad& tg){
 
 //This Subtraction operation
 TensorGrad& TensorGrad::operator-=(const TensorGrad& other){
+	handle_null_tensors(*this, other);
 	this->tensor -= other.tensor;
 	this->track_self_mod([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index, bool first){
@@ -432,6 +491,7 @@ TensorGrad& TensorGrad::operator-=(const TensorGrad& other){
 }
 
 TensorGrad& TensorGrad::operator-=(const Tensor& other){
+	handle_null_tensors(*this, other);
 	this->tensor -= other;
 	this->track_self_mod([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 				const size_t parent_index, bool first){
@@ -443,6 +503,7 @@ TensorGrad& TensorGrad::operator-=(const Tensor& other){
 }
 
 TensorGrad& TensorGrad::operator-=(const Scalar other){
+	handle_null_tensors(*this);
 	this->tensor -= other; //faster because I already know it is contiguous
 	
 	this->track_self_mod([other](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -457,11 +518,13 @@ TensorGrad& TensorGrad::operator-=(const Scalar other){
 }
 
 Tensor& operator-=(Tensor& t, const TensorGrad& tg){
+	handle_null_tensors(t, tg);
 	return t -= tg.tensor;
 }
 
 // Division operation
 TensorGrad TensorGrad::operator/(const TensorGrad& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor / other.tensor);
 	if(!is_tracking_grad(*this, other)){
 		result.do_track_grad = false;
@@ -480,6 +543,7 @@ TensorGrad TensorGrad::operator/(const TensorGrad& other) const {
 	return std::move(result);
 }
 TensorGrad TensorGrad::operator/(const Scalar other) const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor / other);
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -496,6 +560,7 @@ TensorGrad TensorGrad::operator/(const Scalar other) const {
 }
 
 TensorGrad TensorGrad::operator/(const Tensor& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor / other);
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -514,6 +579,7 @@ TensorGrad TensorGrad::operator/(const Tensor& other) const {
 }
 
 TensorGrad operator/(const Tensor& other, const TensorGrad& tg){
+	handle_null_tensors(tg, other);
 	TensorGrad result(other / tg.tensor);
 	if(!is_tracking_grad(tg)){
 		result.do_track_grad = false;
@@ -532,6 +598,7 @@ TensorGrad operator/(const Tensor& other, const TensorGrad& tg){
 }
 
 TensorGrad operator/(const Scalar other, const TensorGrad& tg) {
+	handle_null_tensors(tg);
     TensorGrad result(other / tg.tensor);
 	if(!is_tracking_grad(tg)){
 		result.do_track_grad = false;
@@ -551,6 +618,7 @@ TensorGrad operator/(const Scalar other, const TensorGrad& tg) {
 
 //This division operation
 TensorGrad& TensorGrad::operator/=(const TensorGrad& other){
+	handle_null_tensors(*this, other);
 	if(!this->do_track_grad){
 		this->tensor /= other.tensor;
 		return *this;
@@ -573,6 +641,7 @@ TensorGrad& TensorGrad::operator/=(const TensorGrad& other){
 }
 
 TensorGrad& TensorGrad::operator/=(const Tensor& other){
+	handle_null_tensors(*this, other);
 	if(!this->do_track_grad){
 		this->tensor /= other;
 		return *this;
@@ -593,6 +662,7 @@ TensorGrad& TensorGrad::operator/=(const Tensor& other){
 }
 
 TensorGrad& TensorGrad::operator/=(const Scalar other){
+	handle_null_tensors(*this);
 	this->tensor /= other; //faster because I already know it is contiguous
 	this->track_self_mod([other](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 			const size_t parent_index, bool first){
@@ -607,12 +677,14 @@ TensorGrad& TensorGrad::operator/=(const Scalar other){
 }
 
 Tensor& operator/=(Tensor& t, const TensorGrad& tg){
+	handle_null_tensors(t, tg);
 	return t /= tg.tensor;
 }
 
 
 // Multiplication operation
 TensorGrad TensorGrad::operator*(const TensorGrad& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor * other.tensor);
 	if(!is_tracking_grad(*this, other)){
 		result.do_track_grad = false;
@@ -633,6 +705,7 @@ TensorGrad TensorGrad::operator*(const TensorGrad& other) const {
 
 
 TensorGrad TensorGrad::operator*(const Scalar other) const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor * other);
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -649,6 +722,7 @@ TensorGrad TensorGrad::operator*(const Scalar other) const {
 }
 
 TensorGrad TensorGrad::operator*(const Tensor& other) const {
+	handle_null_tensors(*this, other);
 	TensorGrad result(this->tensor * other);
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -667,6 +741,7 @@ TensorGrad TensorGrad::operator*(const Tensor& other) const {
 }
 
 TensorGrad operator*(const Tensor& other, const TensorGrad& tg){
+	handle_null_tensors(tg, other);
 	TensorGrad result(other * tg.tensor);
 	if(!is_tracking_grad(tg)){
 		result.do_track_grad = false;
@@ -685,6 +760,7 @@ TensorGrad operator*(const Tensor& other, const TensorGrad& tg){
 }
 
 TensorGrad operator*(const Scalar other, const TensorGrad& tg) {
+	handle_null_tensors(tg);
 	TensorGrad result(other * tg.tensor);
 	if(!is_tracking_grad(tg)){
 		result.do_track_grad = false;
@@ -703,6 +779,7 @@ TensorGrad operator*(const Scalar other, const TensorGrad& tg) {
 
 //This multiplication operation
 TensorGrad& TensorGrad::operator*=(const TensorGrad& other){
+	handle_null_tensors(*this, other);
 	if(!this->do_track_grad){
 		this->tensor *= other.tensor;
 		return *this;
@@ -727,6 +804,7 @@ TensorGrad& TensorGrad::operator*=(const TensorGrad& other){
 
 //This multiplication operation
 TensorGrad& TensorGrad::operator*=(const Tensor& other){
+	handle_null_tensors(*this, other);
 	if(!this->do_track_grad){
 		this->tensor *= other;
 		return *this;
@@ -747,6 +825,7 @@ TensorGrad& TensorGrad::operator*=(const Tensor& other){
 }
 
 TensorGrad& TensorGrad::operator*=(const Scalar other){
+	handle_null_tensors(*this);
 	this->tensor *= other; //faster because I already know it is contiguous
 	const size_t other_indice = this->parents.size();
 	this->track_self_mod([other](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -762,16 +841,24 @@ TensorGrad& TensorGrad::operator*=(const Scalar other){
 
 
 Tensor& operator*=(Tensor& t, const TensorGrad& tg){
+	handle_null_tensors(t, tg);
 	return t *= tg.tensor;
 }
 
-std::ostream& operator<<(std::ostream &out, const TensorGrad& tg){return out << tg.tensor;}
+std::ostream& operator<<(std::ostream &out, const TensorGrad& tg){
+	if(tg.is_null()){
+		return out << "Null";
+	}else{
+		return out << tg.tensor;
+	}
+}
 
 
 
 
 
 TensorGrad TensorGrad::to_complex_from_real() const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.to_complex_from_real());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -786,6 +873,7 @@ TensorGrad TensorGrad::to_complex_from_real() const{
 }
 
 TensorGrad TensorGrad::to_complex_from_imag() const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.to_complex_from_imag());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -800,48 +888,35 @@ TensorGrad TensorGrad::to_complex_from_imag() const{
 }
 
 //need to make expand and expand_as before doing this:
-TensorGrad TensorGrad::sum(size_value_t dim) const {
+TensorGrad TensorGrad::sum(utils::optional_list list, bool keepdim) const {
 	//perform the forward sum operation
-	TensorGrad result(this->tensor.sum(dim));
-	if(!is_tracking_grad(*this)){
-		result.do_track_grad = false;
-		return std::move(result);
-	}
-
-	//track the current tensor in the result for backward computation
-	result.track_tensors(*this);
-
-	//define the backward function
-	result.create_backward_function([dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
-		//repeat the gradient along the summed dimension
-		parents[0]->grad->tensor += grad.unsqueeze(dim).expand_as(parents[0]->grad->tensor);
-	});
-
-	return std::move(result);
-}
-
-TensorGrad TensorGrad::sum() const{
-	TensorGrad result(this->tensor.sum());
+	handle_null_tensors(*this);
+	Tensor summed = this->tensor.sum(list, true);
+	std::vector<int64_t> dims = summed.shape().Vec();
+	TensorGrad result(keepdim ? summed : summed.squeeze());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
 		return std::move(result);
 	}
 
 
-	result.track_tensors(*this);
-
 	//define the backward function
-	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
+	result.create_backward_function([dims](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
 		//repeat the gradient along the summed dimension
-		parents[0]->grad->tensor += grad.expand_as(parents[0]->grad->tensor);
+		parents[0]->grad->tensor += grad.view(SizeRef(std::move(dims))).expand_as(parents[0]->grad->tensor);
 	});
+
 	return std::move(result);
 }
 
 
-TensorGrad TensorGrad::mean(size_value_t dim) const {
+
+TensorGrad TensorGrad::mean(utils::optional_list list, bool keepdim) const {
 	//perform the forward mean operation
-	TensorGrad result(this->tensor.mean(dim));
+	handle_null_tensors(*this);
+	Tensor meaned = this->tensor.mean(list, true);
+	std::vector<int64_t> dims = meaned.shape().Vec();
+	TensorGrad result(keepdim ? meaned : meaned.squeeze());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
 		return std::move(result);
@@ -850,46 +925,33 @@ TensorGrad TensorGrad::mean(size_value_t dim) const {
 
 	//track the current tensor in the result for backward computation
 	result.track_tensors(*this);
-	size_value_t dim_size = shape()[dim];
+	size_value_t dim_size;
+	if(!list){
+		dim_size = numel();
+	}else{
+		dim_size = 1;
+		for(const auto& dim : list){
+			dim_size *= shape()[dim];
+		}
+	}
 
 	//define the backward function
-	result.create_backward_function([dim, dim_size](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
+	result.create_backward_function([dims, dim_size](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
 	//calculate the size of the dimension along which the mean was computed
 	//this is dim_size
 
 	//expand the gradient to the shape of the original tensor
 
 	//divide the gradient by the size of the dimension to distribute it equally
-	parents[0]->grad->tensor += grad.unsqueeze(dim).expand_as(parents[0]->grad->tensor) / dim_size;
+	parents[0]->grad->tensor += grad.view(SizeRef(std::move(dims))).expand_as(parents[0]->grad->tensor) / dim_size;
 	});
 
 	return std::move(result);
 }
 
-
-TensorGrad TensorGrad::mean() const{
-	TensorGrad result(this->tensor.mean());
-	if(!is_tracking_grad(*this)){
-		result.do_track_grad = false;
-		return std::move(result);
-	}
-
-	result.track_tensors(*this);
-	size_value_t dim_size = numel();
-
-	result.create_backward_function([dim_size](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
-        //calculate the size of the dimension along which the mean was computed
-        //this is dim_size
-
-        //expand the gradient to the shape of the original tensor
-        
-        //divide the gradient by the size of the dimension to distribute it equally
-        parents[0]->grad->tensor += grad / dim_size;
-	});
-	return std::move(result);
-}
 
 result_types::max<TensorGrad, Tensor> TensorGrad::max() const{
+	handle_null_tensors(*this);
 	result_types::max<Tensor, Tensor> o_a = this->tensor.max();
 	TensorGrad result(o_a.values);
 	if(!is_tracking_grad(*this)){
@@ -904,6 +966,7 @@ result_types::max<TensorGrad, Tensor> TensorGrad::max() const{
 }
 
 result_types::max<TensorGrad, Tensor> TensorGrad::max(size_value_t dim) const{
+	handle_null_tensors(*this);
 	result_types::max<Tensor, Tensor> o_a = this->tensor.max(dim);
 	TensorGrad result(o_a.values);
 	if(!is_tracking_grad(*this)){
@@ -920,6 +983,7 @@ result_types::max<TensorGrad, Tensor> TensorGrad::max(size_value_t dim) const{
 
 TensorGrad TensorGrad::exp() const {
 	//perform the forward exp operation
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.exp());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -944,6 +1008,7 @@ TensorGrad& TensorGrad::exp_() {
 
 
 	//apply the in-place exponential operation
+	handle_null_tensors(*this);
 	this->tensor.exp_();
 	if(!this->do_track_grad){return *this;}
 
@@ -965,6 +1030,7 @@ TensorGrad& TensorGrad::exp_() {
 }
 
 TensorGrad TensorGrad::to_dtype(DType dt) const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.to(dt));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -979,6 +1045,7 @@ TensorGrad TensorGrad::to_dtype(DType dt) const {
 }
 
 TensorGrad TensorGrad::to_device(DeviceType dt) const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.to(dt));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -993,6 +1060,7 @@ TensorGrad TensorGrad::to_device(DeviceType dt) const {
 }
 
 TensorGrad TensorGrad::contiguous() const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.contiguous());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1008,6 +1076,7 @@ TensorGrad TensorGrad::contiguous() const{
 }
 
 TensorGrad TensorGrad::clone() const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.clone());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1024,6 +1093,7 @@ TensorGrad TensorGrad::clone() const{
 
 
 TensorGrad TensorGrad::pow(size_value_t exponent) const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.pow(exponent));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1042,6 +1112,7 @@ TensorGrad TensorGrad::pow(size_value_t exponent) const{
 
 
 TensorGrad& TensorGrad::inverse_() {
+	handle_null_tensors(*this);
 	if(!this->do_track_grad){
 		this->tensor.inverse_();
 		return *this;
@@ -1067,6 +1138,7 @@ TensorGrad& TensorGrad::inverse_() {
 }
 
 TensorGrad TensorGrad::inverse() const {
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.inverse());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1082,6 +1154,7 @@ TensorGrad TensorGrad::inverse() const {
 }
 
 TensorGrad TensorGrad::clip(Scalar lower, Scalar higher) const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->tensor.clip(lower, higher));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1096,12 +1169,14 @@ TensorGrad TensorGrad::clip(Scalar lower, Scalar higher) const{
 
 
 TensorGrad& TensorGrad::clip_(Scalar lower, Scalar higher) {
+	handle_null_tensors(*this);
 	(*this)[*this < lower] = lower;
 	(*this)[*this > higher] = higher;
 	return *this;
 }
 
 TensorGrad TensorGrad::pad(std::vector<size_value_t> p, const char* mode, double value) const{
+	handle_null_tensors(*this);
 	utils::throw_exception(p.size() % 2 == 0, "RuntimeError: The size of the pad must have 2 per dimension");
 	utils::throw_exception((p.size() / 2) <= dims(), "RuntimeError: expected padding for at most $ dims but instead got $", dims(), int(p.size() / 2));
 
@@ -1130,6 +1205,7 @@ TensorGrad TensorGrad::pad(std::vector<size_value_t> p, const char* mode, double
 }
 
 TensorGrad TensorGrad::flip(size_value_t dim) const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->flip(dim));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1143,6 +1219,7 @@ TensorGrad TensorGrad::flip(size_value_t dim) const{
 }
 
 TensorGrad TensorGrad::flip() const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->flip());
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1157,6 +1234,7 @@ TensorGrad TensorGrad::flip() const{
 
 
 TensorGrad TensorGrad::dilate(size_value_t dil) const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->dilate(dil));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1171,6 +1249,7 @@ TensorGrad TensorGrad::dilate(size_value_t dil) const{
 }
 
 TensorGrad TensorGrad::undilate(size_value_t dil) const{
+	handle_null_tensors(*this);
 	TensorGrad result(this->undilate(dil));
 	if(!is_tracking_grad(*this)){
 		result.do_track_grad = false;
@@ -1222,6 +1301,7 @@ TensorGrad TensorGrad::undilate(size_value_t dil) const{
 
 #define TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(op, ...) \
     TensorGrad TensorGrad::op(COMBINE_ARGUMENTS(__VA_ARGS__)) const { \
+	handle_null_tensors(*this);\
         TensorGrad result(tensor.op(EXTRACT_ODD_ARGUMENTS(__VA_ARGS__))); \
         result.track_grad(*this, \
             [EXTRACT_ODD_ARGUMENTS(__VA_ARGS__)](Tensor& grad){\
@@ -1299,6 +1379,7 @@ Tensor TensorGrad::grad_value() const {
 }
 
 void TensorGrad::update() {
+	handle_null_tensors(*this);
 	this->tensor -= this->grad->tensor;
 }
 

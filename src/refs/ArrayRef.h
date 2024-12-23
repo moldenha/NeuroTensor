@@ -11,6 +11,7 @@
 #include <array>
 #include <initializer_list>
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../utils/type_traits.h"
 
 namespace nt{
 
@@ -36,7 +37,16 @@ class ArrayRef{
 		ArrayRef();
 		ArrayRef(const ArrayRef<T> &Arr);
 		ArrayRef(ArrayRef<T>&& Arr);
-		ArrayRef(const T &OneEle);
+		// Constructor for general types
+		template<typename U = T, typename std::enable_if_t<!std::is_same_v<U, std::nullptr_t>, bool> = true>
+		ArrayRef(const U& OneEle)
+		:_vals(new T[1]), _total_size(1), _empty(false)
+		{_vals[0] = OneEle;}
+		// Constructor for nullptr type
+		template<typename U = T, typename std::enable_if_t<std::is_same_v<U, std::nullptr_t>, bool> = true>
+		ArrayRef(const U& OneEle)
+		:_vals(nullptr), _total_size(0), _empty(true)
+		{}
 		ArrayRef(const T *data, size_t length);
 		ArrayRef(const std::vector<T> &Vec);
 		template<size_t N>

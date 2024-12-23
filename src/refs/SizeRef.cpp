@@ -87,6 +87,10 @@ SizeRef::SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec)
 	:_sizes(Vec)
 {}
 
+SizeRef::SizeRef(std::nullptr_t)
+	:_sizes(nullptr)
+{}
+
 const bool SizeRef::operator==(const SizeRef &Arr) const {return _sizes == Arr._sizes;}
 const bool SizeRef::operator!=(const SizeRef &Arr) const {return _sizes != Arr._sizes;}
 const typename SizeRef::value_type* SizeRef::data() const {return _sizes.data();}

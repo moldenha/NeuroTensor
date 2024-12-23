@@ -48,6 +48,7 @@ class SizeRef{
 		SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec);
 		SizeRef(ArrayRefInt&&);
 		SizeRef(const ArrayRefInt&);
+		SizeRef(std::nullptr_t);
 
 		SizeRef(const SizeRef&);
 		SizeRef(SizeRef&&);

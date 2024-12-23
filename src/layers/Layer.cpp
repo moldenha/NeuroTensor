@@ -2,45 +2,6 @@
 #include "../utils/utils.h"
 
 namespace nt{
-void LayerGraph::mark_input(const intrusive_ptr<TensorGrad>& inp){
-	layers.push_back(nullptr);
-	intrusive_ptr<LayerNode> node = make_intrusive<LayerNode>();
-	node->input = inp;
-	nodes.push_back(node);
-}
-
-void LayerGraph::mark_output(const intrusive_ptr<TensorGrad>& inp){
-	utils::throw_exception(layers.back() == nullptr, "Error with logging, expected last vector to be a nullptr");
-	nodes.back()->output = inp;
-}
-
-void LayerGraph::mark_child_layerStart(const intrusive_ptr<TensorGrad>& inp){
-	utils::throw_exception(layers.back() == nullptr, "Error with logging, expected last vector to be a nullptr");
-	nodes.back()->output = inp;
-}
-
-void LayerGraph::mark_child_input(const intrusive_ptr<TensorGrad>& inp, Layer * l){
-	utils::throw_exception(layers.back() == nullptr, "Error with logging, expected last vector to be a nullptr");
-	layers.push_back(l);
-	intrusive_ptr<LayerNode> node = make_intrusive<LayerNode>();
-	node->input = inp;
-	nodes.push_back(node);
-}
-
-
-void LayerGraph::mark_child_output(const intrusive_ptr<TensorGrad>& inp, Layer * l){
-	utils::throw_exception(layers.back() == l, "Error with logging, expected to have tracked correct last layer");
-	nodes.back()->output = inp;
-}
-
-
-
-void LayerGraph::mark_child_layerEnd(const intrusive_ptr<TensorGrad>& inp){
-	layers.push_back(nullptr);
-	intrusive_ptr<LayerNode> node = make_intrusive<LayerNode>();
-	node->input = inp;
-	nodes.push_back(node);
-}
 
 void Layer::get_all_layers(reflect::detail::custom_typed_map<Layer>& map, std::string add){
 	reflect::detail::custom_typed_map<Layer> my_layers = this->get_named_vars<Layer>();
@@ -106,6 +67,9 @@ void Layer::update(){
 	}
 }
 
+//I want to have a way to track every input and output
+//
+
 TensorGrad Layer::forward(TensorGrad _x){
 	if(this->is_eval){
 		bool overriden_eval = reflect::detail::backward_module_function_overriden(this->ptr_);
@@ -114,29 +78,60 @@ TensorGrad Layer::forward(TensorGrad _x){
 		}
 		return this->ptr_->forward(_x);
 	}
-	intrusive_ptr<TensorGrad> x = make_intrusive<TensorGrad>(_x.tensor); //modify the tensor grad to remove its gradient tracks before _x
-	this->MyGraph->mark_input(x);
+	intrusive_ptr<TensorGrad> x = make_intrusive<TensorGrad>(_x.detach()); //modify the tensor grad to remove its gradient tracks before _x
+	size_t grad_index = this->MyGraph->mark_input(x);
+	size_t parent_index;
 	if(this->ParentGraph){
 		intrusive_ptr<TensorGrad> p_x = make_intrusive<TensorGrad>(_x); // have the gradient graph within this one
 		this->ParentGraph->mark_child_layerStart(p_x);
-		this->ParentGraph->mark_child_input(x, this);
+		parent_index = this->ParentGraph->mark_child_input(x, this);
 
 	}
 	intrusive_ptr<TensorGrad> forward_out = make_intrusive<TensorGrad>(this->ptr_->forward(*x));
-	this->MyGraph->mark_output(forward_out);
+	this->MyGraph->mark_output(forward_out, grad_index);
 	if(this->ParentGraph){
 		intrusive_ptr<TensorGrad> ngrad_out = make_intrusive<TensorGrad>(forward_out->tensor);
 		this->ParentGraph->mark_child_layerEnd(ngrad_out);
-		this->ParentGraph->mark_child_output(forward_out, this);
+		this->ParentGraph->mark_child_output(forward_out, this, parent_index);
 	}
 	return *forward_out;
 }
 
-void Layer::backward(Tensor grad){
+void get_grad_from_parents(intrusive_ptr<TensorGrad>& tgs, intrusive_ptr<TensorGrad>& input, Tensor& grad){
+	for(auto& parent : tgs->parents){
+		//a way to determine if they occupy the same memory
+		if(parent->data_ptr() == input->data_ptr()){
+		//TODO: look into the function below
+		/* if(parent->occupy_same_tensor_memory(*input)){ */
+			grad = std::move(parent->grad_value());
+			return;
+		}
+		get_grad_from_parents(parent, input, grad);
+	}
+}
+
+/* bool get_grad_from_parents_print(intrusive_ptr<TensorGrad>& tgs, intrusive_ptr<TensorGrad>& input){ */
+/* 	for(auto& parent : tgs->parents){ */
+/* 		std::cout << "parent shape: "<<parent->shape() << std::endl; */
+/* 		if(parent->data_ptr() == input->data_ptr()){ */ 
+/* 			//this is a way to determine if they occupy the same memory */
+/* 			std::cout << "found input!"<<std::endl; */
+/* 			return true; */
+/* 		}else if(parent->shape() == input->shape()){ */
+/* 			std::cout << "shapes were equal though..."<<std::endl; */
+/* 		} */
+/* 		return get_grad_from_parents_print(parent, input); */
+/* 	} */
+/* 	return false; */
+/* } */
+
+
+Tensor Layer::backward(Tensor grad){
+
 	bool overriden_backward = reflect::detail::backward_module_function_overriden(this->ptr_);
 	if(overriden_backward){
 		this->MyGraph->back().second->input->grad = make_intrusive<tensor_holder>(this->ptr_->backward(grad));
-		return;
+		return this->MyGraph->back().second->input->grad_value();
 	}
 	while(this->MyGraph->size() > 0){
 		//get the last pair of layers and the output and input tensor grad
@@ -145,14 +140,13 @@ void Layer::backward(Tensor grad){
 		//and then in that case just have the tensor grads update the path of grads themselves
 		if(info.first == nullptr){
 			info.second->output->backward(grad);
-			//then update the gradient to be subsequent gradient how ever many steps through the 
-			grad = std::move(info.second->input->grad_value());
+			get_grad_from_parents(info.second->output, info.second->input, grad);
 			continue;
 		}
 		//otherwise calculate the gradient for the current layer...
-		info.first->backward(std::move(grad));
-		grad = info.second->input->grad_value();
+		grad = std::move(info.first->backward(std::move(grad)));
 	}
+	return std::move(grad);
 }
 
 } //nt::

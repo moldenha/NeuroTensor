@@ -214,7 +214,7 @@ class BucketIterator_blocked{
 		}
 		template<size_t N>
 		inline bool block_size_left() const noexcept{
-			return (m_ptr[1] - m_ptr[0]) >= N;
+			return (m_ptr[1] - m_ptr[0]) >= N && (m_ptr[1] > m_ptr[0]);
 		}
 		inline friend uint64_t block_diff(const BucketIterator_blocked& a, const BucketIterator_blocked& b) noexcept {
 			if(b.current_stride == a.current_stride)

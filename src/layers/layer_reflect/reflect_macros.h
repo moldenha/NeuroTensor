@@ -5,6 +5,7 @@
 //#include "tie_structure.hpp"
 #include "custom_iterator.hpp"
 #include "custom_iterator_map.hpp"
+#include "../Module.h"
 
 namespace nt{
 namespace reflect{
@@ -334,15 +335,15 @@ namespace reflect{
 		const bool registered_##Derived = [](){ \
 			::nt::reflect::detail::getRegistry().emplace_back(\
 				std::type_index(typeid(Derived)),\
-				[](Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }, \
-				[](Module* ptr) {\
+				[](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }, \
+				[](::nt::Module* ptr) {\
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_iterator();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
 						return ::nt::reflect::detail::custom_any_iterator(_NT_CLS_TO_ITERATOR_(dynamic_ptr, Derived, __VA_ARGS__));\
 					}\
 				}, \
-				[](Module* ptr){\
+				[](::nt::Module* ptr){\
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_map();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
@@ -350,9 +351,9 @@ namespace reflect{
 					}\
 				},\
 				#Derived,\
-				[](){return _NT_OVERRIDEN_(Module, Derived, forward);},\
-				[](){return _NT_OVERRIDEN_(Module, Derived, backward);},\
-				[](){return _NT_OVERRIDEN_(Module, Derived, eval);}\
+				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, forward);},\
+				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, backward);},\
+				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, eval);}\
 				);\
 			return true;\
 		}();\

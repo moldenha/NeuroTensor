@@ -14,112 +14,8 @@
 namespace nt{
 
 
-//38.5,45.5, 51.5, 52.5, 53.5,54.5,55.5,57.5,58.5,59.5,60.5,61.5,62.5,64.5,66.5,67.5,69.5,
-//70.5,71.5,72.5,73.5,75.5,81.5,82.5,83.5,84.5,85.5,86.5,87.5,88.5,91.5,92.5,93.5,94.5,95.5,97.5 (7, 4, 2, 4, 3 (a lot), (5&6))
-/*
-def show_current_mask(images_tensor):
-     images_np = images_tensor[:,0,:,:].numpy()
-     fig, axs = plt.subplots(1, images_np.shape[0], figsize=(15, 5))
-     for i in range(images_np.shape[0]):
-             axs[i].imshow(images_np[i], cmap='gray')
-             axs[i].axis('off')  # Turn off axis labels
-             axs[i].set_title(f'Image {i+1}')
-     plt.show()
-
-for i, mask in enumerate(masks):
-	for j, img in enumerate(mask):
-		if(torch.all(img[0] == 1) or torch.all(img[1] == 0)):
-			if(i % 2 != 0):
-				indexes.append((int(i/2), list(data.keys())[int(i/2)], j))
-			
 
 
-def replaceMaskTensor(filename, threshold, index, mask):
-	image = Image.open(filename).convert('L')
-	image_resized = image.resize((256, 256), resample=Image.LANCZOS)
-	image_np = np.array(image_resized)
-	image_np[image_np > threshold] = 255
-	image_np[image_np != 255] = 0
-	image_np[image_np == 255] = 1
-	image_t = torch.from_numpy(image_np).clone().to(torch.uint8)
-	a = torch.where(image_t == 0)
-	b = torch.where(image_t == 1)
-	image_t_0 = image_t.clone()
-	image_t_0[a] = 1
-	image_t_0[b] = 0
-	mask_a = mask.clone()
-	mask_a[index] = 12
-	mask_a[index][0] = image_t_0
-	mask_a[index][1] = image_t
-	return mask_a
-
-def replaceMaskTensor_c(filename, threshold, index, mask):
-	image = Image.open(filename).convert('L')
-	image_resized = image.resize((256, 256), resample=Image.LANCZOS)
-	image_np = np.array(image_resized)
-	image_np[image_np > threshold] = 255
-	image_np[image_np != 255] = 0
-	image_np[image_np == 255] = 1
-	image_t = torch.from_numpy(image_np).clone().to(torch.uint8)
-	a = torch.where(image_t == 0)
-	b = torch.where(image_t == 1)
-	image_t_0 = image_t.clone()
-	image_t_0[a] = 1
-	image_t_0[b] = 0
-	mask_a = mask.clone()
-	mask_a[index][0] = 12
-	mask_a[index][1] = image_t
-	return mask_a
-
-
-def getFilename(data, index, num):
-	return '/Users/sammoldenhauer/Downloads/college/southwell/tracing_images/untouched/'+list(data.keys())[index] +'/'+str(num)+'_b_cropped.bmp'
-
-for i in range(len(masks)):
-	index = int(i / 2)
-	for j in range(len(masks[i])):
-		filename = getFilename(data, index, j+1)
-		image = Image.open(filename).convert('L')
-		image_resized = image.resize((256,256), resample = Image.LANCZOS)
-		image_np = np.array(image_resized)
-		image_np[image_np > threshold] = 255
-		image_np[image_np != 255] = 0
-		image_np[image_np == 255] = 1
-		image_t = torch.from_numpy(image_np).clone().to(torch.uint8)
-		a = torch.where(image_t == 0)
-		b = torch.where(image_t == 1)
-		image_t_0 = image_t.clone()
-		image_t_0[a] = 1
-		image_t_0[b] = 0
-		masks[i][j][0] = image_t_0
-		masks[i][j][1] = image_t
-
-
-
-def show_current_input(inp):
-	# Convert the tensor to NumPy array and rearrange the dimensions
-	images_np = inp.permute(0, 2, 3, 1).numpy()
-	# Create a figure and axis objects
-	fig, axs = plt.subplots(3, 4, figsize=(12, 9))
-	# Iterate over each image and display it
-	for i, ax in enumerate(axs.flat):
-	    ax.imshow(images_np[i])
-	    ax.axis('off')  # Turn off axis labels
-	    ax.set_title(f'Image {i+1}')
-	# Adjust spacing between subplots
-	plt.tight_layout()
-	# Show the plot
-	plt.show()
-
-108/109 image 6 & 5 is weird
-
- */
-
-//DN 24-1-9 (1) was classified as 1 -> 0
-//DN 4-3-1 (3) was classified as 0 -> 1
-//DN 4-3-1 (7) was classified as 0 -> 1
-//DN 4-3-1 (8) was classified as 1 -> 2
-//6-3-6 (3) was classified as 0 -> 1
 
 //the below is extremely important that it is initialized using new[]
 //new will actually call an initializer (instead of just filling it with garbage)
@@ -307,6 +203,16 @@ Bucket::Bucket(Bucket&& other)
 	strides_blocked(other.strides_blocked),
 	dtype(other.dtype)
 {}
+
+Bucket::Bucket(std::nullptr_t)
+	:buckets_(nullptr),
+	strides_(nullptr),
+	stride_size(0),
+	bs(0),
+	strides_blocked(true),
+	dtype(DType::Float32)
+{}
+
 
 bool Bucket::is_contiguous() const {
 	if(strides_blocked && stride_size == 2){return true;}

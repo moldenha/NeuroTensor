@@ -107,6 +107,7 @@ class Bucket{
 		Bucket();
 		Bucket(const Bucket& b);
 		Bucket(Bucket&& b);
+		Bucket(std::nullptr_t);
 		Bucket& operator=(const Bucket& b);
 		Bucket& operator=(Bucket&& b);
 
@@ -121,6 +122,9 @@ class Bucket{
 			const_cast<int64_t&>(bs) = 0;
 			strides_blocked = true;
 
+		}
+		inline bool occupy_same_memory(const Bucket& b) const noexcept {
+			return b.strides_ == strides_ && buckets_ == b.buckets_;
 		}
 		/* ~Bucket(); */
 		

@@ -72,6 +72,7 @@ set(CORE_SOURCES
     src/refs/ArrayRef.cpp
     src/refs/SizeRef.cpp
     src/utils/utils.cpp
+    src/utils/optional.cpp
     src/Tensor.cpp
 )
 
@@ -125,11 +126,13 @@ set(PERMUTE_SOURCES
 set(AI_SOURCES
     # src/layers/Linear.cpp
     src/layers/Layer.cpp
+    src/layers/LayerGraph.cpp
     # src/layers/ActivationFunction.cpp
     # src/layers/Fold.cpp
     # src/layers/Conv2d.cpp
     src/layers/TensorGrad.cpp
     src/layers/functional.cpp
+    src/layers/Loss.cpp
 
 )
 

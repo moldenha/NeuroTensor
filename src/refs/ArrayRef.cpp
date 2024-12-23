@@ -14,6 +14,7 @@
 #include <iostream>
 #include <assert.h>
 #include <utility>
+#include "../utils/type_traits.h"
 
 namespace nt{
 template<typename T>
@@ -36,10 +37,21 @@ ArrayRef<T>::ArrayRef(ArrayRef<T>&& Arr)
 	:_vals(std::move(Arr._vals)), _total_size(std::exchange(Arr._total_size, 0)), _empty(std::exchange(Arr._empty, true))
 {}
 
-template<typename T>
-ArrayRef<T>::ArrayRef(const T &OneEle)
-	:_vals(new T[1]), _total_size(1), _empty(false)
-{_vals[0] = OneEle;}
+/* // Constructor for general types */
+/* template<typename T> */
+/* template<typename U, std::enable_if_t<!std::is_same_v<U, std::nullptr_t>, bool>> */
+/* ArrayRef<T>::ArrayRef(const U& OneEle) */
+/*     : _vals(new T[1]), _total_size(1), _empty(false) { */
+/*     _vals[0] = OneEle; */
+/* } */
+
+/* // Constructor for nullptr type */
+/* template<typename T> */
+/* template<typename U, std::enable_if_t<std::is_same_v<U, std::nullptr_t>, bool>> */
+/* ArrayRef<T>::ArrayRef(const U& OneEle) */
+/*     : _vals(nullptr), _total_size(0), _empty(true) {} */
+
+
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const T *data, size_t length)
@@ -86,7 +98,6 @@ ArrayRef<T>::ArrayRef(const std::unique_ptr<T[]>& vals, size_t ts)
 	if(!_empty){std::copy(vals.get(), vals.get() + ts, _vals.get());}
 	else{_vals.reset(nullptr);}
 }
-
 
 template<typename T>
 ArrayRef<T>::ArrayRef(std::unique_ptr<T[]>&& vals, size_t ts)

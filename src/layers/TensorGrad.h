@@ -1,8 +1,9 @@
-#ifndef _TENSOR_GRAD_H_
-#define _TENSOR_GRAD_H_
+#ifndef _NT_TENSOR_GRAD_H_
+#define _NT_TENSOR_GRAD_H_
 
 #include "../Tensor.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../utils/tensor_holder.h"
 #include <vector>
 #include <memory>
 #include <iostream>
@@ -11,6 +12,7 @@
 #include <type_traits>
 #include <variant>
 #include <optional>
+#include "../utils/optional_list.h"
 
 namespace nt{
 
@@ -31,16 +33,12 @@ namespace functional {
     TensorGrad sigmoid(const TensorGrad&);
     TensorGrad clamp(const TensorGrad&, std::optional<int64_t> min = std::nullopt, std::optional<int64_t> max = std::nullopt);
     TensorGrad relu(const TensorGrad&);
+    TensorGrad var(const TensorGrad&, utils::optional_list dim = nullptr, int64_t correction = 1, bool keepdim = false);
+    TensorGrad invsqrt(const TensorGrad&);
+    TensorGrad tanh(const TensorGrad&);
+    TensorGrad tan(const TensorGrad&);
 
 } // namespace functional_l
-
-
-class tensor_holder : public intrusive_ptr_target{
-	public:
-		Tensor tensor;
-		explicit tensor_holder(const Tensor& t) : tensor(t) {}
-		explicit tensor_holder(Tensor&& t) : tensor(t) {}
-};
 
 /* inline intrusive_ptr<tensor_holder>& operator=(intrusive_ptr<tensor_holder>& it, Tensor&& t) noexcept { */
 /* 	it = make_intrusive<tensor_holder>(t); */
@@ -174,6 +172,11 @@ class TensorGrad : public intrusive_ptr_target{
 		friend TensorGrad functional::fold(const TensorGrad&, utils::my_tuple output_size, utils::my_tuple kernel_size, utils::my_tuple dilation, utils::my_tuple padding, utils::my_tuple stride);
 		friend TensorGrad functional::functional_std::conv2d(const TensorGrad&, const TensorGrad&, utils::my_tuple, utils::my_tuple, utils::my_tuple, int64_t);
 		friend TensorGrad functional::sigmoid(const TensorGrad&);
+		friend TensorGrad functional::invsqrt(const TensorGrad&);
+		friend TensorGrad functional::tanh(const TensorGrad&);
+		friend TensorGrad functional::tan(const TensorGrad&);
+		friend TensorGrad functional::var(const TensorGrad&, utils::optional_list, int64_t, bool);
+
 
 	private:
 	
@@ -216,6 +219,7 @@ class TensorGrad : public intrusive_ptr_target{
 		explicit TensorGrad(Scalar value);
 		explicit TensorGrad(const Tensor&);
 		explicit TensorGrad(Tensor&& t);
+		explicit TensorGrad(std::nullptr_t);
 		inline void eval() noexcept {do_track_grad = false;}
 		inline void train() noexcept {do_track_grad = true;}
 		TensorGrad(TensorGrad&& tg);
@@ -339,6 +343,9 @@ class TensorGrad : public intrusive_ptr_target{
 		inline const void* data_ptr() const     {return this->tensor.data_ptr();}
 		inline void* data_ptr_end()             {return this->tensor.data_ptr_end();}
 		inline const void* data_ptr_end() const {return this->tensor.data_ptr_end();}
+		inline bool occupy_same_tensor_memory(const TensorGrad& tg) const noexcept { 
+			return this->tensor.occupy_same_memory(tg.tensor);
+		}
 		friend std::ostream& operator << (std::ostream &out, const TensorGrad&);
 		
 
@@ -359,10 +366,8 @@ class TensorGrad : public intrusive_ptr_target{
 		TensorGrad imag() const;
 		TensorGrad to_complex_from_real() const;
 		TensorGrad to_complex_from_imag() const;
-		TensorGrad sum() const;
-		TensorGrad sum(size_value_t dim) const;
-		TensorGrad mean() const;
-		TensorGrad mean(size_value_t dim) const;
+		TensorGrad sum(utils::optional_list list = nullptr, bool keepdim=false) const;
+		TensorGrad mean(utils::optional_list list = nullptr, bool keepdim=false) const;
 		result_types::max<TensorGrad, Tensor> max() const;
 		result_types::max<TensorGrad, Tensor> max(size_value_t dim) const;
 		TensorGrad exp() const;
@@ -392,10 +397,11 @@ class TensorGrad : public intrusive_ptr_target{
 		//still need to implemenet:
 		//currently none
 
-
+		inline Tensor& detach() noexcept {return this->tensor;}
+		inline const Tensor& detach() const noexcept {return this->tensor;}
 		inline TensorGrad unsqueeze_as(const TensorGrad& tg) const {return this->unsqueeze_as(tg.tensor);} 
-		inline TensorGrad expand_as(const Tensor& t) const {return expand(t.shape());}
-		inline TensorGrad expand_as(const TensorGrad& tg) const {return expand(tg.shape());}
+		inline TensorGrad expand_as(const Tensor& t) const {return this->expand(t.shape());}
+		inline TensorGrad expand_as(const TensorGrad& tg) const {return this->expand(tg.shape());}
 		
 		void backward(const Tensor&);
 		void zero_grad();
@@ -416,4 +422,4 @@ Tensor& operator/=(Tensor&, const TensorGrad&);
 
 #include "TensorGrad.hpp"
 
-#endif
+#endif //_NT_TENSOR_GRAD_H_
