@@ -111,9 +111,12 @@ class Bucket{
 		Bucket& operator=(const Bucket& b);
 		Bucket& operator=(Bucket&& b);
 
+		const intrusive_ptr<void*[]>& intrusive_strides() const& noexcept {return strides_;}
+		const intrusive_ptr<DeviceHolder>& intrusive_device() const& noexcept {return buckets_;} 
+
 		static Bucket makeNullBucket(DType dt = DType::Float32, int64_t stride_size=0); //dangerous to use if not immediately initialized right after
-		inline const int64_t& buckets_amt() const {return bs;}
-		inline const int64_t& stride_amt() const {return stride_size;}
+		inline const int64_t& buckets_amt() const noexcept {return bs;}
+		inline const int64_t& stride_amt() const noexcept {return stride_size;}
 		inline const DeviceType& device_type() const noexcept {return buckets_[0]->get_device_type();}
 		inline void nullify(){
 			buckets_.nullify();
@@ -148,13 +151,23 @@ class Bucket{
 		template<typename T>
 		inline BucketIterator_blocked<T> begin_blocked(){
 			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
-			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()), stride_size/2, 0); // bs is just stride_size / 2 (should be) 
+			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()), 
+					                 reinterpret_cast<T*>(data_ptr()), 
+							 stride_size/2-1, 0); 
+			// bs is just stride_size / 2 (should be) 
 		}
 		template<typename T>
 		inline BucketIterator_blocked<T> end_blocked(){
 			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
-			if(stride_size == 0){return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_end()), stride_size/2, stride_size/2);}
-			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, stride_size/2, stride_size/2); // bs is just stride_size / 2 (should be) 
+			if(stride_size == 0){
+				return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_end()),
+					reinterpret_cast<T*>(data_ptr_end()), 
+					stride_size/2, stride_size/2);
+			}
+			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, 
+						 reinterpret_cast<T*>(data_ptr_end()), 
+						stride_size/2-1, stride_size/2-1); 
+			// bs is just stride_size / 2 (should be) 
 		}
 		template<typename T>
 		inline BucketIterator_list<T> begin_list(){
@@ -180,13 +193,20 @@ class Bucket{
 		template<typename T>
 		inline BucketIterator_blocked<const T> cbegin_blocked() const{
 			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
-			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()), stride_size/2, 0); // bs is just stride_size / 2  
+			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()), 
+					                 reinterpret_cast<const T*>(data_ptr()), 
+							stride_size/2-1, 0); // bs is just stride_size / 2  
 		}
 		template<typename T>
 		inline BucketIterator_blocked<const T> cend_blocked() const{
 			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
-			if(stride_size == 0){return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_end()), stride_size/2, stride_size/2);}
-			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, stride_size/2, stride_size/2); // bs is just stride_size / 2  
+			if(stride_size == 0){return BucketIterator_blocked<const T>(
+					reinterpret_cast<T**>(stride_end()),
+					 reinterpret_cast<const T*>(data_ptr_end()), 
+					stride_size/2, stride_size/2);}
+			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, 
+					 reinterpret_cast<const T*>(data_ptr_end()), 
+					stride_size/2-1, stride_size/2-1); // bs is just stride_size / 2  
 		}
 		template<typename T>
 		inline BucketIterator_list<const T> cbegin_list() const {
@@ -216,22 +236,34 @@ class Bucket{
 		}
 		template<size_t i, typename T, typename = std::enable_if_t<i == 2> >
 		BucketIterator_blocked<T> begin(){
-			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()), stride_size/2, 0);;
+			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()), 
+					 reinterpret_cast<T*>(data_ptr()), 
+					stride_size/2-1, 0);;
 		}
 		template<size_t i, typename T, typename = std::enable_if_t<i == 2> >
 		BucketIterator_blocked<const T> cbegin() const{
-			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()), stride_size/2, 0);
+			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()), 
+					 reinterpret_cast<const T*>(data_ptr()), 
+					stride_size/2-1, 0);
 		}
 		//stride_size / 2 is the amount of contiguous buckets there are
 		template<size_t i, typename T, typename = std::enable_if_t<i == 2> >
 		BucketIterator_blocked<T> end(){
-			if(stride_size == 0){return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_end()), stride_size/2, stride_size/2);}
-			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, stride_size/2, stride_size/2);
+			if(stride_size == 0){return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_end()),
+					 reinterpret_cast<T*>(data_ptr_end()), 
+					stride_size/2, stride_size/2);}
+			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, 
+					 reinterpret_cast<T*>(data_ptr_end()), 
+					stride_size/2-1, stride_size/2-1);
 		}
 		template<size_t i, typename T, typename = std::enable_if_t<i == 2> >
 		BucketIterator_blocked<const T> cend() const{
-			if(stride_size == 0){return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_end()), stride_size/2, stride_size/2);}
-			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, stride_size/2, stride_size/2);
+			if(stride_size == 0){return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_end()),
+					 reinterpret_cast<const T*>(data_ptr_end()), 
+					stride_size/2-1, stride_size/2-1);}
+			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()) + stride_size-1, 
+					reinterpret_cast<const T*>(data_ptr_end()), 
+					stride_size/2-1, stride_size/2-1);
 		}
 		template<size_t i, typename T, typename = std::enable_if_t<i == 3> >
 		BucketIterator_list<T> begin(){

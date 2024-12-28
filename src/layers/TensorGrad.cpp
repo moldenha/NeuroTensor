@@ -204,6 +204,16 @@ TensorGrad& TensorGrad::operator=(Scalar s){
 	return *this;
 }
 
+TensorGrad& TensorGrad::nullify(){
+	tensor = Tensor(nullptr);
+	do_track_grad = false;
+	grad = nullptr;
+	backwardFunc = nullptr;
+	parents.clear();
+	children = nullptr;
+	return *this;
+}
+
 TensorGrad& TensorGrad::set_(const Tensor& t){
 	if(is_null()){
 		tensor = t;
@@ -284,6 +294,18 @@ TensorGrad TensorGrad::operator+(const Scalar other) const {
 	});
 
 	return std::move(result);
+}
+
+void TensorGrad::redefine_tracking(TensorGrad& tg, const TensorGrad& parent, std::function<void(const Tensor&, intrusive_ptr<TensorGrad>&)> func){
+	if(tg.is_null()){
+		return;
+	}
+	tg.parents.clear();
+	tg.backwardFunc->clear();
+	tg.track_tensors(parent);
+	tg.create_backward_function([func](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
+		func(grad, parents[0]);
+	});
 }
 
 TensorGrad TensorGrad::operator+(const Tensor& other) const {
@@ -898,7 +920,7 @@ TensorGrad TensorGrad::sum(utils::optional_list list, bool keepdim) const {
 		result.do_track_grad = false;
 		return std::move(result);
 	}
-
+	result.track_tensors(*this);
 
 	//define the backward function
 	result.create_backward_function([dims](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents) {
@@ -1310,11 +1332,27 @@ TensorGrad TensorGrad::undilate(size_value_t dil) const{
         return std::move(result); \
     }
 
+TensorGrad TensorGrad::operator[](size_value_t i) const {
+	handle_null_tensors(*this);
+	if(tensor.dtype == DType::TensorObj && dims() == 1){
+		TensorGrad result(tensor[i].item<Tensor>());
+		result.track_grad(*this, [i](Tensor& grad){
+			return grad[i].item<Tensor>();
+		});
+		return std::move(result);
+	}
+	TensorGrad result(tensor[i]);
+	result.track_grad(*this, [i](Tensor& grad){
+		return grad[i];
+	});
+	return std::move(result);
+}
+
 // these are all operations where the stride or view of the memory is changed
 // (the actual values in the memory are not)
 // for that reason, the same operation can just be done to track the gradient
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(view, SizeRef, s)
-TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(operator[], size_value_t, i)
+/* TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(operator[], size_value_t, i) */
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(operator[], my_range, i)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(operator[], std::vector<my_range>, i)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(operator[], Tensor, i)
@@ -1359,6 +1397,11 @@ void TensorGrad::backward(const Tensor& initialGrad) {
 	}
 	this->backward_self(this->grad->tensor, true);
 
+}
+
+void TensorGrad::backward(){
+	utils::throw_exception(this->grad, "Expected if no grad passed to backward function, grad already defined");
+	this->backward_self(this->grad->tensor, true);
 }
 
 void TensorGrad::zero_grad() {

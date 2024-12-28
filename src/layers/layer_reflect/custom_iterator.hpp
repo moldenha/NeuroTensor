@@ -133,6 +133,7 @@ public:
         
         // Dereference operator
         inline T& operator*() { return _it->get(); }
+	inline T* operator->() {return &_it->get();}
         
         // Pre-increment operator
         inline Iterator& operator++() { ++_it; return *this; }
@@ -151,6 +152,7 @@ public:
         
         // Dereference operator
         inline const T& operator*() { return _it->get(); }
+	inline const T* operator->() {return &_it->get();}
         
         // Pre-increment operator
         inline CIterator& operator++() { ++_it; return *this; }
@@ -187,6 +189,7 @@ public:
 	references.reserve(it.references.size());
 	references.insert(references.end(), it.references.begin(), it.references.end());
     }
+    inline size_t size() const {return references.size();}
 };
 
 template<typename T>

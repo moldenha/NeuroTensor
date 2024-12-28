@@ -347,13 +347,24 @@ namespace reflect{
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_map();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
-						return _NT_CLS_TO_MAP_(dynamic_ptr, Derived);\
+						return _NT_CLS_TO_MAP_(dynamic_ptr, Derived, __VA_ARGS__);\
 					}\
 				},\
 				#Derived,\
 				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, forward);},\
 				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, backward);},\
-				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, eval);}\
+				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, eval);},\
+				[](::nt::Module* ptr) -> std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>{\
+					if constexpr (_NT_OVERRIDEN_(::nt::Module, Derived, backward)){\
+						return std::bind(&::nt::Module::backward, \
+								ptr, std::placeholders::_1, \
+								std::placeholders::_2);\
+					}else{\
+						return std::bind(&Derived::backward, \
+								dynamic_cast<Derived*>(ptr), std::placeholders::_1, \
+								std::placeholders::_2);\
+					}\
+				}\
 				);\
 			return true;\
 		}();\

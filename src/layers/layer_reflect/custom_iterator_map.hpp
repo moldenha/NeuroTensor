@@ -62,6 +62,8 @@ class custom_any_map{
 			add_references(begin, args...);
 		}
 
+		inline size_t size() const {return references.size();}
+
 		inline std::map<std::string, std::any>& get_references(std::type_index index) noexcept {return references[index];}
 };
 
@@ -153,6 +155,9 @@ public:
         typename std::map<std::string, std::reference_wrapper<T>>::const_iterator _it;
     };
     
+    inline size_t size() const {
+	return references.size();
+    }
     // Begin iterator
     inline Iterator begin() noexcept {
         return Iterator(references.begin());
@@ -181,7 +186,7 @@ public:
 
     inline void extend(custom_typed_map&& it){
 	/* references.reserve(it.references.size()); */
-	references.insert(references.end(), it.references.begin(), it.references.end());
+	references.insert(it.references.begin(), it.references.end());
     }
 
     inline void extend_unique(custom_typed_map&& it, std::string to_add){

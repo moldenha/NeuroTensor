@@ -84,7 +84,8 @@ void conv_test(){
 
 int main(){
 	
-	test_layers();
+	/* test_layers(); */
+	test_lnn();
 
 	return 0;
 }

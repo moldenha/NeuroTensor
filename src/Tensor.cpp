@@ -156,6 +156,14 @@ void Tensor::swap(Tensor& other){
 }
 
 Tensor& Tensor::operator=(const Tensor &t){
+	if(is_null()){
+		_vals = t._vals;
+		_size = t._size;
+		_total_size = t._total_size;
+		dtype = t.dtype;
+		stored_strides = t.stored_strides;
+		return *this;
+	}
 	if(shape() == t.shape() && dtype == t.dtype){
 		_vals.transform_function([](auto& a, auto& b){return b;}, t._vals);
 		return *this;
@@ -173,8 +181,8 @@ Tensor& Tensor::operator=(const Tensor &t){
 }
 
 Tensor& Tensor::set_(const Tensor& t){
-	utils::throw_exception(t.dtype == dtype, "Expected dtype of $ but got $", dtype, t.dtype);
-	utils::throw_exception(t.shape() == shape(), "Expected shape to be $ but got shape $", shape(), t.shape());
+	utils::THROW_EXCEPTION(t.dtype == dtype, "Expected dtype of $ but got $", dtype, t.dtype);
+	utils::THROW_EXCEPTION(t.shape() == shape(), "Expected shape to be $ but got shape $", shape(), t.shape());
 	_vals.transform_function([](auto& a, auto& b){return b;}, t._vals);
 	return *this;
 }
@@ -313,8 +321,8 @@ Tensor operator/(Scalar s, const Tensor &t){
 
 
 Tensor Tensor::operator==(const Tensor &val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
-	utils::throw_exception(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
 	if(dtype == DType::TensorObj){
 		Tensor output(shape(), DType::TensorObj);
 		_vals.transform_function<DType::TensorObj>([](const Tensor& a, const Tensor& b){return a == b;}, val._vals, reinterpret_cast<Tensor*>(output.data_ptr()));
@@ -326,8 +334,8 @@ Tensor Tensor::operator==(const Tensor &val) const{
 }
 
 Tensor Tensor::operator>=(const Tensor &val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
-	utils::throw_exception(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
 	if(dtype == DType::TensorObj){
 		Tensor output(shape(), DType::TensorObj);
 		_vals.transform_function<DType::TensorObj>([](const Tensor& a, const Tensor& b){return a >= b;}, val._vals, reinterpret_cast<Tensor*>(output.data_ptr()));
@@ -339,8 +347,8 @@ Tensor Tensor::operator>=(const Tensor &val) const{
 }
 
 Tensor Tensor::operator<=(const Tensor &val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
-	utils::throw_exception(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
 	if(dtype == DType::TensorObj){
 		Tensor output(shape(), DType::TensorObj);
 		_vals.transform_function<DType::TensorObj>([](const Tensor& a, const Tensor& b){return a <= b;}, val._vals, reinterpret_cast<Tensor*>(output.data_ptr()));
@@ -352,10 +360,10 @@ Tensor Tensor::operator<=(const Tensor &val) const{
 }
 
 Tensor Tensor::operator&&(Tensor val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
 
-	utils::throw_exception(val.dtype == dtype && dtype == DType::Bool, "\nRuntimeError: Expected both tensors to have a dtype of Bool but got $ and $", dtype, val.dtype);
-	utils::throw_exception(val.is_contiguous() && is_contiguous(), "\nRuntimeError: Expected both tensors to be contiguous");
+	utils::THROW_EXCEPTION(val.dtype == dtype && dtype == DType::Bool, "\nRuntimeError: Expected both tensors to have a dtype of Bool but got $ and $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.is_contiguous() && is_contiguous(), "\nRuntimeError: Expected both tensors to be contiguous");
 	uint_bool_t looking(true);
 	Tensor output(shape(), DType::Bool);
 	uint_bool_t* o_begin = reinterpret_cast<uint_bool_t*>(output.data_ptr());
@@ -370,10 +378,10 @@ Tensor Tensor::operator&&(Tensor val) const{
 }
 
 Tensor Tensor::operator||(Tensor val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
 
-	utils::throw_exception(val.dtype == dtype && dtype == DType::Bool, "\nRuntimeError: Expected both tensors to have a dtype of Bool but got $ and $", dtype, val.dtype);
-	utils::throw_exception(val.is_contiguous() && is_contiguous(), "\nRuntimeError: Expected both tensors to be contiguous");
+	utils::THROW_EXCEPTION(val.dtype == dtype && dtype == DType::Bool, "\nRuntimeError: Expected both tensors to have a dtype of Bool but got $ and $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.is_contiguous() && is_contiguous(), "\nRuntimeError: Expected both tensors to be contiguous");
 	uint_bool_t looking(true);
 	Tensor output(shape(), DType::Bool);
 	uint_bool_t* o_begin = reinterpret_cast<uint_bool_t*>(output.data_ptr());
@@ -388,8 +396,8 @@ Tensor Tensor::operator||(Tensor val) const{
 }
 
 Tensor Tensor::operator>(const Tensor &val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
-	utils::throw_exception(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
 	if(dtype == DType::TensorObj){
 		Tensor output(shape(), DType::TensorObj);
 		_vals.transform_function<DType::TensorObj>([](const Tensor& a, const Tensor& b){return a > b;}, val._vals, reinterpret_cast<Tensor*>(output.data_ptr()));
@@ -401,8 +409,8 @@ Tensor Tensor::operator>(const Tensor &val) const{
 }
 
 Tensor Tensor::operator<(const Tensor &val) const{
-	utils::throw_exception(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
-	utils::throw_exception(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
+	utils::THROW_EXCEPTION(val.shape() == shape(), "\nRuntimeError: Expected input tensor to have a shape of $ but got $", shape(), val.shape());
+	utils::THROW_EXCEPTION(val.dtype == dtype, "\nRuntimeError: Expected input tensor to have a dtype of $ but got $", dtype, val.dtype);
 	if(dtype == DType::TensorObj){
 		Tensor output(shape(), DType::TensorObj);
 		_vals.transform_function<DType::TensorObj>([](const Tensor& a, const Tensor& b){return a < b;}, val._vals, reinterpret_cast<Tensor*>(output.data_ptr()));
@@ -549,13 +557,13 @@ Tensor Tensor::operator[](size_value_t x){
 	x = x < 0 ? x + dims() : x;
 	uint64_t nx = static_cast<uint64_t>(x);
 	if(_total_size == 1) {
-		utils::throw_exception(x == 0, "\nRuntimeError: Expected singleton to have indexed of at most $ but instead got $", 0, x);
+		utils::THROW_EXCEPTION(x == 0, "\nRuntimeError: Expected singleton to have indexed of at most $ but instead got $", 0, x);
 		return *this;
 	}
 	
 	//I do really like the assertion below
 	//assert(x < shape()[0]);
-	utils::throw_exception(x < shape()[0], "RuntimeError: Expected x to be less than $ but got $", shape()[0], x);
+	utils::THROW_EXCEPTION(x < shape()[0], "RuntimeError: Expected x to be less than $ but got $", shape()[0], x);
 	/* if(dims() == 1 && dtype == DType::TensorObj) */
 	/* 	return reinterpret_cast<Tensor*>(data_ptr())[x]; */
 	if(dims() == 1){
@@ -575,11 +583,11 @@ const Tensor Tensor::operator[](size_value_t x) const{
 	x = x < 0 ? x + dims() : x;
 	uint64_t nx = static_cast<uint64_t>(x);
 	if(_total_size == 1) {
-		utils::throw_exception(x == 0, "\nRuntimeError: Expected singleton to have indexed of at most $ but instead got $", 0, x);
+		utils::THROW_EXCEPTION(x == 0, "\nRuntimeError: Expected singleton to have indexed of at most $ but instead got $", 0, x);
 		return *this;
 	}
 
-	utils::throw_exception(x < shape()[0], "RuntimeError: Expected x to be less than $ but got $", shape()[0], x);
+	utils::THROW_EXCEPTION(x < shape()[0], "RuntimeError: Expected x to be less than $ but got $", shape()[0], x);
 	/* if(dims() == 1 && dtype == DType::TensorObj) */
 	/* 	return reinterpret_cast<const Tensor*>(data_ptr())[x]; */
 	if(dims() == 1){
@@ -594,16 +602,16 @@ const Tensor Tensor::operator[](size_value_t x) const{
 
 
 Tensor Tensor::operator[](const Tensor& t) const{
-	utils::throw_exception(t.dtype == DType::Bool || t.dtype == DType::TensorObj, "RuntimeError: expected DType Bool or TensorObj but got $", t.dtype);
+	utils::THROW_EXCEPTION(t.dtype == DType::Bool || t.dtype == DType::TensorObj, "RuntimeError: expected DType Bool or TensorObj but got $", t.dtype);
 	if(t.dtype == DType::TensorObj){
-		utils::throw_exception(t.is_contiguous(), "RuntimeError: Expected indexing tensor to be contiguous");
-		utils::throw_exception(t.numel() == dims(), "Expected indexing tensor to have $ tensors but had $", dims(), t.numel());
+		utils::THROW_EXCEPTION(t.is_contiguous(), "RuntimeError: Expected indexing tensor to be contiguous");
+		utils::THROW_EXCEPTION(t.numel() == dims(), "Expected indexing tensor to have $ tensors but had $", dims(), t.numel());
 		ArrayVoid my_vals = _vals.bucket_all_indices();
 		const Tensor* begin = reinterpret_cast<const Tensor*>(t.data_ptr());
 		const Tensor* end = begin + t.numel();
 		const Tensor* begin_cpy = begin;
 		for(;begin != end; ++begin)
-			utils::throw_exception(begin->dtype == DType::int64, "Expected indexing tensor to have dtype int64 but got $", begin->dtype);
+			utils::THROW_EXCEPTION(begin->dtype == DType::int64, "Expected indexing tensor to have dtype int64 but got $", begin->dtype);
 		begin = begin_cpy;
 
 		//making the strides for indexing:
@@ -636,8 +644,8 @@ Tensor Tensor::operator[](const Tensor& t) const{
 
 		return Tensor(new_vals, {static_cast<size_value_t>(n_size)});
 	}
-	utils::throw_exception(t.numel() == numel(), "Numels must be equal for [] operator on Tensor DType::Bool");
-	utils::throw_exception(t.is_contiguous(), "RuntimeError: Expected indexing tensor to be contiguous");
+	utils::THROW_EXCEPTION(t.numel() == numel(), "Numels must be equal for [] operator on Tensor DType::Bool");
+	utils::THROW_EXCEPTION(t.is_contiguous(), "RuntimeError: Expected indexing tensor to be contiguous");
 	ArrayVoid my_vals = _vals.bucket_all_indices();
 	size_value_t new_size = ::nt::functional::count(t);
 	ArrayVoid new_vals = _vals.new_strides(new_size);
@@ -982,7 +990,7 @@ Tensor Tensor::view(SizeRef nv) const{
 
 //this is a view to happen to every single tensor
 Tensor Tensor::view_Tensors(SizeRef nv) const{
-	utils::throw_exception(dtype == DType::TensorObj, "Expected view_Tensors to be used on a tensor of tensors");
+	utils::THROW_EXCEPTION(dtype == DType::TensorObj, "Expected view_Tensors to be used on a tensor of tensors");
 	Tensor outp = Tensor::makeNullTensorArray(numel());
 	Tensor* outputIt = reinterpret_cast<Tensor*>(outp.data_ptr());
 	_vals.transform_function<DType::TensorObj>([&nv](auto& inp){return inp.view(nv);}, outputIt);
@@ -990,14 +998,14 @@ Tensor Tensor::view_Tensors(SizeRef nv) const{
 }
 
 Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const{
-	utils::throw_exception(dtype == DType::TensorObj, "Expected view_Tensors to be used on a tensor of tensors");
+	utils::THROW_EXCEPTION(dtype == DType::TensorObj, "Expected view_Tensors to be used on a tensor of tensors");
 	Tensor outp = Tensor::makeNullTensorArray(numel());
 	size_value_t n = 1;
 	bool is_neg = false;
 	size_value_t neg_index = 0;
 	for(size_value_t i = 0; i < nv.size(); ++i){
 		if(nv[i] < 0){
-			utils::throw_exception(is_neg == false, "already had negative value in shape at index $" , neg_index);
+			utils::THROW_EXCEPTION(is_neg == false, "already had negative value in shape at index $" , neg_index);
 			is_neg = true;
 			neg_index = i;
 			continue;
@@ -1007,7 +1015,7 @@ Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const{
 	const int64_t& t_size = numel();
 	_vals.transform_function<DType::TensorObj>([&nv, &is_neg, &neg_index, &n](auto& inp){
 			if(is_neg){
-				utils::throw_exception(inp.numel() % n == 0, "shape must be divisible by what has been given, $ is not divisible by $", inp.numel(), n);
+				utils::THROW_EXCEPTION(inp.numel() % n == 0, "shape must be divisible by what has been given, $ is not divisible by $", inp.numel(), n);
 				nv[neg_index] = inp.numel() / n;
 			}
 			return inp.view(SizeRef(nv));
@@ -1187,7 +1195,7 @@ void print_vector(const std::vector<T>& vec){
 //this is fairly inefficient, and could definitely be made to be more efficient
 //it wouldn't be super hard, just use the permute functions above
 Tensor Tensor::permute(std::vector<size_value_t> Perm) const{ // going to figure out a better one for this
-	utils::throw_exception(Perm.size() <= dims(), "Expected to permute at most $ dims but got $ dims to permute", dims(), Perm.size());
+	utils::THROW_EXCEPTION(Perm.size() <= dims(), "Expected to permute at most $ dims but got $ dims to permute", dims(), Perm.size());
 	std::vector<std::pair<size_value_t, size_value_t> > transposes;
 	std::vector<size_value_t> cur_strides = getChangedStrides();
 	size_value_t min_dim = dims();
@@ -1278,7 +1286,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const{
 	_a = _a < 0 ? dims() + _a : _a;
 	_b = _b < 0 ? dims() + _b : _b;
 	
-	utils::throw_exception((_a < dims() && _b < dims()) && (_a >= 0 && _b >= 0)
+	utils::THROW_EXCEPTION((_a < dims() && _b < dims()) && (_a >= 0 && _b >= 0)
 			, "a and b ($,$) are out of range for tensor with dimensionality $", _a, _b, dims());
 
 	if(_a > _b){std::swap(_a, _b);}
@@ -1364,6 +1372,10 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const{
 	//basically, by splitting, this will do all the lower dimensions at the exact same time
 	//without needing to do threading to run it in parallel
 	//obviously, threading will be added to further parallelize this though
+	if(shape().range(0, _b+1).multiply() == 1){
+		//this is the case when it is all 1's, and there really isn't a change even in the view
+		return *this;
+	}
 	Tensor split = this->split_axis(_b).view(shape().range(0,_b+1)); //this split_axis function needs to be made faster
 	Tensor* mine = reinterpret_cast<Tensor*>(split.data_ptr());
 	Tensor out = Tensor::makeNullTensorArray(shape().range(0, _b+1).multiply());
@@ -1380,10 +1392,12 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const{
 	for(uint32_t i = 0; i < done.size(); ++i){done[i] = m_shape[i]-1;}
 	std::vector<uint64_t> current_shape(out_shape.size(), 0);
 	current_shape.back() = 1;
+	/* std::cout << "transposing dims "<<_a<<" and "<<_b<<" with input shape of "<<shape() << std::endl; */
 	*outp = *mine;
 	++mine;
 	for(;!is_equal(current_shape, done); increment_shape(current_shape, m_shape), ++mine){
 		std::swap(current_shape[_a], current_shape[_b]);
+		/* std::cout << "setting "<< calc_index(current_shape, n_strides) << " of  " << shape().range(0, _b+1).multiply() << std::endl; */ 
 		*(outp + calc_index(current_shape, n_strides)) = *mine;
 		std::swap(current_shape[_a], current_shape[_b]);
 	}
@@ -1470,7 +1484,7 @@ inline static constexpr auto transposeRC_once = [](auto first, auto last, const 
 //this swaps rows and collumns in memory
 //potentially faster than transpose(-1,-2)
 const Tensor& Tensor::RowColSwap() const {
-	utils::throw_exception(dims() >= 2, "RuntimeError: Expected dims to be greater than or equal to 2 but got $", dims());
+	utils::THROW_EXCEPTION(dims() >= 2, "RuntimeError: Expected dims to be greater than or equal to 2 but got $", dims());
 	if(!is_contiguous()){
 		if(dims() > 2){
 			const Tensor parts = split_axis(-3); //div matricies
@@ -2001,12 +2015,12 @@ t\t\tvalue_type\* last = first + total;\n\t\t\t\t\ttranspose_RowColSwap_contiguo
 
 
 Tensor& Tensor::RowColSwap_Tensors() {
-	utils::throw_exception(dtype == DType::TensorObj, "RowColSwap_Tensors is meant to be used on a tensor that holds tensors");
+	utils::THROW_EXCEPTION(dtype == DType::TensorObj, "RowColSwap_Tensors is meant to be used on a tensor that holds tensors");
 	_vals.for_each<DType::TensorObj>([](auto& inp){inp.RowColSwap();});return *this;
 }
 
 Tensor& Tensor::RowColSwap() {
-	utils::throw_exception(dims() >= 2, "RuntimeError: Expected dims to be greater than or equal to 2 but got $", dims());
+	utils::THROW_EXCEPTION(dims() >= 2, "RuntimeError: Expected dims to be greater than or equal to 2 but got $", dims());
 	if(!is_contiguous()){
 		if(dims() > 2){
 			const Tensor parts = split_axis(-3); //div matricies
@@ -2527,7 +2541,7 @@ Tensor& Tensor::RowColSwap() {
 
 
 Tensor Tensor::real() const{
-	utils::throw_exception(DTypeFuncs::is_complex(dtype), "RuntimeError: Expected dtype to be a complex number but got $", dtype);
+	utils::THROW_EXCEPTION(DTypeFuncs::is_complex(dtype), "RuntimeError: Expected dtype to be a complex number but got $", dtype);
 
 	ArrayVoid out_vals = _vals.get_bucket().is_strided() ? _vals.copy_strides(true) : _vals.bucket_all_indices();
 #ifdef _HALF_FLOAT_SUPPORT_
@@ -2543,7 +2557,7 @@ Tensor Tensor::real() const{
 }
 
 Tensor Tensor::to_complex_from_real() const{
-	utils::throw_exception(
+	utils::THROW_EXCEPTION(
 #ifdef _HALF_FLOAT_SUPPORT_
 			dtype == DType::Double || dtype == DType::Float || dtype == DType::Float16,
 #else
@@ -2652,7 +2666,7 @@ Tensor Tensor::to_complex_from_real() const{
 
 
 Tensor Tensor::imag() const{
-	utils::throw_exception(DTypeFuncs::is_complex(dtype), "RuntimeError: Expected dtype to be a complex number but got $", dtype);
+	utils::THROW_EXCEPTION(DTypeFuncs::is_complex(dtype), "RuntimeError: Expected dtype to be a complex number but got $", dtype);
 	ArrayVoid out_vals = _vals.get_bucket().is_strided() ? _vals.copy_strides(true) : _vals.bucket_all_indices();
 #ifdef _HALF_FLOAT_SUPPORT_
 	out_vals.dtype = (dtype == DType::Complex128 ? DType::Double : dtype == DType::Complex64 ? DType::Float : DType::Float16);
@@ -2676,7 +2690,7 @@ Tensor Tensor::imag() const{
 
 
 Tensor Tensor::to_complex_from_imag() const{
-	utils::throw_exception(
+	utils::THROW_EXCEPTION(
 #ifdef _HALF_FLOAT_SUPPORT_
 			dtype == DType::Double || dtype == DType::Float || dtype == DType::Float16,
 #else
@@ -2875,7 +2889,7 @@ Tensor::Tensor(ArrayVoid Arr, SizeRef _s, const std::vector<size_value_t>& strid
 
 //this will be finished at a later point in time
 /*Tensor Tensor::split_axis(std::vector<my_range> ranges){*/
-/*	utils::throw_exception(ranges.size() <= dims(), "expeted to have at most $ ranges but got $ ranges for split_axis on tensor shape $", dims(), ranges.size(), shape());*/
+/*	utils::THROW_EXCEPTION(ranges.size() <= dims(), "expeted to have at most $ ranges but got $ ranges for split_axis on tensor shape $", dims(), ranges.size(), shape());*/
 	
 
 /*	std::vector<uint32_t> divs(ranges.size());*/
@@ -2887,7 +2901,7 @@ Tensor::Tensor(ArrayVoid Arr, SizeRef _s, const std::vector<size_value_t>& strid
 /*	}*/
 /*	for(uint32_t i = 0; i < ranges.size(); ++i){*/
 /*		ranges[i].fix(shape()[i]); // corrects the ranges so that if one of the input ranges is a negative number, then it is corrected according to the shape of the current tensor*/
-/*		utils::throw_exception(shape()[i] >= ranges[i].length(), "Expected range to be less than or equal to length ($) at dim ($) but got ($)", shape()[i], i, ranges[i].length());*/
+/*		utils::THROW_EXCEPTION(shape()[i] >= ranges[i].length(), "Expected range to be less than or equal to length ($) at dim ($) but got ($)", shape()[i], i, ranges[i].length());*/
 /*		uint32_t cur_length = ranges[i].length();*/
 /*		lengths[i].push_back({0, cur_length});*/
 /*		if(cur_length == shape()[i])*/
@@ -3099,8 +3113,8 @@ Tensor Tensor::split_axis_1() const{
 
 Tensor Tensor::unfold(size_value_t dim, size_value_t size, size_value_t step) const{
 	dim = dim < 0 ? dims() + dim : dim;
-	utils::throw_exception(dim < dims(), "Expected to get an appropriate dimension less than $ but got $\n", dims(), dim);
-	utils::throw_exception(size <= shape()[dim], "maximum size for Tensor at dimension $ is $ but got size of $", dim, shape()[dim], size);
+	utils::THROW_EXCEPTION(dim < dims(), "Expected to get an appropriate dimension less than $ but got $\n", dims(), dim);
+	utils::THROW_EXCEPTION(size <= shape()[dim], "maximum size for Tensor at dimension $ is $ but got size of $", dim, shape()[dim], size);
 	
 	std::vector<size_value_t> n_strides = this->strides();
 	std::vector<size_value_t> get_strides = this->getChangedStrides();
@@ -3161,7 +3175,7 @@ void add_value_to_output_fold_function(T* output_tensor, const SizeRef& output_t
 /* Tensor Tensor::fold(size_value_t dim, size_value_t size, size_value_t step, const SizeRef& output_shape) const { */
 /*     // Validate inputs */
 /*     dim = dim < 0 ? t.dims() + dim : dim; */
-/*     utils::throw_exception(dim < t.dims(), "Expected to get an appropriate dimension less than " + std::to_string(dims()) + " but got " + std::to_string(dim)); */
+/*     utils::THROW_EXCEPTION(dim < t.dims(), "Expected to get an appropriate dimension less than " + std::to_string(dims()) + " but got " + std::to_string(dim)); */
 
 /*     // Calculate the shape and stride for the unfolded tensor */
 /*     std::vector<size_value_t> n_shape = shape().Vec(); */
@@ -3195,8 +3209,8 @@ void add_value_to_output_fold_function(T* output_tensor, const SizeRef& output_t
 
 /* Tensor Tensor::unfold(int32_t dim, uint32_t size, uint32_t step) const{ */
 	/* dim = dim < 0 ? dims() + dim : dim; */
-	/* utils::throw_exception(dim < dims(), "Expected to get an appropriate dimension less than $ but got $\n", dims(), dim); */
-	/* utils::throw_exception(size <= shape()[dim], "maximum size for Tensor at dimension $ is $ but got size of $", dim, shape()[dim], size); */
+	/* utils::THROW_EXCEPTION(dim < dims(), "Expected to get an appropriate dimension less than $ but got $\n", dims(), dim); */
+	/* utils::THROW_EXCEPTION(size <= shape()[dim], "maximum size for Tensor at dimension $ is $ but got size of $", dim, shape()[dim], size); */
 
 	/* std::vector<uint32_t> vec = shape().Vec(); */
 /* 	uint32_t unfolds = uint32_t((shape()[dim] - size)/step + 1); */
@@ -3257,8 +3271,8 @@ void add_value_to_output_fold_function(T* output_tensor, const SizeRef& output_t
 /* #else */
 /* Tensor Tensor::unfold(int32_t dim, uint32_t size, uint32_t step) const{ */
 /* 	dim = dim < 0 ? dims() + dim : dim; */
-/* 	utils::throw_exception(dim < dims(), "Expected to get an appropriate dimension less than $ but got $\n", dims(), dim); */
-/* 	utils::throw_exception(size <= shape()[dim], "maximum size for Tensor at dimension $ is $ but got size of $", dim, shape()[dim], size); */
+/* 	utils::THROW_EXCEPTION(dim < dims(), "Expected to get an appropriate dimension less than $ but got $\n", dims(), dim); */
+/* 	utils::THROW_EXCEPTION(size <= shape()[dim], "maximum size for Tensor at dimension $ is $ but got size of $", dim, shape()[dim], size); */
 
 /* 	std::vector<uint32_t> vec = shape().Vec(); */
 /* 	uint32_t unfolds = uint32_t((shape()[dim] - size)/step + 1); */
@@ -3359,12 +3373,12 @@ const void* Tensor::data_ptr() const{
 }
 
 void* Tensor::data_ptr_end(){
-	utils::throw_exception(is_contiguous(), "Can only find end of data pointer on contiguous tensor");
+	utils::THROW_EXCEPTION(is_contiguous(), "Can only find end of data pointer on contiguous tensor");
 	return (void*)(reinterpret_cast<uint8_t*>(data_ptr()) + (_total_size * DTypeFuncs::size_of_dtype(dtype)));
 }
 
 const void* Tensor::data_ptr_end() const{
-	utils::throw_exception(is_contiguous(), "Can only find end of data pointer on contiguous tensor");
+	utils::THROW_EXCEPTION(is_contiguous(), "Can only find end of data pointer on contiguous tensor");
 	return (const void*)(reinterpret_cast<const uint8_t*>(data_ptr()) + (_total_size * DTypeFuncs::size_of_dtype(dtype)));
 }
 
@@ -3503,8 +3517,8 @@ Tensor Tensor::operator>(Scalar c) const{
 
 
 std::string_view Tensor::sv() const{
-	utils::throw_exception(dtype == DType::uint8, "\nRuntimeError: Expected DType for string_view to be uint8 but got $", dtype);
-	utils::throw_exception(is_contiguous(), "Can only convert contiguous tensor to string_view");
+	utils::THROW_EXCEPTION(dtype == DType::uint8, "\nRuntimeError: Expected DType for string_view to be uint8 but got $", dtype);
+	utils::THROW_EXCEPTION(is_contiguous(), "Can only convert contiguous tensor to string_view");
 	return std::string_view(reinterpret_cast<const char*>(data_ptr()), numel());
 }
 
@@ -3707,9 +3721,9 @@ Tensor Tensor::sum_as(const SizeRef& s) const{
 
 	}
 	for(const auto& dim : axes){
-		output = output.transpose(0, dim).sum(0).unsqueeze(0).transpose(0, dim);
+		output = output.transpose(0, dim).sum(0, true).transpose(0, dim);
 	}
-	return std::move(output);	
+	return std::move(output.view(s));	
 }
 
 Tensor Tensor::sum_as(const Tensor& t) const {
@@ -3794,12 +3808,12 @@ result_types::max<Tensor,Tensor> Tensor::max(size_value_t dim) const{
 }
 
 Tensor Tensor::exp() const{
-	utils::throw_exception(dtype != DType::Bool, "\nRuntimeError: Tried running unsupported DType Bool with function exp()");
+	utils::THROW_EXCEPTION(dtype != DType::Bool, "\nRuntimeError: Tried running unsupported DType Bool with function exp()");
 	return Tensor(_vals.exp(), shape());
 }
 
 Tensor& Tensor::exp_(){
-	utils::throw_exception(dtype != DType::Bool, "\nRuntimeError: Tried running unsupported DType Bool with function exp_()");
+	utils::THROW_EXCEPTION(dtype != DType::Bool, "\nRuntimeError: Tried running unsupported DType Bool with function exp_()");
 	_vals.exp_();
 	return *this;
 }
@@ -4008,8 +4022,8 @@ Tensor Tensor::clip(Scalar a, Scalar b) const{
 }
 
 Tensor Tensor::pad(std::vector<size_value_t> p, const char* mode, double value) const{
-	utils::throw_exception(p.size() % 2 == 0, "RuntimeError: The size of the pad must have 2 per dimension");
-	utils::throw_exception((p.size() / 2) <= dims(), "RuntimeError: expected padding for at most $ dims but instead got $", dims(), int(p.size() / 2));
+	utils::THROW_EXCEPTION(p.size() % 2 == 0, "RuntimeError: The size of the pad must have 2 per dimension");
+	utils::THROW_EXCEPTION((p.size() / 2) <= dims(), "RuntimeError: expected padding for at most $ dims but instead got $", dims(), int(p.size() / 2));
 
 	std::vector<size_value_t> n_shape = shape().Vec();
 	size_value_t i = 0;
@@ -4042,7 +4056,7 @@ Tensor Tensor::flip(size_value_t dim) const{
 	if(dim == 0){
 		return functional::cat(this->split_axis(0).flip()).view(shape());
 	}
-	utils::throw_exception(dim < dims() && dim > 0, "RuntimeError: Expected input dim for flip to be less than $ but got $", dims(), dim);
+	utils::THROW_EXCEPTION(dim < dims() && dim > 0, "RuntimeError: Expected input dim for flip to be less than $ but got $", dims(), dim);
 	Tensor output(shape(), dtype);
 	/* Tensor to_split = (dim == dims()-1) ? this->transpose(-1,-2) : *this; */
 	Tensor my_tensors = this->split_axis(dim);
@@ -4098,7 +4112,7 @@ Tensor Tensor::flip_() const{
 /* //therefore, the solution would be to get the RowColSwap function working again (which needs to happen anyways) */
 /* Tensor Tensor::flip_(size_value_t dim){ */
 /* 	dim = dim < 0 ? dim + dims() : dim; */
-/* 	utils::throw_exception(dim < dims() && dim > 0, "RuntimeError: Expected input dim for flip to be less than $ but got $", dims(), dim); */
+/* 	utils::THROW_EXCEPTION(dim < dims() && dim > 0, "RuntimeError: Expected input dim for flip to be less than $ but got $", dims(), dim); */
 /* 	Tensor output(_vals.copy_strides(false), shape()); */
 /* 	Tensor my_tensors = (dim == (dims()-1)) ? this->RowColSwap().split_axis(-2) : this->split_axis(dim); */
 /* 	Tensor out_tensors = (dim == (dims()-1)) ? output.RowColSwap().split_axis(-2) : output.split_axis(dim); */

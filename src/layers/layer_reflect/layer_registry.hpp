@@ -52,7 +52,8 @@ using RegistryEntry = std::tuple<std::type_index,
 			std::string,
 			std::function<bool()>,
 			std::function<bool()>,
-			std::function<bool()>
+			std::function<bool()>,
+			std::function<std::function<void(const Tensor&, intrusive_ptr<TensorGrad>)>(Module*)>
 >;
 
 using RegistryType = std::vector<RegistryEntry>;
@@ -143,6 +144,15 @@ inline bool eval_module_function_overriden(const intrusive_ptr<Module>& ptr_){
 
 }
 
+inline std::function<void(const Tensor&, intrusive_ptr<TensorGrad>)> get_backward_function(const intrusive_ptr<Module>& ptr_){
+	intrusive_ptr<Module>& ptr = const_cast<intrusive_ptr<Module>&>(ptr_);
+	for(auto& it : getRegistry()){
+		if(std::get<1>(it)(ptr.get())){
+			return std::get<8>(it)(ptr_.get());
+		}
+	}
+	return nullptr;	
+}
 
 
 }}}

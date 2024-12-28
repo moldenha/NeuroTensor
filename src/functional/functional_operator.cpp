@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <ios>
 #include <iostream>
 
 #include "../Tensor.h"
@@ -150,6 +151,7 @@ void functional_operator_this(Tensor& _a, const Tensor& _b, const functional_ope
 	a = a.expand_as(b).clone();
 	utils::throw_exception(a.shape() == b.shape(), "Shape error for functional operator $ != $", a.shape(), b.shape());
 	Tensor c = functional_operator_out(a, b, op);
+
 	Tensor s = (c.dims() > _a.dims()) ? _a.unsqueeze_as(c) : _a;
 	s.set_(c.sum_as(s));
 }

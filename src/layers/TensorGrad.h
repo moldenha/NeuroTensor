@@ -37,6 +37,7 @@ namespace functional {
     TensorGrad invsqrt(const TensorGrad&);
     TensorGrad tanh(const TensorGrad&);
     TensorGrad tan(const TensorGrad&);
+    TensorGrad cat(std::vector<TensorGrad>, int64_t dim = 0);
 
 } // namespace functional_l
 
@@ -176,6 +177,7 @@ class TensorGrad : public intrusive_ptr_target{
 		friend TensorGrad functional::tanh(const TensorGrad&);
 		friend TensorGrad functional::tan(const TensorGrad&);
 		friend TensorGrad functional::var(const TensorGrad&, utils::optional_list, int64_t, bool);
+		friend TensorGrad functional::cat(std::vector<TensorGrad>, int64_t);
 
 
 	private:
@@ -287,6 +289,7 @@ class TensorGrad : public intrusive_ptr_target{
 		TensorGrad operator[](my_range) const;
 		TensorGrad operator[](Tensor) const;
 		TensorGrad operator[](std::vector<my_range>) const;
+		TensorGrad& nullify();
 
 		inline TensorGrad& operator++(){return *this += 1;}
 		
@@ -327,10 +330,22 @@ class TensorGrad : public intrusive_ptr_target{
 		inline TensorGrad& divide_(const TensorGrad& val)   {return *this /= val;}
 		inline TensorGrad& divide_(const Tensor& val)       {return *this /= val;}
 		inline Scalar toScalar() const                      {return this->tensor.toScalar();}
-		template<typename T>
-		inline T& item() {return this->tensor.item<T>();}
-		template<typename T>
-		inline const T& item() const                               {return this->tensor.item<T>();}
+		template<typename T = Scalar>
+		inline std::conditional_t< std::is_same_v<T, Scalar>, Scalar, T&> item() {
+			if constexpr (std::is_same_v<T, Scalar>){
+				return toScalar();
+			}else{
+				return this->tensor.item<T>();
+			}
+		}
+		template<typename T = Scalar>
+		inline std::conditional_t< std::is_same_v<T, Scalar>, Scalar, const T&> item() const {
+			if constexpr (std::is_same_v<T, Scalar>){
+				return toScalar();
+			}else{
+				return this->tensor.item<T>();
+			}
+		}
 		inline const bool is_contiguous() const                    {return this->tensor.is_contiguous();}
 		inline const bool is_empty() const                         {return this->tensor.is_empty();}
 		inline const bool is_null() const                          {return this->tensor.is_null();}
@@ -404,10 +419,11 @@ class TensorGrad : public intrusive_ptr_target{
 		inline TensorGrad expand_as(const TensorGrad& tg) const {return this->expand(tg.shape());}
 		
 		void backward(const Tensor&);
+		void backward();
 		void zero_grad();
 		Tensor grad_value() const;
 		void update(); // updates current values based on gradient
-
+		static void redefine_tracking(TensorGrad&, const TensorGrad&, std::function<void(const Tensor&, intrusive_ptr<TensorGrad>&)>);
 };
 
 Tensor& operator+=(Tensor&, const TensorGrad&);

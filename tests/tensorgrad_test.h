@@ -283,6 +283,29 @@ int test_autograd_original(){
 }
 
 
+int test_autograd_cat(){
+	nt::TensorGrad a(nt::functional::randn({2, 3, 4}));
+	nt::TensorGrad b(nt::functional::randn({3, 3, 4}));
+	std::cout << "a: "<<a<<std::endl;
+	nt::TensorGrad a_split = a.split_axis(0);
+	std::cout << "a_split: "<<a_split<<std::endl;
+	std::cout << "a_split grad: "<<a_split.grad->tensor<<std::endl;
+	b.zero_grad();
+	std::vector<nt::TensorGrad> vec({a, b});
+	nt::TensorGrad catted = nt::functional::cat(std::move(vec));
+	std::cout << catted << std::endl;
+	catted.backward(nt::functional::randn({5,3,4}));
+	std::cout << "a grad: "<<a.grad->tensor << std::endl;
+	std::cout << "a_split grad: "<<a_split.grad->tensor<<std::endl;
+	std::cout << "b grad: "<<b.grad->tensor << std::endl;
+
+	std::cout << std::endl << std::endl << "a_split[1]: "<<a_split[1] << std::endl;
+	std::cout << " a_split[1].grad: "<<a_split[1].grad->tensor << std::endl;
+	return 0;
+
+}
+
+
 int test_autograd(){
 	relu_autograd_test();
 	return 0;

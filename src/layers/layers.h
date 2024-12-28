@@ -4,6 +4,7 @@
 #include "../Tensor.h"
 
 #include <cstdint>
+#include <sys/_types/_int64_t.h>
 #include <type_traits>
 #include <variant>
 #include <functional>
@@ -254,6 +255,7 @@ class BatchNorm1D : public Module{
 };
 
 _NT_REGISTER_LAYER_(BatchNorm1D, num_features, epsilon, momentum, affine, track_running_stats, running_mean, running_var, gamma, beta)
+
 
 
 

@@ -1584,6 +1584,111 @@ Bucket Bucket::copy_strides() const {
 }
 
 
+
+Bucket Bucket::catV(const std::vector<Bucket>& buckets){
+	DType out_dtype = buckets[0].dtype;
+	for(const auto& ref : buckets){
+		utils::throw_exception(ref.dtype == out_dtype, "Expected all in cat to be of the same dtype but got $ and $", out_dtype, ref.dtype);
+	}
+	const DeviceType& dev = buckets[0].device_type();
+	for(const auto& ref : buckets){
+		utils::throw_exception(ref.device_type() == dev, "Expected all in cat to be of the same DeviceType but got $ and $", dev, ref.device_type());
+	}
+	bool blocked = buckets[0].strides_blocked;
+	bool convert_strides = false;
+	for(const auto& ref : buckets){
+		if(ref.strides_blocked != blocked){
+			convert_strides = true;
+			break;
+		}
+	}
+	if(convert_strides){
+		//dont reserve, has been shown to cause an allocation error with buckets
+		std::vector<Bucket> n_bucks(buckets.size(), Bucket::makeNullBucket(out_dtype));
+		for(uint32_t i = 0; i < buckets.size(); ++i){
+			n_bucks[i] = buckets[i].bucket_all_indices();
+		}
+		return Bucket::catV(n_bucks);
+	}
+	std::vector<std::reference_wrapper<const intrusive_ptr<Device> > > n_data;
+	n_data.reserve(buckets[0].bs);
+	for(uint64_t i = 0; i < buckets[0].bs; ++i)
+		n_data.push_back(std::cref((*buckets[0].buckets_)[i]));
+	int64_t nstride_s = 0;
+	for(const auto& ref : buckets){
+		nstride_s += ref.stride_size;
+	}
+	nt::intrusive_ptr<void*[]> nStrides(nstride_s);
+	uint64_t stride_index = 0;
+	for(const auto& ref : buckets){
+		Bucket::processCatData(ref, n_data, nStrides, stride_index);
+	}
+	return Bucket(to_device_holder(n_data), std::move(nStrides), nstride_s, n_data.size(), blocked, out_dtype);
+}
+
+
+//this can be really slow when there are a lot of buckets and a lot of strides
+//may want to rethink some of this (this was fixed with the new DeviceHolder construct, that can now only need a few Devices instead of what it was before)
+//the longest part is the allocation actually
+//
+//problem before device holder:
+// basically, whenever there was a transpose, to make the transpose faster, it would be split at the highest dimension possible
+// this allowed all of the tensors and data below that dimension to automatically be transposed automatically (save some complexity, 
+// and therefore time by shape().multiiply(dim) ^ (numel() - shape().range(0,dim).multiply())
+// sounds great right?
+// well, thats what I thought, and for the most part, yeah it was
+// this made it so that the longest part (after optimization of the split function), was this concatenation function here
+// (obviously the device holder also sped up the split function, without having to allocate another n intrusive_ptr<void> and all that stuff, instead its just a simple addition of an atomic pointer
+// (one that would have happened anyways)
+//
+// so with this function, back to the previous example, if it was a large tensor, then there were thousands of intrusive_ptr<void>'s that had to be allocated and then set
+// instead now, it is just a simple addition of an atomic number
+// making the below function much faster
+ 
+Bucket Bucket::catV(const std::vector<std::reference_wrapper<const Bucket> >& buckets){
+	DType out_dtype = buckets[0].get().dtype;
+	for(const auto& ref : buckets){
+		utils::throw_exception(ref.get().dtype == out_dtype, "Expected all in cat to be of the same dtype but got $ and $", out_dtype, ref.get().dtype);
+	}
+	const DeviceType& dev = buckets[0].get().device_type();
+	for(const auto& ref : buckets){
+		utils::throw_exception(ref.get().device_type() == dev, "Expected all in cat to be of the same DeviceType but got $ and $", dev, ref.get().device_type());
+	}
+	bool blocked = buckets[0].get().strides_blocked;
+	bool convert_strides = false;
+	for(const auto& ref : buckets){
+		if(ref.get().strides_blocked != blocked){
+			convert_strides = true;
+			break;
+		}
+	}	
+	if(convert_strides){
+		//dont reserve, has been shown to cause an allocation error with buckets
+		std::vector<Bucket> n_bucks(buckets.size(), Bucket::makeNullBucket(out_dtype));
+		for(uint32_t i = 0; i < buckets.size(); ++i){
+			n_bucks[i] = buckets[i].get().bucket_all_indices();
+		}
+		return Bucket::catV(n_bucks);
+	}
+	std::vector<std::reference_wrapper<const intrusive_ptr<Device> > > n_data;
+	n_data.reserve(buckets[0].get().bs);
+	for(uint64_t i = 0; i < buckets[0].get().bs; ++i){
+		n_data.push_back(std::cref((*buckets[0].get().buckets_)[i]));
+	}
+	int64_t nstride_s = 0;
+	for(const auto& ref : buckets){
+		nstride_s += ref.get().stride_size;
+	}
+	nt::intrusive_ptr<void*[]> nStrides(nstride_s);
+	uint64_t stride_index = 0;
+	for(const auto& ref : buckets){
+		Bucket::processCatData(ref.get(), n_data, nStrides, stride_index);
+	}
+
+	return Bucket(to_device_holder(n_data), std::move(nStrides), nstride_s, n_data.size(), blocked, out_dtype);
+}
+
+
 /* Bucket Bucket::FromShared(intrusive_ptr<void[]> ptr, uint64_t s, DType dt){ */
 /* 	Bucket output(s, dt, dCPU); */
 /* 	void* mem = output.data_ptr(); */

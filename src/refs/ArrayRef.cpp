@@ -131,6 +131,7 @@ ArrayRef<T>& ArrayRef<T>::operator=(ArrayRef<T>&& Arr){
 
 template<typename T>
 const bool ArrayRef<T>::operator==(const ArrayRef<T> &Arr) const {
+	if(Arr._vals == nullptr || _vals == nullptr){return false;}
 	if(Arr._total_size != _total_size)
 		return false;
 	if(Arr._empty != _empty)
@@ -140,6 +141,7 @@ const bool ArrayRef<T>::operator==(const ArrayRef<T> &Arr) const {
 
 template<typename T>
 const bool ArrayRef<T>::operator!=(const ArrayRef<T> &Arr) const {
+	if(Arr._vals == nullptr || _vals == nullptr){return true;}
 	if(Arr._total_size != _total_size)
 		return true;
 	if(Arr._empty != _empty)

@@ -124,15 +124,12 @@ set(PERMUTE_SOURCES
 
 #this also includes autograds and layers
 set(AI_SOURCES
-    # src/layers/Linear.cpp
     src/layers/Layer.cpp
-    src/layers/LayerGraph.cpp
-    # src/layers/ActivationFunction.cpp
-    # src/layers/Fold.cpp
-    # src/layers/Conv2d.cpp
+    src/layers/LNN.cpp
     src/layers/TensorGrad.cpp
     src/layers/functional.cpp
     src/layers/Loss.cpp
+    src/layers/Optimizers.cpp
 
 )
 

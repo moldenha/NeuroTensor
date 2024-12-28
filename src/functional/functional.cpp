@@ -1283,7 +1283,7 @@ Tensor meshgrid(Tensor&& x, Tensor&& y){
 //for example if I did cat(A, B[2], C)
 //it would look at all of B, not just B[2]
 Tensor as_strided_force_contiguity(const Tensor& input, const SizeRef& n_size, const SizeRef& n_stride, const int64_t& storage_offset){
-	utils::throw_exception(n_size.size() == n_stride.size(), "Expected to have same amount of strides as dimensions for as strided");
+	utils::THROW_EXCEPTION(n_size.size() == n_stride.size(), "Expected to have same amount of strides as dimensions for as strided");
 	//bound force contiguity bucket basically takes the tensor's memory
 	//and looks at each bucket of memory (for example if there was a concatenation that happened)
 	//and it looks at all instances of memory
@@ -1328,7 +1328,7 @@ Tensor as_strided_force_contiguity(const Tensor& input, const SizeRef& n_size, c
 Tensor as_strided(const Tensor& input, const SizeRef n_size, SizeRef n_stride, const int64_t storage_offset, bool whole_tensor){
 	if(n_stride.size() == n_size.size()+1){n_stride = n_stride.pop_front();}
 	if(whole_tensor){return as_strided_force_contiguity(input, n_size, n_stride, storage_offset);}
-	utils::throw_exception(n_size.size() == n_stride.size(), "Expected to have same amount of strides as dimensions for as size or one more, where the last dimension represents n_size.multiply()");
+	utils::THROW_EXCEPTION(n_size.size() == n_stride.size(), "Expected to have same amount of strides as dimensions for as size or one more, where the last dimension represents n_size.multiply()");
 	//bound force contiguity bucket basically takes the tensor's memory
 	//and looks at each bucket of memory (for example if there was a concatenation that happened)
 	//and it looks at all instances of memory

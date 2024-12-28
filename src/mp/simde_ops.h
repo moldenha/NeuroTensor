@@ -253,28 +253,8 @@ inline void func_name(T begin, T end, U begin2, O out){\
 
 _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(add, add, std::plus);
 _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(subtract, subtract, std::minus);
-/* _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies); */
+_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies);
 _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(divide, divide, std::divides);
-
-
-template<typename T, typename U, typename O>\
-inline void multiply(T begin, T end, U begin2, O out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
-	using base_type = utils::IteratorBaseType_t<T>;
-	if constexpr (simde_supported_v<base_type>){
-		static constexpr size_t pack_size = pack_size_v<base_type>;
-		for(; begin + pack_size <= end; begin += pack_size, begin2 += pack_size, out += pack_size){
-			simde_type<base_type> a = it_loadu(begin);
-			simde_type<base_type> b = it_loadu(begin2);
-			simde_type<base_type> c = SimdTraits<base_type>::multiply(a, b);
-			it_storeu(out, c);
-		}
-		std::transform(begin, end, begin2, out, std::multiplies<>{});
-	}
-	else{
-		std::transform(begin, end, begin2, out, std::multiplies<>{});
-	}
-}
 
 
 

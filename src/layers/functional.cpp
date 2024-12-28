@@ -28,9 +28,11 @@ TensorGrad matmult(const TensorGrad& a, const TensorGrad& b){
 	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 					intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
 
+
 		parents[0]->grad->tensor += ::nt::functional::matmult(grad, b->tensor, false, true);
 
 		parents[1]->grad->tensor += ::nt::functional::matmult(a->tensor, grad, true, false);
+
 	}, a_c, b_c);
 	return result;
 }
@@ -211,6 +213,145 @@ TensorGrad tan(const TensorGrad& x){
 	result.create_backward_function([](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
 		parents[0]->grad->tensor += dtan(grad);
 	});
+	return std::move(result);
+}
+
+Tensor cat_vec(std::vector<TensorGrad>& tgs){
+	const typename SizeRef::value_type& num = tgs.size();
+	auto begin = tgs.begin();
+	auto end = tgs.end();
+	const SizeRef sh = begin->shape();
+	const SizeRef sh_smaller = sh.pop_front();
+	int64_t n_dim_size = sh[0];
+	auto begin_cpy = begin;
+	++begin;
+	for(;begin != end; ++begin){
+		n_dim_size += begin->shape()[0];
+		utils::THROW_EXCEPTION(begin->shape().pop_front() == sh_smaller, "Expected all shapes in concatenate to be the same, but got $ and $", begin->shape().pop_front(), sh_smaller);
+	}
+	std::vector<typename SizeRef::value_type> vec = sh.Vec();
+	vec[0] = n_dim_size;
+	std::vector<std::reference_wrapper<const ArrayVoid> > arrVds;
+	arrVds.reserve(num); //okay because it is allocating a reference wrapper, putting a number there would cause an allocation error
+	begin = begin_cpy;
+	typename SizeRef::value_type i = 0;
+	for(typename SizeRef::value_type i = 0; begin != end; ++begin, ++i){
+		arrVds.push_back(std::cref(begin->tensor.arr_void()));
+	}
+	return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
+		
+}
+
+Tensor cat_vec(std::vector<TensorGrad>& tgs, int64_t dim){
+	if(dim == 0){return cat_vec(tgs);}
+	const typename SizeRef::value_type& num = tgs.size();
+	auto begin = tgs.begin();
+	auto end = tgs.end();
+	const SizeRef sh = begin->shape().transpose(0, dim);
+	int64_t n_dim_size = sh[0];
+	const SizeRef sh_smaller = sh.pop_front();
+	auto begin_cpy = begin;
+	++begin;
+	for(;begin != end; ++begin){
+		n_dim_size += begin->shape()[dim];
+		utils::THROW_EXCEPTION(begin->shape().transpose(0, dim).pop_front() == sh_smaller, "Expected all shapes in concatenate to be the same, but got $ and $", begin->shape(), sh);
+	}
+	std::vector<typename SizeRef::value_type> vec = sh.Vec();
+	vec[0] = n_dim_size;
+	std::vector<std::reference_wrapper<const ArrayVoid> > arrVds;
+	arrVds.reserve(num); //okay because it is allocating a reference wrapper, putting a number there would cause an allocation error
+	begin = begin_cpy;
+	typename SizeRef::value_type i = 0;
+	for(typename SizeRef::value_type i = 0; begin != end; ++begin, ++i){
+		arrVds.push_back(std::cref(begin->tensor.transpose(0, dim).arr_void()));
+	}
+	return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
+		
+}
+
+Tensor cat_vec_grad(std::vector<intrusive_ptr<TensorGrad>>& tgs){
+	const typename SizeRef::value_type& num = tgs.size();
+	auto begin = tgs.begin();
+	auto end = tgs.end();
+	const SizeRef sh = (*begin)->shape();
+	const SizeRef sh_smaller = sh.pop_front();
+	int64_t n_dim_size = sh[0];
+	auto begin_cpy = begin;
+	++begin;
+	for(;begin != end; ++begin){
+		n_dim_size += (*begin)->shape()[0];
+		utils::THROW_EXCEPTION((*begin)->shape().pop_front() == sh_smaller, "Expected all shapes in concatenate to be the same, but got $ and $", (*begin)->shape().pop_front(), sh_smaller);
+	}
+	std::vector<typename SizeRef::value_type> vec = sh.Vec();
+	vec[0] = n_dim_size;
+	std::vector<std::reference_wrapper<const ArrayVoid> > arrVds;
+	arrVds.reserve(num); //okay because it is allocating a reference wrapper, putting a number there would cause an allocation error
+	begin = begin_cpy;
+	typename SizeRef::value_type i = 0;
+	for(typename SizeRef::value_type i = 0; begin != end; ++begin, ++i){
+		arrVds.push_back(std::cref((*begin)->grad->tensor.arr_void()));
+	}
+	return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
+		
+}
+
+Tensor cat_vec_grad(std::vector<intrusive_ptr<TensorGrad>>& tgs, int64_t dim){
+	if(dim == 0){return cat_vec_grad(tgs);}
+	const typename SizeRef::value_type& num = tgs.size();
+	auto begin = tgs.begin();
+	auto end = tgs.end();
+	const SizeRef sh = (*begin)->shape().transpose(0, dim);
+	int64_t n_dim_size = sh[0];
+	const SizeRef sh_smaller = sh.pop_front();
+	auto begin_cpy = begin;
+	++begin;
+	for(;begin != end; ++begin){
+		n_dim_size += (*begin)->shape()[dim];
+		utils::THROW_EXCEPTION((*begin)->shape().transpose(0, dim).pop_front() == sh_smaller, "Expected all shapes in concatenate to be the same, but got $ and $", (*begin)->shape(), sh);
+	}
+	std::vector<typename SizeRef::value_type> vec = sh.Vec();
+	vec[0] = n_dim_size;
+	std::vector<std::reference_wrapper<const ArrayVoid> > arrVds;
+	arrVds.reserve(num); //okay because it is allocating a reference wrapper, putting a number there would cause an allocation error
+	begin = begin_cpy;
+	typename SizeRef::value_type i = 0;
+	for(typename SizeRef::value_type i = 0; begin != end; ++begin, ++i){
+		arrVds.push_back(std::cref((*begin)->grad->tensor.transpose(0, dim).arr_void()));
+	}
+	return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
+		
+}
+
+
+
+
+TensorGrad cat(std::vector<TensorGrad> tgs, int64_t dim){
+	bool track_grad = tgs[0].do_track_grad;
+	for(const auto& tg : tgs){
+		utils::throw_exception(tg.do_track_grad == track_grad, "Cannot concatenate tensors that are both tracking the gradient and are not");
+		utils::throw_exception(!tg.is_null(), "Cannot concatenate null tensors");
+	}
+	TensorGrad result(cat_vec(tgs, dim));
+	if(!track_grad){
+		result.do_track_grad = false;
+		return std::move(result);
+	}
+
+	//tracking the gradient itself
+	//rather than tracking each parent individually
+	result.parents.clear();
+	result.parents.reserve(tgs.size());
+	for(const auto& tg : tgs){
+		if(tg.grad == nullptr){
+			tg.grad = make_intrusive<tensor_holder>(functional::zeros_like(tg.tensor));
+		}
+		result.parents.push_back(make_intrusive<TensorGrad>(tg));
+	}
+	result.grad = make_intrusive<tensor_holder>(cat_vec_grad(result.parents));
+	intrusive_ptr<TensorGrad> res_intrusive = make_intrusive<TensorGrad>(result);
+	for(const auto& tg : tgs){
+		tg.children->push_back(res_intrusive);
+	}
 	return std::move(result);
 }
 

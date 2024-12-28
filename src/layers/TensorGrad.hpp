@@ -181,6 +181,8 @@ inline void TensorGrad::track_grad(const TensorGrad& t, OutOperator&& op){
 	t.children->push_back(make_intrusive<TensorGrad>(*this));
 }
 
+
+
 }
 
 #endif
