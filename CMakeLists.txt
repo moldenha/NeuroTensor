@@ -41,6 +41,21 @@ else()
 
 endif()
 
+# Check the processor architecture for apple silicon
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+        message(STATUS "Apple Silicon detected (ARM architecture).")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_NT_APPLE_SILICON_SUPPORTED_") 
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        message(STATUS "Intel Mac detected (x86_64 architecture).")
+        # Do something specific for Intel Macs
+    else()
+        message(STATUS "Unknown architecture detected: ${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+else()
+    message(STATUS "Not on macOS, skipping architecture check.")
+endif()
+
 # set_target_properties(tbb PROPERTIES COMPILE_FLAGS "-fno-sanitize=address" LINK_FLAGS "-fno-sanitize=address")
 
 #MKL_FLAGS := -I/opt/intel/oneapi/mkl/latest/include -L/opt/intel/oneapi/mkl/latest/lib -Wl,-rpath,/opt/intel/oneapi/mkl/latest/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
