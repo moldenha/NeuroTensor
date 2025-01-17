@@ -3,20 +3,13 @@
 #include "conv_dnn.cpp"
 #include "../Tensor.h"
 #include <memory>
+#include "../layers/functional.h"
 
 namespace nt{
 namespace functional{
 
 
 
-TensorGrad conv2d(const TensorGrad& image, const TensorGrad& kernel, utils::my_tuple stride, utils::my_tuple padding, utils::my_tuple dilation, int64_t groups){
-	utils::throw_exception(image.do_track_grad == kernel.do_track_grad, "Conv2d only supports fully tracking the gradient or not at all");
-	if(!image.do_track_grad){
-		Tensor out = functional::conv2d(image.tensor, kernel.tensor);
-		return TensorGrad(std::move(out));;
-	}
-	return functional_std::conv2d(image, kernel, stride, padding, dilation, groups);
-}
 
 Tensor conv2d(const Tensor &image, const Tensor &kernel, utils::my_tuple stride, utils::my_tuple padding, utils::my_tuple dilation, int64_t groups){
 	/* switch(image.dtype){ */

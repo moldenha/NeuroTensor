@@ -137,7 +137,84 @@ optional_list& optional_list::operator=(intrusive_ptr<intrusive_list<int64_t>>&&
 	return *this;
 }
 
+//optional string
+optional_string::optional_string(const optional_string& op)
+	:str(op.str)
+{}
 
+optional_string::optional_string(optional_string&& op)
+	:str(std::move(op.str))
+{}
+
+optional_string::optional_string(const intrusive_ptr<intrusive_string>& it)
+	:str(it)
+{}
+
+optional_string::optional_string(intrusive_ptr<intrusive_string>&& it)
+	:str(it)
+{}
+
+
+optional_string::optional_string(const std::string& t)
+	:str(make_intrusive<intrusive_string>(t))
+{}
+
+optional_string::optional_string(std::string&& t)
+	:str(make_intrusive<intrusive_string>(std::move(t)))
+{}
+
+optional_string::optional_string(std::nullptr_t)
+	:str(nullptr)
+{}
+
+optional_string::optional_string()
+	:str(nullptr)
+{}
+
+
+optional_string& optional_string::operator=(const optional_string& op){
+	str = op.str;
+	return *this;
+}
+
+optional_string& optional_string::operator=(optional_string&& op){
+	str = std::move(op.str);
+	return *this;
+}
+
+optional_string& optional_string::operator=(const std::string& t){
+	if(*this){
+		str->value = t;
+		return *this;
+	}
+	str = make_intrusive<intrusive_string>(t);
+	return *this;
+}
+
+optional_string& optional_string::operator=(std::string&& t){
+	if(*this){
+		str->value = std::move(t);
+		return *this;
+	}
+	str = make_intrusive<intrusive_string>(std::move(t));
+	return *this;
+}
+
+optional_string& optional_string::operator=(const intrusive_ptr<intrusive_string>& it){
+	str = it;
+	return *this;
+}
+
+optional_string& optional_string::operator=(intrusive_ptr<intrusive_string>&& it){
+	str = std::move(it);
+	return *this;
+}
+
+
+optional_string& optional_string::operator=(std::nullptr_t){
+	if(*this){this->str.reset();}
+	return *this;
+}
 
 
 

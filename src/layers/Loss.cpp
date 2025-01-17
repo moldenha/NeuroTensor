@@ -53,7 +53,7 @@ TensorGrad MSE(const TensorGrad& output, const Tensor& target){
 	Tensor dx = std::pow(output.tensor - target, 2) / target.numel();;
 	Scalar item = dx.sum().toScalar();
 	TensorGrad loss(item);
-	loss.grad = nt::make_intrusive<tensor_holder>(dx);
+	loss.grad = nt::make_intrusive<tensor_holder>(-dx);
 	TensorGrad::redefine_tracking(loss, output, [](const Tensor& grad, intrusive_ptr<TensorGrad>& parent){
 		parent->grad->tensor = grad;
 	});

@@ -4,6 +4,7 @@ project(NeuroTensor)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -fsanitize=address -g -DUSE_PARALLEL -O3")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -fsanitize=address")
+set(CMAKE_VERBOSE_MAKEFILE OFF) 
 
 # Find TBB
 # find_package(TBB REQUIRED)
@@ -41,6 +42,9 @@ else()
 
 endif()
 
+
+#add_subdirectory(third_party/xnetwork)
+
 # set_target_properties(tbb PROPERTIES COMPILE_FLAGS "-fno-sanitize=address" LINK_FLAGS "-fno-sanitize=address")
 
 #MKL_FLAGS := -I/opt/intel/oneapi/mkl/latest/include -L/opt/intel/oneapi/mkl/latest/lib -Wl,-rpath,/opt/intel/oneapi/mkl/latest/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
@@ -65,6 +69,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party/simde
     ${CMAKE_SOURCE_DIR}/third_party/half
     ${CMAKE_SOURCE_DIR}/third_party/stb
+    #${CMAKE_SOURCE_DIR}/third_party/xnetwork/include
 )
 
 
@@ -104,6 +109,7 @@ set(FUNCTIONAL_SOURCES
 	src/functional/functional_matmult.cpp
 	src/functional/functional_fold.cpp
 	src/functional/functional_conv.cpp
+	src/functional/linalg.cpp
 	src/functional/wrbits.cpp
 )
 
@@ -130,6 +136,15 @@ set(AI_SOURCES
     src/layers/functional.cpp
     src/layers/Loss.cpp
     src/layers/Optimizers.cpp
+    src/layers/Module.cpp
+    #ncps sources
+    src/layers/ncps/lstm_cell.cpp
+    src/layers/ncps/wiring/wiring.cpp
+    src/layers/ncps/cfc/wired_cfc_cell.cpp
+    src/layers/ncps/cfc/cfc_cell.cpp
+    src/layers/ncps/cfc/cfc.cpp
+    src/layers/ncps/ltc/ltc.cpp
+    src/layers/ncps/ltc/ltc_cell.cpp
 
 )
 

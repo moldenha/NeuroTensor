@@ -636,6 +636,7 @@ struct uint_bool_t{
 	inline uint_bool_t& operator=(const uint8_t &val){value = val > 0 ? 1 : 0; return *this;}
 	inline uint_bool_t& operator=(const uint_bool_t &val){value = val.value; return *this;}
 	inline uint_bool_t& operator=(uint_bool_t&& val){value = val.value; return *this;}
+    inline operator bool() const {return value == 1;}
 	friend bool operator==(const uint_bool_t& a, const uint_bool_t& b);	
 	friend bool operator==(const bool& a, const uint_bool_t& b);	
 	friend bool operator==(const uint_bool_t& a, const bool& b);	
@@ -689,8 +690,13 @@ namespace std {
 namespace std{
 _NT_DEFINE_STL_FUNC_FP16_ROUTE_(exp)
 _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(exp)
+_NT_DEFINE_STL_FUNC_FP16_ROUTE_(abs)
+_NT_DEFINE_STL_FUNC_CFP16_ROUTE_(abs)
 _NT_DEFINE_STL_FUNC_FP16_ROUTE_(sqrt)
 _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(sqrt)
+_NT_DEFINE_STL_FUNC_FP16_ROUTE_(log)
+_NT_DEFINE_STL_FUNC_CFP16_ROUTE_(log)
+
 _NT_DEFINE_STL_FUNC_FP16_ROUTE_(tanh)
 _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(tanh)
 _NT_DEFINE_STL_FUNC_FP16_ROUTE_(tan)
@@ -711,6 +717,8 @@ _NT_DEFINE_STL_FUNC_FP16_ROUTE_(cos)
 _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(cos)
 _NT_DEFINE_STL_FUNC_FP16_ROUTE_(acos)
 _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(acos)
+
+
 
 inline ::nt::float16_t pow(::nt::float16_t a, ::nt::float16_t b){
 	return _NT_FLOAT32_TO_FLOAT16_(std::pow(_NT_FLOAT16_TO_FLOAT32_(a), _NT_FLOAT16_TO_FLOAT32_(b)));

@@ -3,5 +3,6 @@
 
 #include "optional_tensor.h"
 #include "optional_list.h"
+#include "optional_string.h"
 
 #endif

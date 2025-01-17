@@ -188,6 +188,8 @@ public:
 	/* references.reserve(it.references.size()); */
 	references.insert(it.references.begin(), it.references.end());
     }
+    
+    inline std::map<std::string, std::reference_wrapper<T>>& get_references() {return references;}
 
     inline void extend_unique(custom_typed_map&& it, std::string to_add){
 	for(auto ele : it){
@@ -200,6 +202,10 @@ public:
 		}
 		references.insert({key, element});
 	}
+    }
+
+    inline void extend(std::map<std::string, std::reference_wrapper<T> >& map){
+	    references.insert(map.begin(), map.end());
     }
 
 };

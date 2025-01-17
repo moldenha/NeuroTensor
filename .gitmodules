@@ -13,3 +13,6 @@
 [submodule "third_party/stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb
+[submodule "third_party/xnetwork"]
+	path = third_party/xnetwork
+	url = https://github.com/luk036/xnetwork-cpp

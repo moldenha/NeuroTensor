@@ -252,7 +252,7 @@ class Tensor final{
 		Tensor unsqueeze(size_value_t dim = 0) const;
 		Tensor unsqueeze_as(const Tensor&) const;
 		Tensor unsqueeze_as(const SizeRef&) const;
-		Tensor squeeze() const;
+		Tensor squeeze(utils::optional_list list = nullptr) const;
 		Tensor permute(std::vector<size_value_t>) const;
 		inline std::vector<size_value_t> strides() const {return shape().strides();}
 		inline std::vector<size_value_t> getChangedStrides() const {
@@ -296,10 +296,12 @@ class Tensor final{
 		Tensor to_complex_from_imag() const;
 		Tensor sum(utils::optional_list list = nullptr, bool keepdim=false) const;
 		Tensor mean(utils::optional_list list = nullptr, bool keepdim=false) const;
-		result_types::max<Tensor, Tensor> max() const;
+		result_types::max<Tensor, Tensor> max(utils::optional_list list = nullptr) const;
+		result_types::max<Tensor, Tensor> min(utils::optional_list list = nullptr) const;
+		/* result_types::max<Tensor, Tensor> max() const; */
 		Tensor sum_as(const SizeRef&) const;
 		Tensor sum_as(const Tensor&) const;
-		result_types::max<Tensor, Tensor> max(size_value_t) const;
+		/* result_types::max<Tensor, Tensor> max(size_value_t) const; */
 		Tensor exp() const;
 		Tensor& exp_();
 		Tensor pow(Scalar) const;
@@ -388,13 +390,9 @@ Tensor operator/(Scalar s, const Tensor& t);
 }
 
 
-/* #define @(a, b) \ */
-/*     static_assert(std::is_same<decltype(a), nt::Tensor>::value, "a must be nt::Tensor"); \ */
-/*     static_assert(std::is_same<decltype(b), nt::Tensor>::value, "b must be nt::Tensor"); \ */
-/*     nt::functional::matmult((a), (b)) */
-
 // Specialization of std::swap for nt::Tensor
 #include "functional/functional.h"
+#include "functional/tensor_get.h"
 namespace std {
     inline void swap(::nt::Tensor& lhs, ::nt::Tensor& rhs) {
         lhs.swap(rhs); // Call your custom swap function

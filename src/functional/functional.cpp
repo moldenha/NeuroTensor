@@ -351,6 +351,84 @@ Tensor rand(Scalar lower, Scalar upper, SizeRef s, DType dt){
 	return std::move(output);
 }
 
+Tensor randbools(SizeRef s, double p){
+	utils::throw_exception(p >= 0 || p <= 1, "Expected percentage p to be in [0, 1] but got $", p);
+	if(p == 1){
+		return ones(s, DType::Bool);
+	}else if(p == 0){
+		return zeros(s, DType::Bool);
+	}
+	Tensor out = zeros(std::move(s), DType::Bool);
+	Tensor range = arange(out.numel(), DType::int64, 0);
+	int64_t n = out.numel();
+	int64_t numOnes = static_cast<int64_t>(p * n);
+
+	std::random_device rd;
+	std::minstd_rand gen(rd());
+	std::uniform_int_distribution<> dis(0, n - 1);
+	
+	int64_t* range_begin = reinterpret_cast<int64_t*>(range.data_ptr());
+	int64_t* range_end = range_begin + n;
+	std::shuffle(range_begin, range_end, gen);
+	uint_bool_t* out_indices = reinterpret_cast<uint_bool_t*>(out.data_ptr());
+	for (int64_t i = 0; i < numOnes; ++i) {
+		out_indices[range_begin[i]] = uint_bool_t(true);
+	}
+	return std::move(out);
+}
+
+
+void xavier_uniform_(Tensor& tensor){
+	int64_t fan_in = tensor.shape()[1];
+	int64_t fan_out = tensor.shape()[0];
+	double bound = std::sqrt(6.0 / (double)(fan_in + fan_out));
+	DType dt = tensor.dtype;
+	std::random_device rd;
+	std::minstd_rand gen(rd());
+	if(DTypeFuncs::is_complex(dt)){
+		tensor.arr_void().execute_function<WRAP_DTYPES<ComplexTypesL> >(
+		[&bound, &gen](auto begin, auto end){
+			using complex_t = utils::IteratorBaseType_t<decltype(begin)>;
+			using value_t = typename complex_t::value_type;
+#ifdef _HALF_FLOAT_SUPPORT_
+			if constexpr (std::is_same_v<value_t, float16_t>){
+				std::uniform_real_distribution<float> dis((float)(-bound), (float)(bound));
+				std::generate(begin, end, [&]() {return complex_t(static_cast<value_t>(dis(gen)), static_cast<value_t>(dis(gen)));});
+			}
+			else{
+				std::uniform_real_distribution<value_t> dis((value_t)(-bound), (value_t)(bound));
+				std::generate(begin, end, [&]() {return complex_t(dis(gen), dis(gen));}); 
+			}
+#else
+			std::uniform_real_distribution<value_t> dis((value_t)(-bound), (value_t)(bound));
+			std::generate(begin, end, [&]() {return complex_t(dis(gen), dis(gen));});
+#endif
+
+		});
+	}
+	else if(DTypeFuncs::is_floating(dt)){
+		tensor.arr_void().execute_function<WRAP_DTYPES<FloatingTypesL> >(
+		[&bound, &gen](auto begin, auto end){
+			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+#ifdef _HALF_FLOAT_SUPPORT_
+			if constexpr (std::is_same_v<value_t, float16_t>){
+				std::uniform_real_distribution<float> dis((float)(-bound), (float)(bound));
+				std::generate(begin, end, [&]() {return static_cast<value_t>(dis(gen));});
+			}
+			else{
+				std::uniform_real_distribution<value_t> dis((value_t)(-bound), (value_t)(bound));
+				std::generate(begin, end, [&]() {return dis(gen);}); 
+			}
+#else
+			std::uniform_real_distribution<value_t> dis((value_t)(-bound), (value_t)(bound));
+			std::generate(begin, end, [&]() {return dis(gen);});
+#endif
+		});
+	}
+
+
+}
+
 Tensor randn(SizeRef inp, DType dt){
 	Tensor output = randint(0, 20, std::move(inp), dt);
 	softmax_(output);
@@ -594,10 +672,14 @@ Tensor cat(const Tensor& t){
 		const SizeRef sh = begin->shape();
 		++begin;
 		for(;begin != end; ++begin){
-			utils::THROW_EXCEPTION(begin->shape() == sh, "Expected all shapes in concatenate to be the same, but got $ and $", begin->shape(), sh);
+			utils::THROW_EXCEPTION(begin->shape().pop_front() == sh.pop_front(), 
+                          "Expected all shapes in concatenate to be the same, except for dim (0) but got $ and $", begin->shape(), sh);
 		}
+		begin = begin_cpy;
 		std::vector<typename SizeRef::value_type> vec = sh.Vec();
-		vec[0] *= num;
+        ++begin;
+        for(;begin != end; ++begin)
+            vec[0] += begin->shape()[0];
 		std::vector<std::reference_wrapper<const ArrayVoid> > arrVds;
 		arrVds.reserve(num); //okay because it is allocating a reference wrapper, putting a number there would cause an allocation error
 		begin = begin_cpy;
@@ -635,43 +717,116 @@ Tensor cat_unordered(const std::vector<Tensor>& t){
 	return Tensor(std::move(outp), {static_cast<typename SizeRef::value_type>(n_numel)});
 }
 
-Tensor cat(std::vector<Tensor> t, int32_t dim){
-	dim = dim < 0 ? t[0].dims() + dim : dim;
-	typename SizeRef::value_type last_dim = 0;
-	for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
-		exception_dtypes(t[i-1].dtype, t[i].dtype);
-		utils::THROW_EXCEPTION(t[i-1].dims() == t[i].dims(), "Runtime Error: Expected all tensors to have $ dims but got $ instead", t[i-1].dims(), t[i].dims());
-		for(typename SizeRef::value_type j = 0; j < t[i].dims(); ++j){
-			if(j == dim){
-				last_dim += t[i-1].shape()[j];
-				continue;
-			}
-			utils::THROW_EXCEPTION(t[i].shape()[j] == t[i-1].shape()[j],
-				"Runtime Error: Expected tensors to have same shape ($) at dim $ but got ($) instead",
-				t[i-1].shape()[j], j, t[i].shape()[j]);
-		}
-	}
-	last_dim += t.back().shape()[dim];
-	std::vector<typename SizeRef::value_type> vec = t[0].shape().Vec();
-	vec[dim] = last_dim;
-	SizeRef a(std::move(vec));
-	Tensor outp(a, t[0].dtype);
-	std::vector<my_range> ranges(dim+1);
-	for(typename SizeRef::value_type i = 0; i < ranges.size()-1; ++i){
-		ranges[i] = my_range(0, t[0].shape()[i]);
-	}
-	typename SizeRef::value_type last = 0;
-	for(typename SizeRef::value_type i = 0; i < t.size(); ++i){
-		ranges.back() = my_range(last, t[i].shape()[dim]);
-		last += t[i].shape()[dim];
-		outp[ranges] = t[i];
-	}
-	return outp;
+
+Tensor _NT_cat_vec_(std::vector<Tensor> &tgs) {
+    const typename SizeRef::value_type &num = tgs.size();
+    auto begin = tgs.begin();
+    auto end = tgs.end();
+    const SizeRef sh = begin->shape();
+    const SizeRef sh_smaller = sh.pop_front();
+    int64_t n_dim_size = sh[0];
+    auto begin_cpy = begin;
+    ++begin;
+    for (; begin != end; ++begin) {
+        n_dim_size += begin->shape()[0];
+        utils::THROW_EXCEPTION(begin->shape().pop_front() == sh_smaller,
+                                                     "Expected all shapes in concatenate to be the "
+                                                     "same, but got $ and $",
+                                                     begin->shape().pop_front(), sh_smaller);
+    }
+    std::vector<typename SizeRef::value_type> vec = sh.Vec();
+    vec[0] = n_dim_size;
+    std::vector<std::reference_wrapper<const ArrayVoid>> arrVds;
+    arrVds.reserve(num); // okay because it is allocating a reference wrapper,
+                                             // putting a number there would cause an allocation error
+    begin = begin_cpy;
+    typename SizeRef::value_type i = 0;
+    for (typename SizeRef::value_type i = 0; begin != end; ++begin, ++i) {
+        arrVds.push_back(std::cref(begin->arr_void()));
+    }
+    return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
+}
+
+Tensor _NT_cat_vec_(std::vector<Tensor> &tgs, int64_t dim) {
+
+    if (dim == 0) {
+        return _NT_cat_vec_(tgs);
+    }
+    const typename SizeRef::value_type &num = tgs.size();
+    auto begin = tgs.begin();
+    auto end = tgs.end();
+    const SizeRef sh = begin->shape().transpose(0, dim);
+    int64_t n_dim_size = sh[0];
+    const SizeRef sh_smaller = sh.pop_front();
+    auto begin_cpy = begin;
+    ++begin;
+    for (; begin != end; ++begin) {
+        n_dim_size += begin->shape()[dim];
+        utils::THROW_EXCEPTION(begin->shape().transpose(0, dim).pop_front() ==
+                                                             sh_smaller,
+                                                     "Expected all shapes in concatenate to be the "
+                                                     "same, but got $ and $",
+                                                     begin->shape(), sh);
+    }
+    std::vector<typename SizeRef::value_type> vec = sh.Vec();
+    vec[0] = n_dim_size;
+    std::vector<ArrayVoid> arrVds;
+    //arrVds.reserve(num); // okay because it is allocating a reference wrapper,
+    // putting a number there would cause an allocation error
+    begin = begin_cpy;
+    typename SizeRef::value_type i = 0;
+    for (typename SizeRef::value_type i = 0; begin != end; ++begin, ++i) {
+        arrVds.push_back(begin->transpose(0, dim).arr_void());
+    }
+    SizeRef shape(std::move(vec));
+    return Tensor(ArrayVoid::cat(arrVds), std::move(shape)).transpose(0, dim);
+}
+
+
+
+Tensor cat(std::vector<Tensor> t, int64_t dim){
+	// dim = dim < 0 ? t[0].dims() + dim : dim;
+    return _NT_cat_vec_(t, dim);
+	// typename SizeRef::value_type last_dim = 0;
+	// for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
+	// 	exception_dtypes(t[i-1].dtype, t[i].dtype);
+	// 	utils::THROW_EXCEPTION(t[i-1].dims() == t[i].dims(), "Runtime Error: Expected all tensors to have $ dims but got $ instead", t[i-1].dims(), t[i].dims());
+	// 	for(typename SizeRef::value_type j = 0; j < t[i].dims(); ++j){
+	// 		if(j == dim){
+	// 			last_dim += t[i-1].shape()[j];
+	// 			continue;
+	// 		}
+	// 		utils::THROW_EXCEPTION(t[i].shape()[j] == t[i-1].shape()[j],
+	// 			"Runtime Error: Expected tensors to have same shape ($) at dim $ but got ($) instead",
+	// 			t[i-1].shape()[j], j, t[i].shape()[j]);
+	// 	}
+	// }
+	// last_dim += t.back().shape()[dim];
+	// std::vector<typename SizeRef::value_type> vec = t[0].shape().Vec();
+	// vec[dim] = last_dim;
+	// SizeRef a(std::move(vec));
+	// Tensor outp(a, t[0].dtype);
+	// std::vector<my_range> ranges(dim+1);
+	// for(typename SizeRef::value_type i = 0; i < ranges.size()-1; ++i){
+	// 	ranges[i] = my_range(0, t[0].shape()[i]);
+	// }
+	// typename SizeRef::value_type last = 0;
+	// for(typename SizeRef::value_type i = 0; i < t.size(); ++i){
+	// 	ranges.back() = my_range(last, t[i].shape()[dim]);
+	// 	last += t[i].shape()[dim];
+	// 	outp[ranges] = t[i];
+	// }
+	// return outp;
+    
+
 }
 
 Tensor cat(const Tensor& t, int64_t dim){
 	utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
 			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype);
+    if(dim == 0){
+        return cat(t);
+    }
 	const typename SizeRef::value_type& num = t.numel();
 	return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&num, &dim](auto begin, auto end) -> Tensor{
 		auto begin_cpy = begin;
@@ -685,18 +840,20 @@ Tensor cat(const Tensor& t, int64_t dim){
 		}
 		std::vector<typename SizeRef::value_type> vec = sh.Vec();
 		vec[0] = n_dim_size;
-		std::vector<std::reference_wrapper<const ArrayVoid> > arrVds;
+		std::vector<ArrayVoid> arrVds;
 		arrVds.reserve(num); //okay because it is allocating a reference wrapper, putting a number there would cause an allocation error
 		begin = begin_cpy;
 		typename SizeRef::value_type i = 0;
 		for(typename SizeRef::value_type i = 0; begin != end; ++begin, ++i){
-			arrVds.push_back(std::cref(begin->transpose(0, dim).arr_void()));
+			arrVds.push_back(begin->transpose(0, dim).arr_void());
 		}
 		return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec))).transpose(0, dim);
 		
 	});
 	
 }
+
+
 
 
 std::vector<Tensor> get_all(Tensor& t){
@@ -736,6 +893,8 @@ std::vector<Tensor> get_indices(std::vector<Tensor>& ts, int64_t* begin, int64_t
 
 }
 
+
+
 Tensor index_select(Tensor input, int8_t dim, Tensor index){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
@@ -772,7 +931,7 @@ Tensor select(Tensor input, int8_t dim, int64_t index){
 	return input[std::move(ranges)];
 }
 
-Tensor split(Tensor input, typename SizeRef::value_type split_size, int8_t dim){
+Tensor split(Tensor input, typename SizeRef::value_type split_size, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
 	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
@@ -799,87 +958,95 @@ Tensor split(Tensor input, typename SizeRef::value_type split_size, int8_t dim){
 		output[total_tensors-1] = input[my_range(begin, -1)];
 		return std::move(output);
 	}
-	std::vector<Tensor> vec = get_all(input);
-	int8_t dim_cpy = dim;
-	--dim;
-	while(dim > 0){
-		vec = get_all(vec);
-		--dim;
-	}
-	typename SizeRef::value_type begin = 0;
-	typename SizeRef::value_type end = split_size;
-	auto n_shape = input.shape().Vec();
-	n_shape[dim_cpy] = split_size;
-	SizeRef curr_shape(n_shape);
-	if(!remainder){
-		for(typename SizeRef::value_type i = 0; i < total_tensors; ++i){
-			std::vector<Tensor> vec_cpy(vec.size());
-			for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
-				vec_cpy[j] = vec[i][my_range(begin, end)];
-			}
-			output[i] = cat_unordered(vec_cpy).view(curr_shape);
-			begin += split_size;
-			end += split_size;
-		}
-		return std::move(output);
-	}
-	for(typename SizeRef::value_type i = 0; i < total_tensors-1; ++i){
-		std::vector<Tensor> vec_cpy(vec.size());
-		for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
-			vec_cpy[j] = vec[i][my_range(begin, end)];
-		}
-		output[i] = cat_unordered(vec_cpy).view(curr_shape);
-		begin += split_size;
-		end += split_size;
-	}
-	std::vector<Tensor> vec_cpy(vec.size());
-	for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
-		vec_cpy[j] = vec[j][my_range(begin, -1)];
-	}
-	n_shape[dim_cpy] = input.shape()[dim_cpy] % split_size;
-	output[total_tensors-1] = cat_unordered(vec_cpy).view(SizeRef(std::move(n_shape)));
-	return std::move(output);
+    return split(input.transpose(0, dim), split_size, 0).transpose(0, dim);
+	// std::vector<Tensor> vec = get_all(input);
+	// int8_t dim_cpy = dim;
+	// --dim;
+	// while(dim > 0){
+	// 	vec = get_all(vec);
+	// 	--dim;
+	// }
+	// typename SizeRef::value_type begin = 0;
+	// typename SizeRef::value_type end = split_size;
+	// auto n_shape = input.shape().Vec();
+	// n_shape[dim_cpy] = split_size;
+	// SizeRef curr_shape(n_shape);
+	// if(!remainder){
+	// 	for(typename SizeRef::value_type i = 0; i < total_tensors; ++i){
+	// 		std::vector<Tensor> vec_cpy(vec.size());
+	// 		for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
+	// 			vec_cpy[j] = vec[i][my_range(begin, end)];
+	// 		}
+	// 		output[i] = cat_unordered(vec_cpy).view(curr_shape);
+	// 		begin += split_size;
+	// 		end += split_size;
+	// 	}
+	// 	return std::move(output);
+	// }
+	// for(typename SizeRef::value_type i = 0; i < total_tensors-1; ++i){
+	// 	std::vector<Tensor> vec_cpy(vec.size());
+	// 	for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
+	// 		vec_cpy[j] = vec[i][my_range(begin, end)];
+	// 	}
+	// 	output[i] = cat_unordered(vec_cpy).view(curr_shape);
+	// 	begin += split_size;
+	// 	end += split_size;
+	// }
+	// std::vector<Tensor> vec_cpy(vec.size());
+	// for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
+	// 	vec_cpy[j] = vec[j][my_range(begin, -1)];
+	// }
+	// n_shape[dim_cpy] = input.shape()[dim_cpy] % split_size;
+	// output[total_tensors-1] = cat_unordered(vec_cpy).view(SizeRef(std::move(n_shape)));
+	// return std::move(output);
 }
 
-Tensor split(Tensor input, std::vector<typename SizeRef::value_type> split_sections, int8_t dim){
+Tensor split(Tensor input, std::vector<typename SizeRef::value_type> split_sections, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	typename SizeRef::value_type sum = std::accumulate(split_sections.cbegin(), split_sections.cend(), 0);
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
 	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
 	utils::THROW_EXCEPTION(sum == input.shape()[dim], "Expected the sum of split_sections to be equal to the shape along dim $ which is $, instead got $", (int)dim, input.shape()[dim], sum);
 
-	Tensor output({static_cast<typename SizeRef::value_type>(split_sections.size())}, DType::TensorObj);
 	if(dim == 0){
+        Tensor output({static_cast<typename SizeRef::value_type>(split_sections.size())}, DType::TensorObj);
 		typename SizeRef::value_type begin = 0;
 		for(typename SizeRef::value_type i = 0; i < split_sections.size(); ++i){
-			output[i] = input[my_range(begin, split_sections[i])];
+            // std::cout << "doing range from "<<begin<<" to "<<split_sections[i]<<std::endl;
+			output[i] = input[my_range(begin, split_sections[i]+begin)];
 			begin += split_sections[i];
 		}
 		return std::move(output);
 	}
-	std::vector<Tensor> vec = get_all(input);
-	int8_t dim_cpy = dim;
-	--dim;
-	while(dim > 0){
-		vec = get_all(vec);
-		--dim;
-	}
-	typename SizeRef::value_type begin = 0;
-	auto n_shape = input.shape().Vec();
-	for(typename SizeRef::value_type i = 0; i < split_sections.size(); ++i){
-		std::vector<Tensor> vec_cpy(vec.size());
-		for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
-			vec_cpy[j] = vec[i][my_range(begin, split_sections[i])];
-		}
-		n_shape[dim_cpy] = split_sections[i];
-		output[i] = cat_unordered(vec_cpy).view(SizeRef(n_shape));
-		begin += split_sections[i];
-	}
-	return std::move(output);
+    Tensor output = split(input.transpose(0, dim), std::move(split_sections), 0);
+    Tensor* begin = reinterpret_cast<Tensor*>(output.data_ptr());
+    Tensor* end = begin + output.numel();
+    for(;begin != end; ++begin)
+        *begin = begin->transpose(0, dim);
+    return std::move(output);
+	// std::vector<Tensor> vec = get_all(input);
+	// int8_t dim_cpy = dim;
+	// --dim;
+	// while(dim > 0){
+	// 	vec = get_all(vec);
+	// 	--dim;
+	// }
+	// typename SizeRef::value_type begin = 0;
+	// auto n_shape = input.shape().Vec();
+	// for(typename SizeRef::value_type i = 0; i < split_sections.size(); ++i){
+	// 	std::vector<Tensor> vec_cpy(vec.size());
+	// 	for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
+	// 		vec_cpy[j] = vec[i][my_range(begin, split_sections[i])];
+	// 	}
+	// 	n_shape[dim_cpy] = split_sections[i];
+	// 	output[i] = cat_unordered(vec_cpy).view(SizeRef(n_shape));
+	// 	begin += split_sections[i];
+	// }
+	// return std::move(output);
 }
 
 
-Tensor chunk(Tensor input, typename SizeRef::value_type chunks, int8_t dim){
+Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
 	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
@@ -897,7 +1064,7 @@ Tensor chunk(Tensor input, typename SizeRef::value_type chunks, int8_t dim){
 		return std::move(output);
 	}
 	std::vector<Tensor> vec = get_all(input);
-	int8_t dim_cpy = dim;
+	int64_t dim_cpy = dim;
 	--dim;
 	while(dim > 0){
 		vec = get_all(vec);
@@ -976,10 +1143,15 @@ Tensor stack(std::vector<Tensor> t){
 	return std::move(output);
 }
 
-Tensor stack(std::vector<Tensor> t, int8_t dim){
+Tensor stack(std::vector<Tensor> t, int64_t dim){
 	for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
+		utils::THROW_EXCEPTION(!t[i-1].is_null(),
+				"Cannot stack a null tensor!");
+		utils::THROW_EXCEPTION(!t[i].is_null(),
+				"Cannot stack a null tensor!");
 		utils::THROW_EXCEPTION(t[i-1].shape() == t[i].shape(),
-				"Runtime Error: Expected all Tensors to have same shape of $ but instead got", t[i-1].shape(), t[i].shape());
+				"Runtime Error: Expected all Tensors to have same shape of $ but instead got $",
+				t[i-1].shape(), t[i].shape());
 		exception_dtypes(t[i-1].dtype, t[i].dtype);
 	}
 	std::vector<typename SizeRef::value_type> vec = t[0].shape().Vec();
@@ -991,8 +1163,63 @@ Tensor stack(std::vector<Tensor> t, int8_t dim){
 	for(Tensor& x : t)
 		arrVds.push_back(x.arr_void());
 
-	return Tensor(ArrayVoid::cat(arrVds), a.transpose(0, dim)).transpose(0, dim);
+	return Tensor(ArrayVoid::cat(arrVds), a).transpose(0, dim);
 }
+
+Tensor stack(std::vector<std::reference_wrapper<Tensor> > t, int64_t dim){
+	for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
+		utils::THROW_EXCEPTION(!t[i-1].get().is_null(),
+				"Cannot stack a null tensor!");
+		utils::THROW_EXCEPTION(!t[i].get().is_null(),
+				"Cannot stack a null tensor!");
+		utils::THROW_EXCEPTION(t[i-1].get().shape() == t[i].get().shape(),
+				"Runtime Error: Expected all Tensors to have same shape of $ but instead got $", 
+				t[i-1].get().shape(), t[i].get().shape());
+		exception_dtypes(t[i-1].get().dtype, t[i].get().dtype);
+	}
+	std::vector<typename SizeRef::value_type> vec = t[0].get().shape().Vec();
+	dim = dim < 0 ? dim + t[0].get().dims() : dim;
+	vec.insert(vec.begin(), t.size());
+	SizeRef a(std::move(vec));
+	std::vector<ArrayVoid> arrVds;
+	arrVds.reserve(t.size());
+	for(auto& x : t)
+		arrVds.push_back(x.get().arr_void());
+	return Tensor(ArrayVoid::cat(arrVds), a).transpose(0, dim);
+}
+
+
+Tensor stack(const Tensor& t, int64_t dim){
+	utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
+			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype);
+	return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&dim](auto begin, auto end){
+		auto begin_cpy = begin;
+		const SizeRef& original_shape = begin_cpy->shape();
+		DType out_dtype = begin_cpy->dtype;
+        const Tensor& t = *begin;
+		for(;begin_cpy != end; ++begin_cpy){
+			utils::THROW_EXCEPTION(!begin_cpy->is_null(),
+					"Cannot stack a null tensor!");
+			utils::THROW_EXCEPTION(original_shape == begin_cpy->shape(),
+				"Runtime Error: Expected all Tensors to have same shape of $ but instead got $",
+				original_shape, begin_cpy->shape());
+			exception_dtypes(out_dtype, begin_cpy->dtype);
+		}
+		std::vector<typename SizeRef::value_type> vec = original_shape.Vec();
+		dim = dim < 0 ? dim + t.dims() : dim;
+		vec.insert(vec.begin() + dim, (end-begin));
+		SizeRef a(std::move(vec));
+		std::vector<ArrayVoid> arrVds;
+		arrVds.reserve((end-begin));
+		for(;begin != end; ++begin){
+			arrVds.push_back(begin->arr_void());
+		}
+		return Tensor(ArrayVoid::cat(arrVds), a).transpose(0, dim);
+
+		
+	});
+}
+
 
 
 Tensor vectorize(std::vector<Tensor> t){
@@ -1033,6 +1260,58 @@ Tensor dsigmoid(const Tensor & x, bool apply_sigmoid){
 	return std::move(a);
 	
 }
+
+//TODO: silu function
+/* double gelu_approx_grad(double x) { */
+/*     const double sqrt_2_pi = std::sqrt(2.0 / M_PI); */
+/*     const double c = 0.044715; */
+
+/*     // Compute z = sqrt(2/pi) * (x + c * x^3) */
+/*     double z = sqrt_2_pi * (x + c * std::pow(x, 3)); */
+
+/*     // Compute tanh(z) and its derivative */
+/*     double tanh_z = std::tanh(z); */
+/*     double tanh_derivative = 1 - tanh_z * tanh_z; */
+
+/*     // Gradient of z with respect to x */
+/*     double dz_dx = sqrt_2_pi * (1 + 3 * c * x * x); */
+
+/*     // Final gradient */
+/*     return 0.5 * (1 + tanh_z) + 0.5 * x * tanh_derivative * dz_dx; */
+/* } */
+
+Tensor silu(const Tensor& x){
+	return x * sigmoid(x);
+}
+
+Tensor dsilu(const Tensor& x){
+	Tensor sigmoid_x = sigmoid(x);
+	Tensor grad = sigmoid_x * (1 + x * (1 - sigmoid_x));
+	return std::move(grad);
+}
+
+
+Tensor gelu(const Tensor& x){
+	Scalar sqrt_2_pi = std::sqrt(2.0 / M_PI);
+	return 0.5 * x * (1.0 + tanh(sqrt_2_pi * (x + 0.044715 * std::pow(x, 3))));
+}
+
+Tensor dgelu(const Tensor& x) {
+    const Scalar sqrt_2_pi(std::sqrt(2.0 / M_PI));
+    const Scalar c(0.044715);
+
+    Tensor z = sqrt_2_pi * (x + c * std::pow(x, 3));
+    // Compute tanh(z) and its derivative
+    z = tanh(z);
+    Tensor tanh_derivative = 1 - (z * z);
+
+    // Gradient of z with respect to x
+    Tensor dz_dx = sqrt_2_pi * (1 + 3 * c.to<double>() * x * x);
+
+    // Final gradient
+    return 0.5 * (1 + z) + 0.5 * x * tanh_derivative * dz_dx;
+}
+
 
 
 Tensor tanh(const Tensor& x){
@@ -1124,6 +1403,72 @@ Tensor dinvsqrt(const Tensor& x){
 	return std::move(a);
 }
 
+Tensor abs(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES< FloatingTypesL, SignedTypesL> >([](auto begin, auto end){
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+#ifdef __SIZEOF_INT128__
+        if constexpr (std::is_same_v<value_t, int128_t>){
+            for(;begin != end; ++begin)
+                *begin = static_cast<int128_t>(std::abs(static_cast<int64_t>(*begin)));
+                
+        }
+        else{
+            for(;begin != end; ++begin)
+                *begin = std::abs(*begin);
+        }
+#else
+        for(;begin != end; ++begin)
+            *begin = std::abs(*begin);
+#endif
+	});
+    a.arr_void().execute_function_chunk<WRAP_DTYPES<ComplexTypesL> >([](auto begin, auto end){
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+		for(;begin != end; ++begin)
+			*begin = value_t(std::abs(std::get<0>(*begin)), std::abs(std::get<1>(*begin)));
+	});
+    a.arr_void().execute_function_chunk<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		for(;begin != end; ++begin)
+			*begin = abs(*begin);
+	});
+    return std::move(a);
+}
+
+
+//ln(x)
+Tensor log(const Tensor& x){
+	Tensor a = x.clone();
+	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+		mp::log(begin, end, begin);
+	});
+	return std::move(a);
+}
+//derivative of ln(x) is just 1/x
+Tensor dlog(const Tensor& x){
+	return x.inverse();
+}
+
+Tensor clamp(const Tensor& x, std::optional<int64_t> min, std::optional<int64_t> max){
+	Tensor out = x.clone();
+	if(min && max){
+		out[out < min.value() && out > max.value()] = 0;
+		return std::move(out);
+	}
+	else if(min)
+		out[out < min.value()] = 0;
+	else if(max)
+		out[out > max.value()] = 0;
+	return std::move(out);
+}
+
+Tensor relu(const Tensor& x){return clamp(x, 0);}
+
+Tensor softplus(const Tensor& x, Scalar beta, Scalar threshold){
+	Tensor softplus_x = x * beta;
+	Tensor where = x > threshold;
+	softplus_x[where].set_(log(1 + std::exp(softplus_x[where])).divide_(beta));
+	return std::move(softplus_x);
+}
 
 Tensor var(const Tensor& x, utils::optional_list dim, int64_t correction, bool keepdim){
 	Tensor mean = x.mean(dim, true);
@@ -1155,6 +1500,10 @@ Tensor dvar(const Tensor& dx, const Tensor& x, utils::optional_list dim, int64_t
 	return (2 / (N - correction)) * (x - mean);
 }
 
+Tensor dot(const Tensor& a, const Tensor& b, utils::optional_list dim, bool keepdim){
+	Tensor c = a * b;
+	return c.sum(dim, keepdim);
+}
 
 size_t amount_of(const Tensor& t, Scalar s){
 	if(t.dtype == DType::Bool){
@@ -1363,6 +1712,13 @@ Tensor as_strided(const Tensor& input, const SizeRef n_size, SizeRef n_stride, c
 		return Tensor(output, std::move(n_size), out_strides);
 	}
 	return Tensor(output, std::move(n_size), n_stride.Vec());
+}
+
+Tensor droupout(const Tensor& input, double p){
+	Tensor bools = randbools(input.shape(), p);
+	Tensor out = input.clone();
+	out[bools] = 0;
+	return std::move(out);
 }
 
 }

@@ -102,8 +102,9 @@ inline void iota(T begin, T end, utils::IteratorBaseType_t<T> value = 0){
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
 		base_type loading[pack_size];
-		for(size_t i = 0; i < pack_size; ++i, ++value){
-			loading[i] = value;
+        utils::IteratorBaseType_t<T> value_cpy = value;
+		for(size_t i = 0; i < pack_size; ++i, ++value_cpy){
+			loading[i] = value_cpy;
 		}
 		simde_type<base_type> val;
 		simde_type<base_type> add = SimdTraits<base_type>::set1(static_cast<base_type>(pack_size));
@@ -339,6 +340,7 @@ _NT_MAKE_INV_INLINE_FUNC_(std::cosh, sech)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sech, sech, _nt_sech);
 _NT_MAKE_INV_INLINE_FUNC_(std::cos, sec)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sec, sec, _nt_sec);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(log, log, std::log);
 
 
 template<typename T, typename U>

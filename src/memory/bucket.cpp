@@ -1264,6 +1264,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 	const std::size_t dtype_s = DTypeFuncs::size_of_dtype(dtype);
 	
 	Tensor array = Tensor::makeNullTensorArray((r) ? div + 1 : div);
+    const uint64_t splitting_tsize = splitting;
 	splitting *= dtype_s;
 	remainder *= dtype_s;
 	
@@ -1279,12 +1280,15 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		/* std::cout << "for counter "<<counter<< " the current is "<<current<<" and the (bucket,stride) is "<<current_bucket_index<<','<<current_stride_index<<std::endl; */
 		/* ++counter; */
 		std::ptrdiff_t distance = (end - begin);
-		if(r && begin_t + 1 == end_t){splitting = remainder;} //this accounts for the if(r)
+		if(r && begin_t + 1 == end_t){
+            splitting = remainder; 
+            splitting_tsize = remainder / dtype_s
+        } //this accounts for the if(r)
 		//the below lines have to be run no matter what for every iteration of the tensors, made sense to put them up front for readability
 		//also would be easiest to change them only once
 		begin_t->_vals.bucket.buckets_ = buckets_;
-		begin_t->_total_size = splitting;
-		begin_t->_vals.size = splitting;
+		begin_t->_total_size = splitting_tsize;
+		begin_t->_vals.size = splitting_tsize;
 		begin_t->dtype = dtype;
 		begin_t->_vals.dtype = dtype;
 		begin_t->_vals.bucket.dtype = dtype;
@@ -1394,7 +1398,10 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 	const std::size_t dtype_s = DTypeFuncs::size_of_dtype(dtype);
 	
 	Tensor array = Tensor::makeNullTensorArray((r) ? div + 1 : div);
+    Tensor* array_end = reinterpret_cast<Tensor*>(array.data_ptr_end());
 
+    const uint64_t splitting_tsize = splitting;
+    const uint64_t remainder_tsize = remainder;
 	splitting *= dtype_s;
 	remainder *= dtype_s;
 	static tbb::mutex printMutex;
@@ -1432,28 +1439,35 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 	Tensor* end_t = begin_t + (range.end() - range.begin());
 	for(;begin_t != end_t; ++begin_t){
 		std::ptrdiff_t distance = (end - begin);
-		if(r && begin_t + 1 == end_t){splitting = remainder;} //this accounts for the if(r)
+        int64_t cur_splitting = (r && begin_t + 1 == array_end) ? 
+                remainder : splitting;
+        int64_t cur_splitting_t = (r && begin_t + 1 == array_end) ? 
+                remainder_tsize : splitting_tsize;
+        //this accounts for the if(r)
+
+
+
 		//the below lines have to be run no matter what for every iteration of the tensors, made sense to put them up front for readability
 		//also would be easiest to change them only once
 		begin_t->_vals.bucket.buckets_ = buckets_;
-		begin_t->_total_size = splitting;
-		begin_t->_vals.size = splitting;
+		begin_t->_total_size = cur_splitting_t;
+		begin_t->_vals.size = cur_splitting_t;
 		begin_t->dtype = dtype;
 		begin_t->_vals.dtype = dtype;
 		begin_t->_vals.bucket.dtype = dtype;
 		begin_t->_vals.bucket.strides_blocked = true;
 		const_cast<int64_t&>(begin_t->_vals.bucket.bs) = bs;
 	
-		if(distance > splitting){
+		if(distance > cur_splitting){
 			begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
 			begin_t->_vals.bucket.strides_[0] = begin;
-			begin += splitting;
+			begin += cur_splitting;
 			begin_t->_vals.bucket.strides_[1] = begin;
 			const_cast<int64_t&>(begin_t->_vals.bucket.stride_size) = 2;
 			/* current += splitting; */
 			continue;
 		}
-		if(distance == splitting){
+		if(distance == cur_splitting){
 			begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
 			begin_t->_vals.bucket.strides_[0] = begin;
 			begin_t->_vals.bucket.strides_[1] = end;
@@ -1473,14 +1487,14 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		//this so far is to keep track of the original information
 		//the newStrides is to decide exactly how much memory in terms of new strides to allocate
 		int64_t newStrides = 2;
-		uint64_t left = splitting - distance;
+		uint64_t left = cur_splitting - distance;
 		void** c_stride_cpy = c_strides;
 		uint8_t* original_begin = begin;
 		uint8_t* original_end = end;
 		//the point of this loop is to iterate begin and end until it reaches the distance between the original begin and this end is greater than or equal to splitting
 		//this allows for an easier way to keep track of where everything is in terms of iteration
 		//and makes implementing an easy to follow and imoplement loop for whenever original_begin != begin
-		while(distance < splitting){
+		while(distance < cur_splitting){
 			// Update 'begin' and 'end' to the next strides
 			begin = reinterpret_cast<uint8_t*>(*(++c_stride_cpy));
 			end = reinterpret_cast<uint8_t*>(*(++c_stride_cpy));
@@ -1490,7 +1504,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 			distance += (end - begin);
 
 			//update the remaining distance
-			if(distance < splitting){left -= (end-begin);}
+			if(distance < cur_splitting){left -= (end-begin);}
 		}
 		begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(newStrides); //make the new strides for the output bucked
 		const_cast<int64_t&>(begin_t->_vals.bucket.stride_size) = newStrides; // log the size of the strides
@@ -1511,7 +1525,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		utils::throw_exception(*c_strides == *c_stride_cpy, "Expected c_strides and c_stride_cpy to be the same, but did math logic incorrect"); //this will be taken out, just for now
 		*out_strides = begin;
 		++out_strides; //next end
-		if(distance == splitting){
+		if(distance == cur_splitting){
 			*out_strides = end;
 			if((begin_t + 1) == end_t){break;}
 			begin = reinterpret_cast<uint8_t*>(*(++c_strides));

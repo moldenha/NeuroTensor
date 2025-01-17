@@ -1,7 +1,7 @@
 #ifndef _NT_REFLECT_MACROS_H_
 #define _NT_REFLECT_MACROS_H_
 //this is a libaray for the macros related to reflection
-#include <type_traits>
+#include "../../utils/type_traits.h"
 //#include "tie_structure.hpp"
 #include "custom_iterator.hpp"
 #include "custom_iterator_map.hpp"
@@ -13,6 +13,23 @@ namespace reflect{
 
 //determines if a derived(D) class from a base(B) class has the function(name) overriden
 #define _NT_OVERRIDEN_(B, D, name) !std::is_same_v<decltype(&B::name), decltype(&D::name)>
+
+//this is a macro to make a class that is able to determine if a function is part of a class or not
+
+#define _NT_MAKE_IS_CLASS_FUNCTION_(func_name)\
+template <typename T>                                                       \
+class has_##func_name {                                                     \
+private:                                                                    \
+    template <typename U>                                                   \
+    static auto test(int) ->     decltype(&U::func_name, std::true_type{}); \
+                                                                            \
+    template <typename>                                                     \
+    static std::false_type test(...);                                       \
+                                                                            \
+public:                                                                     \
+    static constexpr bool value = decltype(test<T>(0))::value;              \
+};
+
 
 
 //get true number of __VA_ARGS__ including 0
@@ -330,6 +347,115 @@ namespace reflect{
 //this is better by just taking the variables that the user always gives
 //that way Module can inherit from intrusive_ptr_target
 //frees up a lot of tasks that were limited by the tie structure gimic
+
+namespace reflect{
+namespace detail{
+
+template<typename R, typename Callable>
+inline R unpackAndCall(std::vector<nt::utils::any_ref>& _vec, Callable f, int index){
+    return f();
+}
+
+template<typename R, typename Callable, typename Type1, typename... Types>
+inline R unpackAndCall(std::vector<nt::utils::any_ref>& _vec, Callable f, int index){
+    auto func = ([&_vec, f, index](Types&&... rest) -> R {return f(std::forward<Type1&&>(_vec[index].cast<Type1>()), std::forward<Types&&>(rest)...);});
+    return unpackAndCall<R, decltype(func), Types...>(_vec, func, index+1);
+}
+
+
+template <typename T, typename R, typename... Types>
+R class_vector_argument_func(std::vector<nt::utils::any_ref> _vec, T *obj, R(T::*f)(Types...)) {
+    if(_vec.size() != sizeof...(Types)){
+        throw std::invalid_argument("invalid number of arguments to pass to function");
+    }
+    auto func = ([obj, f](Types&&... rest) -> R {return (obj->*f)(std::forward<Types&&>(rest)...);});
+    return unpackAndCall<R, decltype(func), Types...>(_vec, func, 0);
+}
+
+
+template <typename R, typename ... Types>
+inline R _nt_run_vector_arg_through_func_(std::vector<std::any> _vec, R(*f)(Types ...)){
+	int i = 0;
+	return f((std::any_cast<std::rvalue_wrapper<Types>>(_vec[i++])())...);
+}
+_NT_MAKE_IS_CLASS_FUNCTION_(forward)
+_NT_MAKE_IS_CLASS_FUNCTION_(eval)
+
+
+
+template<typename T>
+constexpr bool has_eval_v = has_eval<T>::value;
+
+template<typename T>
+constexpr bool has_forward_v = has_forward<T>::value;
+
+template<typename T>
+constexpr bool has_backward_v = _NT_OVERRIDEN_(::nt::Module, T, backward);
+
+template<typename T>
+inline TensorGrad run_forward_expression_(T* dynamic_ptr, std::vector<utils::any_ref> _vec){
+    if constexpr (::nt::reflect::detail::has_forward_v<T>){ 
+        static_assert(::nt::utils::is_class_function_return_type<::nt::TensorGrad>(&T::forward) 
+                , "Forward function must return a TensorGrad type"); 
+        if constexpr (_NT_OVERRIDEN_(::nt::Module, T, backward)){ 
+            ::nt::utils::throw_exception(_vec[0].type() == typeid(::nt::TensorGrad) || _vec[0].type() == typeid(const ::nt::TensorGrad), 
+                "If there is a custom backward function, the first variable going into the forward function must be a tensor grad");  
+            ::nt::TensorGrad _x = _vec[0].cast<::nt::TensorGrad>(); 
+            std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)> back_func(std::bind(&T::backward, dynamic_ptr, std::placeholders::_1, std::placeholders::_2)); 
+            ::nt::TensorGrad output = ::nt::reflect::detail::class_vector_argument_func(std::move(_vec), dynamic_ptr, &T::forward); 
+            output.children->clear(); 
+            ::nt::TensorGrad::redefine_tracking(output, _x, back_func); 
+            return std::move(output); 
+        }else{ 
+            return ::nt::reflect::detail::class_vector_argument_func(std::move(_vec), dynamic_ptr, &T::forward); 
+        } 
+    } else{ 
+        for(auto& any : _vec){ 
+            if(any.type() == typeid(::nt::TensorGrad) || any.type() == typeid(const ::nt::TensorGrad)){ 
+                return any.cast<::nt::TensorGrad>(); 
+            } 
+        }return ::nt::TensorGrad(nullptr); 
+    } 
+}
+
+template<typename Derived>
+inline TensorGrad run_eval_expression_ (Derived* dynamic_ptr, std::vector<::nt::utils::any_ref> _vec){  
+    if constexpr (::nt::reflect::detail::has_forward_v<Derived> && !::nt::reflect::detail::has_eval_v<Derived>){ 
+        static_assert(::nt::utils::is_class_function_return_type<::nt::TensorGrad>(&Derived::forward) 
+                , "Forward function must return a TensorGrad type"); 
+        return ::nt::reflect::detail::class_vector_argument_func(std::move(_vec), dynamic_ptr, &Derived::forward); 
+    } 
+    else if constexpr (::nt::reflect::detail::has_eval_v<Derived>){ 
+        static_assert(::nt::utils::is_class_function_return_type<::nt::TensorGrad>(&Derived::eval) 
+                || ::nt::utils::is_class_function_return_type<::nt::Tensor>(&Derived::eval), 
+                "Eval function must return a TensorGrad or Tensor type"); 
+        return ::nt::TensorGrad(::nt::reflect::detail::class_vector_argument_func(std::move(_vec), dynamic_ptr, &Derived::eval)); 
+    } else{ 
+        for(auto& any : _vec){ 
+            if(any.type() == typeid(::nt::TensorGrad) || any.type() == typeid(const ::nt::TensorGrad)){ 
+                return any.cast<::nt::TensorGrad>(); 
+            } 
+        }return ::nt::TensorGrad(nullptr); 
+    } 
+}
+
+template<typename Derived>
+inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)> bind_backward_expression_(Derived* dynamic_ptr){
+    if constexpr (has_backward_v<Derived>){
+        return std::bind(&Derived::backward,
+						dynamic_ptr, std::placeholders::_1,
+						std::placeholders::_2);
+    }else{
+       return std::bind(&Module::backward,
+						dynamic_cast<Module*>(dynamic_ptr), std::placeholders::_1,
+						std::placeholders::_2); 
+    }
+}
+
+// #define _NT_CLASS_HAS_FUNCTION_(function_name, class) ::nt::reflect::detail::has_##function_name<class>::value
+
+}} //nt::reflect::detail::
+
 #define _NT_REGISTER_LAYER_(Derived, ...)\
 	namespace derived_detail{\
 		const bool registered_##Derived = [](){ \
@@ -351,24 +477,74 @@ namespace reflect{
 					}\
 				},\
 				#Derived,\
-				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, forward);},\
-				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, backward);},\
-				[](){return _NT_OVERRIDEN_(::nt::Module, Derived, eval);},\
+				[](){return ::nt::reflect::detail::has_forward_v<Derived>;},\
+				[](){return ::nt::reflect::detail::has_backward_v<Derived>;},\
+				[](){return ::nt::reflect::detail::has_eval_v<Derived>;},\
 				[](::nt::Module* ptr) -> std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>{\
-					if constexpr (_NT_OVERRIDEN_(::nt::Module, Derived, backward)){\
-						return std::bind(&::nt::Module::backward, \
-								ptr, std::placeholders::_1, \
-								std::placeholders::_2);\
-					}else{\
-						return std::bind(&Derived::backward, \
-								dynamic_cast<Derived*>(ptr), std::placeholders::_1, \
-								std::placeholders::_2);\
-					}\
-				}\
+                    return ::nt::reflect::detail::bind_backward_expression_<Derived>(dynamic_cast<Derived*>(ptr));\
+				},\
+			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                return ::nt::reflect::detail::run_forward_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+            },\
+			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                return ::nt::reflect::detail::run_eval_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+            }\
 				);\
 			return true;\
 		}();\
 	}
+
+
+//this is a special route for registering layers that are contained within a namespace
+//just so that there is not a conflict in naming parameters
+
+//ex: _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Conv2D, nt__layers__Conv2D, Weight, Bias)
+
+
+
+#define _NT_REGISTER_LAYER_NAMESPACED_(Derived, DerivedNamespaced, ...)\
+	namespace derived_detail {\
+		const bool registered_##DerivedNamespaced = []() {\
+			::nt::reflect::detail::getRegistry().emplace_back(\
+				std::type_index(typeid(Derived)),\
+				[](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; },\
+				[](::nt::Module* ptr) {\
+					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0) {\
+						return ::nt::reflect::detail::custom_any_iterator();\
+					} else {\
+						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
+						return ::nt::reflect::detail::custom_any_iterator(\
+							_NT_CLS_TO_ITERATOR_(dynamic_ptr, Derived, __VA_ARGS__)\
+						);\
+					}\
+				},\
+				[](::nt::Module* ptr) {\
+					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0) {\
+						return ::nt::reflect::detail::custom_any_map();\
+					} else {\
+						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
+						return _NT_CLS_TO_MAP_(dynamic_ptr, Derived, __VA_ARGS__);\
+					}\
+				},\
+				#Derived,\
+				[]() { return ::nt::reflect::detail::has_forward_v<Derived>; },\
+				[]() {return ::nt::reflect::detail::has_backward_v<Derived>;},\
+				[]() { return ::nt::reflect::detail::has_eval_v<Derived>; },\
+				[](::nt::Module* ptr) -> std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>{\
+                    return ::nt::reflect::detail::bind_backward_expression_<Derived>(dynamic_cast<Derived*>(ptr));\
+				},\
+			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                return ::nt::reflect::detail::run_forward_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+            },\
+			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                return ::nt::reflect::detail::run_eval_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+            }\
+			);\
+			return true;\
+		}();\
+	}
+
+
 
 } //nt::
 

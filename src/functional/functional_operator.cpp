@@ -95,13 +95,18 @@ Tensor functional_operator_out(const Tensor& _a, const Tensor& _b, const functio
 		}
 		return std::move(output);	
 	}
+
+
+
 	Tensor b = (_a.dims() > _b.dims()) ? _b.unsqueeze_as(_a) : _b;
 	Tensor a = (_b.dims() > _a.dims()) ? _a.unsqueeze_as(_b) : _a;
 	if(b.shape() == a.shape()){return functional_operator_out(a, b, op).view(_a.shape());}
 	b = b.expand_as(a).clone();
 	a = a.expand_as(b).clone();
 	utils::throw_exception(a.shape() == b.shape(), "Shape error for functional operator $ != $", a.shape(), b.shape());
-	return functional_operator_out(a, b, op).sum_as(_a.unsqueeze_as(a)).view(_a.shape());
+    // const Tensor& _larger_dim = (_a.dims() > _b.dims()) ? _a : _b;
+	// return functional_operator_out(a, b, op).sum_as(_larger_dim).view(_larger_dim.shape());
+	return functional_operator_out(a, b, op);
 }
 
 

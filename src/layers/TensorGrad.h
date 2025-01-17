@@ -1,5 +1,9 @@
 #ifndef _NT_TENSOR_GRAD_H_
 #define _NT_TENSOR_GRAD_H_
+namespace nt{
+class TensorGrad; // Forward declaration
+}
+
 
 #include "../Tensor.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
@@ -14,32 +18,16 @@
 #include <optional>
 #include "../utils/optional_list.h"
 
+#include "functional_class.h"
+
 namespace nt{
 
-class TensorGrad; // Forward declaration
-namespace functional {
-    TensorGrad matmult(const TensorGrad& a, const TensorGrad& b);
-    TensorGrad matmult(const Tensor& a, const TensorGrad& b);
-    TensorGrad matmult(const TensorGrad& a, const Tensor& b);
-    TensorGrad unfold1d(const TensorGrad&, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation=1, Tensor::size_value_t padding = 0, Tensor::size_value_t stride = 1, bool transpose_out = true);
-    TensorGrad unfold(const TensorGrad&, utils::my_tuple kernel_size, utils::my_tuple dilation=1, utils::my_tuple padding = 0, utils::my_tuple stride = 1, bool transpose_out = true);
-    TensorGrad unfold3d(const TensorGrad&, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> dilation=1, utils::my_n_tuple<3> padding = 0, utils::my_n_tuple<3> stride = 1, bool transpose_out = true);
-    TensorGrad fold(const TensorGrad&, utils::my_tuple output_size, utils::my_tuple kernel_size, utils::my_tuple dilation=1, utils::my_tuple padding = 0, utils::my_tuple stride = 1);
-    //image, kernel, stride, padding, dilation, groups
-    namespace functional_std{
-    TensorGrad conv2d(const TensorGrad&, const TensorGrad&, utils::my_tuple, utils::my_tuple, utils::my_tuple, int64_t);
-    }
-    TensorGrad conv2d(const TensorGrad&, const TensorGrad&, utils::my_tuple, utils::my_tuple, utils::my_tuple, int64_t);
-    TensorGrad sigmoid(const TensorGrad&);
-    TensorGrad clamp(const TensorGrad&, std::optional<int64_t> min = std::nullopt, std::optional<int64_t> max = std::nullopt);
-    TensorGrad relu(const TensorGrad&);
-    TensorGrad var(const TensorGrad&, utils::optional_list dim = nullptr, int64_t correction = 1, bool keepdim = false);
-    TensorGrad invsqrt(const TensorGrad&);
-    TensorGrad tanh(const TensorGrad&);
-    TensorGrad tan(const TensorGrad&);
-    TensorGrad cat(std::vector<TensorGrad>, int64_t dim = 0);
 
-} // namespace functional_l
+namespace functional{
+template <typename T, typename... Args, 
+    std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, int> = 0>
+TensorGrad list(T &&first, Args &&...rest); //forward declaration
+}
 
 /* inline intrusive_ptr<tensor_holder>& operator=(intrusive_ptr<tensor_holder>& it, Tensor&& t) noexcept { */
 /* 	it = make_intrusive<tensor_holder>(t); */
@@ -69,7 +57,8 @@ class intrusive_vector_tg : public intrusive_ptr_target{
 		}
 		inline void clear() {vec.clear();}
 		inline void remove(uint32_t i){
-			vec.erase(vec.begin() + i);
+            if(i < vec.size())
+                vec.erase(vec.begin() + i);
 		}
 		inline std::vector<intrusive_ptr<TensorGrad> >::iterator begin() {return vec.begin();}
 		inline std::vector<intrusive_ptr<TensorGrad> >::iterator end() {return vec.end();}
@@ -91,22 +80,25 @@ class intrusive_back_func : public intrusive_ptr_target{
 		using function_type_b = std::function<void(const Tensor&, std::vector<intrusive_ptr<TensorGrad>>&, bool)>;
 	private:
 		std::variant<std::monostate, function_type, function_type_b> Func;
+        bool _has_been_cleared;
 	public:
 		intrusive_back_func()
-			:Func(std::monostate{})
+			:Func(std::monostate{}), _has_been_cleared(false)
 		{utils::throw_exception(Func.index() == 0, "Loaded a function type into backward function and index was expected to be 0 but got $", Func.index());}
 		intrusive_back_func(function_type func)
-			:Func(func)
+			:Func(func), _has_been_cleared(false)
 		{utils::throw_exception(Func.index() == 1, "Loaded a function type into backward function and index was expected to be 1 but got $", Func.index());}
 		intrusive_back_func(function_type_b func)
-			:Func(func)
+			:Func(func), _has_been_cleared(false)
 		{utils::throw_exception(Func.index() == 2, "Loaded a function type into backward function and index was expected to be 2 but got $", Func.index());}
 		/* inline function_type& get() noexcept {return Func;} */
 		/* inline const function_type& get() const noexcept {return Func;} */
-		inline void set(function_type func) noexcept {Func = func;}
-		inline void set(function_type_b func) noexcept {Func = func;}
-		inline void clear() noexcept {Func = std::monostate{};}
+		inline void set(function_type func) noexcept {Func = func; _has_been_cleared = false;}
+		inline void set(function_type_b func) noexcept {Func = func; _has_been_cleared = false;}
+		inline void clear() noexcept {Func = std::monostate{}; _has_been_cleared = true;}
 		inline size_t index() const noexcept {return Func.index();}
+        inline const bool& is_cleared() const noexcept {return _has_been_cleared;}
+        inline void unmark_clearing() noexcept {_has_been_cleared = false;}
 		inline void run(const Tensor& t, std::vector<intrusive_ptr<TensorGrad>>& v){
 			if(std::monostate* f = std::get_if<std::monostate>(&Func)){
 				utils::throw_exception(false, "Tried to run invalid function");
@@ -164,23 +156,13 @@ class intrusive_back_func : public intrusive_ptr_target{
 class TensorGrad : public intrusive_ptr_target{
 	public:
 		using size_value_t = Tensor::size_value_t;
-		friend TensorGrad functional::matmult(const TensorGrad&, const TensorGrad&);
-		friend TensorGrad functional::matmult(const Tensor&, const TensorGrad&);
-		friend TensorGrad functional::matmult(const TensorGrad&, const Tensor&);
-		friend TensorGrad functional::unfold1d(const TensorGrad&, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out);
-		friend TensorGrad functional::unfold(const TensorGrad&, utils::my_tuple kernel_size, utils::my_tuple dilation, utils::my_tuple padding, utils::my_tuple stride, bool transpose_out);
-		friend TensorGrad functional::unfold3d(const TensorGrad&, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> dilation, utils::my_n_tuple<3> padding, utils::my_n_tuple<3> stride, bool transpose_out);
-		friend TensorGrad functional::fold(const TensorGrad&, utils::my_tuple output_size, utils::my_tuple kernel_size, utils::my_tuple dilation, utils::my_tuple padding, utils::my_tuple stride);
-		friend TensorGrad functional::functional_std::conv2d(const TensorGrad&, const TensorGrad&, utils::my_tuple, utils::my_tuple, utils::my_tuple, int64_t);
-		friend TensorGrad functional::sigmoid(const TensorGrad&);
-		friend TensorGrad functional::invsqrt(const TensorGrad&);
-		friend TensorGrad functional::tanh(const TensorGrad&);
-		friend TensorGrad functional::tan(const TensorGrad&);
-		friend TensorGrad functional::var(const TensorGrad&, utils::optional_list, int64_t, bool);
-		friend TensorGrad functional::cat(std::vector<TensorGrad>, int64_t);
+        
+        template <typename T, typename... Args, std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, int> >
+        friend TensorGrad functional::list(T &&first, Args &&...rest);
 
 
 	private:
+    friend class functional::TensorGrad_Functional_Class;
 	
 	inline static intrusive_ptr<tensor_holder> make_tensor_holder(const TensorGrad& t){
 		return nt::intrusive_ptr<tensor_holder>::make(t.tensor.clone());
@@ -208,9 +190,11 @@ class TensorGrad : public intrusive_ptr_target{
 	void track_grad(const TensorGrad& t, OutOperator&& op);
 	bool is_child() const noexcept;
 	void unchild() noexcept;
-	TensorGrad(Tensor t, intrusive_ptr<tensor_holder> g, intrusive_ptr<intrusive_back_func> f, std::vector<intrusive_ptr<TensorGrad> > p, intrusive_ptr<intrusive_vector_tg> c);
+	const bool grad_required;
+	TensorGrad(Tensor t, intrusive_ptr<tensor_holder> g, intrusive_ptr<intrusive_back_func> f, std::vector<intrusive_ptr<TensorGrad> > p, intrusive_ptr<intrusive_vector_tg> c, bool);
 	public:
 		Tensor tensor;
+		const DType& dtype;
 		bool do_track_grad;
 		mutable intrusive_ptr<tensor_holder> grad;
 		intrusive_ptr<intrusive_back_func> backwardFunc;
@@ -218,12 +202,12 @@ class TensorGrad : public intrusive_ptr_target{
 		std::vector<intrusive_ptr<TensorGrad>> parents;
 		intrusive_ptr<intrusive_vector_tg> children;
 		
-		explicit TensorGrad(Scalar value);
-		explicit TensorGrad(const Tensor&);
-		explicit TensorGrad(Tensor&& t);
-		explicit TensorGrad(std::nullptr_t);
-		inline void eval() noexcept {do_track_grad = false;}
-		inline void train() noexcept {do_track_grad = true;}
+		explicit TensorGrad(Scalar value, bool grad_required=true);
+		explicit TensorGrad(const Tensor&, bool grad_required=true);
+		explicit TensorGrad(Tensor&& t, bool grad_required=true);
+		explicit TensorGrad(std::nullptr_t, bool grad_required = true);
+		inline void eval() noexcept {if(grad_required){do_track_grad = false;}}
+		inline void train() noexcept {if(grad_required){do_track_grad = true;}}
 		TensorGrad(TensorGrad&& tg);
 		TensorGrad(const TensorGrad& tg);
 		TensorGrad& operator=(const TensorGrad& tg);
@@ -367,7 +351,7 @@ class TensorGrad : public intrusive_ptr_target{
 		TensorGrad unsqueeze(size_value_t dim = 0) const;
 		TensorGrad unsqueeze_as(const Tensor&) const;
 		TensorGrad unsqueeze_as(const SizeRef&) const;
-		TensorGrad squeeze() const;
+		TensorGrad squeeze(utils::optional_list list = nullptr) const;
 		TensorGrad flatten(size_value_t, size_value_t) const;
 		TensorGrad unflatten(size_value_t, size_value_t) const;
 		TensorGrad permute(std::vector<size_value_t>) const;
@@ -417,10 +401,12 @@ class TensorGrad : public intrusive_ptr_target{
 		inline TensorGrad unsqueeze_as(const TensorGrad& tg) const {return this->unsqueeze_as(tg.tensor);} 
 		inline TensorGrad expand_as(const Tensor& t) const {return this->expand(t.shape());}
 		inline TensorGrad expand_as(const TensorGrad& tg) const {return this->expand(tg.shape());}
-		
+	
+		inline static TensorGrad makeNullTensorArray(int64_t num){ return TensorGrad(Tensor::makeNullTensorArray(num)); }
 		void backward(const Tensor&);
 		void backward();
 		void zero_grad();
+        void ensure_grads_initialized();
 		Tensor grad_value() const;
 		void update(); // updates current values based on gradient
 		static void redefine_tracking(TensorGrad&, const TensorGrad&, std::function<void(const Tensor&, intrusive_ptr<TensorGrad>&)>);
@@ -432,10 +418,9 @@ Tensor& operator*=(Tensor&, const TensorGrad&);
 Tensor& operator/=(Tensor&, const TensorGrad&);
 
 
-
-}
+}//nt::
 
 
 #include "TensorGrad.hpp"
-
+#include "../functional/tensorgrad_get.h"
 #endif //_NT_TENSOR_GRAD_H_

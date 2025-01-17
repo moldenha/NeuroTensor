@@ -492,6 +492,7 @@ template float128_t Scalar::to<float128_t>() const;
 template complex_64 Scalar::to<complex_64>() const;
 template complex_128 Scalar::to<complex_128>() const;
 template uint_bool_t Scalar::to<uint_bool_t>() const;
+template uint_bool_t Scalar::to<bool>() const;
 
 
 Scalar Scalar::inverse() const{

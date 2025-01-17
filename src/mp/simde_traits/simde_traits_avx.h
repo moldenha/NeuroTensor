@@ -176,6 +176,7 @@ struct SimdTraits_avx<float> {
 	static constexpr auto acos = simde_mm_acos_ps;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm_log_ps;
 
 	
 	static constexpr auto subtract = simde_mm_sub_ps;
@@ -267,6 +268,7 @@ struct SimdTraits_avx<double> {
 	static constexpr auto acos = simde_mm_acos_pd;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm_log_pd;
 
 	static constexpr auto subtract = simde_mm_sub_pd;
 	static constexpr auto add = simde_mm_add_pd;
@@ -767,6 +769,7 @@ struct SimdTraits_avx<complex_64> {
 	static constexpr auto acos = simde_mm_acos_ps;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm_log_ps;
 
 	
 	static constexpr auto subtract = simde_mm_sub_ps;
@@ -1058,6 +1061,16 @@ struct SimdTraits_avx<float16_t>{
 		simde__m128 high_a = simde_mm_cvtph_ps(simde_mm_unpackhi_epi64(a, a));
 		simde__m128 low_res = simde_mm_invsqrt_ps(low_a);
 		simde__m128 high_res = simde_mm_invsqrt_ps(high_a);
+			    low_res = simde_mm_cvtps_ph(low_res, 0);
+			    high_res = simde_mm_cvtps_ph(high_res, 0);
+		return simde_mm_unpacklo_epi64(low_res, high_res);
+	};
+
+	inline static constexpr auto log = [](const Type& a) noexcept -> Type { //important for self-attention and useful for other computations
+		simde__m128 low_a = simde_mm_cvtph_ps(a);
+		simde__m128 high_a = simde_mm_cvtph_ps(simde_mm_unpackhi_epi64(a, a));
+		simde__m128 low_res = simde_mm_log_ps(low_a);
+		simde__m128 high_res = simde_mm_log_ps(high_a);
 			    low_res = simde_mm_cvtps_ph(low_res, 0);
 			    high_res = simde_mm_cvtps_ph(high_res, 0);
 		return simde_mm_unpacklo_epi64(low_res, high_res);

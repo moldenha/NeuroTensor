@@ -17,18 +17,19 @@ namespace nt{
 
 class Bucket;
 
-//46-4-5 (4) unredo
-//"redo": ["64-1-3 (9)", 
-//"68-1-1 (2)", 
-//"68-1-1 (7)", 
-//"77-1-9 (6)", 
-//"77-1-9 (7)", 
-//"56-4-1 (1)", 
-//"54-4-8 (2)", 
-//"54-4-8 (3)", 
-//"56-2-2 (7)", 
-//"54-5-3 (7)", 
-//"54-5-4 (7)"]
+
+//have it hold an intrusive_ptr<intrusive_variable<bool>>
+//this will allow it to hold true if memory is made unmodifiable dynamically
+//and then just implement some errors for if the memory has been marked const or not by
+//any functions that are not marked const
+//which is really just the iterator function, the nullify function, swap, and the cat function
+//of those, nullify is fine, because the underlying tensor memory will not be modified
+//swap is also fine because the underlying tensor memory will not be modified
+//for cat, it is a little bit trickier, 
+//          it will either throw an error if it should not be modified,
+//          or it will make the output memory non-modifiable <- this seems like the best option (maybe print warning)
+//          or it will clone that specific memory
+
 class Bucket{
 	nt::intrusive_ptr<DeviceHolder> buckets_; //buckets of contiguous memory
 	nt::intrusive_ptr<void*[]> strides_; //void* to store beggining and end

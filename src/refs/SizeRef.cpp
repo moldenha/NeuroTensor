@@ -24,68 +24,107 @@ namespace nt{
 /* 	} */
 /* 	_mults.back() = 1; */
 /* } */
+// SizeRef check_1({30});
+
+// void size_ref_check(const SizeRef& arr){
+//     if(check_1 == arr){std::cout << "size ref of "<<check_1<<" constructed! = "<<arr<<std::endl;return;}
+// }
 
 SizeRef::SizeRef(const SizeRef& Arr)
 	:_sizes(Arr._sizes)
 {
-	//std::cout<<"copying size ref"<<std::endl;
+	// // size_ref_check(*this);
+    //std::cout<<"copying size ref"<<std::endl;
 }
 
 
 
 SizeRef::SizeRef(SizeRef&& Arr)
 	:_sizes(std::move(Arr._sizes))
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(const ArrayRefInt& Arr)
 	:_sizes(Arr)
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(ArrayRefInt&& Arr)
 	:_sizes(std::move(Arr))
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef& SizeRef::operator=(const SizeRef &Arr){
 	_sizes = Arr._sizes;
+	// size_ref_check(*this);
 	return *this;
+
 }
 
 SizeRef& SizeRef::operator=(SizeRef&& Arr){
 	_sizes = std::move(Arr._sizes);
+	// size_ref_check(*this);
 	return *this;
 }
 
 SizeRef::SizeRef(const value_type &OneEle)
 	:_sizes({OneEle})
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(const ArrayRefInt::value_type *data, size_t length)
 	:_sizes(data, length)
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(const std::vector<ArrayRefInt::value_type> &Vec)
 	:_sizes(&Vec[0], Vec.size())
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(std::vector<ArrayRefInt::value_type>&& Vec)
 	:_sizes(&Vec[0], Vec.size())
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 
 template<size_t N>
 SizeRef::SizeRef(const std::array<value_type, N> &Arr)
 	:_sizes(Arr)
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 
 template<size_t N>
 SizeRef::SizeRef(const value_type (&Arr)[N])
 	:_sizes(Arr)
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec)
 	:_sizes(Vec)
-{}
+{
+	// size_ref_check(*this);
+
+}
 
 SizeRef::SizeRef(std::nullptr_t)
 	:_sizes(nullptr)

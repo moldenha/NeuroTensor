@@ -20,6 +20,7 @@ void SGD::erase_grad_tracking(){
 		if(t.is_null()){continue;}
 		t.parents.clear();
 		t.backwardFunc->clear();
+        t.backwardFunc->unmark_clearing();
 		t.children->clear();
 	}
 }
@@ -27,7 +28,10 @@ void SGD::erase_grad_tracking(){
 void SGD::zero_grad(){
 	for(auto& t : parameters){
 		if(t.is_null()){continue;}
-		t.zero_grad();
+        if(t.grad == nullptr){t.grad = make_intrusive<tensor_holder>(functional::zeros_like(t.tensor));}
+        else{
+            t.grad->tensor.fill_(0);
+        }
 	}
 }
 
@@ -42,6 +46,7 @@ void Adam::erase_grad_tracking(){
 		if(t.is_null()){continue;}
 		t.parents.clear();
 		t.backwardFunc->clear();
+        t.backwardFunc->unmark_clearing();
 		t.children->clear();
 	}
 }
@@ -50,7 +55,10 @@ void Adam::erase_grad_tracking(){
 void Adam::zero_grad(){
 	for(auto& t : parameters){
 		if(t.is_null()){continue;}
-		t.zero_grad();
+        if(t.grad == nullptr){t.grad = make_intrusive<tensor_holder>(functional::zeros_like(t.tensor));}
+        else{
+            t.grad->tensor.fill_(0);
+        }
 	}
 }
 
@@ -92,7 +100,8 @@ void Adam::step(){
 		grad.set_((this->learning_rate * m_hat) / (std::sqrt(v_hat) + this->epsilon));
 		grad.clip_(-10, 10);
 		begin->update();
-	}	
+	}
+    this->erase_grad_tracking();
 }
 
 

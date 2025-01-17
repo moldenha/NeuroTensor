@@ -15,30 +15,37 @@
 #include "layer_reflect/reflect_macros.h"
 #include "layer_reflect/layer_registry.hpp"
 #include "layers.h"
+#include "ncps/wiring/wiring.h"
+
 
 namespace nt{
 namespace layers{
 
 enum LNNOptions{
-	Default,
-	HodgkinsHuxley
+	LTC,
+	CfC
 };
 
 
 //liquid neural network
 class LNN : public Module{
-	int64_t _channels, _input_size, _hidden_size, _output_size;
+    intrusive_ptr<ncps::Wiring> _wiring;
+    Tensor construct_hidden(int64_t batch_size);
+    //input_size, output_size, neurons
+    static intrusive_ptr<ncps::Wiring> build_wiring(int64_t, int64_t, int64_t);
 	public:
-		Layer ODE;
-		Layer W_out;
-		LNN(int64_t channels, int64_t input_size, int64_t hidden_size, int64_t output_size, LNNOptions option = LNNOptions::Default);
-		TensorGrad forward(const TensorGrad&) override;
+        TensorGrad hidden_state;
+        Layer lnn;
+		LNN(int64_t input_size, int64_t output_size, int64_t neurons, LNNOptions option = LNNOptions::LTC, bool return_sequences = true);
+		TensorGrad forward(TensorGrad);
 };
 
 
-_NT_REGISTER_LAYER_(LNN, ODE, W_out);
+
 
 }}
+
+_NT_REGISTER_LAYER_NAMESPACED_(nt::layers::LNN, nt__layers__LNN, hidden_state, lnn)
 
 
 

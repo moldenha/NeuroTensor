@@ -6,7 +6,7 @@ Version: v0.1.0
 NeuroTensor is a tensor framework that has a tda and autograd wrapper built in. The syntax follows PyTorch's closely, but in C++. Current version is 0.1.0 and there is still much to come for added support and testing. This is an early beta version, with an end goal being a framework for computational neuroscience tools.
 
 
-## Tensor Class
+## Tensors and NeuroTensor
 
 The Tensor class is seperate from the autograd. It is a standalone wrapper, that uses the `nt::DType` enum to switch between different types, and has a wide range of function support. A detailed documentation is to come.
 
@@ -24,7 +24,113 @@ std::cout << t2 << std::endl;
 
 ```
 
-## The Autograd
+## Creating Custom Layers
+
+There is an `nt::Layer` class with a built-in reflection wrapper. Each custom layer or model must be a class that inherits from `nt::Module`. Gradients are automatically tracked, but can be manually created as well by overloading the `backward` function. The `eval` function can also be overloaded if there are differences in the way that the layer or model behaves based on if it is in `eval` mode beyond just not tracking the gradient. 
+
+The idea behind the API was to make it as simple and flexible as possible, while also allowing some of the principles behind c++ to shine through. Below is an example involving as many or as few arguments as needed, and showing the ability to use things such as references. Of course pointers are also allowed. Currently, default parameters and named parameters are not supported. Support for default parameters are currently being added. 
+
+Below is an example making and usign custom layers:
+
+```C++
+
+#include <nt/ai.h>
+#include <nt/Tensor.h>
+
+
+class TimeAwareHiddenLayer : public nt::Module{
+    int64_t _input_size, _hidden_size;
+    public:
+        nt::Layer input_proj, hidden_proj, time_proj, output_proj;
+        TimeAwareHiddenLayer(int64_t input_size, int64_t hidden_size)
+        :_input_size(input_size),
+        _hidden_size(hidden_size),
+        input_proj(nt::layers::Linear(input_size, hidden_size)),
+        hidden_proj(nt::layers::Linear(hidden_size, hidden_size)),
+        time_proj(nt::layers::Linear(1, hidden_size)) // Scalar time which is going to be a tensor of shape (1,1)
+        output_proj(nt::layers::Linear(hidden_size, hidden_size))
+        {}
+
+        // Automatically tracks if references are expected
+        // For the nt::Scalar, if a scalar rvalue is passed, will automatically convert it to an nt::Scalar
+        nt::TensorGrad forward(const nt::TensorGrad& x, nt::TensorGrad& h, nt::Scalar t){
+            // Params: x: input (const reference)
+            //         h: reference to hidden hidden
+            //         t: time
+            nt::TensorGad time(nt::Tensor(t).view(1,1), false); // The layer class expects an nt::TensorGrad argument
+            
+            nt::TensorGrad x_proj = this->input_proj(x);
+            nt::TensorGrad h_proj = this->hidden_proj(h);
+            nt::TensorGrad t_proj = this->time_proj(time);
+            
+            // Will modify the value the reference h points to
+            if(t.get<int64_t>() == 1){
+                h += h_proj;
+            }
+            else{
+                h -= h_proj;
+            }
+            nt::TensorGrad combined = nt::functional::relu(x_proj + h_proj + t_proj);
+            nt::TensorGrad output = this->output_proj(combined);
+            return std::move(output);
+        }
+};
+
+
+class WrapperLayer : public nt::Module{
+    int64_t _hidden_size;
+    public:
+        nt::Layer time_aware_layer;
+        nt::TensorGrad default_hidden; // Stores a learnable default hidden state
+        WrapperLayer(int64_t input_size, int64_t hidden_size)
+        :_hidden_size(hidden_size),
+        time_aware_layer(TimeAwareHiddenLayer(input_size,  hidden_size)),
+        default_hidden(nt::functional::zeros({1, hidden_size}))
+        {}
+        
+        nt::TensorGrad forward(nt::TensorGrad x){
+            int64_t batch_size = x.shape()[0];
+            nt::TensorGrad h = this->default_hidden.repeat(batch_size);
+            // will convert 1 to an nt::Scalar
+            // and use the lvalue references of x and h
+            return this->time_aware_layer(x, h, 1); //will convert 1 to an nt::Scalar and 
+        }
+        
+
+};
+
+
+
+//this adds reflection to the layer so that gradients can be tracked properly and automatically
+_NT_REGISTER_LAYER_(TimeAwareHiddenLayer, input_proj, hidden_proj, time_proj, output_proj)
+_NT_REGISTER_LAYER_(WrapperLayer, time_aware_layer, default_hidden)
+//any variable that is a NeuroTensor object should be included
+
+
+int main(){
+    auto critereon = nt::loss::MSE;
+	nt::TensorGrad input(nt::functional::randn({30, 20}, nt::DType::Float32));
+	nt::Tensor wanted = nt::functional::randint(0, 1, {30, 10}).to(nt::DType::Float32);
+	nt::Layer model = WrapperLayer(20, 10);
+	nt::optimizers::Adam optimizer(model.parameters(), 0.01);
+	optimizer.zero_grad();
+    
+    //training
+	for(int64_t i = 0; i < 10; ++i){
+		nt::TensorGrad output = model(input);
+		nt::TensorGrad loss = critereon(output, wanted);
+		std::cout << "loss: "<<loss.item() << std::endl;
+		loss.backward();
+		optimizer.step();
+	}
+	std::cout << model(input) << std::endl;
+    std::cout << wanted << std::endl;
+    return 0;
+}
+
+```
+
+## Autograd Usage
 
 The autograd is a dynamic wrapper class called `TensorGrad`. The `TensorGrad` is being adapted to have all the same functionality as the `Tensor` class, but also tracking gradients. This is an example from testing to make sure that branching works.
 
@@ -66,40 +172,4 @@ std::cout << "Mult_branch is now: "<<Mult_Branch << std::endl;
 std::cout << "myScalar is now: "<<myScalar << std::endl;
 ```
 
-## Layer Class
-
-There is an `nt::Layer` class with a built-in reflection wrapper. Each custom layer or model must be a class that inherits from `nt::Module`. Gradients are automatically tracked, but can be manually created as well by overloading the `backward` function. The `eval` function can also be overloaded if there are differences in the way that the layer or model behaves based on if it is in `eval` mode beyond just not tracking the gradient. Below is an example making of a custom layer:
-
-```C++
-//creation of a custom layer
-class Example : public nt::Module{
-	public:
-		nt::Layer l1;
-		nt::Layer b1;
-		nt::TensorGrad parameter;
-		bool normalize;
-		Example(int64_t hidden_features, int64_t out_features, bool normal = true)
-			:l1(nt::layers::Linear(hidden_features, out_features)),
-			b1(normal ? nt::Layer(nt::layers::BatchNorm1D(out_features)) : nt::Layer(nt::layers::Identity())),
-			parameter(nullptr),
-			normalize(normal)
-			{}
-
-		inline nt::TensorGrad forward(const nt::TensorGrad& x) override{
-			nt::TensorGrad out = l1(x);
-			out = b1(out);
-			if(parameter.is_null()){
-				parameter = nt::functional::zeros({x.shape()[-2], 1}, x.tensor.dtype);
-			}
-			return out + parameter;
-		}
-
-};
-
-//this adds reflection to the layer so that gradients can be tracked properly
-_NT_REGISTER_LAYER_(Example, l1, b1, parameter, normalize)
-//in the above, normalize is optional to add
-//any variable that is an NeuroTensor object should be included
-
-```
 

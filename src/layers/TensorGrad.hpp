@@ -1,5 +1,5 @@
-#ifndef _TENSOR_GRAD_HPP_
-#define _TENSOR_GRAD_HPP_
+#ifndef _NT_TENSOR_GRAD_HPP_
+#define _NT_TENSOR_GRAD_HPP_
 
 #include "TensorGrad.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
@@ -72,7 +72,7 @@ inline void TensorGrad::track_self_mod(std::function<void(const Tensor&, std::ve
 	}
 
 
-	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children);
+	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children, grad_required);
 	this->parents = std::vector<intrusive_ptr<TensorGrad> >();
 	utils::throw_exception(this->parents.size() == 0, "Expected parent size to be 0 but got $", this->parents.size());
 	const size_t other_indice = 0;
@@ -109,7 +109,7 @@ inline void TensorGrad::track_self_mod(std::function<void(const Tensor&, std::ve
 	}
 
 
-	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children);
+	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children, grad_required);
 	this->parents = std::vector<intrusive_ptr<TensorGrad> >();
 	utils::throw_exception(this->parents.size() == 0, "Expected parent size to be 0 but got $", this->parents.size());
 	const size_t other_indice = 0;
@@ -166,7 +166,10 @@ inline void TensorGrad::track_tensors(const TensorGrad& t, const Args&... args){
 //this function might have to happen on the grad of the incoming tensor when taking into account the overall grad
 template<typename OutOperator>
 inline void TensorGrad::track_grad(const TensorGrad& t, OutOperator&& op){
-	if(!this->do_track_grad){return;}
+    if(!t.do_track_grad || !this->do_track_grad){
+        this->do_track_grad = false;
+        return;
+    }
 	if(t.grad == nullptr){
 		t.grad = nt::make_intrusive<tensor_holder>(nt::functional::zeros_like(t.tensor));
 	}
@@ -185,4 +188,4 @@ inline void TensorGrad::track_grad(const TensorGrad& t, OutOperator&& op){
 
 }
 
-#endif
+#endif //_NT_TENSOR_GRAD_HPP_

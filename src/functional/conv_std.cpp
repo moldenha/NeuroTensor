@@ -1,4 +1,6 @@
 #include "functional_conv.h"
+#include "functional.h"
+#include "functional_matmult.h"
 #include "../layers/TensorGrad.h"
 #include "../Tensor.h"
 #include <memory>
@@ -105,93 +107,6 @@ Tensor conv2d(const Tensor &image, const Tensor &kernel, utils::my_tuple stride,
 }
 
 
-//prep to this point:
-//Tensor outp_unfold = matmult(inp_unfold, w.view(w.shape()[0], -1), false, true).RowColSwap();
-//SizeRef s1 = outp_unfold.shape();
-//dz = dz.view(s1).RowColSwap();
-//
-TensorGrad conv2d(const TensorGrad& image, const TensorGrad& kernel, utils::my_tuple stride, utils::my_tuple padding, utils::my_tuple dilation, int64_t groups){
-	utils::throw_exception(groups >= 1, "Cannot have less than 1 group for convolution");
-	utils::throw_exception(kernel.dims() == 3 || kernel.dims() == 4, "Expected the input kernel to convolution to be 3D or 4D but is $D", kernel.dims());
-	utils::throw_exception(image.dims() == 3 || image.dims() == 4, "Expected input image to convolution to be 3D or 4D but got $D", image.dims());
-	Tensor x = (image.dims() == 3) ? image.tensor.unsqueeze(0) : image.tensor;
-	/* x = x.pad({padding[0], padding[0], padding[1], padding[1]}); */
-	Tensor w = kernel.dims() == 3 ? kernel.tensor.unsqueeze(0) : kernel.tensor;
-	utils::throw_exception(w.shape()[1] * groups == x.shape()[1], "Expected channels of the kernel to equal the input channels of the image but got $ and $", w.shape()[1], x.shape()[1]);
-	utils::throw_exception(w.shape()[0] % groups == 0, "Expected the output channels, being the kernel's shape at dimension 0 ($) to be divisible by groups ($) but is not", w.shape()[0], groups);
-
-	int64_t Rout = ((image.shape()[-2] + 2 * padding[0] - dilation[0] * (w.shape()[-2] - 1) - 1) / stride[0]) + 1;
-	int64_t Cout = ((image.shape()[-1] + 2 * padding[1] - dilation[1] * (w.shape()[-1] - 1) - 1) / stride[1]) + 1;
-	//set padding to 0
-	Tensor inp_unfold = unfold(x, {kernel.shape()[-2], kernel.shape()[-1]}, dilation, padding, stride, true);
-	if(groups > 1){
-		SizeRef d_unfold_shape = inp_unfold.shape();
-		int64_t add = int(x.shape()[1] / groups) * (w.shape()[-1] * w.shape()[-2]);
-		//should be kernel channels * kernel_rows * kernel_cols
-		//this is based on after unfolding, there is a shape change to where the channels are now multiplied by the kernel (r,c)
-		int64_t k_add = w.shape()[0] / groups;
-		//this is what to seperate the kernel by
-		//the really nice thing about the way this is split
-		//is that as far as the multiplication is concerned, because the only thing not contiguous will be the batches,
-		//this basically is contiguous because of the way it is handeled with pointers
-		Tensor x_parts = inp_unfold.split_axis({my_range(0, inp_unfold.shape()[0]), my_range(0, add)});
-		//this is just going to be contiguous assuming the kernel is contiguous
-		Tensor k_parts = w.split_axis({my_range(0, k_add)});
-
-		intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(k_parts.clone());
-		intrusive_ptr<tensor_holder> original_x = make_intrusive<tensor_holder>(x_parts);
-		//I added an optimized way to just do a straight forward multiplication of tensors
-		Tensor output = matmult(x_parts, k_parts.view_Tensors(k_add, -1), true, true).RowColSwap();
-		const SizeRef& s1 = output.shape();
-		output = output.view(-1, x.shape()[0], Rout, Cout);
-		utils::throw_exception(output.dtype != DType::TensorObj, "Should not have a tensor object exit a matmult"); //
-		TensorGrad result(output.transpose(0,1).contiguous());
-		result.track_tensors(image, kernel);
-		result.create_backward_function([d_unfold_shape, s1, stride, padding, dilation, add, k_add](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
-						intrusive_ptr<tensor_holder> w, intrusive_ptr<tensor_holder> img){
-			Tensor grad_s1 = grad.transpose(0,1).split_axis(0).view_Tensors(s1.pop_front());
-			grad_s1.RowColSwap_Tensors();
-			Tensor dw = matmult(img->tensor, grad_s1, true, false);
-			parents[1]->grad->tensor.split_axis({my_range(0, k_add)}) += dw;
-		
-			Tensor d_unfold = zeros(d_unfold_shape, grad.dtype);
-			d_unfold.split_axis({my_range(0,d_unfold.shape()[0]), my_range(0, add)}).set_(matmult(grad_s1, w->tensor, false, true));
-			
-			utils::my_tuple output_size(parents[0]->grad->tensor.shape()[-2], parents[0]->grad->tensor.shape()[-1]);
-			unfold_backward(d_unfold, parents[0]->grad->tensor, output_size, 
-					{parents[1]->grad->tensor.shape()[-2], parents[1]->grad->tensor.shape()[-1]},
-					dilation, padding, stride, true);
-
-		}, k_parts, x_parts);	
-		return std::move(result);
-	}
-
-	intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(w.view(w.shape()[0], -1).clone());
-	intrusive_ptr<tensor_holder> original_x = make_intrusive<tensor_holder>(inp_unfold);
-	Tensor outp_unfold = matmult(inp_unfold, w.view(w.shape()[0], -1), true, true).RowColSwap();
-	const SizeRef& s1 = outp_unfold.shape();
-	TensorGrad result(outp_unfold.view(x.shape()[0], -1, Rout, Cout));
-	result.track_tensors(image, kernel);
-	result.create_backward_function([s1, stride, padding, dilation](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
-				intrusive_ptr<tensor_holder> w, intrusive_ptr<tensor_holder> original_x){
-		Tensor grad_s1 = grad.view(s1);
-		grad_s1.RowColSwap();
-		Tensor dw = matmult(original_x->tensor, grad_s1, false, true);
-		parents[1]->grad->tensor += dw.view(parents[1]->grad->tensor.shape());
-
-		Tensor d_unfold = matmult(grad_s1, w->tensor, true, false);
-		utils::my_tuple output_size(parents[0]->grad->tensor.shape()[-2], parents[0]->grad->tensor.shape()[-1]);
-		unfold_backward(d_unfold, parents[0]->grad->tensor, output_size, 
-				{parents[1]->grad->tensor.shape()[-2], parents[1]->grad->tensor.shape()[-1]},
-				dilation, padding, stride, true);
-					
-	
-	}, original_w, original_x);
-	
-	return std::move(result);
-
-
-}
 
 //this is going to be the forward and backward functions of conv2d for TensorGrad
 /* TensorGrad conv2d_oneGroup(const TensorGrad& image, const TensorGrad& kernel, utils::my_tuple stride, utils::my_tuple padding, utils::my_tuple dilation){ */
@@ -475,4 +390,11 @@ def test_my_conv_transpose2d():
 /*         return catted.contiguous(); */
 /*     return catted.pad({{output_padding[0], output_padding[0]}, {output_padding[1], output_padding[1]}, {output_padding[2], output_padding[2]}}); */
 /* } */
-}}} //::nt::functional::functional_std
+}//nt::functional::functional_std::
+//prep to this point:
+//Tensor outp_unfold = matmult(inp_unfold, w.view(w.shape()[0], -1), false, true).RowColSwap();
+//SizeRef s1 = outp_unfold.shape();
+//dz = dz.view(s1).RowColSwap();
+//
+
+}} //::nt::functional

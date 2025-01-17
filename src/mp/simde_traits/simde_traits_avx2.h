@@ -186,6 +186,7 @@ struct SimdTraits_avx2<float> {
 	static constexpr auto acos = simde_mm256_acos_ps;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm256_log_ps;
 
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
@@ -289,6 +290,7 @@ struct SimdTraits_avx2<double> {
 	static constexpr auto acos = simde_mm256_acos_pd;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm256_log_pd;
 	/* inline static constexpr auto modulo = [](const Type& divisor_c, const Type& dividend_c) noexcept -> Type{ */
 	/* 	/1* static constexpr auto modulo = simde_mm_rem_epi64; *1/ */
 	/* 	simde__m256i divisor = simde_mm256_cvtpd_epi64(divisor_c); */
@@ -787,6 +789,7 @@ using Type = simde__m256;
 	static constexpr auto acos = simde_mm256_acos_ps;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm256_log_ps;
 
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
@@ -884,6 +887,9 @@ struct SimdTraits_avx2<complex_128> {
 	static constexpr auto acos = simde_mm256_acos_pd;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm256_log_pd;
+
+
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_pd(a, b, c);
@@ -975,6 +981,7 @@ struct SimdTraits_avx2<float16_t>{
 	static constexpr auto acos = simde_mm256_acos_ps;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm256_log_ps;
 
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
@@ -1087,6 +1094,7 @@ struct SimdTraits_avx2<complex_32>{
 	static constexpr auto acos = simde_mm256_acos_ps;
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
+	static constexpr auto log = simde_mm256_log_ps;
 
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;

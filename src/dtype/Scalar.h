@@ -140,6 +140,13 @@ class Scalar{
 		friend std::ostream& operator<<(std::ostream&, const Scalar&);
 };
 
+namespace utils{
+
+//a scalar is either the Scalar class, or a type that can be made into a scalar
+template<typename T>
+inline constexpr bool is_scalar_value_v = std::is_constructible<Scalar, T>::value;
+}
+
 
 class ScalarRef{
 	union data_t{

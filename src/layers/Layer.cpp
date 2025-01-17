@@ -1,4 +1,5 @@
 #include "Layer.h"
+#include "TensorGrad.h"
 #include "../utils/utils.h"
 #include <ios>
 
@@ -6,6 +7,7 @@ namespace nt{
 
 void Layer::get_all_layers(reflect::detail::custom_typed_map<Layer>& map, std::string add){
 	reflect::detail::custom_typed_map<Layer> my_layers = this->get_named_vars<Layer>();
+	my_layers.extend(this->ptr_->_get_mapped_layer_names_wrapped());
 	for(auto it : my_layers){
 		const std::string& name = it.first;
 		it.second.get_all_layers(map, add + '.' + name);
@@ -22,11 +24,8 @@ void Layer::get_all_layers(reflect::detail::custom_typed_map<Layer>& map, std::s
 /* } */
 
 reflect::detail::custom_typed_iterator<Layer> Layer::get_all_layers(){
-	reflect::detail::custom_typed_iterator<Layer> outp = this->get_vars<Layer>();
-	for(auto& l : this->get_vars<Layer>()){
-		outp.extend(l.get_all_layers());
-	}
-	return std::move(outp);
+	reflect::detail::custom_typed_map<Layer> named = this->get_all_named_layers();
+	return reflect::detail::custom_typed_iterator<Layer>(named.get_references().begin(), named.get_references().end()); 
 }
 
 
@@ -48,10 +47,8 @@ Layer& Layer::eval(){
 Layer& Layer::train(){
 	bool overriden_eval = reflect::detail::backward_module_function_overriden(this->ptr_);
 	this->is_eval = false;
-	if(!overriden_eval){
-		for(auto& parameter : this->get_vars<TensorGrad>()){
-			parameter.train();
-		}
+	for(auto& parameter : this->get_vars<TensorGrad>()){
+		parameter.train();
 	}
 	for(auto& l : this->get_vars<Layer>()){
 		l.train();
@@ -61,15 +58,14 @@ Layer& Layer::train(){
 
 
 reflect::detail::custom_typed_iterator<TensorGrad> Layer::parameters(){
-	reflect::detail::custom_typed_iterator<TensorGrad> start = this->get_vars<TensorGrad>();
-	for(auto& l : this->get_vars<Layer>()){
-		start.extend(std::move(l.parameters()));
-	}
-	return std::move(start);
+	reflect::detail::custom_typed_map<TensorGrad> named = this->named_parameters();
+	return reflect::detail::custom_typed_iterator<TensorGrad>(named.get_references().begin(), named.get_references().end()); 
 }
 
 reflect::detail::custom_typed_map<TensorGrad> Layer::named_parameters(){
 	reflect::detail::custom_typed_map<TensorGrad> start = this->get_named_vars<TensorGrad>();
+	start.extend(this->ptr_->_get_mapped_grad_names_wrapped());
+
 	for(const auto& l : this->get_named_vars<Layer>()){
 		start.extend_unique(std::move(l.second.named_parameters()), '.'+l.first);
 	}
@@ -77,38 +73,26 @@ reflect::detail::custom_typed_map<TensorGrad> Layer::named_parameters(){
 }
 
 void Layer::update(){
-	for(auto& parameter : this->get_vars<TensorGrad>()){
+	for(auto& parameter : this->parameters()){
 		parameter.update();
 	}
-	for(auto& l : this->get_vars<Layer>()){
-		l.update();
-	}
 }
 
 
-TensorGrad Layer::forward(TensorGrad _x){
+TensorGrad Layer::_run_forward(std::vector<utils::any_ref> _vec){
 	if(this->is_eval){
-		bool overriden_eval = reflect::detail::backward_module_function_overriden(this->ptr_);
-		if(overriden_eval){
-			return TensorGrad(this->ptr_->eval(_x.tensor));
-		}
-		return this->ptr_->forward(_x);
+		return reflect::detail::run_eval_function(this->ptr_, std::move(_vec));
 	}
-	bool overriden_backward = reflect::detail::backward_module_function_overriden(this->ptr_);
-	if(overriden_backward){
-		//parent = _x
-		std::function<void(const Tensor&, intrusive_ptr<TensorGrad>)> back_func = reflect::detail::get_backward_function(this->ptr_);
-		TensorGrad output = this->ptr_->forward(_x);
-		output.children->clear();
-		TensorGrad::redefine_tracking(output, _x, back_func);
-		return std::move(output);
-	}
-	return this->ptr_->forward(_x);
-
+	return reflect::detail::run_forward_function(this->ptr_, std::move(_vec));
+	
 }
+
+
 
 //I want to have a way to track every input and output
 //this is old below, better way of doing it now
+//now the backward function if it is overriden is just attached to the output tensor
+//and the input tensor and the output tensor are just attached to each other
 
 /* TensorGrad Layer::forward(TensorGrad _x){ */
 /* 	if(this->is_eval){ */

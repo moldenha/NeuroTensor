@@ -633,8 +633,58 @@ template <std::size_t N>
 using reverse_index_sequence = typename reverse_index_sequence_impl<std::make_index_sequence<N>, N>::type;
 
 
+template<typename T, typename Arg>
+inline constexpr decltype(auto) add_cv_like(Arg& arg) noexcept {
+    if constexpr (std::is_const<T>::value && std::is_volatile<T>::value) {
+        return const_cast<const volatile Arg&>(arg);
+    }
+    else if constexpr (std::is_const<T>::value) {
+        return const_cast<const Arg&>(arg);
+    }
+    else if constexpr (std::is_volatile<T>::value) {
+        return const_cast<volatile Arg&>(arg);
+    }
+    else {
+        return const_cast<Arg&>(arg);
+    }
 }
-}
+
+template <typename C, typename T, typename R, typename... Types>
+inline constexpr bool is_class_function_return_type(R(T::*f)(Types...)){return std::is_same_v<C, R>;}
+
+
+//repeat types
+//std::tuple<repeat_types_t<int, 4> > is the same as std::tuple<int, int, int, int>
+
+template <typename T, std::size_t N, typename... Ts>
+struct repeat_types_helper {
+    using type = typename repeat_types_helper<T, N - 1, T, Ts...>::type;
+};
+
+// Base case: N == 0
+template <typename T, typename... Ts>
+struct repeat_types_helper<T, 0, Ts...> {
+    using type = std::tuple<Ts...>;
+};
+
+// Alias for easier use
+template <typename T, std::size_t N>
+using repeat_types_t = typename repeat_types_helper<T, N>::type;
+
+//primary template for variadic template check
+template <typename T, typename Arg1, typename... Args>
+struct is_all_same {
+    static constexpr bool value = std::is_same_v<T, Arg1> && is_all_same<T, Args...>::value;
+};
+
+//specialization for the base case
+template <typename T>
+struct is_all_same<T, T> : std::true_type {};
+
+template<typename T, typename... Args>
+inline static constexpr bool is_all_same_v = is_all_same<T, Args...>::value;
+
+}} //nt::utils::
 
 
 namespace nt{

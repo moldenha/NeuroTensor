@@ -8,6 +8,8 @@
 #include <tuple>
 #include <utility>
 #include <type_traits>
+#include <map>
+#include <iterator>
 
 namespace nt{
 namespace reflect{
@@ -126,6 +128,28 @@ public:
     custom_typed_iterator(custom_any_iterator any_it)
 	    :references(anyToRefVec<T>(any_it.get_references(std::type_index(typeid(T)))))
     {}
+
+    custom_typed_iterator(
+        typename std::map<std::string, std::reference_wrapper<T>>::const_iterator begin, 
+			typename std::map<std::string, std::reference_wrapper<T>>::const_iterator end)
+    {
+	references.reserve(end-begin);
+	for(;begin != end; ++begin){
+		auto& [name, ref] = *begin;
+		references.push_back(ref);
+	}
+    }
+    custom_typed_iterator(
+        typename std::map<std::string, std::reference_wrapper<T>>::iterator begin, 
+			typename std::map<std::string, std::reference_wrapper<T>>::iterator end)
+    {
+	references.reserve(std::distance(begin, end));
+	for(;begin != end; ++begin){
+		auto& [name, ref] = *begin;
+		references.push_back(ref);
+	}
+    }
+
     // Iterator class for the custom_typed_iterator
     class Iterator {
     public:
