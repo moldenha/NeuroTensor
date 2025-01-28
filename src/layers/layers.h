@@ -41,6 +41,40 @@ public:
   Identity() = default;
 };
 
+class Conv1D : public Module{
+public:
+    bool use_bias;
+    int64_t groups, in_channels, out_channels;
+    int64_t stride, padding, dilation;
+    TensorGrad Weight, Bias;
+    Conv1D(int64_t in_channels, int64_t out_channels, int64_t kernel_size,
+           int64_t stride = 1, int64_t padding = 0, int64_t dilation = 1,
+           int64_t groups = 1, bool use_bias = true)
+        :use_bias(use_bias), groups(groups), in_channels(in_channels),
+        out_channels(out_channels), stride(stride), padding(padding),
+        dilation(dilation),
+        Weight(functional::randn({out_channels, in_channels / groups, kernel_size})),
+        Bias(use_bias ? functional::randn({out_channels, 1})
+                : Tensor::Null())
+        {
+    utils::THROW_EXCEPTION(out_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    utils::THROW_EXCEPTION(in_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    }
+
+    inline TensorGrad forward(TensorGrad x){
+        utils::THROW_EXCEPTION(
+            x.shape()[-2] == in_channels,
+            "Expected input tensor to have channel size of $ but got $",
+            in_channels, x.shape());
+        TensorGrad outp = 
+            functional::conv1d(x, Weight, stride, padding, dilation, groups);
+        if(use_bias){return outp + Bias;}
+        return std::move(outp);
+    }
+};
+
 class Conv2D : public Module {
 public:
   bool use_bias;
@@ -75,6 +109,146 @@ public:
     }
     return outp + Bias;
   }
+};
+
+class Conv3D : public Module{
+public:
+    bool use_bias;
+    int64_t groups, in_channels, out_channels;
+    utils::my_n_tuple<3> stride, padding, dilation;
+    TensorGrad Weight, Bias;
+    Conv3D(int64_t in_channels, int64_t out_channels, utils::my_n_tuple<3> kernel_size,
+           utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0, utils::my_n_tuple<3> dilation = 1,
+           int64_t groups = 1, bool use_bias = true)
+        :use_bias(use_bias), groups(groups), in_channels(in_channels),
+        out_channels(out_channels), stride(stride), padding(padding),
+        dilation(dilation),
+        Weight(functional::randn({out_channels, in_channels / groups, kernel_size[0], kernel_size[1], kernel_size[3]})),
+        Bias(use_bias ? functional::randn({out_channels, 1, 1, 1})
+                : Tensor::Null())
+        {
+    utils::THROW_EXCEPTION(out_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    utils::THROW_EXCEPTION(in_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    }
+
+    inline TensorGrad forward(TensorGrad x){
+        utils::THROW_EXCEPTION(
+            x.shape()[-4] == in_channels,
+            "Expected input tensor to have channel size of $ but got $",
+            in_channels, x.shape());
+        TensorGrad outp = 
+            functional::conv3d(x, Weight, stride, padding, dilation, groups);
+        if(use_bias){return outp + Bias;}
+        return std::move(outp);
+    }
+};
+
+
+class ConvTranspose1D : public Module{
+public:
+    bool use_bias;
+    int64_t groups, in_channels, out_channels;
+    int64_t stride, padding, output_padding, dilation;
+    TensorGrad Weight, Bias;
+    ConvTranspose1D(int64_t in_channels, int64_t out_channels, int64_t kernel_size,
+           int64_t stride = 1, int64_t padding = 0, int64_t output_padding = 0, int64_t dilation = 1,
+           int64_t groups = 1, bool use_bias = true)
+        :use_bias(use_bias), groups(groups), in_channels(in_channels),
+        out_channels(out_channels), stride(stride), padding(padding),
+        output_padding(output_padding), dilation(dilation),
+        Weight(functional::randn({in_channels, out_channels / groups, kernel_size})),
+        Bias(use_bias ? functional::randn({out_channels, 1})
+                : Tensor::Null())
+        {
+    utils::THROW_EXCEPTION(out_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    utils::THROW_EXCEPTION(in_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    }
+
+    inline TensorGrad forward(TensorGrad x){
+        utils::THROW_EXCEPTION(
+            x.shape()[-2] == in_channels,
+            "Expected input tensor to have channel size of $ but got $",
+            in_channels, x.shape());
+        TensorGrad outp = 
+            functional::conv_transpose1d(x, Weight, stride, padding, output_padding, dilation, groups);
+        if(use_bias){return outp + Bias;}
+        return std::move(outp);
+    }
+};
+
+class ConvTranspose2D : public Module {
+public:
+  bool use_bias;
+  int64_t groups, in_channels, out_channels;
+  utils::my_tuple stride, padding, output_padding, dilation;
+  TensorGrad Weight, Bias;
+  ConvTranspose2D(int64_t in_channels, int64_t out_channels, utils::my_tuple kernel_size,
+         utils::my_tuple stride = 1, utils::my_tuple padding = 0, utils::my_tuple output_padding = 0,
+         utils::my_tuple dilation = 1, int64_t groups = 1, bool use_bias = true)
+      : use_bias(use_bias), groups(groups), in_channels(in_channels),
+        out_channels(out_channels), stride(stride), padding(padding),
+        output_padding(output_padding), dilation(dilation),
+        Weight(functional::randn({in_channels, out_channels / groups,
+                                  kernel_size[0], kernel_size[1]})),
+        Bias(use_bias ? functional::randn({out_channels, 1, 1})
+                      : Tensor::Null()) {
+    utils::THROW_EXCEPTION(out_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    utils::THROW_EXCEPTION(in_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+  }
+
+  inline TensorGrad forward(TensorGrad x) {
+    utils::THROW_EXCEPTION(
+        x.shape()[-3] == in_channels,
+        "Expected input tensor to have channel size of $ but got $",
+        in_channels, x.shape());
+    TensorGrad outp =
+        functional::conv_transpose2d(x, Weight, stride, padding, output_padding, dilation, groups);
+    if (!use_bias) {
+      return outp;
+    }
+    return outp + Bias;
+  }
+};
+
+class ConvTranspose3D : public Module{
+public:
+    bool use_bias;
+    int64_t groups, in_channels, out_channels;
+    utils::my_n_tuple<3> stride, padding, output_padding, dilation;
+    TensorGrad Weight, Bias;
+    ConvTranspose3D(int64_t in_channels, int64_t out_channels, utils::my_n_tuple<3> kernel_size,
+           utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0, utils::my_n_tuple<3> output_padding = 0,
+           utils::my_n_tuple<3> dilation = 1,
+           int64_t groups = 1, bool use_bias = true)
+        :use_bias(use_bias), groups(groups), in_channels(in_channels),
+        out_channels(out_channels), stride(stride), padding(padding), output_padding(output_padding),
+        dilation(dilation),
+        Weight(functional::randn({in_channels, out_channels / groups, kernel_size[0], kernel_size[1], kernel_size[3]})),
+        Bias(use_bias ? functional::randn({out_channels, 1, 1, 1})
+                : Tensor::Null())
+        {
+    utils::THROW_EXCEPTION(out_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    utils::THROW_EXCEPTION(in_channels % groups == 0,
+                           "Expected in channels to be divisible by groups");
+    }
+
+    inline TensorGrad forward(TensorGrad x){
+        utils::THROW_EXCEPTION(
+            x.shape()[-4] == in_channels,
+            "Expected input tensor to have channel size of $ but got $",
+            in_channels, x.shape());
+        TensorGrad outp = 
+            functional::conv_transpose3d(x, Weight, stride, padding, output_padding, dilation, groups);
+        if(use_bias){return outp + Bias;}
+        return std::move(outp);
+    }
 };
 
 class Softplus : public Module {
@@ -304,7 +478,17 @@ _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::BatchNorm1D, nt__layers__BatchNorm1D,
                                gamma, beta)
 
 _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Identity, nt__layers__Identity)
+_NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Conv1D, nt__layers__Conv1D, use_bias,
+                               groups, in_channels, out_channels, Weight, Bias)
 _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Conv2D, nt__layers__Conv2D, use_bias,
+                               groups, in_channels, out_channels, Weight, Bias)
+_NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Conv3D, nt__layers__Conv3D, use_bias,
+                               groups, in_channels, out_channels, Weight, Bias)
+_NT_REGISTER_LAYER_NAMESPACED_(nt::layers::ConvTranspose1D, nt__layers__ConvTranspose1D, use_bias,
+                               groups, in_channels, out_channels, Weight, Bias)
+_NT_REGISTER_LAYER_NAMESPACED_(nt::layers::ConvTranspose2D, nt__layers__ConvTranspose2D, use_bias,
+                               groups, in_channels, out_channels, Weight, Bias)
+_NT_REGISTER_LAYER_NAMESPACED_(nt::layers::ConvTranspose3D, nt__layers__ConvTranspose3D, use_bias,
                                groups, in_channels, out_channels, Weight, Bias)
 _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Softplus, nt__layers__Softplus, beta,
                                threshold)

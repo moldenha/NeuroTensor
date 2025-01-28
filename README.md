@@ -47,7 +47,7 @@ class TimeAwareHiddenLayer : public nt::Module{
         _hidden_size(hidden_size),
         input_proj(nt::layers::Linear(input_size, hidden_size)),
         hidden_proj(nt::layers::Linear(hidden_size, hidden_size)),
-        time_proj(nt::layers::Linear(1, hidden_size)) // Scalar time which is going to be a tensor of shape (1,1)
+        time_proj(nt::layers::Linear(1, hidden_size)), // Scalar time which is going to be a tensor of shape (1,1)
         output_proj(nt::layers::Linear(hidden_size, hidden_size))
         {}
 
@@ -56,15 +56,16 @@ class TimeAwareHiddenLayer : public nt::Module{
         nt::TensorGrad forward(const nt::TensorGrad& x, nt::TensorGrad& h, nt::Scalar t){
             // Params: x: input (const reference)
             //         h: reference to hidden hidden
-            //         t: time
-            nt::TensorGad time(nt::Tensor(t).view(1,1), false); // The layer class expects an nt::TensorGrad argument
+            //         t: 00:5
+            
+            nt::TensorGrad time(nt::Tensor(t).view(1,1), false); // The layer class expects an nt::TensorGrad argument
             
             nt::TensorGrad x_proj = this->input_proj(x);
             nt::TensorGrad h_proj = this->hidden_proj(h);
             nt::TensorGrad t_proj = this->time_proj(time);
             
             // Will modify the value the reference h points to
-            if(t.get<int64_t>() == 1){
+            if(t.to<int64_t>() == 1){
                 h += h_proj;
             }
             else{
@@ -90,7 +91,7 @@ class WrapperLayer : public nt::Module{
         
         nt::TensorGrad forward(nt::TensorGrad x){
             int64_t batch_size = x.shape()[0];
-            nt::TensorGrad h = this->default_hidden.repeat(batch_size);
+            nt::TensorGrad h = this->default_hidden.expand({batch_size, this->_hidden_size});
             // will convert 1 to an nt::Scalar
             // and use the lvalue references of x and h
             return this->time_aware_layer(x, h, 1); //will convert 1 to an nt::Scalar and 

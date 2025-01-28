@@ -25,22 +25,7 @@ else()
 
 endif()
 
-# Check for oneDNN installation
-find_package(DNNL QUIET)
 
-if (DNNL_FOUND)
-    message(STATUS "Found system-installed oneDNN")
-    include_directories(${DNNL_INCLUDE_DIR})
-    set(DNNL_LIB DNNL::dnnl)
-
-else()
-    message(STATUS "System-installed oneDNN not found, building from source")
-    add_subdirectory(third_party/oneDNN)
-    set(DNNL_LIB dnnl)  # Use the built oneDNN target
-    include_directories(${CMAKE_SOURCE_DIR}/third_party/oneDNN/include)
-    link_directories(${CMAKE_BINARY_DIR}/third_party/oneDNN/build/src)
-
-endif()
 
 
 #add_subdirectory(third_party/xnetwork)
@@ -64,12 +49,10 @@ include_directories(
     # ${MKL_INCLUDE_DIR}
     # ${TBB_INCLUDE_DIRS}
     # ${Boost_INCLUDE_DIRS}
-    # ${CMAKE_SOURCE_DIR}/third_party/oneDNN/include
     # ${CMAKE_SOURCE_DIR}/third_party/tbb/include
     ${CMAKE_SOURCE_DIR}/third_party/simde
     ${CMAKE_SOURCE_DIR}/third_party/half
     ${CMAKE_SOURCE_DIR}/third_party/stb
-    #${CMAKE_SOURCE_DIR}/third_party/xnetwork/include
 )
 
 
@@ -195,35 +178,7 @@ set(SOURCES
 add_executable(main.out main.cpp ${SOURCES})
 
 
-# Define the MKL library path
-#-L/opt/intel/oneapi/mkl/latest/lib -Wl,-rpath,/opt/intel/oneapi/mkl/latest/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
-# set(MKL_LIB_PATH ${MKLROOT}/lib)
 
-
-# if (TBB_FOUND)
-#     link_directories(${TBB_LIBRARY_DIRS})
-# else()
-#     link_directories(${CMAKE_BINARY_DIR}/third_party/tbb/build/src)
-# endif()
-
-# if (DNNL_FOUND)
-#     link_directories(${DNNL_LIBRARY_DIR})
-# else()
-#     link_directories(${CMAKE_BINARY_DIR}/third_party/oneDNN/build/src)
-# endif()
-
-# # Add the MKL library path
-# link_directories(
-# 	# ${MKL_LIB_PATH}
-# 	${CMAKE_BINARY_DIR}/third_party/oneDNN/build/src
-# 	${CMAKE_BINARY_DIR}/third_party/tbb/build/src
-# )
-
-# Define the MKL libraries
-# set(MKL_LIBS mkl_intel_lp64 mkl_sequential mkl_core m dl)
-# set(BOOST_LIBS boost_system boost_filesystem boost_iostreams) #this is only used for the tda visualization system, eventually going to take these out
-
-# set(CMAKE_BUILD_RPATH ${MKL_LIB_PATH})
 
 
 # Link libraries
@@ -233,16 +188,10 @@ target_link_libraries(main.out
     # ${Boost_LIBRARIES}
     ${TBB_LIB}
     pthread
-    ${DNNL_LIB}
 )
 
 # Set RPATH for runtime
-# list( APPEND CMAKE_INSTALL_RPATH /opt/intel/oneapi/mkl/latest/lib )
-
-# list( APPEND CMAKE_INSTALL_RPATH /opt/intel/oneapi/mkl/latest/lib )
 set_target_properties(main.out PROPERTIES
-	# BUILD_RPATH /opt/intel/oneapi/mkl/latest/lib
-	# INSTALL_RPATH /opt/intel/oneapi/mkl/latest/lib
 	INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 

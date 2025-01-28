@@ -18,6 +18,11 @@ struct my_range{
 	my_range& operator-=(const int64_t& v); // decrement begin and end by v
 	void fix(size_t s); // if begin or end is less than 0, add s to them
 	const int64_t length() const; // end - begin
+    bool operator==(const my_range&) const;
+    bool operator<(const my_range&) const;
+    bool operator>(const my_range&) const;
+    bool operator<=(const my_range&) const;
+    bool operator>=(const my_range&) const;
 };
 
 

@@ -248,6 +248,7 @@ class Tensor final{
 			
 		}
 		Tensor view_Tensors(SizeRef) const;
+        Tensor transpose_Tensors(size_value_t, size_value_t) const;
 
 		Tensor unsqueeze(size_value_t dim = 0) const;
 		Tensor unsqueeze_as(const Tensor&) const;
@@ -319,11 +320,17 @@ class Tensor final{
 		Tensor flip_() const; //strided copy of the original version
 		/* Tensor flip_(size_value_t dim); // this returns a version where the stride was changed, makes it easier for things like a convolution backprop without taking more memory */
 		Tensor undilate_(size_value_t dil) const;
+		Tensor undilate_(size_value_t, size_value_t) const;
+		Tensor undilate_(size_value_t, size_value_t, size_value_t) const;
 		Tensor undilate(size_value_t dil) const;
+        Tensor undilate(size_value_t row_dil, size_value_t col_dil) const;
+        Tensor undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const;
 		//dilate by basically adding that many zeros between each row and collumn
 		//the above has a memory thing where it takes part of its memory from the original tensor
 		//there is also a contiguous version below
 		Tensor dilate(size_value_t dil) const;
+		Tensor dilate(size_value_t dil_r, size_value_t dil_c) const;
+		Tensor dilate(size_value_t chan_dil, size_value_t dil_r, size_value_t dil_c) const;
 		Tensor repeat_(size_value_t amt) const; //this is the amount to repeat wthout copying memory by
 		/* Tensor dilate_mem_(size_value_t dil) const; */
 		Tensor repeat_(size_value_t dim, size_value_t amt) const;

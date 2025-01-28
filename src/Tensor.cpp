@@ -11,6 +11,7 @@
 #include <functional>
 // #include <i386/types.h>
 #include <algorithm>
+#include <set>
 #include <ios>
 #include <memory.h>
 #include <memory>
@@ -1198,6 +1199,7 @@ Tensor Tensor::view_Tensors(SizeRef nv) const {
     return std::move(outp);
 }
 
+
 Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
     utils::THROW_EXCEPTION(
         dtype == DType::TensorObj,
@@ -1233,6 +1235,19 @@ Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
         reinterpret_cast<Tensor *>(outp.data_ptr()));
     return std::move(outp);
 }
+
+// this is a transpose to happen to every single tensor
+Tensor Tensor::transpose_Tensors(size_value_t a, size_value_t b) const {
+    utils::THROW_EXCEPTION(
+        dtype == DType::TensorObj,
+        "Expected transpose_Tensors to be used on a tensor of tensors");
+    Tensor outp = Tensor::makeNullTensorArray(numel());
+    Tensor *outputIt = reinterpret_cast<Tensor *>(outp.data_ptr());
+    _vals.transform_function<DType::TensorObj>(
+        [&a, &b](auto &inp) { return inp.transpose(a, b); }, outputIt);
+    return std::move(outp);
+}
+
 
 Tensor Tensor::flatten(size_value_t _a, size_value_t _b) const {
     _a = _a < 0 ? _a + dims() : _a;
@@ -3517,21 +3532,32 @@ r[i].length();
 
 // the point of this function is to generate all ranges based on a singular
 // range
+
+void print_vec_ranges(std::vector<my_range>& current_ranges){
+    std::cout << '(';
+    for(int i = 0; i < current_ranges.size()-1; ++i)
+            std::cout << current_ranges[i] << ',';
+    std::cout << current_ranges.back() << ')' << std::endl;
+}
+
+//set instead of unordered set because the order does matter
 void generate_ranges(const std::vector<my_range> &ranges,
                      std::vector<my_range> current_ranges, size_t idx,
-                     std::vector<std::vector<my_range>> &result,
+                     std::set<std::vector<my_range>> &result,
                      const SizeRef &shape) noexcept {
+    if (idx >= ranges.size()) return;
     if (idx == (ranges.size() - 1)) {
         if (idx_is_total(ranges[idx], shape, idx)) {
-            result.push_back(current_ranges);
+            result.insert(current_ranges);
             return;
         }
-        bool at_end = ranges[idx].end + ranges[idx].length() >= shape[idx];
+        bool at_end = current_ranges[idx].end + ranges[idx].length() >= shape[idx];
         current_ranges[idx] =
-            at_end ? my_range(ranges[idx].end, shape[idx])
-                   : my_range(ranges[idx].end,
-                              ranges[idx].end + ranges[idx].length());
-        result.push_back(current_ranges);
+            at_end ? my_range(current_ranges[idx].end, shape[idx])
+                   : my_range(current_ranges[idx].end,
+                              current_ranges[idx].end + ranges[idx].length());
+        // std::cout << "inserting "<<current_ranges<<std::endl;
+        result.insert(current_ranges);
         if (at_end) {
             return;
         }
@@ -3540,18 +3566,24 @@ void generate_ranges(const std::vector<my_range> &ranges,
     if (idx_is_total(ranges[idx], shape, idx)) {
         generate_ranges(ranges, current_ranges, idx + 1, result, shape);
     } else {
-        bool at_end = ranges[idx].end + ranges[idx].length() >= shape[idx];
+        bool at_end = current_ranges[idx].end + ranges[idx].length() >= shape[idx];
+        // std::cout << "current_ranges before add: ";
+        // print_vec_ranges(current_ranges);
         current_ranges[idx] =
-            at_end ? my_range(ranges[idx].end, shape[idx])
-                   : my_range(ranges[idx].end,
-                              ranges[idx].end + ranges[idx].length());
-        result.push_back(current_ranges);
-        if (at_end) {
-            generate_ranges(ranges, current_ranges, idx + 1, result, shape);
-        } else {
+            at_end ? my_range(current_ranges[idx].end, shape[idx])
+                   : my_range(current_ranges[idx].end,
+                              current_ranges[idx].end + ranges[idx].length());
+        
+        // std::cout << "at end and generating range idx: "<<idx << " ranges size: "<<ranges.size()
+        //         <<" shape: "<<shape<<std::endl;
+        // std::cout << "current_ranges: ";
+        // print_vec_ranges(current_ranges);
+        // std::cout << "inserting "<<current_ranges<<std::endl;
+        result.insert(current_ranges);
+        if(!at_end){
             generate_ranges(ranges, current_ranges, idx, result, shape);
-            generate_ranges(ranges, current_ranges, idx + 1, result, shape);
         }
+        generate_ranges(ranges, current_ranges, idx + 1, result, shape);
     }
 }
 
@@ -3564,11 +3596,16 @@ Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
         // Add a my_range(0, -1) to ranges
         ranges.push_back(my_range(0, shape()[ranges.size()]));
     }
-    for (uint32_t i = 0; i < ranges.size(); ++i)
+    for (uint32_t i = 0; i < ranges.size(); ++i){
         ranges[i].fix(shape()[i]);
+        utils::throw_exception(ranges[i].length() > 0, 
+                "Cannot increment range at dimension $ with length of 0 got range of $", 
+                i, ranges[i]);
+    }
 
-    std::vector<std::vector<my_range>> result_ranges;
+    std::set<std::vector<my_range>> result_ranges;
     std::vector<my_range> current_ranges = ranges;
+    result_ranges.insert(ranges);
 
     generate_ranges(ranges, current_ranges, 0, result_ranges, shape());
     if (result_ranges.size() == 1 || result_ranges.size() == 0)
@@ -5087,6 +5124,7 @@ Tensor Tensor::flip_() const {
 Tensor Tensor::dilate(size_value_t dil) const {
     if (dil == 0)
         return contiguous();
+    utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for dilation but got $", dims());
     std::vector<size_value_t> vec = shape().Vec();
     /* dil -= 1; */
     vec.back() *= dil;
@@ -5095,9 +5133,60 @@ Tensor Tensor::dilate(size_value_t dil) const {
     vec[vec.size() - 2] -= (dil - 1);
     Tensor outp = functional::zeros(SizeRef(vec), dtype);
     auto sh = shape();
-    size_value_t back_add = outp.shape().back() + (dil - 1);
+    size_value_t back_add = (outp.shape().back()  * (dil-1)) + 1;
     _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
         [&sh, &back_add, &dil](auto abegin, auto aend, void *obegin) {
+            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
+            size_value_t cols = sh[-1];
+            size_value_t i_total = sh.multiply(-2);
+            value_t *begin = reinterpret_cast<value_t *>(obegin);
+            for (uint64_t i = 0; abegin != aend; ++abegin, ++i) {
+                *begin = *abegin;
+                if ((i + 1) % cols == 0) {
+                    //if it is just at the end of the matrix, move to the next matrix
+                    if ((i + 1) % i_total == 0) {
+                        ++begin;
+                        continue;
+                    }
+                    //otherwise, move down
+                    //dil-1 rows, 
+                    begin += back_add;
+                    continue;
+                }
+                begin += dil;
+            }
+        },
+        outp.data_ptr());
+    return outp;
+}
+
+Tensor Tensor::dilate(size_value_t row_dil, size_value_t col_dil) const {
+    if (row_dil == 0 && col_dil == 0)
+        return contiguous();
+
+    utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for dilation but got $", dims());
+
+    std::vector<size_value_t> vec = shape().Vec();
+
+    // Adjust shape for dilation (applies to the last two dimensions)
+    vec[vec.size() - 1] *= col_dil; // Adjust columns
+    vec[vec.size() - 1] -= (col_dil - 1);
+    vec[vec.size() - 2] *= row_dil; // Adjust rows
+    vec[vec.size() - 2] -= (row_dil - 1);
+
+    Tensor outp = functional::zeros(SizeRef(vec), dtype);
+
+    auto sh = shape();
+    auto outp_shape = outp.shape();
+    size_value_t rows = sh[-2]; // Original rows
+    size_value_t cols = sh[-1]; // Original columns
+    size_value_t num_batches = numel() / (rows * cols); // Total number of batches (product of all dims except last two)
+    size_value_t output_cols = outp.shape().back();
+    size_value_t back_add = (outp.shape().back()  * (row_dil-1)) + 1;
+    // size_value_t back_add = (output_cols - cols * col_dil) + col_dil;
+
+    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
+        [&sh, &outp_shape, &num_batches, &rows, &cols, &output_cols, &back_add, &row_dil, &col_dil](auto abegin, auto aend, void *obegin) {
             using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
             size_value_t cols = sh[-1];
             size_value_t i_total = sh.multiply(-2);
@@ -5112,34 +5201,193 @@ Tensor Tensor::dilate(size_value_t dil) const {
                     begin += back_add;
                     continue;
                 }
-                begin += dil;
+                begin += col_dil;
             }
         },
         outp.data_ptr());
     return outp;
 }
 
-Tensor Tensor::undilate(size_value_t dil) const {
-    if (dil == 0) {
+// template<typename value_t>
+// void process_dilate(std::vector<Tensor::size_value_t>& multiplies,
+//                     std::vector<Tensor::size_value_t>& back_adds,
+//                     std::vector<Tensor::size_value_t>& dils,
+//                     const SizeRef& shape,
+//                     const uint64_t& i, 
+//                     value_t*& begin){
+//     if(!((i+1) % multiplies[multiplies.size()-2] == 0)){begin += dils.back();return;}
+    
+// }
+
+//Tensor Tensor::dilate(std::vector<size_value_t> dils) const {
+//    if(std::all_of(dils.cbegin(), dils.cend(), [](const size_value_t& val){return val <= 1;}))
+//            return contiguous();
+
+//    utils::throw_exception(!std::any_of(dils.cbegin(), dils.cend(), 
+//                                        [](const size_value_t& val){val < 1;}), 
+//                           "cannot dilate less than 1 at any dimension");
+//    utils::throw_exception(dims() >= dils.size(), 
+//                           "Expected dim size to be greater than or equal to $ for dilation but got $", 
+//                           dils.size(), dims());
+
+//    std::vector<size_value_t> vec = shape().Vec();
+
+//    // Adjust shape for dilation (applies to the last two dimensions)
+//    auto v_rbegin = vec.rbegin();
+//    auto d_rbegin = dils.crbegin();
+//    auto d_rend = dils.crend();
+//    for(;d_rbegin != d_rend; ++d_rbegin, ++v_rbegin){
+//        *v_rbegin *= *d_rbegin;
+//        *v_rbegin -= (*d_drbegin - 1);
+//    }
+
+//    Tensor outp = functional::zeros(SizeRef(vec), dtype);
+//    //size_value_t back_add = (outp.shape().back()  * (row_dil-1)) + 1;
+
+//    auto sh = shape();
+//    auto outp_shape = outp.shape();
+//    std::vector<size_value_t> multiplies(dils.size());
+//    for (int i = dils.size() - 1; i >= 1; --i) {
+//        multiplies[dils.size() - 1 - i] = x.shape().multiply(-1 * i);
+//    }
+//    multiplies.back() = 0;
+//    std::vector<size_value_t> back_adds(dils.size());
+//    for(int i = 0; i < dils.size(); ++i){
+//        back_adds[i] =  multiplies[i] * (dils[i]-1) + 1; 
+//    }
+
+//    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
+//        [&sh, &outp_shape, &dils, &multiplies](auto abegin, auto aend, void *obegin) {
+//            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
+//            size_value_t cols = sh[-1];
+//            size_value_t i_total = sh.multiply(-2);
+//            value_t *begin = reinterpret_cast<value_t *>(obegin);
+//            for (uint64_t i = 0; abegin != aend; ++abegin, ++i) {
+//                *begin = *abegin;
+//                if ((i + 1) % cols == 0) {
+//                    if ((i + 1) % i_total == 0) {
+//                        ++begin;
+//                        continue;
+//                    }
+//                    begin += back_add;
+//                    continue;
+//                }
+//                begin += col_dil;
+//            }
+//        },
+//        outp.data_ptr());
+//    return outp;
+//}
+
+
+
+Tensor Tensor::dilate(size_value_t channel_dil, size_value_t row_dil, size_value_t col_dil) const {
+    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (channel_dil == 0 || channel_dil == 1))
         return contiguous();
-    }
+
+    utils::throw_exception(row_dil >= 1 && col_dil >= 1 && channel_dil >= 1,
+                           "Cannot dilate less than 1 but got dilations of {$, $, $}",
+                           channel_dil, row_dil, col_dil);
+
+    utils::throw_exception(dims() >= 3, "Expected dim size to be greater than or equal to 3 for 3D dilation but got $", dims());
+
     std::vector<size_value_t> vec = shape().Vec();
-    vec.back() = (vec.back() + (dil - 1)) / dil;
-    vec[vec.size() - 2] = (vec[vec.size() - 2] + (dil - 1)) / dil;
+
+    // Adjust shape for dilation (applies to the last two dimensions)
+    vec[vec.size() - 1] *= col_dil; // Adjust columns
+    vec[vec.size() - 1] -= (col_dil - 1);
+    vec[vec.size() - 2] *= row_dil; // Adjust rows
+    vec[vec.size() - 2] -= (row_dil - 1);
+    vec[vec.size() - 3] *= channel_dil; // Adjust channels
+    vec[vec.size() - 3] -= (channel_dil - 1);
+
     Tensor outp = functional::zeros(SizeRef(vec), dtype);
 
     auto sh = shape();
-    size_value_t back_add = sh.back() + (dil - 1);
+    auto outp_shape = outp.shape();
+    size_value_t channels = sh[-3]; // Original channels
+    size_value_t rows = sh[-2]; // Original rows
+    size_value_t cols = sh[-1]; // Original columns
+
+    // size_value_t num_batches = numel() / (rows * cols); // Total number of batches (product of all dims except last two)
+    
+    size_value_t output_cols = outp.shape().back();
+    size_value_t col_back_add = 1;
+    size_value_t row_back_add = (outp.shape().back()  * (row_dil-1)) + 1;
+    size_value_t channel_back_add = ((outp.shape()[-1] * outp.shape()[-2]) * channel_dil - 1) + 1;
+    // size_value_t back_add = (output_cols - cols * col_dil) + col_dil;
+
     _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
-        [&sh, &back_add, &dil](auto abegin, auto aend, void *obegin) {
+        [&sh, &outp_shape, &channels, &rows, &cols, 
+            &col_back_add, &row_back_add, &channel_back_add, 
+            &channel_dil, &row_dil, &col_dil](auto abegin, auto aend, void *obegin) {
             using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
             size_value_t cols = sh[-1];
-            size_value_t i_total = sh.multiply(-2);
+            size_value_t mat_total = sh.multiply(-2);
+            size_value_t batched_mat_total = sh.multiply(-3);
             value_t *begin = reinterpret_cast<value_t *>(obegin);
-            for (uint64_t i = 0; abegin != aend; ++abegin) {
-                if ((i % back_add) % dil == 0 && (i % back_add) / dil < cols &&
-                    (i / back_add) % dil == 0) {
-                    *begin++ = *abegin;
+            for (uint64_t i = 0; abegin != aend; ++abegin, ++i) {
+                *begin = *abegin;
+                if ((i + 1) % cols == 0) {
+                    if ((i + 1) % mat_total == 0) {
+                        if((i + 1) % batched_mat_total == 0){
+                            begin++;
+                            continue;
+                        }
+                        begin += channel_back_add;
+                        continue;
+                    }
+                    begin += row_back_add;
+                    continue;
+                }
+                begin += col_dil;
+            }
+        },
+        outp.data_ptr());
+    return outp;
+}
+
+
+Tensor Tensor::undilate(size_value_t dil) const {
+        return this->undilate(dil, dil);
+}
+
+Tensor Tensor::undilate(size_value_t row_dil, size_value_t col_dil) const {
+    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1)) {
+        return contiguous();
+    }
+    utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for undilation but got $", dims());
+    utils::throw_exception(row_dil >= 1 && col_dil >= 1,
+                           "Cannot dilate less than 1 but got dilations of {$, $}",
+                           row_dil, col_dil);
+
+    std::vector<size_value_t> vec = shape().Vec();
+    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;
+    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;
+    Tensor outp = functional::zeros(SizeRef(vec), dtype);
+
+    auto sh = shape();
+    size_value_t original_cols = sh.back();
+    size_value_t original_rows = sh[-2];
+    size_value_t matrix_size = original_rows * original_cols;
+    size_value_t batches = numel() / matrix_size;
+    size_value_t row_add = (sh[-2] * (row_dil - 1));  // Adjust row dilation
+    size_value_t col_add = (sh.back() * (col_dil - 1));          // Adjust column dilation
+    // size_value_t back_add = sh.back() + (dil - 1);
+    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
+        [&original_rows, &batches, &matrix_size, &original_cols, &row_dil, &col_dil](auto abegin, auto aend, void *obegin) {
+            // std::cout << "called undilate function"<<std::endl;
+            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
+            value_t *begin = reinterpret_cast<value_t *>(obegin);
+            // std::cout << "starting undilate for loop"<<std::endl;
+            // int64_t b_counter = 0;
+            for(int64_t b = 0; b < batches; ++b, abegin += matrix_size){
+                auto cur_begin = abegin;
+                for(int64_t r = 0; r < original_rows; r += row_dil, cur_begin += (original_cols * row_dil)){
+                    auto mBegin = cur_begin;
+                    for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
+                        *begin++ = *mBegin;
+                    }
                 }
             }
         },
@@ -5148,34 +5396,175 @@ Tensor Tensor::undilate(size_value_t dil) const {
     return outp;
 }
 
-Tensor Tensor::undilate_(size_value_t dil) const {
-    if (dil == 0) {
+Tensor Tensor::undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const {
+    // If no dilation, return contiguous tensor
+    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1)) {
         return contiguous();
     }
 
-    // Calculate the original shape before dilation
-    std::vector<size_value_t> vec = shape().Vec();
-    vec.back() = (vec.back() + (dil - 1)) / dil;
-    vec[vec.size() - 2] = (vec[vec.size() - 2] + (dil - 1)) / dil;
-    SizeRef outp_shape(std::move(vec));
-    /* Tensor outp = functional::zeros(SizeRef(vec), dtype); */
+    // Check dimensionality and validate dilation values
+    utils::throw_exception(dims() >= 3, "Expected dim size to be greater than or equal to 3 for 3D undilation but got $", dims());
+    utils::throw_exception(row_dil >= 1 && col_dil >= 1 && chan_dil >= 1,
+                           "Cannot dilate less than 1 but got dilations of {$, $, $}",
+                           row_dil, col_dil, chan_dil);
 
+    // Calculate the new shape after undilation for each dimension
+    std::vector<size_value_t> vec = shape().Vec();
+    vec[vec.size() - 3] = (vec[vec.size() - 3] + (chan_dil - 1)) / chan_dil; // Channel dimension
+    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;    // Row dimension
+    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;                        // Column dimension
+
+    Tensor outp = functional::zeros(SizeRef(vec), dtype);
+
+    auto sh = shape();
+    size_value_t original_cols = sh.back();
+    size_value_t original_rows = sh[-2];
+    size_value_t original_channels = sh[-3];
+    size_value_t matrix_size = original_rows * original_cols;
+    size_value_t channel_size = matrix_size * original_channels;
+    size_value_t batches = numel() / channel_size;
+    // size_value_t back_add = sh.back() + (dil - 1);
+    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
+        [&original_channels, &original_rows, &batches, &channel_size, &matrix_size, &original_cols, &chan_dil, &row_dil, &col_dil]
+            (auto abegin, auto aend, void *obegin) {
+            // std::cout << "called undilate function"<<std::endl;
+            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
+            value_t *begin = reinterpret_cast<value_t *>(obegin);
+            // std::cout << "starting undilate for loop"<<std::endl;
+            // int64_t b_counter = 0;
+            for(int64_t b = 0; b < batches; ++b, abegin += channel_size){
+                auto cur_begin = abegin;
+                for(int64_t d = 0; d < original_channels; d += chan_dil, cur_begin += matrix_size * chan_dil){
+                    auto dBegin = cur_begin;
+                    for(int64_t r = 0; r < original_rows; r += row_dil, dBegin += (original_cols * row_dil)){
+                        auto mBegin = dBegin;
+                        for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
+                            *begin++ = *mBegin;
+                        }
+                    }
+                }
+            }
+        },
+        outp.data_ptr());
+    return std::move(outp);
+}
+
+
+Tensor Tensor::undilate_(size_value_t dil) const {
+    return this->undilate_(dil, dil);
+    // if (dil == 0) {
+    //     return contiguous();
+    // }
+
+    // // Calculate the original shape before dilation
+    // std::vector<size_value_t> vec = shape().Vec();
+    // vec.back() = (vec.back() + (dil - 1)) / dil;
+    // vec[vec.size() - 2] = (vec[vec.size() - 2] + (dil - 1)) / dil;
+    // SizeRef outp_shape(std::move(vec));
+    // /* Tensor outp = functional::zeros(SizeRef(vec), dtype); */
+
+    // ArrayVoid cpy1 = _vals.bucket_all_indices();
+    // ArrayVoid cpy = cpy1.new_strides(outp_shape.multiply());
+    // void **my_strides = cpy1.stride_begin();
+    // void **outp_strides = cpy.stride_begin();
+
+    // size_value_t cols = shape()[-1];
+    // size_value_t i_total = shape().multiply(-2);
+    // size_value_t outp_cols = vec.back();
+    // size_value_t outp_i_total = vec[vec.size() - 2];
+
+    // for (size_value_t i = 0; i < numel(); ++i, ++my_strides) {
+    //     // Check if the current element should be part of the original tensor
+    //     if ((i % (outp_cols * dil)) % dil == 0 &&
+    //         (i / (outp_cols * dil)) % dil == 0) {
+    //         *outp_strides = *my_strides;
+    //         ++outp_strides;
+    //     }
+    // }
+
+    // return Tensor(std::move(cpy), std::move(outp_shape));
+}
+
+Tensor Tensor::undilate_(size_value_t row_dil, size_value_t col_dil) const {
+    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1)) {
+        return *this;
+    }
+    utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for undilation but got $", dims());
+    utils::throw_exception(row_dil >= 1 && col_dil >= 1,
+                           "Cannot dilate less than 1 but got dilations of {$, $}",
+                           row_dil, col_dil);
+
+    std::vector<size_value_t> vec = shape().Vec();
+    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;
+    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;
+    SizeRef outp_shape(std::move(vec));
+    
     ArrayVoid cpy1 = _vals.bucket_all_indices();
     ArrayVoid cpy = cpy1.new_strides(outp_shape.multiply());
     void **my_strides = cpy1.stride_begin();
     void **outp_strides = cpy.stride_begin();
 
-    size_value_t cols = shape()[-1];
-    size_value_t i_total = shape().multiply(-2);
-    size_value_t outp_cols = vec.back();
-    size_value_t outp_i_total = vec[vec.size() - 2];
 
-    for (size_value_t i = 0; i < numel(); ++i, ++my_strides) {
-        // Check if the current element should be part of the original tensor
-        if ((i % (outp_cols * dil)) % dil == 0 &&
-            (i / (outp_cols * dil)) % dil == 0) {
-            *outp_strides = *my_strides;
-            ++outp_strides;
+    auto sh = shape();
+    size_value_t original_cols = sh.back();
+    size_value_t original_rows = sh[-2];
+    size_value_t matrix_size = original_rows * original_cols;
+    size_value_t batches = numel() / matrix_size;
+    for(int64_t b = 0; b < batches; ++b, my_strides += matrix_size){
+        void **cur_begin = my_strides;
+        for(int64_t r = 0; r < original_rows; r += row_dil, cur_begin += (original_cols * row_dil)){
+            void **mBegin = cur_begin;
+            for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
+                *outp_strides++ = *mBegin;
+            }
+        }
+    }
+
+    return Tensor(std::move(cpy), std::move(outp_shape));
+}
+
+Tensor Tensor::undilate_(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const {
+    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1)) {
+        return *this;
+    }
+
+    // Check dimensionality and validate dilation values
+    utils::throw_exception(dims() >= 3, "Expected dim size to be greater than or equal to 3 for 3D undilation but got $", dims());
+    utils::throw_exception(row_dil >= 1 && col_dil >= 1 && chan_dil >= 1,
+                           "Cannot dilate less than 1 but got dilations of {$, $, $}",
+                           row_dil, col_dil, chan_dil);
+
+    // Calculate the new shape after undilation for each dimension
+    std::vector<size_value_t> vec = shape().Vec();
+    vec[vec.size() - 3] = (vec[vec.size() - 3] + (chan_dil - 1)) / chan_dil; // Channel dimension
+    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;    // Row dimension
+    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;                        // Column dimension
+    SizeRef outp_shape(std::move(vec));
+    
+    ArrayVoid cpy1 = _vals.bucket_all_indices();
+    ArrayVoid cpy = cpy1.new_strides(outp_shape.multiply());
+    void **my_strides = cpy1.stride_begin();
+    void **outp_strides = cpy.stride_begin();
+
+
+    auto sh = shape();
+    size_value_t original_cols = sh.back();
+    size_value_t original_rows = sh[-2];
+    size_value_t original_channels = sh[-3];
+    size_value_t matrix_size = original_rows * original_cols;
+    size_value_t channel_size = matrix_size * original_channels;
+    size_value_t batches = numel() / channel_size;
+
+    for(int64_t b = 0; b < batches; ++b, my_strides += channel_size){
+        void **cur_begin = my_strides;
+        for(int64_t d = 0; d < original_channels; d += chan_dil, cur_begin += matrix_size * chan_dil){
+            void **dBegin = cur_begin;
+            for(int64_t r = 0; r < original_rows; r += row_dil, dBegin += (original_cols * row_dil)){
+                void **mBegin = dBegin;
+                for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
+                    *outp_strides++ = *mBegin;
+                }
+            }
         }
     }
 

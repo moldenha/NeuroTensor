@@ -33,6 +33,15 @@ class TensorGrad_Functional_Class {
     static TensorGrad fold(const TensorGrad &, utils::my_tuple, utils::my_tuple,
                            utils::my_tuple, utils::my_tuple, utils::my_tuple);
     // image, kernel, stride, padding, dilation, groups
+    static TensorGrad conv1d(const TensorGrad &, const TensorGrad &,
+                                 int64_t, int64_t,
+                                 int64_t, int64_t);
+    static TensorGrad conv1d(const Tensor &, const TensorGrad &,
+                                 int64_t, int64_t,
+                                 int64_t, int64_t);
+    static TensorGrad conv1d(const TensorGrad &, const Tensor &,
+                                 int64_t, int64_t,
+                                 int64_t, int64_t); 
     static TensorGrad conv2d(const TensorGrad &, const TensorGrad &,
                                  utils::my_tuple, utils::my_tuple,
                                  utils::my_tuple, int64_t);
@@ -42,6 +51,46 @@ class TensorGrad_Functional_Class {
     static TensorGrad conv2d(const TensorGrad &, const Tensor &,
                                  utils::my_tuple, utils::my_tuple,
                                  utils::my_tuple, int64_t);
+    static TensorGrad conv3d(const TensorGrad &, const TensorGrad &,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>,
+                                 utils::my_n_tuple<3>, int64_t);
+    static TensorGrad conv3d(const Tensor &, const TensorGrad &,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>,
+                                 utils::my_n_tuple<3>, int64_t);
+    static TensorGrad conv3d(const TensorGrad &, const Tensor &,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>,
+                                 utils::my_n_tuple<3>, int64_t);
+
+    static TensorGrad conv_transpose1d(const TensorGrad &, const TensorGrad &,
+                                 int64_t, int64_t, int64_t,
+                                 int64_t, int64_t);
+    static TensorGrad conv_transpose1d(const Tensor &, const TensorGrad &,
+                                 int64_t, int64_t, int64_t,
+                                 int64_t, int64_t);
+    static TensorGrad conv_transpose1d(const TensorGrad &, const Tensor &,
+                                 int64_t, int64_t, int64_t,
+                                 int64_t, int64_t); 
+    static TensorGrad conv_transpose2d(const TensorGrad &, const TensorGrad &,
+                                 utils::my_tuple, utils::my_tuple, utils::my_tuple,
+                                 utils::my_tuple, int64_t);
+    static TensorGrad conv_transpose2d(const Tensor &, const TensorGrad &,
+                                 utils::my_tuple, utils::my_tuple, utils::my_tuple,
+                                 utils::my_tuple, int64_t);
+    static TensorGrad conv_transpose2d(const TensorGrad &, const Tensor &,
+                                 utils::my_tuple, utils::my_tuple, utils::my_tuple,
+                                 utils::my_tuple, int64_t);
+    static TensorGrad conv_transpose3d(const TensorGrad &, const TensorGrad &,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>, int64_t);
+    static TensorGrad conv_transpose3d(const Tensor &, const TensorGrad &,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>, int64_t);
+    static TensorGrad conv_transpose3d(const TensorGrad &, const Tensor &,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>,
+                                 utils::my_n_tuple<3>, utils::my_n_tuple<3>, int64_t);
+
+
+
     static TensorGrad sigmoid(const TensorGrad &);
     static TensorGrad clamp(const TensorGrad &, std::optional<int64_t>,
                             std::optional<int64_t>);

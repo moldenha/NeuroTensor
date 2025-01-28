@@ -58,23 +58,142 @@ inline TensorGrad fold(const TensorGrad &a, utils::my_tuple output_size,
                                              dilation, padding, stride);
 }
 
+inline TensorGrad conv1d(const TensorGrad &image, const TensorGrad &kernel,
+                         int64_t stride = 1, int64_t padding = 0,
+                         int64_t dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv1d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad conv1d(const Tensor &image, const TensorGrad &kernel,
+                         int64_t stride = 1, int64_t padding = 0,
+                         int64_t dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv1d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad conv1d(const TensorGrad &image, const Tensor &kernel,
+                         int64_t stride = 1, int64_t padding = 0,
+                         int64_t dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv1d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+
 inline TensorGrad conv2d(const TensorGrad &image, const TensorGrad &kernel,
-                         utils::my_tuple stride, utils::my_tuple padding,
-                         utils::my_tuple dilation, int64_t groups) {
+                         utils::my_tuple stride = 1, utils::my_tuple padding = 0,
+                         utils::my_tuple dilation = 1, int64_t groups = 1) {
     return TensorGrad_Functional_Class::conv2d(image, kernel, stride,
                                                    padding, dilation, groups);
 }
 
 inline TensorGrad conv2d(const Tensor &image, const TensorGrad &kernel,
-                         utils::my_tuple stride, utils::my_tuple padding,
-                         utils::my_tuple dilation, int64_t groups) {
+                         utils::my_tuple stride = 1, utils::my_tuple padding = 0,
+                         utils::my_tuple dilation = 1, int64_t groups = 1) {
     return TensorGrad_Functional_Class::conv2d(image, kernel, stride,
                                                    padding, dilation, groups);
-}inline TensorGrad conv2d(const TensorGrad &image, const Tensor &kernel,
-                         utils::my_tuple stride, utils::my_tuple padding,
-                         utils::my_tuple dilation, int64_t groups) {
+}
+
+inline TensorGrad conv2d(const TensorGrad &image, const Tensor &kernel,
+                         utils::my_tuple stride = 1, utils::my_tuple padding = 0,
+                         utils::my_tuple dilation = 1, int64_t groups = 1) {
     return TensorGrad_Functional_Class::conv2d(image, kernel, stride,
                                                    padding, dilation, groups);
+}
+
+inline TensorGrad conv3d(const TensorGrad &image, const TensorGrad &kernel,
+                         utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0,
+                         utils::my_n_tuple<3> dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv3d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad conv3d(const Tensor &image, const TensorGrad &kernel,
+                         utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0,
+                         utils::my_n_tuple<3> dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv3d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad conv3d(const TensorGrad &image, const Tensor &kernel,
+                         utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0,
+                         utils::my_n_tuple<3> dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv3d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+
+inline TensorGrad conv_transpose1d(const TensorGrad &image, const TensorGrad &kernel,
+                         int64_t stride = 1, int64_t padding = 0,
+                         int64_t output_padding = 0, int64_t dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose1d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose1d(const Tensor &image, const TensorGrad &kernel,
+                         int64_t stride = 1, int64_t padding = 0,
+                         int64_t output_padding = 0, int64_t dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose1d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose1d(const TensorGrad &image, const Tensor &kernel,
+                         int64_t stride = 1, int64_t padding = 0,
+                         int64_t output_padding = 0, int64_t dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose1d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+
+inline TensorGrad conv_transpose2d(const TensorGrad &image, const TensorGrad &kernel,
+                         utils::my_tuple stride = 1, utils::my_tuple padding = 0,
+                         utils::my_tuple output_padding = 0,utils::my_tuple dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose2d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose2d(const Tensor &image, const TensorGrad &kernel,
+                         utils::my_tuple stride = 1, utils::my_tuple padding = 0,
+                         utils::my_tuple output_padding = 0,utils::my_tuple dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose2d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose2d(const TensorGrad &image, const Tensor &kernel,
+                         utils::my_tuple stride = 1, utils::my_tuple padding = 0,
+                         utils::my_tuple output_padding = 0,utils::my_tuple dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose2d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose3d(const TensorGrad &image, const TensorGrad &kernel,
+                         utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0,
+                         utils::my_n_tuple<3> output_padding = 0, utils::my_n_tuple<3> dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose3d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose3d(const Tensor &image, const TensorGrad &kernel,
+                         utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0,
+                         utils::my_n_tuple<3> output_padding = 0, utils::my_n_tuple<3> dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose3d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
+}
+
+inline TensorGrad conv_transpose3d(const TensorGrad &image, const Tensor &kernel,
+                         utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0, 
+                         utils::my_n_tuple<3> output_padding = 0, utils::my_n_tuple<3> dilation = 1, 
+                         int64_t groups = 1) {
+    return TensorGrad_Functional_Class::conv_transpose3d(image, kernel, stride,
+                                                padding, output_padding, dilation, groups);
 }
 
 

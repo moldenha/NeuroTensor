@@ -28,7 +28,7 @@ Tensor& unfold3d_backward(const Tensor& x, Tensor& output, const utils::my_n_tup
 
 
 //1d transforms:
-Tensor unfold1d(const Tensor& x, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out);
+Tensor unfold1d(const Tensor& x, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation=1, Tensor::size_value_t padding=0, Tensor::size_value_t stride=1, bool transpose_out=true);
 Tensor unfold1d_backward(const Tensor& x, Tensor::size_value_t output_size, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out);
 Tensor& unfold1d_backward(const Tensor& x, Tensor& output, Tensor::size_value_t output_size, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out);
 

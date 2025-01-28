@@ -31,6 +31,12 @@ my_range& my_range::operator+(const int64_t& v){end = v; return *this;}
 
 my_range& my_range::operator-(const int64_t& v){end = (-1*v); return *this;}
 
+bool my_range::operator==(const my_range& a) const { return a.begin == begin && a.end == end;}
+bool my_range::operator<(const my_range& a) const { return a.begin < begin && a.end < end; }
+bool my_range::operator>(const my_range& a) const { return a.begin > begin && a.end > end; }
+bool my_range::operator<=(const my_range& a) const { return a.begin <= begin && a.end <= end; }
+bool my_range::operator>=(const my_range& a) const { return a.begin >= begin && a.end >= end; }
+
 void my_range::fix(size_t s){
 	end = end < 0 ? (end + s): end;
 	begin = begin < 0 ? (begin + s): begin;

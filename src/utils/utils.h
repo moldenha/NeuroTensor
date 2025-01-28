@@ -421,32 +421,21 @@ inline tbb::blocked_range3d<int64_t> calculateGrainSize3D(int64_t pages_start, i
 class my_tuple{
 	int64_t first, second;
 	public:
-		inline my_tuple(const int64_t a, const int64_t b)
-			:first(a), second(b)
-		{}
-
-		inline my_tuple(const int64_t a)
-			:first(a), second(a)
-		{}
-
-		inline my_tuple(std::tuple<int64_t, int64_t> t)
-			:first(std::get<0>(t)), second(std::get<1>(t))
-		{}
-
-		inline my_tuple& operator=(int64_t x){first = x; second = x; return *this;}
-		inline my_tuple& operator=(std::tuple<int64_t, int64_t> x){first = std::get<0>(x); second = std::get<1>(x); return *this;}
-		inline const int64_t& operator[](const int64_t x) const {if(x == 0){return first;}return second;}
-		inline bool operator==(const int64_t x) const {return (first == x && second == x);}
-		inline bool operator!=(const int64_t x) const {return (first != x && second != x);}
-		inline bool operator > (const int64_t x) const {return (first > x && second > x);}
-		inline bool operator < (const int64_t x) const {return (first < x && second < x);}
-		inline bool operator >= (const int64_t x) const {return (first >= x && second >= x);}
-		inline bool operator <= (const int64_t x) const {return (first <= x && second <= x);}
+		my_tuple(const int64_t a, const int64_t b);
+		my_tuple(const int64_t a);
+	    my_tuple(std::tuple<int64_t, int64_t> t);
+		my_tuple& operator=(int64_t x);
+		my_tuple& operator=(std::tuple<int64_t, int64_t> x);
+		const int64_t& operator[](const int64_t x) const;
+		bool operator==(const int64_t x) const ;
+		bool operator!=(const int64_t x) const ;
+		bool operator > (const int64_t x) const ;
+		bool operator < (const int64_t x) const ;
+		bool operator >= (const int64_t x) const ;
+		bool operator <= (const int64_t x) const ;
 };
 
-inline std::ostream& operator<<(std::ostream& out, const my_tuple& t){
-	return out << '(' << t[0] << ',' << t[1] << ')';
-}
+std::ostream& operator<<(std::ostream& out, const my_tuple& t);
 
 
 
@@ -478,7 +467,7 @@ class my_n_tuple{
 	}
 
 	template<typename T, T... ints>
-	inline void set_array_tuple(const generate_tuple_type_n<int64_t, N>& t, std::integer_sequence<T, ints...> int_seq){
+	inline void set_array_tuple(const typename generate_tuple_type_n<int64_t, N>::type& t, std::integer_sequence<T, ints...> int_seq){
 		((arr[ints] = std::get<ints>(t)), ...);
 	}
 	public:
@@ -486,93 +475,43 @@ class my_n_tuple{
 		inline my_n_tuple(const int64_t a, const int64_t b, const Args... args)
 		{
 			static_assert(N > 2 ? sizeof...(Args) + 2 == N : sizeof...(Args) == 0, "Expected to get N arguments for tuple");
-			static_assert(N >= 2, "Expected to get N arguments for tuple");
+			static_assert(N >= 2, "Expected to get N >= 2 arguments for tuple");
 			set_array(0, a, b, args...);
 		}
 
-		inline my_n_tuple(const int64_t a)
-		{
-			for(size_t i = 0; i < N; ++i)
-				arr[i] = a;
-		}
+		my_n_tuple(const int64_t a);
 
-		inline my_n_tuple(generate_tuple_type_n<int64_t, N> t){
+		inline my_n_tuple(typename generate_tuple_type_n<int64_t, N>::type t){
 			set_array_tuple(t, std::make_index_sequence<N>{});
 		}
 
-		inline my_n_tuple& operator=(int64_t x){
-			for(size_t i = 0; i < N; ++i)
-				arr[i] = x;
-			return *this;
-		}
-		inline my_tuple& operator=(generate_tuple_type_n<int64_t, N> t){
+		my_n_tuple& operator=(int64_t x);
+		inline my_n_tuple& operator=(typename generate_tuple_type_n<int64_t, N>::type t){
 			set_array_tuple(t, std::make_index_sequence<N>{});
+            return *this;
 		}
-		inline const int64_t& operator[](const int64_t x) const {return arr[x];}
-		inline bool operator==(const int64_t x) const {
-			for(size_t i = 0; i < N; ++i){
-				if(arr[i] != x){return false;}}
-			return true;
-		}
-		inline bool operator!=(const int64_t x) const {
-			for(size_t i = 0; i < N; ++i){
-				if(arr[i] == x){return false;}}
-			return true;
-		}
-		inline bool operator > (const int64_t x) const {
-			for(size_t i = 0; i < N; ++i){
-				if(arr[i] <= x){return false;}}
-			return true;
-		}
-		inline bool operator < (const int64_t x) const {
-			for(size_t i = 0; i < N; ++i){if(arr[i] >= x){return false;}}
-			return true;
-		}
-		inline bool operator >= (const int64_t x) const {
-			for(size_t i = 0; i < N; ++i){if(arr[i] < x){return false;}}
-			return true;
-		}
-		inline bool operator <= (const int64_t x) const {
-			for(size_t i = 0; i < N; ++i){if(arr[i] > x){return false;}}
-			return true;
-		}
+		const int64_t& operator[](const int64_t x) const; 
+		bool operator==(const int64_t x) const ;
+        bool operator!=(const int64_t x) const; 
+		bool operator > (const int64_t x) const;
+		bool operator < (const int64_t x) const; 
+		bool operator >= (const int64_t x) const; 
+		bool operator <= (const int64_t x) const; 
 };
 
 template<std::size_t N>
-inline std::ostream& operator<<(std::ostream& out, const my_n_tuple<N>& t){
-	out << '(';
-	for(uint32_t i = 0; i < N-1; ++i)
-		out << t[i] << ',';
-	return out << t[N-1] << ')';
-}
+std::ostream& operator<<(std::ostream& out, const my_n_tuple<N>& t);
 
 class tuple_or_int{
 	std::variant<int64_t, std::tuple<int64_t, int64_t>> val;
 	public:
-		inline tuple_or_int(int64_t x)
-			:val(x)
-		{}
-
-		inline tuple_or_int(std::tuple<int64_t, int64_t> x)
-			:val(x)
-		{}
-
-		inline tuple_or_int& operator=(int64_t x){val = x; return *this;}
-		inline tuple_or_int& operator=(std::tuple<int64_t, int64_t> x){val = x; return *this;}
-		inline std::tuple<int64_t, int64_t> to_tuple() const{
-			if(std::holds_alternative<std::tuple<int64_t, int64_t>>(val)){
-				return std::get<1>(val);
-			}
-			return std::tuple<int64_t, int64_t>(std::get<0>(val), std::get<0>(val));
-		}
-		inline operator std::tuple<int64_t, int64_t>() const {return to_tuple();}
-		inline my_tuple to_my_tuple() const {
-			if(std::holds_alternative<std::tuple<int64_t, int64_t>>(val)){
-				return my_tuple(std::get<1>(val));
-			}
-			return my_tuple(std::get<0>(val), std::get<0>(val));
-	
-		}
+		tuple_or_int(int64_t x);
+        tuple_or_int(std::tuple<int64_t, int64_t> x);
+	    tuple_or_int& operator=(int64_t x);
+		tuple_or_int& operator=(std::tuple<int64_t, int64_t> x);
+		std::tuple<int64_t, int64_t> to_tuple() const;
+        operator std::tuple<int64_t, int64_t>() const;
+		my_tuple to_my_tuple() const;
 };
 
 
@@ -656,20 +595,19 @@ inline constexpr bool is_class_function_return_type(R(T::*f)(Types...)){return s
 //repeat types
 //std::tuple<repeat_types_t<int, 4> > is the same as std::tuple<int, int, int, int>
 
-template <typename T, std::size_t N, typename... Ts>
-struct repeat_types_helper {
-    using type = typename repeat_types_helper<T, N - 1, T, Ts...>::type;
-};
+// template <typename T, std::size_t N, typename... Ts>
+// struct repeat_types_helper {
+//     using type = typename repeat_types_helper<T, N - 1, T, Ts...>::type;
+// };
 
-// Base case: N == 0
-template <typename T, typename... Ts>
-struct repeat_types_helper<T, 0, Ts...> {
-    using type = std::tuple<Ts...>;
-};
+// // Base case: N == 0
+// template <typename T, typename... Ts>
+// struct repeat_types_helper<T, 0, Ts...> {
+//     using type = std::tuple<Ts...>;
+// };
 
-// Alias for easier use
 template <typename T, std::size_t N>
-using repeat_types_t = typename repeat_types_helper<T, N>::type;
+using repeat_types_t = typename generate_tuple_type_n<T, N>::type;
 
 //primary template for variadic template check
 template <typename T, typename Arg1, typename... Args>
@@ -687,45 +625,41 @@ inline static constexpr bool is_all_same_v = is_all_same<T, Args...>::value;
 }} //nt::utils::
 
 
-namespace nt{
-namespace detect_number {
-	template<class T, class...Ts>
-	constexpr bool is_charlike(tag_t<T>, Ts&&...){ return false; }
-	constexpr bool is_charlike( tag_t<double> ){ return true; }
-	constexpr bool is_charlike( tag_t<float> ){ return true; }
-	constexpr bool is_charlike( tag_t<int32_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<uint32_t> ){ return true;}
-	constexpr bool is_charlike( tag_t<int64_t> ){return true;}
-	constexpr bool is_charlike( tag_t<int16_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<uint16_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<int8_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<uint8_t> ){ return true; }
-	template<class T>
-	constexpr bool detect=is_charlike(tag<T>);
-};
+// namespace nt{
+// namespace detect_number {
+// 	template<class T, class...Ts>
+// 	constexpr bool is_charlike(tag_t<T>, Ts&&...){ return false; }
+// 	constexpr bool is_charlike( tag_t<double> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<float> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<int32_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<uint32_t> ){ return true;}
+// 	constexpr bool is_charlike( tag_t<int64_t> ){return true;}
+// 	constexpr bool is_charlike( tag_t<int16_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<uint16_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<int8_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<uint8_t> ){ return true; }
+// 	template<class T>
+// 	constexpr bool detect=is_charlike(tag<T>);
+// };
 
-namespace detect_number_pc {
-	template<class T, class...Ts>
-	constexpr bool is_charlike(tag_t<T>, Ts&&...){ return false; }
-	constexpr bool is_charlike( tag_t<double> ){ return true; }
-	constexpr bool is_charlike( tag_t<float> ){ return true; }
-	constexpr bool is_charlike( tag_t<complex_128 >){ return true; }
-	constexpr bool is_charlike( tag_t<complex_64 >){ return true; }
-	constexpr bool is_charlike( tag_t<int32_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<uint32_t> ){ return true;}
-	constexpr bool is_charlike( tag_t<int64_t> ){return true;}
-	constexpr bool is_charlike( tag_t<int16_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<uint16_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<int8_t> ){ return true; }
-	constexpr bool is_charlike( tag_t<uint8_t> ){ return true; }
-	template<class T>
-	constexpr bool detect=is_charlike(tag<T>);
-};
+// namespace detect_number_pc {
+// 	template<class T, class...Ts>
+// 	constexpr bool is_charlike(tag_t<T>, Ts&&...){ return false; }
+// 	constexpr bool is_charlike( tag_t<double> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<float> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<complex_128 >){ return true; }
+// 	constexpr bool is_charlike( tag_t<complex_64 >){ return true; }
+// 	constexpr bool is_charlike( tag_t<int32_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<uint32_t> ){ return true;}
+// 	constexpr bool is_charlike( tag_t<int64_t> ){return true;}
+// 	constexpr bool is_charlike( tag_t<int16_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<uint16_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<int8_t> ){ return true; }
+// 	constexpr bool is_charlike( tag_t<uint8_t> ){ return true; }
+// 	template<class T>
+// 	constexpr bool detect=is_charlike(tag<T>);
+// };
 
-
-
-
-
-}
+// }
 
 #endif // _NT_UTILS_H_

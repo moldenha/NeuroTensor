@@ -1158,7 +1158,7 @@ inline static constexpr auto im2col_cpu_1d_backward = [](auto data_im_ptr, auto 
 };
 
 
-Tensor unfold1d_backward(const Tensor& x, const int64_t& output_size, const int64_t& kernel_size, const int64_t& dilation, const int64_t& padding, const int64_t& stride, const bool& transpose_out){
+Tensor unfold1d_backward(const Tensor& x, Tensor::size_value_t output_size, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out){
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BCOLS = output_size;
 	const int64_t L_c = ((output_size + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1;
@@ -1187,7 +1187,7 @@ Tensor unfold1d_backward(const Tensor& x, const int64_t& output_size, const int6
 }
 
 
-Tensor& unfold1d_backward(const Tensor& x, Tensor& output, const int64_t output_size, const int64_t kernel_size, const int64_t dilation, const int64_t padding, const int64_t stride, const bool transpose_out){
+Tensor& unfold1d_backward(const Tensor& x, Tensor& output, Tensor::size_value_t output_size, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out){
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BCOLS = output_size;
 	const int64_t L_c = ((output_size + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1;
