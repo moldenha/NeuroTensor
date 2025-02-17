@@ -21,7 +21,8 @@ namespace linalg{
 Tensor eye(int64_t n, int64_t b=0, DType dtype = DType::Float32); //make the identity matrix, b means batches
 Tensor eye_like(const Tensor&);
 Tensor norm(const Tensor& A, std::variant<std::nullptr_t, std::string, int64_t> ord = nullptr, utils::optional_list dim = nullptr, bool keepdim = false);
-
+Tensor determinant(const Tensor&);
+Tensor adjugate(const Tensor&);
 
 }} //nt::linalg::
 

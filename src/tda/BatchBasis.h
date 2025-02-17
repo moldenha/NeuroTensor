@@ -82,7 +82,7 @@ class BatchBasises{
 	double radius;
 	BatchKDTree tree;
 	std::unordered_map<std::pair<int64_t, Point>, size_t, BatchPointHash> pointToBasisOverlappingIndex;
-	void findMergeKDTree(std::vector<uint32_t>&);
+	void findMergeKDTree(std::vector<uint32_t>&, bool verbose=false);
 	void generateTracking(const BatchPoints& pts);
 	void sortBalls();
 	void sortBalls(std::vector<uint32_t>&);
@@ -91,7 +91,7 @@ class BatchBasises{
 			:radius(0),
 			tree(pts.dims(), pts.batches())
 		{generateTracking(pts);}
-		void radius_to(double r);
+		void radius_to(double r, bool verbose=false);
 		inline const std::vector<BasisOverlapping>& get_balls(int64_t batch){return balls[batch];}
 		//it is zero because it is sorted after every merge
 		inline const BasisOverlapping& getLargest(int64_t batch) const {return balls[batch][0];}

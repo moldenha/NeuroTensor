@@ -30,7 +30,8 @@ src/tda/refinement
 src/layers/old_layers
 #old intrusive ptr files
 src/intrusive_ptr/old
-src/dtyp/old
+src/dtype/old
+src/images/old
 old_tests/
 src/functional/matmult/miscellaneous
 

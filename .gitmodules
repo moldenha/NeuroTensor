@@ -11,3 +11,6 @@
 	path = third_party/stb
 	url = https://github.com/nothings/stb
 
+[submodule "third_party/matplot"]
+	path = third_party/matplot
+	url = https://github.com/alandefreitas/matplotplusplus

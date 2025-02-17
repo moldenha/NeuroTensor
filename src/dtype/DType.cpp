@@ -46,69 +46,72 @@ std::ostream& operator<<(std::ostream &out, const uint_bool_t &data){
 
 
 std::ostream& operator<< (std::ostream &out, DType const& data) {
-	switch(data){
-		case DType::Float:
-		      out << "DTypeFloat32";
-		      break;
-		case DType::Double:
-		      out << "DTypeFloat64";
-		      break;
-		case DType::Complex64:
-		      out << "DTypeComplex64";
-		      break;
-		case DType::Complex128:
-		      out << "DTypeComplex128";
-		      break;
-		case DType::Byte:
-		      out << "DTypeByteSigned8";
-		      break;
-		case DType::Short:
-			out << "DTypeShortSigned16";
-			break;
-		case DType::UnsignedShort:
-			out << "DTypeUnsignedShort16";
-			break;
-		case DType::Long:
-		      out << "DTypeUnsignedLong32";
-		      break;
-		case DType::Integer:
-		      out << "DTypeInteger32";
-		      break;
-		case DType::LongLong:
-		      out << "DTypeInteger64";
-		      break;
-		case DType::Bool:
-		      out << "DTypeBool";
-		      break;
-		case DType::TensorObj:
-		      out << "DTypeTensor";
-		      break;
+    switch(data){
+        case DType::Float:
+            out << "DTypeFloat32";
+            break;
+        case DType::Double:
+            out << "DTypeFloat64";
+            break;
+        case DType::Complex64:
+            out << "DTypeComplex64";
+            break;
+        case DType::Complex128:
+            out << "DTypeComplex128";
+            break;
+        case DType::int8:
+            out << "DTypeInt8";
+            break;
+        case DType::Byte:
+            out << "DTypeByteSigned8";
+            break;
+        case DType::Short:
+            out << "DTypeShortSigned16";
+            break;
+        case DType::UnsignedShort:
+            out << "DTypeUnsignedShort16";
+            break;
+        case DType::Long:
+            out << "DTypeUnsignedLong32";
+            break;
+        case DType::Integer:
+            out << "DTypeInteger32";
+            break;
+        case DType::LongLong:
+            out << "DTypeInteger64";
+            break;
+        case DType::Bool:
+            out << "DTypeBool";
+            break;
+        case DType::TensorObj:
+            out << "DTypeTensor";
+            break;
 #ifdef __SIZEOF_INT128__
-		case DType::int128:
-		      out << "DTypeInt128";
-		      break;
-		case DType::uint128:
-		      out << "DTypeUnsignedInt128";
-		      break;
+        case DType::int128:
+            out << "DTypeInt128";
+            break;
+        case DType::uint128:
+            out << "DTypeUnsignedInt128";
+            break;
 #endif
 #ifdef _HALF_FLOAT_SUPPORT_
-		case DType::Float16:
-		      out << "DTypeFloat16";
-		      break;
-		case DType::Complex32:
-		      out << "DTypeComplex32";
-		      break;
+        case DType::Float16:
+            out << "DTypeFloat16";
+            break;
+        case DType::Complex32:
+            out << "DTypeComplex32";
+            break;
 #endif
 #ifdef _128_FLOAT_SUPPORT_
-		case DType::Float128:
-		      out << "DTypeFloat128";
-		      break;
+            case DType::Float128:
+            out << "DTypeFloat128";
+        break;
 #endif
-		default:
-		      out << "UnknownType";
-		      break;
-	}
-	return out;
+        default:
+            out << "UnknownType";
+            break;
+    }
+    return out;
 }
 
 

@@ -16,6 +16,7 @@ class Points;
 #include <sys/types.h>
 #include <unordered_set>
 #include <utility>
+#include <algorithm>
 #include "../images/image.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "../refs/intrusive_list.h"
@@ -157,6 +158,14 @@ inline int64_t sum(const Point& p) noexcept {
 	return std::accumulate(p.cbegin(), p.cend(), int64_t(0));
 }
 
+inline bool operator<(const Point& p1, const Point& p2){
+    return sum(p1) < sum(p2);
+}
+// inline bool operator<(const Point& p1, const Point& p2){
+//     return std::lexicographical_compare(p1.cbegin(), p1.cend(),
+//                                     p2.cbegin(), p2.cend());
+// }
+
 inline std::ostream& operator<<(std::ostream& os, const Point& p){
 	os << '(';
 	for(size_t i = 0; i < p.size()-1; ++i)
@@ -241,6 +250,14 @@ inline points_2d getPoints2d(const std::string img_ptw, uint8_t point=1){
 
 }
 
+}
+
+namespace std{
+template<>
+struct hash<::nt::tda::Point> : ::nt::tda::PointHash {};
+
+template<>
+struct hash<::nt::tda::Point2d> : ::nt::tda::Point2dHash {};
 }
 
 #endif

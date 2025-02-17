@@ -1,5 +1,6 @@
 #include "../src/layers/Layer.h"
 #include "../src/layers/LNN.h"
+#include "../src/layers/ncps/cfc/cfc.h"
 #include "../src/layers/Optimizers.h"
 #include <iostream>
 #include <sstream>
@@ -98,8 +99,18 @@ void test_layers(){
 }
 
 
+inline ::nt::reflect::detail::custom_any_map get_named_module_vars(nt::Module* ptr){
+	for(auto& it : ::nt::reflect::detail::getRegistry()){
+		if(std::get<1>(it)(ptr)){
+			return std::get<3>(it)(ptr);
+		}
+	}
+	return nt::reflect::detail::custom_any_map();
+}
 
 
+//TODO: put all of the register layers inside of a .cpp file
+//will be registered and avoid redundancies
 void test_lnn(){
 	auto critereon = nt::loss::MSE;
 	nt::TensorGrad input(nt::functional::randn({1, 2, 20}, nt::DType::Float32));
@@ -116,6 +127,14 @@ void test_lnn(){
 		nt::TensorGrad loss = critereon(output, wanted);
 		std::cout << "loss: "<<loss.item() << std::endl;
 		loss.backward();
+        for(const auto& tg : model.parameters()){
+            std::cout << "gradient for "<<tg.shape()<<std::endl;
+            if(tg.grad != nullptr){
+                std::cout << tg.grad->tensor << std::endl;
+            }else{
+                std::cout << tg.shape() << "had nullptr gradient"<<std::endl;
+            }
+        }
 		optimizer.step();
 	}
 	std::cout << model(input) << std::endl;

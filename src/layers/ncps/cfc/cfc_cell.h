@@ -52,6 +52,6 @@ _NT_REGISTER_LAYER_NAMESPACED_(nt::ncps::CfCCell, nt__ncps__CfCCell, input_size,
                                sparsity_mask, backbone,
                                time_a, time_b, ff1_weight, ff1_bias, ff2_weight,
                                ff2_bias, w_tau, A)
-_NT_REGISTER_LAYER_NAMESPACED_(nt::ncps::LeCun, nt__ncps__LeCun)
+// _NT_REGISTER_LAYER_NAMESPACED_(nt::ncps::LeCun, nt__ncps__LeCun)
 
 #endif //_NT_LAYERS_NCPS_CFC_CELL_H_

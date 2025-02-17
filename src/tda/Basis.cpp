@@ -31,6 +31,7 @@ bool BasisOverlapping::intersect(const BasisOverlapping& b2) const {
 
 std::vector<Basis> BasisOverlapping::getConnected(const Point& p) const {
 	std::vector<Basis> connections;
+    connections.reserve(Balls.size() / 2);
 	for(const auto& pair : Balls){
 		if(pair.first == p){
 			/* connections.push_back(pair.second); */

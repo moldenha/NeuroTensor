@@ -17,13 +17,14 @@
 #include "tests/tensor_test.h"
 // #include "tests/tensorgrad_test.h"
 // #include "tests/layer_test.h"
-
+#include "tests/tda_test.h"
 
 
 
 
 int main(){
-	convT_gradient_tests();
+    persistent_diagram_test();
+	// convT_gradient_tests();
 	/* test_layers(); */
 	// test_lnn();
 

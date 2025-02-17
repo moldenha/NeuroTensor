@@ -72,7 +72,7 @@ inline void TensorGrad::track_self_mod(std::function<void(const Tensor&, std::ve
 	}
 
 
-	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children, grad_required);
+	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children, grad_required, std::move(_child_counter));
 	this->parents = std::vector<intrusive_ptr<TensorGrad> >();
 	utils::throw_exception(this->parents.size() == 0, "Expected parent size to be 0 but got $", this->parents.size());
 	const size_t other_indice = 0;
@@ -80,7 +80,7 @@ inline void TensorGrad::track_self_mod(std::function<void(const Tensor&, std::ve
 	this->backwardFunc = make_intrusive<intrusive_back_func>(intrusive_back_func::function_type(std::bind(new_backward_func, std::placeholders::_1, std::placeholders::_2, other_indice)));
 	utils::THROW_EXCEPTION(this->backwardFunc->index() == 1, "Expected to have an index of 1 in the backward func but got $", this->backwardFunc->index());
 
-
+    this->_child_counter = make_intrusive<intrusive_variable<int64_t>>(0);
 	if(old_self.is_child()){
 		/* children->push_back(*this); */
 		for(auto& parent : old_self.parents){
@@ -109,13 +109,14 @@ inline void TensorGrad::track_self_mod(std::function<void(const Tensor&, std::ve
 	}
 
 
-	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children, grad_required);
+	TensorGrad old_self(tensor, grad, std::move(backwardFunc), std::move(parents), children, grad_required, std::move(_child_counter));
 	this->parents = std::vector<intrusive_ptr<TensorGrad> >();
 	utils::throw_exception(this->parents.size() == 0, "Expected parent size to be 0 but got $", this->parents.size());
 	const size_t other_indice = 0;
 	this->track_tensors(old_self, args...);
 	this->backwardFunc = make_intrusive<intrusive_back_func>(intrusive_back_func::function_type_b(std::bind(new_backward_func, std::placeholders::_1, std::placeholders::_2, other_indice, std::placeholders::_3)));
 	utils::THROW_EXCEPTION(this->backwardFunc->index() == 2, "Expected to have an index of 1 in the backward func but got $", this->backwardFunc->index());
+    this->_child_counter = make_intrusive<intrusive_variable<int64_t>>(0);
 
 
 	if(old_self.is_child()){
@@ -125,7 +126,7 @@ inline void TensorGrad::track_self_mod(std::function<void(const Tensor&, std::ve
 			if(parent->children->size() > 0){
 				for(uint32_t i = 0; i < parent->children->size(); ++i){
 					if(parent->children->at(i)->children == this->children){
-						parent->children->push_back(*this);
+						parent->children->push_back(*this); //makes itself a child of old_self
 						b = true;
 						break;
 					}
@@ -144,6 +145,7 @@ inline void TensorGrad::track_tensors(const TensorGrad& t){
 	if(t.grad == nullptr){
 		t.grad = nt::make_intrusive<tensor_holder>(nt::functional::zeros_like(t.tensor));
 	}
+    t._child_counter->get() += 1;
 	parents.push_back(nt::make_intrusive<TensorGrad>(t));
 }
 
@@ -154,6 +156,7 @@ inline void TensorGrad::track_tensors(const TensorGrad& t, const Args&... args){
 	if(t.grad == nullptr){
 		t.grad = nt::make_intrusive<tensor_holder>(nt::functional::zeros_like(t.tensor));
 	}
+    t._child_counter->get() += 1;
 	parents.push_back(nt::make_intrusive<TensorGrad>(t));
 	track_tensors(args...);
 }
@@ -173,6 +176,7 @@ inline void TensorGrad::track_grad(const TensorGrad& t, OutOperator&& op){
 	if(t.grad == nullptr){
 		t.grad = nt::make_intrusive<tensor_holder>(nt::functional::zeros_like(t.tensor));
 	}
+    // t._child_counter->get() += 1;
 	parents.push_back(nt::make_intrusive<TensorGrad>(t));
 	//just change the gradient views or strides or whatever it may be
 	this->grad = nt::make_intrusive<tensor_holder>(op(parents.back()->grad->tensor));

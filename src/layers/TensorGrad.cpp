@@ -21,23 +21,27 @@ void find_is_parents_cleared(const std::vector<intrusive_ptr<TensorGrad> >& pare
 //but maybe make it an intrusive ptr, that way if parents are added to other tensors it can be tracked
 //or maybe just add threading to the function above
 void TensorGrad::backward_self(const Tensor &grad, bool first) {
-    if (this->backwardFunc->is_cleared()){
-        // this means that backward_self has already been run for this 
-        // specific tensor just it has been the parent of multiple tensors
-        // which means that all of it's parents have also had their 
-        // backward_self called, which means there is no reason to contiue
-        bool out = true;
-        //so adding this does cause a speed up
-        //but not enough
-        //if it was just return, itd be fast af
-        //but unfortunately thats not totally correct
-        //I need to add a way to mark that an entire path of parents have been cleared
-        find_is_parents_cleared(this->parents, out);
-        if(out == true){return;}
-        backward_parents();
-        return;
-    }
+    // if (this->backwardFunc->is_cleared()){
+    //    // this means that backward_self has already been run for this 
+    //    // specific tensor just it has been the parent of multiple tensors
+    //    // which means that all of it's parents have also had their 
+    //    // backward_self called, which means there is no reason to contiue
+    //    bool out = true;
+    //    //so adding this does cause a speed up
+    //    //but not enough
+    //    find_is_parents_cleared(this->parents, out);
+    //    if(out == true){return;}
+    //    backward_parents();
+    //    return;
+        // if(this->_child_counter->get() == 0)
+        //     std::cout << "backward func has been cleared and my child index is "<< this->_child_counter->get() 
+        //         << ' ' << shape() <<std::endl;
+    // }
+    // if(this->_child_counter->get() != 0){backward_parents(); return;}
     if (this->backwardFunc->is_valid()) {
+        // if(this->_child_counter->get() != 0){
+        //     std::cout << "going to run backward func, and my child index is "<<this->_child_counter->get() << ' ' << shape() <<std::endl;
+        // }
         // auto start = std::chrono::high_resolution_clock::now();
         if (first) {
             this->backwardFunc->run(grad, this->parents, first);
@@ -80,6 +84,11 @@ void TensorGrad::backward_child(const Tensor &grad,
     // the normal backward parents:
 
     for (auto &parent : cpy_parents) {
+        // code to check if parent is now 0:
+        // do not increment since this is a child, and the track
+        // grad function does not increment _child_counter
+        // --parent->_child_counter->get();
+        // if( parent->_child_counter->get() != 0){continue;} 
         parent->backward_self(parent->grad->tensor);
     }
     // then done with this tensor :)
@@ -99,10 +108,13 @@ void TensorGrad::backward_parents() {
     for (auto &parent : this->parents) {
 
         if(parent->grad == nullptr){
-            std::cout << "having to make a grad for parent shape "<<parent->shape()<<" should be an error!"<<std::endl;
+            // std::cout << "having to make a grad for parent shape "<<parent->shape()<<" should be an error!"<<std::endl;
             parent->grad = 
                 make_intrusive<tensor_holder>(functional::zeros_like(parent->tensor));
         }
+        //code to check if parent is now 0:
+        --parent->_child_counter->get();
+        // if( parent->_child_counter->get() != 0){continue;} 
 
         parent->backward_self(parent->grad->tensor);
     }
@@ -114,33 +126,35 @@ TensorGrad::TensorGrad(Tensor t, intrusive_ptr<tensor_holder> g,
                        intrusive_ptr<intrusive_back_func> f,
                        std::vector<intrusive_ptr<TensorGrad>> p,
                        intrusive_ptr<intrusive_vector_tg> c,
-                       bool _grad_required)
+                       bool _grad_required, intrusive_ptr<intrusive_variable<int64_t>> cntr)
     : grad_required(_grad_required) , tensor(t), dtype(tensor.dtype),
       do_track_grad(_grad_required), grad(g), backwardFunc(f),
-      parents(std::move(p)), children(c) {}
+      parents(std::move(p)), children(c), _child_counter(cntr) {}
 
 TensorGrad::TensorGrad(Scalar value, bool grad_required)
     : grad_required(grad_required), tensor(nt::Scalar(value)),
       dtype(tensor.dtype), do_track_grad(grad_required), grad(nullptr),
       backwardFunc(make_intrusive<intrusive_back_func>()), parents({}),
-      children(make_intrusive<intrusive_vector_tg>()) {}
+      children(make_intrusive<intrusive_vector_tg>()), _child_counter(make_intrusive<intrusive_variable<int64_t> >(0)) {}
 
 TensorGrad::TensorGrad(const Tensor &t, bool grad_required)
     : grad_required(grad_required), tensor(t), dtype(tensor.dtype),
       do_track_grad(grad_required), grad(nullptr),
       backwardFunc(make_intrusive<intrusive_back_func>()), parents({}),
-      children(make_intrusive<intrusive_vector_tg>()) {}
+      children(make_intrusive<intrusive_vector_tg>()), _child_counter(make_intrusive<intrusive_variable<int64_t> >(0)) {}
 
 TensorGrad::TensorGrad(Tensor &&t, bool grad_required)
     : grad_required(grad_required), tensor(t), dtype(tensor.dtype),
       do_track_grad(grad_required), grad(nullptr),
       backwardFunc(make_intrusive<intrusive_back_func>()), parents({}),
-      children(make_intrusive<intrusive_vector_tg>()) {}
+      children(make_intrusive<intrusive_vector_tg>()), _child_counter(make_intrusive<intrusive_variable<int64_t> >(0)) {}
 TensorGrad::TensorGrad(TensorGrad &&tg)
     : grad_required(tg.grad_required), tensor(std::move(tg.tensor)),
       dtype(tensor.dtype), do_track_grad(tg.do_track_grad),
       grad(std::move(tg.grad)), backwardFunc(std::move(tg.backwardFunc)),
-      parents(std::move(tg.parents)), children(std::move(tg.children)) {
+      parents(std::move(tg.parents)), children(std::move(tg.children)),
+      _child_counter(std::move(tg._child_counter))
+{
     const_cast<bool &>(tg.grad_required) = false;
     tg.do_track_grad = false;
 }
@@ -149,12 +163,12 @@ TensorGrad::TensorGrad(const TensorGrad &tg)
     : grad_required(tg.grad_required), tensor(tg.tensor), dtype(tensor.dtype),
       do_track_grad(tg.do_track_grad), grad(tg.grad),
       backwardFunc(tg.backwardFunc), parents(tg.parents),
-      children(tg.children) {}
+      children(tg.children), _child_counter(tg._child_counter) {}
 
 TensorGrad::TensorGrad(std::nullptr_t, bool grad_required)
     : grad_required(grad_required), tensor(nullptr), dtype(tensor.dtype),
       do_track_grad(false), // default false for nullptr
-      grad(nullptr), backwardFunc(nullptr), parents({}), children(nullptr) {}
+      grad(nullptr), backwardFunc(nullptr), parents({}), children(nullptr), _child_counter(nullptr) {}
 
 void TensorGrad::swap(TensorGrad &tg) {
     tensor.swap(tg.tensor);
@@ -166,6 +180,7 @@ void TensorGrad::swap(TensorGrad &tg) {
     std::swap(const_cast<bool &>(tg.grad_required),
               const_cast<bool &>(grad_required));
     std::swap(const_cast<DType &>(tg.dtype), const_cast<DType &>(dtype));
+    std::swap(tg._child_counter, _child_counter);
 }
 
 TensorGrad &TensorGrad::operator=(const TensorGrad &tg) {
@@ -177,6 +192,7 @@ TensorGrad &TensorGrad::operator=(const TensorGrad &tg) {
     do_track_grad = tg.do_track_grad;
     const_cast<bool &>(grad_required) = tg.grad_required;
     const_cast<DType &>(dtype) = tensor.dtype;
+    _child_counter = tg._child_counter;
     return *this;
 }
 
@@ -191,6 +207,7 @@ TensorGrad &TensorGrad::operator=(TensorGrad &&tg) {
     const_cast<bool &>(tg.grad_required) = false;
     tg.do_track_grad = false;
     const_cast<DType &>(dtype) = tensor.dtype;
+    _child_counter = std::move(tg._child_counter);
     return *this;
 }
 
@@ -231,6 +248,7 @@ TensorGrad &TensorGrad::operator=(Scalar s) {
         backwardFunc = make_intrusive<intrusive_back_func>();
         children = make_intrusive<intrusive_vector_tg>();
         const_cast<DType &>(dtype) = tensor.dtype;
+        _child_counter = make_intrusive<intrusive_variable<int64_t>>(0);
         return *this;
     }
     tensor = s;
@@ -252,6 +270,7 @@ TensorGrad &TensorGrad::nullify() {
     parents.clear();
     children = nullptr;
     const_cast<DType &>(dtype) = tensor.dtype;
+    _child_counter = nullptr;
     return *this;
 }
 
@@ -264,6 +283,7 @@ TensorGrad &TensorGrad::set_(const Tensor &t) {
         backwardFunc = make_intrusive<intrusive_back_func>();
         children = make_intrusive<intrusive_vector_tg>();
         const_cast<DType &>(dtype) = tensor.dtype;
+        _child_counter = make_intrusive<intrusive_variable<int64_t>>(0);
         return *this;
     }
 

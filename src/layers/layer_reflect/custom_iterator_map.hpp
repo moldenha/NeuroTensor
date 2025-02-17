@@ -47,24 +47,31 @@ class custom_any_map{
 			add_tuple<I+1>(names, t);
 		}
 	}
-	public:
-		explicit custom_any_map() {;}
+public:
+    explicit custom_any_map() {;}
 
-		template<typename... Args>
-		explicit custom_any_map(std::vector<std::string> names, std::tuple<Args...>& t){
-			assert(names.size() == std::tuple_size_v<std::tuple<Args...>>);
-			add_tuple(names, t);
-		}
-		template<typename... Args>
-		explicit custom_any_map(std::vector<std::string> names, Args&... args){
-			assert(sizeof...(Args) == names.size());
-			auto begin = names.cbegin();
-			add_references(begin, args...);
-		}
+    template<typename... Args>
+    explicit custom_any_map(std::vector<std::string> names, std::tuple<Args...>& t){
+        assert(names.size() == std::tuple_size_v<std::tuple<Args...>>);
+        add_tuple(names, t);
+    }
+    template<typename... Args>
+    explicit custom_any_map(std::vector<std::string> names, Args&... args){
+        assert(sizeof...(Args) == names.size());
+        auto begin = names.cbegin();
+        add_references(begin, args...);
+    }
 
-		inline size_t size() const {return references.size();}
+    inline size_t size() const {return references.size();}
 
-		inline std::map<std::string, std::any>& get_references(std::type_index index) noexcept {return references[index];}
+    inline std::map<std::string, std::any>& get_references(std::type_index index) noexcept {return references[index];}
+    inline std::vector<std::type_index> keys() const {
+        std::vector<std::type_index> out;
+        out.reserve(references.size());
+        for(const auto& [key, map] : references)
+            out.push_back(key);
+        return std::move(out);
+    }
 };
 
 template<typename T>

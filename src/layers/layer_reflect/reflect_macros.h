@@ -452,6 +452,8 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
     }
 }
 
+
+
 // #define _NT_CLASS_HAS_FUNCTION_(function_name, class) ::nt::reflect::detail::has_##function_name<class>::value
 
 }} //nt::reflect::detail::
@@ -459,37 +461,40 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 #define _NT_REGISTER_LAYER_(Derived, ...)\
 	namespace derived_detail{\
 		const bool registered_##Derived = [](){ \
-			::nt::reflect::detail::getRegistry().emplace_back(\
+			::nt::reflect::detail::getRegistry().emplace_back(std::make_tuple(\
 				std::type_index(typeid(Derived)),\
-				[](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }, \
-				[](::nt::Module* ptr) {\
+				std::function<bool(::nt::Module*)>([](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }), \
+				std::function<::nt::reflect::detail::custom_any_iterator(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_iterator {\
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_iterator();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
 						return ::nt::reflect::detail::custom_any_iterator(_NT_CLS_TO_ITERATOR_(dynamic_ptr, Derived, __VA_ARGS__));\
 					}\
-				}, \
-				[](::nt::Module* ptr){\
+                }), \
+				std::function<::nt::reflect::detail::custom_any_map(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_map{\
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_map();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
 						return _NT_CLS_TO_MAP_(dynamic_ptr, Derived, __VA_ARGS__);\
 					}\
-				},\
-				#Derived,\
-				[](){return ::nt::reflect::detail::has_forward_v<Derived>;},\
-				[](){return ::nt::reflect::detail::has_backward_v<Derived>;},\
-				[](){return ::nt::reflect::detail::has_eval_v<Derived>;},\
+				}),\
+                std::string(#Derived),\
+				std::function<bool()>([](){return ::nt::reflect::detail::has_forward_v<Derived>;}),\
+				std::function<bool()>([](){return ::nt::reflect::detail::has_backward_v<Derived>;}),\
+				std::function<bool()>([](){return ::nt::reflect::detail::has_eval_v<Derived>;}),\
+                std::function<std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>(::nt::Module*)>(\
 				[](::nt::Module* ptr) -> std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>{\
                     return ::nt::reflect::detail::bind_backward_expression_<Derived>(dynamic_cast<Derived*>(ptr));\
-				},\
-			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
-                return ::nt::reflect::detail::run_forward_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
-            },\
-			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
-                return ::nt::reflect::detail::run_eval_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
-            }\
-				);\
+				}),\
+                std::function<::nt::TensorGrad(::nt::Module*, std::vector<::nt::utils::any_ref>)>(\
+                [](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                    return ::nt::reflect::detail::run_forward_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+                }),\
+                std::function<::nt::TensorGrad(::nt::Module*, std::vector<::nt::utils::any_ref>)>(\
+                [](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                    return ::nt::reflect::detail::run_eval_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+                })\
+            ));\
 			return true;\
 		}();\
 	}
@@ -505,10 +510,10 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 #define _NT_REGISTER_LAYER_NAMESPACED_(Derived, DerivedNamespaced, ...)\
 	namespace derived_detail {\
 		const bool registered_##DerivedNamespaced = []() {\
-			::nt::reflect::detail::getRegistry().emplace_back(\
+			::nt::reflect::detail::getRegistry().emplace_back(std::make_tuple(\
 				std::type_index(typeid(Derived)),\
-				[](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; },\
-				[](::nt::Module* ptr) {\
+				std::function<bool(::nt::Module*)>([](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }),\
+				std::function<::nt::reflect::detail::custom_any_iterator(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_iterator {\
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0) {\
 						return ::nt::reflect::detail::custom_any_iterator();\
 					} else {\
@@ -517,29 +522,32 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 							_NT_CLS_TO_ITERATOR_(dynamic_ptr, Derived, __VA_ARGS__)\
 						);\
 					}\
-				},\
-				[](::nt::Module* ptr) {\
+                }),\
+				std::function<::nt::reflect::detail::custom_any_map(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_map {\
 					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0) {\
 						return ::nt::reflect::detail::custom_any_map();\
 					} else {\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
 						return _NT_CLS_TO_MAP_(dynamic_ptr, Derived, __VA_ARGS__);\
 					}\
-				},\
-				#Derived,\
-				[]() { return ::nt::reflect::detail::has_forward_v<Derived>; },\
-				[]() {return ::nt::reflect::detail::has_backward_v<Derived>;},\
-				[]() { return ::nt::reflect::detail::has_eval_v<Derived>; },\
-				[](::nt::Module* ptr) -> std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>{\
+				}),\
+                std::string(#Derived),\
+				std::function<bool()>([]() { return ::nt::reflect::detail::has_forward_v<Derived>; }),\
+				std::function<bool()>([]() {return ::nt::reflect::detail::has_backward_v<Derived>;}),\
+				std::function<bool()>([]() { return ::nt::reflect::detail::has_eval_v<Derived>; }),\
+				std::function<std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>(::nt::Module*)>(\
+                [](::nt::Module* ptr) -> std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)>{\
                     return ::nt::reflect::detail::bind_backward_expression_<Derived>(dynamic_cast<Derived*>(ptr));\
-				},\
-			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
-                return ::nt::reflect::detail::run_forward_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
-            },\
-			[](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
-                return ::nt::reflect::detail::run_eval_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
-            }\
-			);\
+				}),\
+                std::function<::nt::TensorGrad(::nt::Module*, std::vector<::nt::utils::any_ref>)>(\
+                [](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                    return ::nt::reflect::detail::run_forward_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+                }),\
+                std::function<::nt::TensorGrad(::nt::Module*, std::vector<::nt::utils::any_ref>)>(\
+                [](::nt::Module* ptr, std::vector<::nt::utils::any_ref> _vec) -> ::nt::TensorGrad{ \
+                    return ::nt::reflect::detail::run_eval_expression_<Derived>(dynamic_cast<Derived*>(ptr), std::move(_vec));\
+                })\
+            ));\
 			return true;\
 		}();\
 	}

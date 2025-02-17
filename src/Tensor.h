@@ -24,6 +24,7 @@ class Tensor;
 #include "dtype/Scalar.h"
 #include "utils/utils.h"
 #include "utils/optional_list.h"
+
 /* #include "CustomOperator.h" */
 #include <type_traits>
 /* #include "Itterator.h" */
@@ -67,6 +68,7 @@ namespace result_types{
 class Tensor final{
 	friend class ArrayVoid;
 	friend class Bucket;
+    friend class SparseTensor;
 	public:
 		DType dtype;
 		using size_value_t = typename SizeRef::ArrayRefInt::value_type;
@@ -168,6 +170,7 @@ class Tensor final{
 
 		Tensor& fill_(Scalar);
 		Tensor& fill_(const Tensor& val);
+        Tensor& fill_diagonal_(Scalar);
 		Tensor& add_(Scalar val);
 		Tensor& add_(const Tensor& val);
 		Tensor& subtract_(Scalar val);
@@ -184,6 +187,23 @@ class Tensor final{
 		const T& item() const;
 		template<typename T>
 		T& item();
+        template<typename T>
+        T& item(const std::vector<size_value_t>&);
+        template<typename T>
+        const T& item(const std::vector<size_value_t>&) const;
+        template<typename T, typename... Args>
+        inline T& item(int64_t i, Args... args){
+            std::vector<size_value_t> s;
+			collectIntegers(s, i, args...);
+			return this->item<T>(s);
+        }
+        template<typename T, typename... Args>
+        inline const T& item(int64_t i, Args... args) const {
+            std::vector<size_value_t> s;
+			collectIntegers(s, i, args...);
+			return this->item<T>(s);
+        }
+
 		inline const bool is_contiguous() const {return _vals.is_contiguous();}
 		inline const bool is_empty() const {return _vals.is_empty() && _total_size == 0;}
 		inline const bool is_null() const {return _vals.is_null();}
@@ -201,6 +221,24 @@ class Tensor final{
 		/* const Tensor operator[](Ts... ts) const; */
 		const Tensor operator[](std::vector<my_range>) const;
 		Tensor operator[](std::vector<my_range>);
+		const Tensor operator[](std::vector<size_value_t>) const;
+		Tensor operator[](std::vector<size_value_t>);
+        Tensor index_except(int64_t dim, int64_t excluding_index) const;   
+
+		template<typename... Args>
+        inline const Tensor operator()(int64_t i, Args&&... args) const {
+			std::vector<size_value_t> s;
+			collectIntegers(s, i, args...);
+			return (*this)[std::move(s)];
+			
+		}
+        template<typename... Args>
+        inline Tensor operator()(int64_t i, Args&&... args) {
+			std::vector<size_value_t> s;
+			collectIntegers(s, i, args...);
+			return (*this)[std::move(s)];
+			
+		}
 		void print() const;
 		void* data_ptr(); // _vals.strides()[0] <- important distinction btwn what vals and this will return this tensors beggining ptr, versus vals will return the shared pointers first
 		const void* data_ptr() const;
@@ -346,7 +384,7 @@ class Tensor final{
 		class Iterator{
 			public:
 				explicit Iterator(const Tensor& p, int64_t index) : ptr(p), index(index) {}
-				inline const Tensor operator*() {return ptr.dtype == DType::TensorObj ? ptr[index].item<Tensor>() : ptr[index];}
+				inline const Tensor operator*() {return ptr.dtype == DType::TensorObj ? reinterpret_cast<const Tensor*>(ptr.data_ptr())[index] : ptr[index];}
 				inline const Iterator& operator++() {++index;return *this;}
 				inline bool operator!=(const Iterator& other) const {return other.index != index;}
 			private:
@@ -400,6 +438,8 @@ Tensor operator/(Scalar s, const Tensor& t);
 // Specialization of std::swap for nt::Tensor
 #include "functional/functional.h"
 #include "functional/tensor_get.h"
+#include "utils/SparseTensor.h"
+
 namespace std {
     inline void swap(::nt::Tensor& lhs, ::nt::Tensor& rhs) {
         lhs.swap(rhs); // Call your custom swap function

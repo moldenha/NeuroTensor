@@ -44,6 +44,7 @@ int64_t Bucket::blocked_stride_size() const{
 		const uint8_t* end = reinterpret_cast<const uint8_t*>(strides_[i]);
 		/* std::cout << "inner block size: "<<(end-begin)<<std::endl; */
 		size += (end - begin);
+        // std::cout << "size is currently "<<size / dtype_s << std::endl;
 	}
 	return size / dtype_s;
 }
@@ -729,7 +730,7 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
 	nt::utils::THROW_EXCEPTION(start < end, "Expected start to be less than end but got $ and $", start, end);
 	nt::utils::THROW_EXCEPTION(end <= size(), "Expected end to be less than or equal to $ but got $", size(), end);
 	const std::size_t dtype_s = DTypeFuncs::size_of_dtype(dtype);
-	if(!strides_blocked){
+    if(!strides_blocked){
 		return Bucket(buckets_, strides_ + start, end-start, bs, false, dtype);
 	}
 	if(is_contiguous()){
@@ -764,9 +765,9 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
 		nt::intrusive_ptr<void*[]> nStrides(2);
 		nStrides[0] = reinterpret_cast<uint8_t*>(*(stride_begin() + checked_begin)) + (start * dtype_s);
 		nStrides[1] = reinterpret_cast<uint8_t*>(*(stride_begin() + checked_begin)) + (end   * dtype_s);
-		return Bucket(buckets_, std::move(nStrides), 2, 1, true, dtype);
+        return Bucket(buckets_, std::move(nStrides), 2, 1, true, dtype);
 	}
-	uint64_t ntSizeCpy = ntSize;
+	int64_t ntSizeCpy = ntSize;
 	ntSize -= start;
 	checked_end += 2;
 	for(;checked_end < stride_size; checked_end += 2){
@@ -788,16 +789,18 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
 	++my_strides_begin; // next end
 	uint64_t current_size = ((reinterpret_cast<uint8_t*>(*my_strides_begin) - reinterpret_cast<uint8_t*>(*(my_strides_begin-1)))) - start;
 	*arr = *my_strides_begin;
-	end -= current_size;
+	end -= (current_size + start);
+
 	/* *arr = stride_begin() + (checked_begin * 2 + 1); */
 	++arr; //now at next start
 	++my_strides_begin; //now at next start
 	for(;arr != arr_end;){
 		*arr = *my_strides_begin;
 		++arr;//now at next end
-		if(arr + 1 == arr_end){break;}
+        if(arr + 1 == arr_end){break;}
 		++my_strides_begin;//now at next end
 		uint64_t current_size = ((reinterpret_cast<uint8_t*>(*(my_strides_begin+1)) - reinterpret_cast<uint8_t*>(*my_strides_begin)));
+
 		*arr = *my_strides_begin;
 		end -= current_size;
 		++arr;//now at next end

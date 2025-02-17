@@ -531,27 +531,12 @@ bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
 	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
 	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<F>;
 	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<T>;
-	uint32_t type_a = out.get_bucket().iterator_type();
-	uint32_t type_b = my_arr.get_bucket().iterator_type();
-	utils::throw_exception(type_a == 1, "Expected in turn dtype for output to be contiguous, but got iterator type $, problem with creation", type_a);
-	if(type_b == 1){
-		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>();
-		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return ::nt::convert::convert<T, my_value_t>(val);});
-	}
-	else if(type_b == 2){
-		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>();
-		auto end = my_arr.get_bucket().cend_blocked<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return ::nt::convert::convert<T, my_value_t>(val);});
-	}
-	else if(type_b == 3){
-		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>();
-		auto end = my_arr.get_bucket().cend_list<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){return ::nt::convert::convert<T, my_value_t>(val);});
-	}
+    out_value_t* out_ptr = reinterpret_cast<out_value_t*>(out.data_ptr());
+    const_cast<ArrayVoid&>(my_arr).execute_function<WRAP_DTYPES<DTypeEnum<F> > >([&out_ptr](auto begin, auto end){
+        for(;begin != end; ++begin, ++out_ptr){
+            *out_ptr = ::nt::convert::convert<T, my_value_t>(*begin);
+        }
+    });
 	return true;
 }
 
@@ -561,27 +546,14 @@ bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
 	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
 	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<F>;
 	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<T>;
-	uint32_t type_a = out.get_bucket().iterator_type();
-	uint32_t type_b = my_arr.get_bucket().iterator_type();
-	utils::throw_exception(type_a == 1, "Expected in turn dtype for output to be contiguous, but got iterator type $, problem with creation", type_a);
-	if(type_b == 1){
-		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>();
-		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){Tensor outp({1}, F); outp.fill_(val); return std::move(outp);});
-	}
-	else if(type_b == 2){
-		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>();
-		auto end = my_arr.get_bucket().cend_blocked<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){Tensor outp({1}, F); outp.fill_(val); return std::move(outp);});
-	}
-	else if(type_b == 3){
-		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>();
-		auto end = my_arr.get_bucket().cend_list<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const my_value_t& val){Tensor outp({1}, F); outp.fill_(val); return std::move(outp);});
-	}
+    out_value_t* out_ptr = reinterpret_cast<out_value_t*>(out.data_ptr());
+    my_arr.cexecute_function<WRAP_DTYPES<DTypeEnum<F> > >([&out_ptr](auto begin, auto end){
+        for(;begin != end; ++begin, ++out_ptr){
+            Tensor outp({1}, F);
+            outp.fill_(*begin);
+            *out_ptr = std::move(outp);
+        }
+    });
 	return true;
 }
 
@@ -599,27 +571,12 @@ bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
 	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
 	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<F>;
 	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<T>;
-	uint32_t type_a = out.get_bucket().iterator_type();
-	uint32_t type_b = my_arr.get_bucket().iterator_type();
-	utils::throw_exception(type_a == 1, "Expected in turn dtype for output to be contiguous, but got iterator type $, problem with creation", type_a);
-	if(type_b == 1){
-		auto begin = my_arr.get_bucket().cbegin_contiguous<my_value_t>();
-		auto end = my_arr.get_bucket().cend_contiguous<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const Tensor& val){return val.toScalar().to<out_value_t>();});
-	}
-	else if(type_b == 2){
-		auto begin = my_arr.get_bucket().cbegin_blocked<my_value_t>();
-		auto end = my_arr.get_bucket().cend_blocked<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const Tensor& val){return val.toScalar().to<out_value_t>();});
-	}
-	else if(type_b == 3){
-		auto begin = my_arr.get_bucket().cbegin_list<my_value_t>();
-		auto end = my_arr.get_bucket().cend_list<my_value_t>();
-		out_value_t* o_begin = reinterpret_cast<out_value_t*>(out.data_ptr());
-		std::transform(begin, end, o_begin, [](const Tensor& val){return val.toScalar().to<out_value_t>();});
-	}
+    out_value_t* out_ptr = reinterpret_cast<out_value_t*>(out.data_ptr());
+    my_arr.cexecute_function<WRAP_DTYPES<DTypeEnum<F> > >([&out_ptr](auto begin, auto end){
+        for(;begin != end; ++begin, ++out_ptr){
+            *out_ptr = *reinterpret_cast<const out_value_t*>(begin->data_ptr());
+        }
+    });
 	return true;
 }
 

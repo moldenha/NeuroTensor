@@ -26,7 +26,20 @@ else()
 endif()
 
 
+find_package(Matplot++ QUIET)
 
+if (Matplot++_FOUND)
+    message(STATUS "Found system-installed Matplot++")
+    include_directories(${Matplot++_INCLUDE_DIRS})
+    set(MATPLOT_LIB Matplot++::matplot)
+else()
+    message(STATUS "System-installed Matplot++ not found, using source")
+    add_subdirectory(third_party/matplot)
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/matplot/source/matplot)
+    set(MATPLOT_LIB matplot)
+endif()
+    
+    
 
 #add_subdirectory(third_party/xnetwork)
 
@@ -61,6 +74,7 @@ set(CORE_SOURCES
     src/refs/SizeRef.cpp
     src/utils/utils.cpp
     src/utils/optional.cpp
+    src/utils/SparseTensor.cpp
     src/Tensor.cpp
 )
 
@@ -187,6 +201,7 @@ target_link_libraries(main.out
     # ${MKL_LIBS}
     # ${Boost_LIBRARIES}
     ${TBB_LIB}
+    ${MATPLOT_LIB}
     pthread
 )
 

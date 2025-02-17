@@ -157,6 +157,6 @@ TensorGrad CfCCell::forward(TensorGrad input, TensorGrad hx, const Tensor &ts, T
 }
 }
 
-
+_NT_REGISTER_LAYER_NAMESPACED_(nt::ncps::LeCun, nt__ncps__LeCun)
 
 

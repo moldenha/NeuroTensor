@@ -67,6 +67,7 @@ Tensor::Tensor(ArrayVoid ptr, SizeRef v)
     : _vals(ptr), _size(std::move(v)), sub_tensor(true), dtype(ptr.dtype),
       _total_size(ptr.Size()), stored_strides(nullptr) {
     /* std::cout << "setting dtype"<<std::endl; */
+    _total_size = _vals.Size();
     dtype = _vals.dtype;
     /* std::cout << "dtype set"<<std::endl; */
 }
@@ -547,6 +548,7 @@ template int8_t &Tensor::item<int8_t>();
 template uint8_t &Tensor::item<uint8_t>();
 template Tensor &Tensor::item<Tensor>();
 template uint_bool_t &Tensor::item<uint_bool_t>();
+template bool &Tensor::item<bool>();
 template complex_64 &Tensor::item<complex_64>();
 template complex_128 &Tensor::item<complex_128>();
 #ifdef __SIZEOF_INT128__
@@ -578,6 +580,7 @@ template const int8_t &Tensor::item<int8_t>() const;
 template const uint8_t &Tensor::item<uint8_t>() const;
 template const Tensor &Tensor::item<Tensor>() const;
 template const uint_bool_t &Tensor::item<uint_bool_t>() const;
+template const bool &Tensor::item<bool>() const;
 template const complex_64 &Tensor::item<complex_64>() const;
 template const complex_128 &Tensor::item<complex_128>() const;
 #ifdef __SIZEOF_INT128__
@@ -590,6 +593,105 @@ template const complex_32 &Tensor::item<complex_32>() const;
 #endif
 #ifdef _128_FLOAT_SUPPORT_
 template const float128_t &Tensor::item<float128_t>() const;
+#endif
+
+
+
+
+template<typename T>
+T& Tensor::item(const std::vector<size_value_t>& vec){
+    if(vec.size() == 0){return item<T>();}
+    utils::throw_exception(vec.size() <= dims(), "Expected to get at most $ indices for item but got $", dims(), vec.size());
+
+    uint64_t cur_mult = 1;
+    int64_t counter = 0;
+    const auto& sh = shape();
+    for(const size_value_t& val : vec){
+        cur_mult *= val;
+        utils::throw_exception(sh[counter] > val && val >= 0, "Expected indices for item to be positive and within the range of $ but got $", sh[counter], val);
+        ++counter;
+
+    }
+    uint64_t mult = vec.size() == dims() ? 1 : static_cast<uint64_t>(sh.multiply(counter));
+    mult *= cur_mult;
+    return *(_vals.execute_function<WRAP_DTYPES<AllTypesL>>(
+        [&mult](auto begin, auto end) -> T* {
+            return reinterpret_cast<T*>(&(*(begin + mult)));
+        }));
+}
+
+template float &Tensor::item<float>(const std::vector<Tensor::size_value_t> &);
+template double &Tensor::item<double>(const std::vector<Tensor::size_value_t> &);
+template int64_t &Tensor::item<int64_t>(const std::vector<Tensor::size_value_t> &);
+template int32_t &Tensor::item<int32_t>(const std::vector<Tensor::size_value_t> &);
+template uint32_t &Tensor::item<uint32_t>(const std::vector<Tensor::size_value_t> &);
+template int16_t &Tensor::item<int16_t>(const std::vector<Tensor::size_value_t> &);
+template uint16_t &Tensor::item<uint16_t>(const std::vector<Tensor::size_value_t> &);
+template int8_t &Tensor::item<int8_t>(const std::vector<Tensor::size_value_t> &);
+template uint8_t &Tensor::item<uint8_t>(const std::vector<Tensor::size_value_t> &);
+template Tensor &Tensor::item<Tensor>(const std::vector<Tensor::size_value_t> &);
+template uint_bool_t &Tensor::item<uint_bool_t>(const std::vector<Tensor::size_value_t> &);
+template bool &Tensor::item<bool>(const std::vector<Tensor::size_value_t> &);
+template complex_64 &Tensor::item<complex_64>(const std::vector<Tensor::size_value_t> &);
+template complex_128 &Tensor::item<complex_128>(const std::vector<Tensor::size_value_t> &);
+#ifdef __SIZEOF_INT128__
+template uint128_t &Tensor::item<uint128_t>(const std::vector<Tensor::size_value_t> &);
+template int128_t &Tensor::item<int128_t>(const std::vector<Tensor::size_value_t> &);
+#endif
+#ifdef _HALF_FLOAT_SUPPORT_
+template float16_t &Tensor::item<float16_t>(const std::vector<Tensor::size_value_t> &);
+template complex_32 &Tensor::item<complex_32>(const std::vector<Tensor::size_value_t> &);
+#endif
+#ifdef _128_FLOAT_SUPPORT_
+template float128_t &Tensor::item<float128_t>(const std::vector<Tensor::size_value_t> &);
+#endif
+
+template<typename T>
+const T& Tensor::item(const std::vector<size_value_t>& vec) const{
+    if(vec.size() == 0){return item<T>();}
+    utils::throw_exception(vec.size() <= dims(), "Expected to get at most $ indices for item but got $", dims(), vec.size());
+
+    uint64_t cur_mult = 1;
+    int64_t counter = 0;
+    const auto& sh = shape();
+    for(const size_value_t& val : vec){
+        cur_mult *= val;
+        utils::throw_exception(sh[counter] > val && val >= 0, "Expected indices for item to be positive and within the range of $ but got $", sh[counter], val);
+        ++counter;
+
+    }
+    uint64_t mult = vec.size() == dims() ? 1 : static_cast<uint64_t>(sh.multiply(counter));
+    mult *= cur_mult;
+    return *(_vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
+        [&mult](auto begin, auto end) -> const T* {
+            return reinterpret_cast<const T*>(&(*(begin + mult)));
+        }));
+}
+
+template const float &Tensor::item<float>(const std::vector<Tensor::size_value_t> &) const;
+template const double &Tensor::item<double>(const std::vector<Tensor::size_value_t> &) const;
+template const int64_t &Tensor::item<int64_t>(const std::vector<Tensor::size_value_t> &) const;
+template const int32_t &Tensor::item<int32_t>(const std::vector<Tensor::size_value_t> &) const;
+template const uint32_t &Tensor::item<uint32_t>(const std::vector<Tensor::size_value_t> &) const;
+template const int16_t &Tensor::item<int16_t>(const std::vector<Tensor::size_value_t> &) const;
+template const uint16_t &Tensor::item<uint16_t>(const std::vector<Tensor::size_value_t> &) const;
+template const int8_t &Tensor::item<int8_t>(const std::vector<Tensor::size_value_t> &) const;
+template const uint8_t &Tensor::item<uint8_t>(const std::vector<Tensor::size_value_t> &) const;
+template const Tensor &Tensor::item<Tensor>(const std::vector<Tensor::size_value_t> &) const;
+template const uint_bool_t &Tensor::item<uint_bool_t>(const std::vector<Tensor::size_value_t> &) const;
+template const bool &Tensor::item<bool>(const std::vector<Tensor::size_value_t> &) const;
+template const complex_64 &Tensor::item<complex_64>(const std::vector<Tensor::size_value_t> &) const;
+template const complex_128 &Tensor::item<complex_128>(const std::vector<Tensor::size_value_t> &) const;
+#ifdef __SIZEOF_INT128__
+template const uint128_t &Tensor::item<uint128_t>(const std::vector<Tensor::size_value_t> &) const;
+template const int128_t &Tensor::item<int128_t>(const std::vector<Tensor::size_value_t> &) const;
+#endif
+#ifdef _HALF_FLOAT_SUPPORT_
+template const float16_t &Tensor::item<float16_t>(const std::vector<Tensor::size_value_t> &) const;
+template const complex_32 &Tensor::item<complex_32>(const std::vector<Tensor::size_value_t> &) const;
+#endif
+#ifdef _128_FLOAT_SUPPORT_
+template const float128_t &Tensor::item<float128_t>(const std::vector<Tensor::size_value_t> &) const;
 #endif
 
 Scalar Tensor::toScalar() const {
@@ -677,6 +779,7 @@ Tensor Tensor::operator[](size_value_t x) {
     SizeRef n_size = shape().pop_front();
     uint64_t mult = static_cast<uint64_t>(n_size.multiply());
     return Tensor(_vals.share_array(nx * mult, mult), std::move(n_size));
+    // return Tensor(_vals.share_array(nx * mult, mult), std::move(n_size));
 }
 
 const Tensor Tensor::operator[](size_value_t x) const {
@@ -705,11 +808,23 @@ const Tensor Tensor::operator[](size_value_t x) const {
     return Tensor(_vals.share_array(nx * mult, mult), std::move(n_size));
 }
 
+
 Tensor Tensor::operator[](const Tensor &t) const {
     utils::THROW_EXCEPTION(
         t.dtype == DType::Bool || t.dtype == DType::TensorObj || t.dtype == DType::int64,
         "RuntimeError: expected DType Bool, TensorObj, or int64 but got $", t.dtype);
     if (t.dtype == DType::TensorObj) {
+        //if it is operations of tensors of tensors, then jus repeat the operation
+        if(dtype == DType::TensorObj){
+            Tensor output = Tensor::makeNullTensorArray(numel());
+            Tensor* ts_begin = reinterpret_cast<Tensor*>(output.data_ptr());
+            Tensor* ts_end = ts_begin + numel();
+            const Tensor* begin = reinterpret_cast<const Tensor*>(data_ptr());
+            const Tensor* t_begin = reinterpret_cast<const Tensor*>(t.data_ptr());
+            for(;ts_begin != ts_end; ++ts_begin, ++begin, ++t_begin)
+                *ts_begin = (*begin)[*t_begin];
+            return std::move(output);
+        }
         utils::THROW_EXCEPTION(
             t.is_contiguous(),
             "RuntimeError: Expected indexing tensor to be contiguous");
@@ -723,8 +838,8 @@ Tensor Tensor::operator[](const Tensor &t) const {
         const Tensor *begin_cpy = begin;
         for (; begin != end; ++begin)
             utils::THROW_EXCEPTION(
-                begin->dtype == DType::int64,
-                "Expected indexing tensor to have dtype int64 but got $",
+                begin->dtype == DType::int64 && begin->is_contiguous(),
+                "Expected indexing tensor to have dtype int64 but got $ and expected to be contiguous",
                 begin->dtype);
         begin = begin_cpy;
 
@@ -794,11 +909,31 @@ Tensor Tensor::operator[](const Tensor &t) const {
         t.dtype == DType::Bool,
         "RuntimeError (at end, logic error): expected DType Bool, TensorObj, or int64 but got $", t.dtype);
     utils::THROW_EXCEPTION(
-        t.numel() == numel(),
-        "Numels must be equal for [] operator on Tensor DType::Bool");
-    utils::THROW_EXCEPTION(
         t.is_contiguous(),
         "RuntimeError: Expected indexing tensor to be contiguous");
+    if(t.numel() != numel() && t.numel() == shape()[0]){
+        const uint_bool_t *begin =
+            reinterpret_cast<const uint_bool_t *>(t.data_ptr());
+        const uint_bool_t *end = begin + t.numel();
+
+        std::vector<SizeRef::value_type> Vec = this->shape().Vec();
+        Vec[0] = functional::count(t);
+        Tensor split = this->split_axis(0);
+        std::vector<Tensor> catting(functional::count(t), Tensor::Null());
+        auto out_begin = catting.begin();
+        Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
+        for(;begin != end; ++begin, ++s_begin){
+            if(*begin){
+                *out_begin++ = *s_begin;
+            }
+        }
+        return functional::cat(std::move(catting)).view(SizeRef(std::move(Vec)));
+ 
+    }
+    utils::THROW_EXCEPTION(
+        t.numel() == numel(),
+        "Numels must be equal for [] operator on Tensor DType::Bool, or equal to shape()[0] ($)", shape()[0]);
+
     ArrayVoid my_vals = _vals.bucket_all_indices();
     size_value_t new_size = ::nt::functional::count(t);
     ArrayVoid new_vals = _vals.new_strides(new_size);
@@ -814,6 +949,39 @@ Tensor Tensor::operator[](const Tensor &t) const {
         }
     }
     return Tensor(std::move(new_vals), {static_cast<size_value_t>(new_size)});
+}
+
+Tensor Tensor::index_except(int64_t dim, int64_t excluding_index) const {
+    dim = dim < 0 ? dim + dims() : dim;
+    utils::THROW_EXCEPTION(dim < dims() && dim >= 0, "Got invalid dim $", dim);
+    bool end_dim = (dim == dim-1);
+    auto sh = shape();
+    excluding_index = excluding_index < 0 ? excluding_index + sh[dim] : excluding_index;
+    utils::THROW_EXCEPTION(excluding_index < sh[dim] && excluding_index >= 0, "Got invalid index $", excluding_index);
+    std::vector<size_value_t> Vec = sh.Vec();
+    Vec[dim] -= 1;
+
+    Tensor split = this->split_axis(dim);
+    int64_t total = (split.numel() / sh[dim]) * Vec[dim];
+    Tensor out = makeNullTensorArray(total);
+    Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+    Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
+    Tensor* s_end = reinterpret_cast<Tensor*>(split.data_ptr_end());
+    int64_t counter = 0;
+    const int64_t max_dim = (sh[dim]-1);
+    while(s_begin != s_end){
+        if(counter != excluding_index){
+            *o_begin = *s_begin;
+            ++o_begin;
+        }
+        ++s_begin;
+        counter = counter == max_dim ? 0 : counter + 1;
+    }
+    if(end_dim){
+        std::swap(Vec[dim], Vec[dim-1]);
+        return functional::cat_unordered(out).view(SizeRef(std::move(Vec))).transpose(-1, -2);
+    }
+    return functional::cat_unordered(out).view(SizeRef(std::move(Vec)));
 }
 
 // going to re-think the following,
@@ -926,6 +1094,59 @@ const Tensor Tensor::operator[](std::vector<my_range> r) const {
 
     return nt::functional::cat_unordered(outs).view(n_shape);
 }
+
+const Tensor Tensor::operator[](std::vector<size_value_t> xs) const {
+    utils::THROW_EXCEPTION(
+            xs.size() <= dims(),
+            "Expected to get less than or equal to $ indices but got $ indices",
+            dims(), xs.size());
+    if(xs.size() == 1){return (*this)[xs[0]];}
+    if(xs.size() == 0){return *this;}
+    for (size_value_t i = 0; i < xs.size(); ++i) {
+        xs[i] = xs[i] < 0 ? xs[i] + dims() : xs[i];
+    }
+
+    uint64_t cur_mult = 1;
+    auto begin = xs.begin();
+    auto end = xs.end();
+    cur_mult *= *begin;
+    SizeRef n_size = shape().pop_front();
+    ++begin;
+    for(;begin != end; ++begin){
+        cur_mult *= *begin;
+        n_size = n_size.pop_front();
+    }
+    uint64_t mult = n_size.size() == 0 ? 1 : static_cast<uint64_t>(n_size.multiply());
+    return Tensor(_vals.share_array(cur_mult * mult, mult), std::move(n_size));
+
+}
+
+Tensor Tensor::operator[](std::vector<size_value_t> xs) {
+    utils::THROW_EXCEPTION(
+            xs.size() <= dims(),
+            "Expected to get less than or equal to $ indices but got $ indices",
+            dims(), xs.size());
+    if(xs.size() == 1){return (*this)[xs[0]];}
+    if(xs.size() == 0){return *this;}
+    for (size_value_t i = 0; i < xs.size(); ++i) {
+        xs[i] = xs[i] < 0 ? xs[i] + dims() : xs[i];
+    }
+
+    uint64_t cur_mult = 1;
+    auto begin = xs.begin();
+    auto end = xs.end();
+    cur_mult *= *begin;
+    SizeRef n_size = shape().pop_front();
+    ++begin;
+    for(;begin != end; ++begin){
+        cur_mult *= *begin;
+        n_size = shape().pop_front();
+    }
+    uint64_t mult = static_cast<uint64_t>(n_size.multiply());
+    return Tensor(_vals.share_array(cur_mult * mult, mult), std::move(n_size));
+
+}
+
 
 // this was the old way which was not nearly as efficient:
 /*
@@ -1222,15 +1443,16 @@ Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
     const int64_t &t_size = numel();
     _vals.transform_function<DType::TensorObj>(
         [&nv, &is_neg, &neg_index, &n](auto &inp) {
+            std::vector<size_value_t> nv_cpy = nv;
             if (is_neg) {
                 utils::THROW_EXCEPTION(
                     inp.numel() % n == 0,
                     "shape must be divisible by what has been "
                     "given, $ is not divisible by $",
                     inp.numel(), n);
-                nv[neg_index] = inp.numel() / n;
+                nv_cpy[neg_index] = inp.numel() / n;
             }
-            return inp.view(SizeRef(nv));
+            return inp.view(SizeRef(std::move(nv_cpy)));
         },
         reinterpret_cast<Tensor *>(outp.data_ptr()));
     return std::move(outp);
@@ -4051,9 +4273,8 @@ Tensor Tensor::repeat_(size_value_t dim, size_value_t amt) const {
     if (dim == 0) {
         return this->repeat_(amt);
     }
-    SizeRef n_shape = shape().redo_index(dim, amt * shape()[dim]);
-    Tensor split = split_axis(dim);
-    return functional::cat(split_axis(dim).repeat_(amt)).view(n_shape);
+    Tensor transposed = transpose(0, dim);
+    return transposed.repeat_(amt).transpose(0, dim);
 }
 
 Tensor Tensor::expand(SizeRef s) const {
@@ -4139,6 +4360,56 @@ Tensor &Tensor::fill_(const Tensor &val) {
     _vals.for_each<DType::TensorObj>([&val](auto &inp) { inp = val; });
     return *this;
 }
+
+Tensor& Tensor::fill_diagonal_(Scalar c){
+    if(dims() == 2){
+        const int64_t& rows = shape()[-2];
+        const int64_t& cols = shape()[-1];
+        if(dtype == DType::TensorObj){
+            _vals.execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >( [&c, &rows, &cols](auto begin, auto end){
+                int64_t min_rows = std::min(rows, cols);
+                for(int64_t r = 0; r < min_rows; ++r){
+                    if (end < begin || begin == end) break; // Ensure within bounds
+                    *begin = c;  // Assign diagonal element
+                    begin += cols + 1;  // Move to next diagonal element
+                }
+            });
+            return *this;
+        }
+        _vals.execute_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >( [&c, &rows, &cols](auto begin, auto end){
+            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+            auto v = c.to<value_t>();
+            int64_t min_rows = std::min(rows, cols);
+            for(int64_t r = 0; r < min_rows; ++r){
+                if (end < begin || begin == end) break; // Ensure within bounds
+                *begin = v;  // Assign diagonal element
+                begin += cols + 1;  // Move to next diagonal element
+            }
+        });
+        return *this;
+    }
+    if(dims() < 2 && dtype == DType::TensorObj){
+        // _vals.execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >( [&c](auto begin, auto end){
+        //     for(;begin != end; ++begin)
+        //         begin->fill_diagonal_(c);
+        //     // int64_t min_rows = std::min(rows, cols);
+        //     // for(int64_t r = 0; r < min_rows; ++r){
+        //     //     begin[r] = c;
+        //     //     begin += cols;
+        //     // }
+        // });
+        _vals.for_each<DType::TensorObj>([&c](auto &inp) { inp.fill_diagonal_(c); });
+        return *this;
+    }
+    utils::throw_exception(dims() > 2, "cannot diagonally fill a tensor with dims less than 2, but got $", dims());
+    Tensor split = this->split_axis(-3);
+    Tensor* begin = reinterpret_cast<Tensor*>(split.data_ptr());
+    Tensor* end = reinterpret_cast<Tensor*>(split.data_ptr_end());
+    for(;begin != end; ++begin)
+        begin->fill_diagonal_(c);
+    return *this;
+}
+
 Tensor &Tensor::add_(Scalar val) {
     _vals += val;
     return *this;
@@ -4258,22 +4529,33 @@ Tensor sum_one(const Tensor &t, Tensor::size_value_t dim) {
             reinterpret_cast<Tensor *>(outp.data_ptr()));
         return std::move(outp);
     }
-    if (dim != 0) {
-        return t.transpose(0, dim).sum(0).unsqueeze(0).transpose(0, dim);
+    if(dim != 0){
+        return sum_one(t.transpose(0, dim), 0).transpose(0, dim);
     }
     Tensor::size_value_t total_size = t.shape()[0];
     Tensor split = t.split_axis(0);
     Tensor a = split[0].item<Tensor>().clone();
     const Tensor *begin = reinterpret_cast<const Tensor *>(split.data_ptr());
-    threading::preferential_parallel_for(
-        threading::block_ranges<1>(1, split.numel()),
-        [&a, &begin](const auto &range) {
-            for (int64_t i = range.begin[0]; i < range.end[0]; ++i) {
-                a += begin[i];
-            }
-        });
-    return std::move(a);
+    // in the future, use a mutex to lock this and save individual indices
+    // otherwise it returns the incorrect result
+    // threading::preferential_parallel_for(
+    //     threading::block_ranges<1>(1, split.numel()),
+    //     [&a, &begin](const auto &range) {
+    //         for (int64_t i = range.begin[0]; i < range.end[0]; ++i) {
+    //             a += begin[i];
+    //         }
+    //     });
+    const Tensor* end = reinterpret_cast<const Tensor*>(split.data_ptr_end());
+    ++begin;
+    for(;begin != end; ++begin){
+        a += *begin;
+    }
+    auto Vec = t.shape().Vec();
+    Vec[0] = 1;
+    return a.view(SizeRef(std::move(Vec)));
 }
+
+
 
 Tensor Tensor::sum(utils::optional_list list, bool keepdim) const {
     if (dtype == DType::TensorObj) {
@@ -4299,20 +4581,16 @@ Tensor Tensor::sum(utils::optional_list list, bool keepdim) const {
         }
         return std::move(outp);
     }
-    std::vector<SizeRef::ArrayRefInt::value_type> Vec(shape().cbegin(),
-                                                      shape().cend());
     int64_t dim = list[0] < 0 ? list[0] + dims() : list[0];
-    Tensor output = sum_one(*this, list[0]);
-    Vec[dim] = 1;
+    Tensor output = sum_one(*this, dim);
     for (auto begin = list->cbegin() + 1; begin != list->cend(); ++begin) {
         dim = *begin < 0 ? *begin + dims() : *begin;
-        output = sum_one(output, *begin);
-        Vec[dim] = 1;
+        output = sum_one(output, dim);
     }
     if (!keepdim) {
         return output.squeeze();
     }
-    return output.view(SizeRef(std::move(Vec)));
+    return std::move(output);
 }
 
 Tensor Tensor::mean(utils::optional_list list, bool keepdim) const {

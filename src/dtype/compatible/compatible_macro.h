@@ -128,6 +128,8 @@ struct type_to_dtype_s<type>{\
 template<typename T>
 inline static constexpr DType type_to_dtype = type_to_dtype_s<T>::dt;
 
+template<typename T>
+inline static constexpr bool type_is_dtype = std::is_same_v<T, bool> || std::is_same_v<T, uint_bool_t> || type_to_dtype<T> != DType::Bool;
 
 template <DType dt>
 inline static constexpr bool dtype_is_num = is_dtype_num_v<dt>;

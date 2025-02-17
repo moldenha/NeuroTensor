@@ -10,6 +10,8 @@
 #include "functional_fold.h"
 #include "functional_conv.h"
 #include "../utils/optional_list.h"
+#include "../dtype/DType.h"
+#include <cstring>
 
 namespace nt{
 namespace functional{
@@ -99,7 +101,15 @@ Tensor split(Tensor input, typename Tensor::size_value_t split_size, int64_t dim
 Tensor split(Tensor input, std::vector<typename Tensor::size_value_t> split_sections, int64_t dim = 0); //splits into a specified amount on the given dimension
 Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim = 0); //splits into that many chunks
 Tensor as_strided(const Tensor& input, const SizeRef n_size, SizeRef n_stride, const int64_t storage_offset = 0, bool whole_tensor=false);
+Tensor sort(const Tensor&, const Tensor::size_value_t dim = -1, bool descending = false, bool return_sorted=true, bool return_indices=true);
+//returns Tensor(sorted, indices)
+//only returning the indices or the sorted makes things faster
+//this function is meant to sort along for example each row in a matrix or each collumn
+Tensor coordsort(const Tensor& input, Tensor::size_value_t dim = -2, bool descending = false, bool return_sorted=true, bool return_indices=true);
+Tensor unique(Tensor, int64_t dim, bool return_unique=true, bool return_indices=true);
+// returns Tensor(unique, indices) (depending on return_unique and return_indices)
 //puts the tensors into a Tensor of dtype TensorObj with sizeof...(Args) + 1 number of tensors
+Tensor combinations(Tensor vec, int64_t r, int64_t start = 0);
 template<typename T, typename... Args,
          typename std::enable_if<std::is_same<std::decay_t<T>, Tensor>::value, int>::type = 0>
 inline Tensor list(T&& first, Args&&... rest){
@@ -112,6 +122,14 @@ inline Tensor list(T&& first, Args&&... rest){
 	Tensor* current = begin + 1; //move to the next position
 	((*(current++) = std::forward<Args>(rest)), ...);
 	return std::move(out);
+}
+
+template<typename T>
+inline Tensor vector_to_tensor(const std::vector<T>& vec){
+    static_assert(DTypeFuncs::type_is_dtype<T>, "Type in vector is unsupported");
+    Tensor out({static_cast<int64_t>(vec.size())}, DTypeFuncs::type_to_dtype<T>);
+    std::memcpy(out.data_ptr(), &vec[0], sizeof(T) * vec.size());
+    return std::move(out);
 }
 
 }

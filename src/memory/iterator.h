@@ -153,8 +153,8 @@ class BucketIterator_blocked{
 			++(*this);
 			return tmp;
 		}
-		inline const bool operator!=(const BucketIterator_blocked& b) const noexcept {return current_ptr != b.current_ptr;}
-		inline const bool operator==(const BucketIterator_blocked& b) const noexcept {return current_ptr == b.current_ptr;}
+		inline const bool operator!=(const BucketIterator_blocked& b) const noexcept {return current_stride != b.current_stride || current_ptr != b.current_ptr;}
+		inline const bool operator==(const BucketIterator_blocked& b) const noexcept {return current_stride == b.current_stride && current_ptr == b.current_ptr;}
 		inline const bool operator!=(const T*& b) const noexcept {return current_ptr != b;}
 		inline const bool operator==(const T*& b) const noexcept {return current_ptr == b;}
 		inline const bool operator!=(const BucketIterator_list<T>& b) const noexcept {return current_ptr != *b.m_ptr;}

@@ -191,7 +191,10 @@ class TensorGrad : public intrusive_ptr_target{
 	bool is_child() const noexcept;
 	void unchild() noexcept;
 	const bool grad_required;
-	TensorGrad(Tensor t, intrusive_ptr<tensor_holder> g, intrusive_ptr<intrusive_back_func> f, std::vector<intrusive_ptr<TensorGrad> > p, intrusive_ptr<intrusive_vector_tg> c, bool);
+    intrusive_ptr<intrusive_variable<int64_t>> _child_counter; 
+    // this is a variable that is used to check how many children have to update its gradient before
+    // this tensor updates it's parents gradient and so forth
+	TensorGrad(Tensor t, intrusive_ptr<tensor_holder> g, intrusive_ptr<intrusive_back_func> f, std::vector<intrusive_ptr<TensorGrad> > p, intrusive_ptr<intrusive_vector_tg> c, bool, intrusive_ptr<intrusive_variable<int64_t>>);
 	public:
 		Tensor tensor;
 		const DType& dtype;
@@ -201,6 +204,7 @@ class TensorGrad : public intrusive_ptr_target{
 		/* std::function<void(const Tensor&, std::vector<intrusive_ptr<TensorGrad>>&)> backwardFunc; */
 		std::vector<intrusive_ptr<TensorGrad>> parents;
 		intrusive_ptr<intrusive_vector_tg> children;
+
 		
 		explicit TensorGrad(Scalar value, bool grad_required=true);
 		explicit TensorGrad(const Tensor&, bool grad_required=true);

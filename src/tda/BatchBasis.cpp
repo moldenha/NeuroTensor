@@ -154,22 +154,24 @@ bool can_merge(const std::unordered_map<K, V, Hash>& map1, const std::unordered_
     return true; // No conflicts
 }
 
-void BatchBasises::findMergeKDTree(std::vector<uint32_t>& prevMerged){
+void BatchBasises::findMergeKDTree(std::vector<uint32_t>& prevMerged, bool verbose){
 	const int64_t batches = this->balls.size();
 	std::vector<std::reference_wrapper<const Point>> nearbyCenters;
 	nearbyCenters.reserve(30);
 	std::unordered_set<size_t> mergedIndices;
 	mergedIndices.reserve(*std::max_element(prevMerged.cbegin(), prevMerged.cend()));
 	for(int64_t b = 0; b < batches; ++b){
-		utils::printProgressBar(b, batches);
-		std::cout << "\033[F";
+        if(verbose){
+	    	utils::printProgressBar(b, batches);
+		    std::cout << "\033[F";
+        }
 		if(prevMerged[b] == 0){continue;}
 		std::unordered_set<size_t> mergedIndices;
 		prevMerged[b] = 0; //the didMerge variable
 		std::vector<BasisOverlapping>& input_balls = this->balls[b];
 		if(input_balls.size() == 1){continue;}
 		for(size_t i = 0; i < input_balls.size(); ++i){
-			utils::printProgressBar(i, input_balls.size());
+			if(verbose){utils::printProgressBar(i, input_balls.size());}
 			//skip indices already merged
 			if(mergedIndices.find(i) != mergedIndices.end()){continue;}
 			bool mergedFlag = false;
@@ -202,7 +204,7 @@ void BatchBasises::findMergeKDTree(std::vector<uint32_t>& prevMerged){
 		input_balls.shrink_to_fit();
 		mergedIndices.clear();//clear the merged indices so that more memory is not allocated
 
-		std::cout << "\n";
+		if(verbose){std::cout << "\n";}
 
 		// Add remaining unmerged BasisOverlapping objects
 		/* for (size_t i = 0; i < input_balls.size(); ++i) { */
@@ -220,24 +222,33 @@ void BatchBasises::findMergeKDTree(std::vector<uint32_t>& prevMerged){
 
 
 
-void BatchBasises::radius_to(double r){
+void BatchBasises::radius_to(double r, bool verbose){
 	for(size_t b = 0; b < this->balls.size(); ++b){
 		for(size_t i = 0; i < this->balls[b].size(); ++i){
 			balls[b][i].adjust_radius(r);
 		}
 	}
 	this->radius = r;
-	std::cout << "merging..." << std::endl;
-	std::vector<uint32_t> prevMerged(this->balls.size(), 1);
-	utils::beginDualProgressBar(this->balls.size(), this->balls[0].size());
-	size_t num = 0;
-	while(num < prevMerged.size()){
-		this->findMergeKDTree(prevMerged);
-		num = std::count(prevMerged.begin(), prevMerged.end(), 0);
-		utils::endDualProgressBar(this->balls.size(), this->balls[0].size());
-		std::cout << std::endl << num << " have finished merging"<<std::endl;
-		utils::beginDualProgressBar(this->balls.size(), this->balls[0].size());
-	}
+    if(verbose){
+        std::cout << "merging..." << std::endl;
+        std::vector<uint32_t> prevMerged(this->balls.size(), 1);
+        utils::beginDualProgressBar(this->balls.size(), this->balls[0].size());
+        size_t num = 0;
+        while(num < prevMerged.size()){
+            this->findMergeKDTree(prevMerged, true);
+            num = std::count(prevMerged.begin(), prevMerged.end(), 0);
+            utils::endDualProgressBar(this->balls.size(), this->balls[0].size());
+            std::cout << std::endl << num << " have finished merging"<<std::endl;
+            utils::beginDualProgressBar(this->balls.size(), this->balls[0].size());
+        }
+    }else{
+        std::vector<uint32_t> prevMerged(this->balls.size(), 1);
+        size_t num = 0;
+        while(num < prevMerged.size()){
+            this->findMergeKDTree(prevMerged, false);
+            num = std::count(prevMerged.begin(), prevMerged.end(), 0);
+        }
+    }
 }
 
 }} //nt::tda::

@@ -7,8 +7,9 @@
 #include "../dtype/DType.h"
 #include "../dtype/DType_enum.h"
 #include "../mp/simde_ops.h"
+#include "../convert/std_convert.h"
 
-
+//#include "TensorAccessor.h"
 
 
 #include <atomic>
@@ -42,6 +43,7 @@
 #include "../dtype/ArrayVoid.hpp"
 #include "functional_operator.h"
 #include "../mp/Threading.h"
+#include <unordered_map>
 
 #ifdef USE_PARALLEL
 	#include <tbb/parallel_for_each.h>
@@ -1045,6 +1047,481 @@ Tensor split(Tensor input, std::vector<typename SizeRef::value_type> split_secti
 	// return std::move(output);
 }
 
+template<typename Iterator>
+inline bool _nt_sort_descending_(const int64_t& a, const int64_t& b, const Iterator& data){
+    return data[a] > data[b];
+}
+
+template<typename Iterator>
+inline bool _nt_sort_ascending_(const int64_t& a, const int64_t& b, const Iterator& data){
+    return data[a] < data[b];
+}
+
+
+inline bool _nt_sort_descending_tensor_(const int64_t& a, const int64_t& b, const Tensor* data){
+    if(data[b].numel() != data[a].numel()){return data[a].numel() > data[b].numel();}
+    const ArrayVoid& arv = data[b].arr_void();
+    return data[a].arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL> >([&arv](auto begin, auto end) -> bool{
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+        return arv.cexecute_function<DTypeFuncs::type_to_dtype<value_t>>([&begin, &end](auto second, auto s_end) -> bool{
+            for(;begin != end; ++begin, ++second){
+                if(*second != *begin){return *begin > *second;}
+            }
+            return false;
+        });
+    });
+}
+
+inline bool _nt_sort_descending_tensor_valsonly_(const Tensor& a, const Tensor& b){
+    if(b.numel() != a.numel()){return a.numel() > b.numel();}
+    const ArrayVoid& arv = b.arr_void();
+    return a.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL> >([&arv](auto begin, auto end) -> bool{
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+        return arv.cexecute_function<DTypeFuncs::type_to_dtype<value_t>>([&begin, &end](auto second, auto s_end) -> bool{
+            for(;begin != end; ++begin, ++second){
+                if(*second != *begin){return *begin > *second;}
+            }
+            return false;
+        });
+    });
+}
+
+
+inline bool _nt_sort_ascending_tensor_(const int64_t& a, const int64_t& b, const Tensor* data){
+    if(data[b].numel() != data[a].numel()){return data[a].numel() < data[b].numel();}
+    const ArrayVoid& arv = data[b].arr_void();
+    return data[a].arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL> >([&arv](auto begin, auto end) -> bool{
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+        return arv.cexecute_function<DTypeFuncs::type_to_dtype<value_t>>([&begin, &end](auto second, auto s_end) -> bool{
+            for(;begin != end; ++begin, ++second){
+                if(*second != *begin){return *begin < *second;}
+            }
+            return false;
+        });
+    });
+}
+
+inline bool _nt_sort_ascending_tensor_valsonly_(const Tensor& a, const Tensor& b){
+    if(a.numel() != b.numel()){return a.numel() < b.numel();}
+    const ArrayVoid& arv = b.arr_void();
+    return a.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL> >([&arv](auto begin, auto end) -> bool{
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+        return arv.cexecute_function<DTypeFuncs::type_to_dtype<value_t>>([&begin, &end](auto second, auto s_end) -> bool{
+            for(;begin != end; ++begin, ++second){
+                if(*second != *begin){return *begin < *second;}
+            }
+            return false;
+        });
+    });
+}
+
+
+void sort_vals_only(Tensor& values, const bool& descending, const int64_t& dim_size){
+    if(values.dtype != DType::TensorObj){
+        values.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >(
+            [&descending, &dim_size](auto begin, auto end){
+                using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+                using iterator_t = decltype(begin);
+                if constexpr (std::is_pointer_v<iterator_t>){ // because values were cloned should all be contiguous, but this ensures it
+                int64_t total = (end - begin) / dim_size;
+#ifdef USE_PARALLEL
+                if(descending){
+                    tbb::parallel_for(
+                        utils::calculateGrainSize1D(total),
+                        [&](const tbb::blocked_range<int64_t> &range){
+                            // auto s_begin = begin + (range.begin() * dim_size);
+                            // auto s_end = begin + (range.end() * dim_size);
+                            auto i_begin = begin + (range.begin() * dim_size);
+                            auto i_end = begin + (range.end() * dim_size);
+                            for(;i_begin < i_end; i_begin += dim_size){
+                                std::sort(i_begin, i_begin + dim_size, std::greater<value_t>());
+                            }
+                    });
+                }else{
+                   tbb::parallel_for(
+                        utils::calculateGrainSize1D(total),
+                        [&](const tbb::blocked_range<int64_t> &range){
+                            // auto s_begin = begin + (range.begin() * dim_size);
+                            // auto s_end = begin + (range.end() * dim_size);
+                            auto i_begin = begin + (range.begin() * dim_size);
+                            auto i_end = begin + (range.end() * dim_size);
+                            for(;i_begin < i_end; i_begin += dim_size){
+                                std::sort(i_begin, i_begin + dim_size, std::less<value_t>());
+                            }
+                    });
+     
+                }
+#else
+                if(descending){
+                for(;begin != _end; begin += dim_size){
+                    std::sort(begin, begin + dim_size, std::greater<value_t>());
+                }
+                }else{
+                for(;indices_begin != indices_end; indices_begin += dim_size){
+
+                    std::sort(indices_begin, indices_begin + dim_size, std::less<value_t>());
+
+
+                }
+
+                }
+#endif
+            }
+        }
+        );
+    }else{
+        Tensor* begin = reinterpret_cast<Tensor*>(values.data_ptr());
+        Tensor* end = reinterpret_cast<Tensor*>(values.data_ptr_end());
+        int64_t total = (end - begin) / dim_size;
+#ifdef USE_PARALLEL
+        if(descending){
+            tbb::parallel_for(
+                utils::calculateGrainSize1D(total),
+                [&](const tbb::blocked_range<int64_t> &range){
+                    // auto s_begin = begin + (range.begin() * dim_size);
+                    // auto s_end = begin + (range.end() * dim_size);
+                    auto i_begin = begin + (range.begin() * dim_size);
+                    auto i_end = begin + (range.end() * dim_size);
+                    for(;i_begin < i_end; i_begin += dim_size){
+                        std::sort(i_begin, i_begin + dim_size, _nt_sort_descending_tensor_valsonly_);
+                    }
+            });
+        }else{
+           tbb::parallel_for(
+                utils::calculateGrainSize1D(total),
+                [&](const tbb::blocked_range<int64_t> &range){
+                    // auto s_begin = begin + (range.begin() * dim_size);
+                    // auto s_end = begin + (range.end() * dim_size);
+                    auto i_begin = begin + (range.begin() * dim_size);
+                    auto i_end = begin + (range.end() * dim_size);
+                    for(;i_begin < i_end; i_begin += dim_size){
+                        std::sort(i_begin, i_begin + dim_size, _nt_sort_ascending_tensor_valsonly_);
+                    }
+            });
+
+        }
+#else
+        if(descending){
+        for(;begin != end; begin += dim_size){
+            std::sort(begin, begin + dim_size, _nt_sort_descending_tensor_valsonly_);
+        }
+        }else{
+        for(;begin != end; begin += dim_size){
+            std::sort(begin, begin + dim_size, _nt_sort_ascending_tensor_valsonly_);
+        }
+
+        }
+#endif
+ 
+    }
+
+}
+
+Tensor sort(const Tensor& input, const Tensor::size_value_t dim, bool descending, bool return_sorted, bool return_indices){
+    utils::throw_exception(return_sorted || return_indices, "Sort function must return indices or the sorted tensor");
+    auto shape = input.shape();
+    int64_t _dim = dim < 0 ? dim + shape.size() : dim;
+    int64_t dim_size = shape[_dim];
+    utils::throw_exception(_dim >= 0 && _dim < shape.size(), "Invalid dimension $ for sorting", dim);
+    Tensor values = return_indices ? input.transpose(_dim, -1).contiguous() : input.transpose(_dim, -1).clone();
+    if(!return_indices){
+        sort_vals_only(values, descending, dim_size); 
+        return values.transpose(_dim, -1).contiguous();
+    }
+    Tensor indices = arange(values.shape(), DType::int64, 0);  // Create index tensor
+    int64_t* indices_begin = reinterpret_cast<int64_t*>(indices.data_ptr());
+    int64_t* indices_end = reinterpret_cast<int64_t*>(indices.data_ptr_end());
+    if(input.dtype != DType::TensorObj){
+        values.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >(
+            [indices_begin, indices_end, &descending, &dim_size](auto begin, auto end){
+                using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+                using iterator_t = decltype(begin);
+                int64_t total = (end - begin) / dim_size;
+#ifdef USE_PARALLEL
+                if(descending){
+                    tbb::parallel_for(
+                        utils::calculateGrainSize1D(total),
+                        [&](const tbb::blocked_range<int64_t> &range){
+                            // auto s_begin = begin + (range.begin() * dim_size);
+                            // auto s_end = begin + (range.end() * dim_size);
+                            auto i_begin = indices_begin + (range.begin() * dim_size);
+                            auto i_end = indices_begin + (range.end() * dim_size);
+                            for(;i_begin < i_end; i_begin += dim_size){
+                                std::sort(i_begin, i_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                                    return _nt_sort_descending_<iterator_t>(a, b, begin);    
+                                });
+                            }
+                    });
+                }else{
+                   tbb::parallel_for(
+                        utils::calculateGrainSize1D(total),
+                        [&](const tbb::blocked_range<int64_t> &range){
+                            // auto s_begin = begin + (range.begin() * dim_size);
+                            // auto s_end = begin + (range.end() * dim_size);
+                            auto i_begin = indices_begin + (range.begin() * dim_size);
+                            auto i_end = indices_begin + (range.end() * dim_size);
+                            for(;i_begin < i_end; i_begin += dim_size){
+                                std::sort(i_begin, i_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                                    return _nt_sort_ascending_<iterator_t>(a, b, begin);    
+                                });
+                            }
+                    });
+     
+                }
+#else
+                if(descending){
+                for(;indices_begin != indices_end; indices_begin += dim_size){
+                    std::sort(indices_begin, indices_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                        return _nt_sort_descending_<iterator_t>(a, b, begin);    
+                    });
+                }
+                }else{
+                for(;indices_begin != indices_end; indices_begin += dim_size){
+
+                    std::sort(indices_begin, indices_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                        bool ascended = _nt_sort_ascending_<iterator_t>(a, b, begin);
+                        std::cout << std::boolalpha << "ascended is "<<ascended<< std::noboolalpha << std::endl;
+                        return ascended;    
+                    });
+
+
+                }
+
+                }
+#endif
+            }
+        );
+    }else{
+        Tensor* begin = reinterpret_cast<Tensor*>(values.data_ptr());
+        Tensor* end = reinterpret_cast<Tensor*>(values.data_ptr_end());
+        int64_t total = (end - begin) / dim_size;
+#ifdef USE_PARALLEL
+        if(descending){
+            tbb::parallel_for(
+                utils::calculateGrainSize1D(total),
+                [&](const tbb::blocked_range<int64_t> &range){
+                    // auto s_begin = begin + (range.begin() * dim_size);
+                    // auto s_end = begin + (range.end() * dim_size);
+                    auto i_begin = indices_begin + (range.begin() * dim_size);
+                    auto i_end = indices_begin + (range.end() * dim_size);
+                    for(;i_begin < i_end; i_begin += dim_size){
+                        std::sort(i_begin, i_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                            return _nt_sort_descending_tensor_(a, b, begin);    
+                        });
+                    }
+            });
+        }else{
+           tbb::parallel_for(
+                utils::calculateGrainSize1D(total),
+                [&](const tbb::blocked_range<int64_t> &range){
+                    // auto s_begin = begin + (range.begin() * dim_size);
+                    // auto s_end = begin + (range.end() * dim_size);
+                    auto i_begin = indices_begin + (range.begin() * dim_size);
+                    auto i_end = indices_begin + (range.end() * dim_size);
+                    for(;i_begin < i_end; i_begin += dim_size){
+                        std::sort(i_begin, i_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                            return _nt_sort_ascending_tensor_(a, b, begin);    
+                        });
+                    }
+            });
+
+        }
+#else
+        if(descending){
+        for(;indices_begin != indices_end; indices_begin += dim_size){
+            std::sort(indices_begin, indices_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                return _nt_sort_descending_tensor_(a, b, begin);    
+            });
+        }
+        }else{
+        for(;indices_begin != indices_end; indices_begin += dim_size){
+            std::sort(indices_begin, indices_begin + dim_size, [&begin](const int64_t& a, const int64_t& b){
+                return _nt_sort_ascending_tensor_(a, b, begin);
+            });
+        }
+
+        }
+#endif
+ 
+    }
+    indices = indices.transpose(dim, -1).contiguous();
+    if(!return_sorted){return std::move(indices);}
+    Tensor n_values = input.flatten(0, -1)[indices.flatten(0, -1)];
+    n_values = n_values.contiguous().view(shape);
+    return list(std::move(n_values), std::move(indices));
+
+}
+
+
+
+//this is a function designed to sort the first elements of a row or channel of a tensor
+Tensor coordsort(const Tensor& input, Tensor::size_value_t dim, bool descending, bool return_sorted, bool return_indices){
+    utils::throw_exception(return_sorted || return_indices, "Sort function must return indices or the sorted tensor, or both, got none");
+    auto shape = input.shape();
+    int64_t per_dim = input.shape()[dim];
+    Tensor split = input.split_axis(dim).view(-1, per_dim);
+    if(!return_sorted){
+        return sort(split, -1, descending, false, true);
+    }
+    auto [split_sorted, indices] = get<2>(sort(split, -1, descending));
+    Tensor un_split = cat(std::move(split_sorted));
+    if(!return_indices){return un_split.view(shape);}
+    return list(un_split.view(shape), std::move(indices));
+}
+
+
+template <typename T>
+struct NumericVectorHash {
+
+    std::size_t operator()(const nt::Tensor& vec) const {
+        return vec.arr_void().cexecute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DTypeFuncs::type_to_dtype<T> > > >([](auto begin, auto end){
+            std::size_t hash = 0;
+            for(;begin != end; ++begin){
+                if constexpr (std::is_same_v<nt::my_complex<nt::float16_t>, T>){
+                    hash ^= std::hash<float>{}(_NT_FLOAT16_TO_FLOAT32_(begin->real())) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    hash ^= std::hash<float>{}(_NT_FLOAT16_TO_FLOAT32_(begin->imag())) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr (std::is_same_v<nt::my_complex<float>, T>){
+                    hash ^= std::hash<float>{}(begin->real()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    hash ^= std::hash<float>{}(begin->imag()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr (std::is_same_v<nt::my_complex<double>, T>){
+                    hash ^= std::hash<double>{}(begin->real()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    hash ^= std::hash<double>{}(begin->imag()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr (std::is_same_v<nt::float16_t, T>){
+                    hash ^= std::hash<float>{}(_NT_FLOAT16_TO_FLOAT32_(*begin)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr(std::is_same_v<nt::uint_bool_t, T>){
+                    hash ^= std::hash<float>{}(*begin ? float(1) : float(0)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+#ifdef __SIZEOF_INT128__
+                else if constexpr(std::is_same_v<nt::uint128_t, T>){
+                    hash ^= std::hash<int64_t>{}(nt::convert::convert<int64_t, nt::uint128_t>(*begin)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr(std::is_same_v<nt::int128_t, T>){
+                    hash ^= std::hash<int64_t>{}(nt::convert::convert<int64_t, nt::int128_t>(*begin)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+#endif
+                else{
+                    hash ^= std::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+            }
+            return hash;
+        });
+    }
+};
+
+template<typename T>
+struct NumericVectorEqual {
+    bool operator()(const nt::Tensor& a, const nt::Tensor& b) const {
+        if(a.numel() != b.numel() || a.dtype != b.dtype){return false;}
+        if(a.is_null() || b.is_null()){return false;}
+        const nt::ArrayVoid& arr_v = b.arr_void();
+        return a.arr_void().cexecute_function<nt::DTypeFuncs::type_to_dtype<T> >([&arr_v](auto begin, auto end) -> bool{
+            using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;
+            return arr_v.cexecute_function<nt::DTypeFuncs::type_to_dtype<value_t>>([&begin, &end](auto second, auto s_end) -> bool{
+                return std::equal(begin, end, second);
+            });
+        });
+    }
+};
+
+nt::Tensor unique(nt::Tensor input, int64_t dim, bool return_sorted, bool return_indices){
+    utils::throw_exception(return_sorted || return_indices, "unique function must return indices or the sorted tensor, or both, got none");
+    input = input.transpose(-1, dim).contiguous();
+    int64_t last_dim = input.shape().back();
+    nt::Tensor splits = input.split_axis(-2);
+    nt::Tensor* s_begin = reinterpret_cast<nt::Tensor*>(splits.data_ptr());
+    nt::Tensor* s_end = reinterpret_cast<nt::Tensor*>(splits.data_ptr_end());
+    return input.arr_void().execute_function<nt::WRAP_DTYPES<nt::NumberTypesL> >(
+    [&s_begin, &s_end, &last_dim, &return_sorted, &return_indices](auto begin, auto end) -> nt::Tensor {
+        using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;
+        std::unordered_map<nt::Tensor, int64_t, NumericVectorHash<value_t>, NumericVectorEqual<value_t>> unique_map; //tensor and its indice
+        int64_t counter = 0;
+        unique_map[*s_begin] = counter;
+        ++counter;
+        ++s_begin;
+        for(;s_begin != s_end; ++s_begin, ++counter){
+            if (unique_map.find(*s_begin) == unique_map.end()) {
+                unique_map[*s_begin] = counter;
+            } 
+        }
+        if(!return_indices){
+            nt::Tensor output = nt::Tensor::makeNullTensorArray(static_cast<long long>(unique_map.size()));
+            nt::Tensor* o_begin = reinterpret_cast<nt::Tensor*>(output.data_ptr());
+            nt::Tensor* o_end = o_begin + output.numel();
+            for(const auto& [tensor, indice] : unique_map){
+                *o_begin = tensor;
+                ++o_begin;
+            }
+            nt::Tensor out = nt::functional::cat_unordered(output);
+            return out.view(-1, last_dim);
+        }
+        if(!return_sorted){
+            nt::Tensor output_indices({static_cast<long long>(unique_map.size())}, nt::DType::int64);
+            int64_t* i_begin = reinterpret_cast<int64_t*>(output_indices.data_ptr());
+            for(const auto& [tensor, indice] : unique_map){
+                *i_begin = indice;
+                ++i_begin;
+            }
+            return std::move(output_indices);
+ 
+        }
+        nt::Tensor output = nt::Tensor::makeNullTensorArray(static_cast<long long>(unique_map.size()));
+        nt::Tensor output_indices({static_cast<long long>(unique_map.size())}, nt::DType::int64);
+        nt::Tensor* o_begin = reinterpret_cast<nt::Tensor*>(output.data_ptr());
+        nt::Tensor* o_end = o_begin + output.numel();
+        int64_t* i_begin = reinterpret_cast<int64_t*>(output_indices.data_ptr());
+        for(const auto& [tensor, indice] : unique_map){
+            *i_begin = indice;
+            *o_begin = tensor;
+            ++i_begin;
+            ++o_begin;
+        }
+        nt::Tensor out = nt::functional::cat_unordered(output);
+        return nt::functional::list(out.view(-1, last_dim), output_indices);
+    });
+}
+
+
+int64_t num_combinations(int64_t n, int64_t r) {
+    if (r > n) return 0;
+    int64_t result = 1;
+    for (int64_t i = 0; i < r; ++i) {
+        result = result * (n - i) / (i + 1);
+    }
+    return result;
+}
+
+nt::Tensor combinations(nt::Tensor vec, int64_t r, int64_t start){
+    //takes a vector
+    //returns combinations
+    //similar to pythons itertools.combinations
+    nt::utils::throw_exception(vec.dims() == 1, "Expected to get a vector of dimensions 1 but got dimensionality of $", vec.dims());
+    const int64_t n = vec.shape()[0];
+    nt::Tensor myints = nt::functional::arange(r, nt::DType::int64, start);
+    nt::Tensor out = nt::Tensor::makeNullTensorArray(num_combinations(n, r));
+    nt::Tensor* begin = reinterpret_cast<nt::Tensor*>(out.data_ptr());
+    *begin = vec[myints];
+    ++begin;
+    int64_t* first = reinterpret_cast<int64_t*>(myints.data_ptr());
+    int64_t* last = reinterpret_cast<int64_t*>(myints.data_ptr_end());
+    while((*first) != n-r+start){
+        int64_t* mt = last;
+        --mt; // Ensure mt is decremented before use
+        while (*mt == n - int64_t(last - mt) + start) {
+            --mt;
+        }
+        (*mt)++;
+        while (++mt != last) *mt = *(mt-1)+1;
+        *begin = vec[myints];
+        ++begin;
+    }
+    return nt::functional::stack(out).clone();
+
+}
+
 
 Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
@@ -1560,10 +2037,22 @@ void next_index(const SizeRef& s, std::vector<int64_t>& v, typename SizeRef::val
 //inefficient, but for some reason seems to be the only way it works?
 //maybe look back into this function in the future
 Tensor where(Tensor t){
-	utils::THROW_EXCEPTION(t.dtype == DType::Bool, "Expected dtype to be DType::Bool but got $", t.dtype);
 	utils::THROW_EXCEPTION(t.is_contiguous(), "Expected contiguous tensor for where");
+    if(t.dtype == DType::TensorObj){
+        Tensor output = Tensor::makeNullTensorArray(t.numel());
+        Tensor* ts_begin = reinterpret_cast<Tensor*>(output.data_ptr());
+        Tensor* ts_end = ts_begin + t.numel();
+        Tensor* begin = reinterpret_cast<Tensor*>(t.data_ptr());
+        for(;ts_begin != ts_end; ++ts_begin, ++begin)
+            *ts_begin = where(*begin);
+        return std::move(output);
+    }
+	utils::THROW_EXCEPTION(t.dtype == DType::Bool, "Expected dtype to be DType::Bool but got $", t.dtype);
 	uint_bool_t looking(true);
 	size_t amt = amount_of(t, looking);
+    if(amt == 0){
+        return nt::Tensor::Null();
+    }
 	Tensor outp({static_cast<typename SizeRef::value_type>(t.dims()), static_cast<typename SizeRef::value_type>(amt)}, DType::int64);
 	
 	Tensor ts = outp.split_axis_1();
