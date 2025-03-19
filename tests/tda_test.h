@@ -208,7 +208,7 @@ birth is 4.71699 and death is 6.67083 and the shape persists for 1.95384 radii
 void persistent_pointcloud_3d(){
     
     int64_t dims = 3;
-    nt::Tensor cloud = nt::functional::zeros({1, 30, 30, 30}, nt::DType::uint8);
+    nt::Tensor cloud = nt::functional::zeros({1, 30, 30, 30}, nt::DType::int8);
     //I want it to have 50 random points so:
     double percent = 50.0 / (30.0 * 30.0 * 30.0);
     std::cout << "percent is "<<percent<<std::endl;
