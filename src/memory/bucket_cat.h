@@ -158,10 +158,10 @@ inline Bucket Bucket::cat(const Buckets&... buckets){
 	/* 	return Bucket::catV(buckets...); */
 	/* } */
 	else{
-		std::cout << "going to cat "<<sizeof...(Buckets) << "buckets"<<std::endl;
+		// std::cout << "going to cat "<<sizeof...(Buckets) << "buckets"<<std::endl;
 		int64_t n_stride_size = 0;
 		processCatStrideSizeHelper(n_stride_size, buckets...);
-		std::cout << n_stride_size << std::endl;
+		// std::cout << n_stride_size << std::endl;
 		utils::throw_exception(n_stride_size > 2, "Expected bucket size to be greater than zero for a cat function");
 		bool dontConvert = dont_convert_strides(buckets...);
 		verifyAllDevTypes(buckets...);

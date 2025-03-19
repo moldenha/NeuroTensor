@@ -202,7 +202,8 @@ struct SimdTraits_avx2<float> {
 	/* 	return simde_mm256_cvtepi32_ps(simde_mm256_rem_epi32(divisor, dividend)); */
 	/* } */
 
-	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
+	static constexpr auto fmsub = simde_mm256_fmsub_ps;
+    inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_ps(a, b, c);
 #else
@@ -298,6 +299,7 @@ struct SimdTraits_avx2<double> {
 	/* 	return simde_mm256_cvtepi64_pd(simde_mm256_rem_epi64(divisor, dividend)); */
 	/* } */
 
+	static constexpr auto fmsub = simde_mm256_fmsub_pd;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_pd(a, b, c);
@@ -340,6 +342,7 @@ struct SimdTraits_avx2<int32_t> {
 
     /* static constexpr auto modulo = simde_mm256_rem_epi32; */
     inline static constexpr auto broadcast = [](const int32_t* arr) -> Type {return SimdTraits_avx2<int32_t>::set1(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi32(simde_mm256_mullo_epi32(a, b), c);
     };
@@ -374,6 +377,7 @@ struct SimdTraits_avx2<uint32_t> {
     static constexpr auto subtract = simde_mm256_sub_epi32;
     /* static constexpr auto modulo = simde_mm256_rem_epu32; */
     inline static constexpr auto broadcast = [](const uint32_t* arr) -> Type {return SimdTraits_avx2<uint32_t>::set1(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi32(simde_mm256_mullo_epi32(a, b), c);
     };
@@ -422,6 +426,7 @@ struct SimdTraits_avx2<int64_t> {
 
     /* static constexpr auto modulo = simde_mm256_rem_epi64; */
     inline static constexpr auto broadcast = [](const int64_t* arr) -> Type {return simde_mm256_set1_epi64x(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi64(SimdTraits_avx2<int64_t>::multiply(a, b), c);
     };
@@ -463,6 +468,7 @@ struct SimdTraits_avx2<uint64_t> {
 
     /* static constexpr auto modulo = simde_mm256_rem_epu64; */
     inline static constexpr auto broadcast = [](const uint64_t* arr) -> Type {return simde_mm256_set1_epi64x(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi64(SimdTraits_avx2<uint64_t>::multiply(a, b), c);
     };
@@ -529,6 +535,7 @@ struct SimdTraits_avx2<int8_t> {
 
     /* static constexpr auto modulo = simde_mm256_rem_epi8; */
     inline static constexpr auto broadcast = [](const int8_t* arr) -> Type {return simde_mm256_set1_epi8(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi8(SimdTraits_avx2<int8_t>::multiply(a, b), c);
     };
@@ -591,6 +598,7 @@ struct SimdTraits_avx2<uint8_t> {
 
     /* static constexpr auto modulo = simde_mm256_rem_epu8; */
     inline static constexpr auto broadcast = [](const uint8_t* arr) -> Type {return simde_mm256_set1_epi8(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi8(SimdTraits_avx2<uint8_t>::multiply(a, b), c);
     };
@@ -660,6 +668,7 @@ struct SimdTraits_avx2<int16_t> {
 
     /* static constexpr auto modulo = simde_mm256_rem_epi16; */
     inline static constexpr auto broadcast = [](const int16_t* arr) -> Type {return simde_mm256_set1_epi16(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi16(simde_mm256_mullo_epi16(a, b), c);
     };
@@ -708,6 +717,7 @@ struct SimdTraits_avx2<uint16_t> {
     static constexpr auto subtract = simde_mm256_sub_epi16;
     /* static constexpr auto modulo = simde_mm256_rem_epu16; */
     inline static constexpr auto broadcast = [](const uint16_t* arr) -> Type {return simde_mm256_set1_epi16(*arr);};
+    inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 	c = simde_mm256_add_epi16(simde_mm256_mullo_epi16(a, b), c);
     };
@@ -800,7 +810,8 @@ using Type = simde__m256;
 	};
 
 	/* static constexpr auto modulo = SimdTraits_avx2<float>::modulo; */
-	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){ //same
+	static constexpr auto fmsub = simde_mm256_fmsub_ps;
+    inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){ //same
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_ps(a, b, c);
 #else
@@ -890,6 +901,7 @@ struct SimdTraits_avx2<complex_128> {
 	static constexpr auto log = simde_mm256_log_pd;
 
 
+	static constexpr auto fmsub = simde_mm256_fmsub_pd;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_pd(a, b, c);
@@ -992,6 +1004,7 @@ struct SimdTraits_avx2<float16_t>{
 	};
 	/* static constexpr auto modulo = SimdTraits_avx2<float>::modulo; */
 	inline static constexpr auto broadcast = [](const float16_t* a) noexcept -> Type {return SimdTraits_avx2<float16_t>::set1(*a);};
+	static constexpr auto fmsub = simde_mm256_fmsub_ps;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c) noexcept {
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_ps(a, b, c);
@@ -1105,6 +1118,7 @@ struct SimdTraits_avx2<complex_32>{
 	};
 	/* static constexpr auto modulo = SimdTraits_avx2<float16_t>::modulo; */
 	inline static constexpr auto broadcast = [](const complex_32* a) noexcept -> Type {return set1(*a);};
+	static constexpr auto fmsub = simde_mm256_fmsub_ps;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c) noexcept {
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_ps(a, b, c);

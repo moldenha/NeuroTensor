@@ -66,6 +66,9 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party/simde
     ${CMAKE_SOURCE_DIR}/third_party/half
     ${CMAKE_SOURCE_DIR}/third_party/stb
+    #For matrix and vector linear algebra calculations
+    #This incorperates most of the nt::linalg namespace
+    ${CMAKE_SOURCE_DIR}/third_party/eigen
 )
 
 
@@ -74,7 +77,7 @@ set(CORE_SOURCES
     src/refs/SizeRef.cpp
     src/utils/utils.cpp
     src/utils/optional.cpp
-    src/utils/SparseTensor.cpp
+    src/utils/CommaOperator.cpp
     src/Tensor.cpp
 )
 
@@ -106,9 +109,33 @@ set(FUNCTIONAL_SOURCES
 	src/functional/functional_matmult.cpp
 	src/functional/functional_fold.cpp
 	src/functional/functional_conv.cpp
-	src/functional/linalg.cpp
 	src/functional/wrbits.cpp
+    src/functional/numpy.cpp
 )
+
+
+#split linalg into different functions
+#this reduces compile times when specific functions need to be changed
+#would like to do this for all general function in the future and current 
+set(LINALG_SOURCES
+    src/linalg/SVD.cpp
+    src/linalg/QR.cpp
+    src/linalg/inv.cpp
+    src/linalg/column_space.cpp
+    src/linalg/process/SVD.cpp
+    src/linalg/process/QR.cpp
+    src/linalg/process/inv.cpp
+    src/linalg/process/null_space.cpp
+    src/linalg/process/column_space.cpp
+    src/linalg/adjugate.cpp
+    src/linalg/determinant.cpp
+    src/linalg/norm.cpp
+    src/linalg/null_space.cpp
+    src/linalg/pivots.cpp
+    src/linalg/eye.cpp
+    src/linalg/independent.cpp
+)
+
 
 set(TYPES_SOURCES
     src/dtype/ArrayVoid.cpp
@@ -119,6 +146,37 @@ set(TYPES_SOURCES
     src/types/Types.cpp
     src/convert/Convert.cpp
 )
+
+# Check for compiler support for __uint128_t
+include(CheckCCompilerFlag)
+
+# Set a flag to check for __uint128_t support
+check_c_compiler_flag("-m128" HAS_UINT128)
+
+if(NOT HAS_UINT128)
+    # Check for GCC compiler
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        message(STATUS "Was gnu")
+
+        set(HAS_UINT128 TRUE)
+    else()
+        # Check if __SIZEOF_INT128__ is defined in C++ code
+        message(STATUS "Checking compilation")
+        check_cxx_source_compiles("#include <cstddef>\nint main() { return sizeof(__int128) > 0; }" HAS_UINT128)
+    endif()
+endif()
+
+if(NOT HAS_UINT128)
+    message(STATUS "Compiler does not support __uint128_t, using custom uint128_t library")
+
+    # Include the directory for the uint128_t header
+    include_directories(third_party/uint128_t)
+    list(APPEND TYPES_SOURCES 
+        third_party/uint128_t/uint128_t.cpp)
+else()
+    message(STATUS "Compiler supports __uint128_t")
+endif()
+
 
 set(PERMUTE_SOURCES
     src/permute/permute_old.cpp
@@ -150,17 +208,29 @@ set(MP_SOURCES
 )
 
 set(TDA_SOURCES
-    src/tda/Simplex.cpp
-    src/tda/Simplex2d.cpp
-    src/tda/Shapes.cpp
-    src/tda/Basis.cpp
+    src/tda/old_tda/Simplex.cpp
+    src/tda/old_tda/Simplex2d.cpp
+    src/tda/old_tda/Shapes.cpp
+    src/tda/old_tda/Basis.cpp
+    src/tda/old_tda/Points.cpp
+    src/tda/old_tda/Points2d.cpp
+    src/tda/old_tda/KDTree.cpp
+    # src/tda/old_tda/refinement/refine.cpp <- unreleased
+    src/tda/old_tda/BatchBasis.cpp
+    src/tda/old_tda/BatchKDTree.cpp
+    src/tda/old_tda/BatchPoints.cpp
+    src/tda/BasisOverlapping.cpp
+    src/tda/Boundaries.cpp
+    src/tda/Homology.cpp
+    src/tda/MatrixReduction.cpp
+    src/tda/PlotDiagrams.cpp
     src/tda/Points.cpp
-    src/tda/Points2d.cpp
-    src/tda/KDTree.cpp
-    # src/tda/refinement/refine.cpp <- unreleased
-    src/tda/BatchBasis.cpp
-    src/tda/BatchKDTree.cpp
-    src/tda/BatchPoints.cpp
+    src/tda/SimplexConstruct.cpp
+    src/tda/SimplexRadi.cpp
+)
+
+set(SPARSE_SOURCES
+    src/sparse/SparseTensor.cpp
 )
 
 set(IMAGES_SOURCES
@@ -179,11 +249,13 @@ set(SOURCES
     ${MATMULT_SOURCES}
     ${CORE_SOURCES}
     ${FUNCTIONAL_SOURCES}
+    ${LINALG_SOURCES}
     ${TYPES_SOURCES}
     ${PERMUTE_SOURCES}
     ${AI_SOURCES}
     ${MP_SOURCES}
     ${TDA_SOURCES}
+    ${SPARSE_SOURCES}
     ${IMAGES_SOURCES}
     ${MEMORY_SOURCES}
 )

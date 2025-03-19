@@ -8,6 +8,7 @@
 #include <complex.h>
 #include <ostream>
 #include <tuple>
+#include <functional> //to make an std::hash path for uint128
 /* #include <bfloat16/bfloat16.h> */
 
 #include <simde/simde-f16.h> //using this to convert between float32 and float16
@@ -148,9 +149,36 @@ using int128_t = __int128_t;
 std::ostream& operator<<(std::ostream& os, const __int128_t i);
 std::ostream& operator<<(std::ostream& os, const __uint128_t i);
 
+#else 
+
+}
+
+//currently has library for uint128 support that is cross platform
+//will be adding int128 support that is cross platform soon
+#include "uint128_t.h"
+namespace nt{
+using uint128_t = uint128_t;
+
+}
+
+namespace std{
+template<>
+struct hash<::nt::uint128_t>{
+    std::size_t operator()(const uint128_t& x) const {
+        return std::hash<uint64_t>()(static_cast<uint64_t>(x)) ^
+               std::hash<uint64_t>()(static_cast<uint64_t>(x >> 64));
+    }
+};
+
+
+}
+
+namespace nt{
+
 #endif
 
 }
+
 
 namespace nt{
 

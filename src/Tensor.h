@@ -24,6 +24,7 @@ class Tensor;
 #include "dtype/Scalar.h"
 #include "utils/utils.h"
 #include "utils/optional_list.h"
+#include "utils/CommaOperator.h"
 
 /* #include "CustomOperator.h" */
 #include <type_traits>
@@ -130,6 +131,7 @@ class Tensor final{
 		Tensor operator>=(const Tensor&) const;
 		Tensor operator<=(const Tensor&) const;
 		Tensor operator==(const Tensor&) const;
+		Tensor operator!=(const Tensor&) const;
 		Tensor operator>=(Scalar) const;
 		Tensor operator<=(Scalar) const;
 		Tensor operator==(Scalar) const;
@@ -166,11 +168,11 @@ class Tensor final{
 		
 		Tensor operator-() const;
 	
-		/* inline Tensor operator@(const Tensor& b) const {return functional::matmult(*this, b);} */
 
 		Tensor& fill_(Scalar);
 		Tensor& fill_(const Tensor& val);
         Tensor& fill_diagonal_(Scalar);
+        Tensor diagonal() const;
 		Tensor& add_(Scalar val);
 		Tensor& add_(const Tensor& val);
 		Tensor& subtract_(Scalar val);
@@ -180,6 +182,7 @@ class Tensor final{
 		Tensor& divide_(Scalar val);
 		Tensor& divide_(const Tensor& val);
 		Scalar toScalar() const;
+        CommaOperator operator<<(Scalar s);   
 
 		Tensor clone() const;
 		Tensor contiguous() const;
@@ -301,6 +304,11 @@ class Tensor final{
 			return strides();
 		}
 		Tensor transpose(size_value_t, size_value_t) const;
+        //this is a function where you can for example swap rows
+        //if you wanted to swap rows 1 & 2 this would be equivalent to t.swap_axis(-2, 1, 2)
+        Tensor swap_axis(size_value_t dim, size_value_t a, size_value_t b) const;
+        //swap axis on self
+        Tensor& swap_axis_(size_value_t dim, size_value_t a, size_value_t b);
 		Tensor unfold(size_value_t, size_value_t, size_value_t) const;
 		/* Tensor fold(size_value_t dim, size_value_t size, size_value_t step, const SizeRef& output_shape) const; */
 		Tensor flatten(size_value_t, size_value_t) const;
@@ -438,7 +446,7 @@ Tensor operator/(Scalar s, const Tensor& t);
 // Specialization of std::swap for nt::Tensor
 #include "functional/functional.h"
 #include "functional/tensor_get.h"
-#include "utils/SparseTensor.h"
+#include "sparse/SparseTensor.h"
 
 namespace std {
     inline void swap(::nt::Tensor& lhs, ::nt::Tensor& rhs) {

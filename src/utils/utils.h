@@ -622,7 +622,21 @@ struct is_all_same<T, T> : std::true_type {};
 template<typename T, typename... Args>
 inline static constexpr bool is_all_same_v = is_all_same<T, Args...>::value;
 
-}} //nt::utils::
+inline thread_local bool g_print_dtype_on_tensor = true;
+
+} //nt::utils::
+
+inline std::ostream& noprintdtype(std::ostream& os) {
+    utils::g_print_dtype_on_tensor = false;
+    return os;
+}
+
+inline std::ostream& printdtype(std::ostream& os) {
+    utils::g_print_dtype_on_tensor = true;
+    return os;
+}
+
+} //nt::
 
 
 // namespace nt{

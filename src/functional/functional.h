@@ -12,6 +12,7 @@
 #include "../utils/optional_list.h"
 #include "../dtype/DType.h"
 #include <cstring>
+#include "numpy.h"
 
 namespace nt{
 namespace functional{
@@ -35,12 +36,28 @@ Tensor subtract(const Tensor&, const Tensor&);
 Tensor& subtract_(Tensor&, const Tensor&);
 Tensor divide(const Tensor&, const Tensor&);
 Tensor& divide_(Tensor&, const Tensor&);
+//returns c + (a * b);
+Tensor fused_multiply_add(const Tensor& c, const Tensor& a, const Tensor& b);
+Tensor fused_multiply_add(const Tensor& c, const Tensor& a, Scalar b);
+//returns c += (a * b);
+Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, const Tensor& b);
+Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, Scalar b);
+//returns c - (a * b);
+Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, const Tensor& b);
+Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, Scalar b);
+//returns c -= (a * b);
+Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, const Tensor& b);
+Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, Scalar b);
+
+
 Tensor dot(const Tensor&, const Tensor&, utils::optional_list dim = nullptr, bool keepdim = false);
 
 Tensor arange(typename Tensor::size_value_t total_size, DType dt = DType::Float, Scalar start = 0);
 Tensor arange(SizeRef, DType dt = DType::Float, Scalar start = 0);
 bool all(const Tensor&);
 bool any(const Tensor&);
+Tensor all(const Tensor, int64_t dim);
+Tensor any(const Tensor, int64_t dim);
 void save(const Tensor&, const char*);
 Tensor load(const char*);
 

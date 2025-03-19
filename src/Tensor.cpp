@@ -361,8 +361,31 @@ Tensor Tensor::operator==(const Tensor &val) const {
         return std::move(output);
     }
     Tensor output(shape(), DType::Bool);
-    _vals.transform_function<WRAP_DTYPES<NumberTypesL>>(
+    _vals.transform_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<nt::DType::Bool>>>(
         [](auto &a, auto &b) -> uint_bool_t { return uint_bool_t(a == b); },
+        val._vals, reinterpret_cast<uint_bool_t *>(output.data_ptr()));
+    return std::move(output);
+}
+
+Tensor Tensor::operator!=(const Tensor &val) const {
+    utils::THROW_EXCEPTION(
+        val.shape() == shape(),
+        "\nRuntimeError: Expected input tensor to have a shape of $ but got $",
+        shape(), val.shape());
+    utils::THROW_EXCEPTION(
+        val.dtype == dtype,
+        "\nRuntimeError: Expected input tensor to have a dtype of $ but got $",
+        dtype, val.dtype);
+    if (dtype == DType::TensorObj) {
+        Tensor output(shape(), DType::TensorObj);
+        _vals.transform_function<DType::TensorObj>(
+            [](const Tensor &a, const Tensor &b) { return a != b; }, val._vals,
+            reinterpret_cast<Tensor *>(output.data_ptr()));
+        return std::move(output);
+    }
+    Tensor output(shape(), DType::Bool);
+    _vals.transform_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<nt::DType::Bool>>>(
+        [](auto &a, auto &b) -> uint_bool_t { return uint_bool_t(a != b); },
         val._vals, reinterpret_cast<uint_bool_t *>(output.data_ptr()));
     return std::move(output);
 }
@@ -383,6 +406,7 @@ Tensor Tensor::operator>=(const Tensor &val) const {
             reinterpret_cast<Tensor *>(output.data_ptr()));
         return std::move(output);
     }
+    utils::THROW_EXCEPTION(dtype != nt::DType::Bool, "Cannot compare less or greater than with dtype bool");
     Tensor output(shape(), DType::Bool);
     _vals.transform_function<WRAP_DTYPES<NumberTypesL>>(
         [](auto &a, auto &b) -> uint_bool_t { return uint_bool_t(a >= b); },
@@ -406,6 +430,7 @@ Tensor Tensor::operator<=(const Tensor &val) const {
             reinterpret_cast<Tensor *>(output.data_ptr()));
         return std::move(output);
     }
+    utils::THROW_EXCEPTION(dtype != nt::DType::Bool, "Cannot compare less or greater than with dtype bool");
     Tensor output(shape(), DType::Bool);
     _vals.transform_function<WRAP_DTYPES<NumberTypesL>>(
         [](auto &a, auto &b) -> uint_bool_t { return uint_bool_t(a <= b); },
@@ -1217,10 +1242,98 @@ const Tensor Tensor::operator[](const my_range &x) const {
 
 void Tensor::print() const { std::cout << *this << std::endl; }
 
+
+//this function ensures that int8_t and uint8_t are printed properly, otherwise it just comes out as random-looking characters
+//and it is really annoying
+template <typename IteratorOut>
+void print_byte_tensor_template_func(IteratorOut &data, IteratorOut &end,
+                                std::ostream &out, const SizeRef &t_s,
+                                bool sub_matrix, uint32_t print_space) {
+    if (!sub_matrix) {
+        out << t_s << std::endl;
+        out << "Tensor(";
+        print_space += 7;
+    }
+    if (t_s.empty()) {
+        out << "[]" << std::endl;
+        return;
+    }
+    if (t_s.size() == 1) {
+        out << "[";
+        for (; (data + 1) != end; ++data)
+            out << +(*data) << ",";
+        out << +(*data) << "]";
+        if (!sub_matrix) {
+            if(utils::g_print_dtype_on_tensor){
+                out << ", " << t_s << ')' << std::endl;
+            }else{
+                out <<", " << t_s << ')';
+            }
+        }
+        return;
+    }
+    if (t_s.size() == 2) {
+        const Tensor::size_value_t _rows = t_s.front();
+        const Tensor::size_value_t _cols = t_s.back();
+        out << "[";
+        ++print_space;
+        for (Tensor::size_value_t x = 0; x < _rows; ++x) {
+            if (x != 0 || !sub_matrix) {
+                out << "[";
+            }
+            for (Tensor::size_value_t y = 0; y < _cols - 1; ++y) {
+                out << +(*data) << ",";
+                ++data;
+            }
+            if (x == _rows - 1) {
+                out << +(*data) << "]]" << std::endl;
+            } else {
+                out << +(*data) << "],";
+                out << std::endl;
+                for (uint32_t i = 0; i < print_space; ++i)
+                    out << " ";
+            }
+            ++data;
+        }
+        if (!sub_matrix) {
+            out << "])" << std::endl;
+        } else {
+            out << std::endl;
+            for (uint32_t i = 0; i < print_space - 1; ++i)
+                out << " ";
+        }
+        return;
+    }
+    for (Tensor::size_value_t i = 0; i < t_s.front(); ++i) {
+        if (!sub_matrix && i != 0) {
+            for (Tensor::size_value_t j = 0; j < 7; ++j)
+                out << " ";
+        }
+        out << "[";
+        print_byte_tensor_template_func(data, end, out, t_s.pop_front(), true,
+                                   print_space + 1);
+        if (!sub_matrix) {
+            out << "\033[F";
+            for (Tensor::size_value_t j = 0; j < t_s.size() - 3; ++j)
+                out << "]";
+            if (i != t_s.front() - 1) {
+                out << ',';
+                out << std::endl << std::endl;
+            } else {
+                out << ")";
+                if(utils::g_print_dtype_on_tensor){
+                    out << std::endl;
+                }
+            }
+        }
+    }
+}
+
 template <typename IteratorOut>
 void print_tensor_template_func(IteratorOut &data, IteratorOut &end,
                                 std::ostream &out, const SizeRef &t_s,
                                 bool sub_matrix, uint32_t print_space) {
+    
     if (!sub_matrix) {
         out << t_s << std::endl;
         out << "Tensor(";
@@ -1236,7 +1349,11 @@ void print_tensor_template_func(IteratorOut &data, IteratorOut &end,
             out << *data << ",";
         out << *data << "]";
         if (!sub_matrix) {
-            out << ')' << std::endl;
+            if(utils::g_print_dtype_on_tensor){
+                out << ')' << std::endl;
+            }else{
+                out << ')';
+            }
         }
         return;
     }
@@ -1289,7 +1406,9 @@ void print_tensor_template_func(IteratorOut &data, IteratorOut &end,
                 out << std::endl << std::endl;
             } else {
                 out << ")";
-                out << std::endl << std::endl;
+                if(utils::g_print_dtype_on_tensor){
+                    out << std::endl;
+                }
             }
         }
     }
@@ -1300,6 +1419,12 @@ inline static constexpr auto print_tensor_func = [](auto data, auto end,
                                                     const SizeRef &t_s,
                                                     bool sub_matrix,
                                                     uint32_t print_space) {
+    using value_t = utils::IteratorBaseType_t<decltype(data)>;
+    if constexpr (std::is_same_v<value_t, int8_t> || std::is_same_v<value_t, uint8_t>){
+        print_byte_tensor_template_func<decltype(data)>(
+            data, end, out, t_s, false, print_space);
+        return;
+    }
     if (!sub_matrix) {
         out << "Tensor([";
         print_space += 8;
@@ -1315,7 +1440,12 @@ inline static constexpr auto print_tensor_func = [](auto data, auto end,
         }
         out << *data << "]";
         if (!sub_matrix) {
-            out << ", " << t_s << ')' << std::endl;
+            if(utils::g_print_dtype_on_tensor){
+                out << ", " << t_s << ')' << std::endl;
+            }else{
+                out <<", " << t_s << ')';
+            }
+
         }
         return;
     }
@@ -1371,7 +1501,9 @@ inline static constexpr auto print_tensor_func = [](auto data, auto end,
                 out << std::endl << std::endl;
             } else {
                 out << "], " << t_s << ")";
-                out << std::endl;
+                if(utils::g_print_dtype_on_tensor){
+                    out << std::endl;
+                }
             }
         }
     }
@@ -1379,10 +1511,14 @@ inline static constexpr auto print_tensor_func = [](auto data, auto end,
 
 std::ostream &operator<<(std::ostream &out, const Tensor &_t) {
     if (_t.is_null()) {
-        return out << "Null";
+        return out << "Tensor (Null)";
     }
     if (_t.is_empty()) {
-        return out << "Tensor([], " << _t.dtype << ")";
+        if(utils::g_print_dtype_on_tensor){
+            return out << "Tensor([], " << _t.dtype << ")";
+        }else{
+            return out << "Tensor([])";
+        }
     }
     if (_t.dtype == DType::TensorObj && _t.numel() == 1) {
         return out << *reinterpret_cast<const Tensor *>(_t.data_ptr())
@@ -1394,7 +1530,9 @@ std::ostream &operator<<(std::ostream &out, const Tensor &_t) {
         print_tensor_func, out, _t.shape(), false, 0);
     if (_t.dtype == DType::Bool)
         out << std::noboolalpha;
-    out << std::endl << _t.dtype;
+    if(utils::g_print_dtype_on_tensor){
+        out << std::endl << _t.dtype;
+    }
     return out;
 }
 
@@ -1749,6 +1887,19 @@ void transpose_RowColSwap(void **first, void **last,
     }
 }
 
+SizeRef squeeze_and_adjust_transpose(std::vector<Tensor::size_value_t> size_vec, Tensor::size_value_t& a, Tensor::size_value_t& b){
+    //a < b
+    for(int i = size_vec.size()-1; i >= 0; --i){
+        if(size_vec[i] != 1) continue;
+        if(i > b) continue;
+        b = (b == 0) ? 0 : b-1;
+        if(i > a) continue;
+        a = (a == 0) ? 0 : a-1;
+    }
+    size_vec.erase(std::remove(size_vec.begin(), size_vec.end(), 1), size_vec.end());
+    return SizeRef(std::move(size_vec));
+}
+
 // when dims are 1 away from each other this is a great and wonderfully
 // optimized design when they are not, there is probably much to be desired
 Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
@@ -1765,6 +1916,12 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
     }
     if (_a == _b) {
         return *this;
+    }
+    if(std::any_of(shape().begin(), shape().end(), [](const int64_t& i){return i == 1;})){
+        //fill in squeeze and adjust
+        SizeRef out_shape = shape().transpose(_a, _b);
+        SizeRef n_shape = squeeze_and_adjust_transpose(shape().Vec(), _a, _b);
+        return this->view(n_shape).transpose(_a, _b).view(out_shape);
     }
     std::vector<size_value_t> cur_strides = getChangedStrides();
     std::swap(cur_strides[_a + 1], cur_strides[_b + 1]);
@@ -1867,6 +2024,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
     Tensor split = this->split_axis(_b).view(shape().range(
         0, _b + 1)); // this split_axis function needs to be made faster
     Tensor *mine = reinterpret_cast<Tensor *>(split.data_ptr());
+    // std::cout << "there are "<<split.numel()<<" tensors in mine"<<std::endl;
     Tensor out =
         Tensor::makeNullTensorArray(shape().range(0, _b + 1).multiply());
     out._size = shape().range(0, _b + 1);
@@ -1894,7 +2052,9 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
         /* std::cout << "setting "<< calc_index(current_shape, n_strides) << "
          * of  "
          * << shape().range(0, _b+1).multiply() << std::endl; */
-        *(outp + calc_index(current_shape, n_strides)) = *mine;
+        int64_t index = calc_index(current_shape, n_strides);
+        // std::cout << "index "<<index<<" was greater than out numel "<<out.numel()<<std::endl;
+        *(outp + index) = *mine;
         std::swap(current_shape[_a], current_shape[_b]);
     }
     *(outp + out.numel() - 1) = *mine;
@@ -3313,6 +3473,52 @@ Tensor &Tensor::RowColSwap() {
     return *this;
 }
 
+
+Tensor Tensor::swap_axis(size_value_t dim, size_value_t a, size_value_t b) const{
+    dim = (dim < 0) ? dims() + dim : dim;
+    utils::throw_exception(b < dims(), "cannot swap axis ($) that are greater than dims ($)", b, dims());
+    if(a > b) std::swap(a, b);
+    utils::throw_exception(b < shape()[dim], "Expected to swap indices lower than the axis they are swapping got $ and $ for shape $", a, b, shape());
+    Tensor split = this->split_axis(dim);
+    Tensor* begin = reinterpret_cast<Tensor*>(split.data_ptr());
+    Tensor* end = reinterpret_cast<Tensor*>(split.data_ptr_end());
+    if(dim == 0){
+        begin[a].swap(begin[b]);
+        return functional::cat_unordered(split).view(shape());
+    }
+    int64_t batches = shape().flatten(0, dim)[0];
+    int64_t sizes = shape().flatten(dim, -1)[-1];
+    for(int64_t i = 0; i < batches; ++i, begin += sizes){
+        begin[a].swap(begin[b]);
+    }
+    return functional::cat_unordered(split).view(shape());
+
+}
+
+Tensor& Tensor::swap_axis_(size_value_t dim, size_value_t a, size_value_t b){
+    dim = (dim < 0) ? dims() + dim : dim;
+    utils::throw_exception(b < dims(), "cannot swap axis ($) that are greater than dims ($)", b, dims());
+    if(a > b) std::swap(a, b);
+    utils::throw_exception(b < shape()[dim], "Expected to swap indices lower than the axis they are swapping got $ and $ for shape $", a, b, shape());
+    Tensor split = this->split_axis(dim);
+    Tensor* begin = reinterpret_cast<Tensor*>(split.data_ptr());
+    Tensor* end = reinterpret_cast<Tensor*>(split.data_ptr_end());
+    if(dim == 0){
+        begin[a].swap(begin[b]);
+        Tensor n_tensor = functional::cat_unordered(split).view(shape());
+        this->swap(n_tensor);
+        return *this;
+    }
+    int64_t batches = shape().flatten(0, dim)[0];
+    int64_t sizes = shape().flatten(dim, -1)[-1];
+    for(int64_t i = 0; i < batches; ++i, begin += sizes){
+        begin[a].swap(begin[b]);
+    }
+    Tensor n_tensor = functional::cat_unordered(split).view(shape());
+    this->swap(n_tensor);
+    return *this;
+}
+
 Tensor Tensor::real() const {
     utils::THROW_EXCEPTION(
         DTypeFuncs::is_complex(dtype),
@@ -4410,6 +4616,51 @@ Tensor& Tensor::fill_diagonal_(Scalar c){
     return *this;
 }
 
+Tensor Tensor::diagonal() const {
+    if(dims() == 2){
+        const int64_t& rows = shape()[-2];
+        const int64_t& cols = shape()[-1];
+        const int64_t out_cols = std::min(rows, cols);
+        ArrayVoid my_vals = _vals.bucket_all_indices();
+        ArrayVoid new_vals = _vals.new_strides(out_cols);
+        void **out_begin = new_vals.stride_begin();
+        void **my_begin = my_vals.stride_begin();
+        for(int64_t r = 0; r < out_cols; ++r, ++out_begin){
+            *out_begin = my_begin[r * cols + r];
+        }
+        return Tensor(new_vals, {static_cast<size_value_t>(out_cols)});
+    }
+    if(dtype == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(numel());
+        Tensor* out_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+        _vals.cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >( [&out_begin](auto begin, auto end){
+            for(;begin != end; ++begin, ++out_begin)
+                *out_begin = begin->diagonal();
+        });
+        return std::move(out); 
+    }
+    utils::throw_exception(dims() > 2, "cannot get diagonal from a tensor with dims less than 2, but got $", dims());
+    const int64_t& rows = shape()[-2];
+    const int64_t& cols = shape()[-1];
+    const int64_t matrix_s = rows * cols;
+    const int64_t batches = numel() / (rows * cols);
+    const int64_t out_cols = std::min(rows, cols);
+    ArrayVoid my_vals = _vals.bucket_all_indices();
+    ArrayVoid new_vals = _vals.new_strides(out_cols * batches);
+    void **out_begin = new_vals.stride_begin();
+    void **my_begin = my_vals.stride_begin();
+    for(int64_t b = 0; b < batches; ++b, my_begin += matrix_s){
+        for(int64_t r = 0; r < out_cols; ++r, ++out_begin){
+            *out_begin = my_begin[r * cols + r];
+        }
+    }
+    std::vector<size_value_t> out_sh = shape().Vec();
+    out_sh.pop_back();
+    out_sh.back() = out_cols;
+    return Tensor(new_vals, SizeRef(std::move(out_sh)));
+
+}
+
 Tensor &Tensor::add_(Scalar val) {
     _vals += val;
     return *this;
@@ -4432,9 +4683,16 @@ Tensor Tensor::operator>=(Scalar c) const {
     return Tensor(_vals >= c, shape());
 }
 
-Tensor Tensor::operator<(Scalar c) const { return Tensor(_vals <= c, shape()); }
+Tensor Tensor::operator<(Scalar c) const { return Tensor(_vals < c, shape()); }
 
-Tensor Tensor::operator>(Scalar c) const { return Tensor(_vals >= c, shape()); }
+Tensor Tensor::operator>(Scalar c) const { return Tensor(_vals > c, shape()); }
+
+CommaOperator Tensor::operator<<(Scalar s) {
+    utils::throw_exception(is_contiguous(), "Must be contiguous to use comma operator");
+    CommaOperator out(data_ptr(), data_ptr_end(), dtype);
+    return out , s;
+}
+
 
 std::string_view Tensor::sv() const {
     utils::THROW_EXCEPTION(

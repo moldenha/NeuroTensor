@@ -191,8 +191,9 @@ struct SimdTraits_avx<float> {
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
 	}; //returns negative value of current type
-
-	inline static constexpr auto fmadd = [](Type&& a, Type&& b, simde__m128& c){
+    
+    static constexpr auto fmsub = simde_mm_fmsub_ps;
+	inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm_fmadd_ps(a, b, c);
 #else
@@ -282,6 +283,7 @@ struct SimdTraits_avx<double> {
 		return subtract(zero(), a);
 	}; //returns negative value of current type
 
+    static constexpr auto fmsub = simde_mm_fmsub_pd;
 	inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm_fmadd_pd(a, b, c);
@@ -332,6 +334,7 @@ struct SimdTraits_avx<int64_t> {
 		return subtract(zero(), a);
 	}; //returns negative value of current type
     inline static constexpr auto broadcast = [](const int64_t* arr) -> Type {return simde_mm_set1_epi64x(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi64(SimdTraits_avx<int64_t>::multiply(a, b), c);
     };
@@ -378,6 +381,7 @@ struct SimdTraits_avx<uint64_t> {
    
     /* static constexpr auto modulo = simde_mm_rem_epu64; */
     inline static constexpr auto broadcast = [](const uint64_t* arr) noexcept -> Type {return simde_mm_set1_epi64x(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c) noexcept {
 	c = simde_mm_add_epi64(SimdTraits_avx<uint64_t>::multiply(a, b), c);
     };
@@ -423,6 +427,7 @@ struct SimdTraits_avx<int32_t> {
 	}; //returns negative value of current type
  
 	inline static constexpr auto broadcast = [](const int32_t* arr) -> Type {return SimdTraits_avx<int32_t>::set1(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi32(simde_mm_mullo_epi32(a, b), c);
     };
@@ -467,6 +472,7 @@ struct SimdTraits_avx<uint32_t> {
 		return subtract(zero(), a);
 	}; //returns negative value of current type
     inline static constexpr auto broadcast = [](const uint32_t* arr) -> Type {return SimdTraits_avx<uint32_t>::set1(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi32(simde_mm_mullo_epi32(a, b), c);
     };
@@ -526,6 +532,7 @@ struct SimdTraits_avx<int8_t> {
     /* static constexpr auto modulo = simde_mm_rem_epi8; */
 
     inline static constexpr auto broadcast = [](const int8_t* arr) -> Type {return simde_mm_set1_epi8(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi8(SimdTraits_avx<int8_t>::multiply(a, b), c);
     };
@@ -588,6 +595,7 @@ struct SimdTraits_avx<uint8_t> {
     /* static constexpr auto modulo = simde_mm_rem_epu8; */
 
     inline static constexpr auto broadcast = [](const uint8_t* arr) -> Type {return simde_mm_set1_epi8(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi8(SimdTraits_avx<uint8_t>::multiply(a, b), c);
     };
@@ -644,6 +652,7 @@ struct SimdTraits_avx<int16_t> {
 		return subtract(zero(), a);
 	}; //returns negative value of current type
     inline static constexpr auto broadcast = [](const int16_t* arr) -> Type {return simde_mm_set1_epi16(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi16(simde_mm_mullo_epi16(a, b), c);
     };
@@ -701,6 +710,7 @@ struct SimdTraits_avx<uint16_t> {
  
 
     inline static constexpr auto broadcast = [](const uint16_t* arr) -> Type {return simde_mm_set1_epi16(*arr);};
+    inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) -> Type {return subtract(c, multiply(a, b));};
     inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 	c = simde_mm_add_epi16(simde_mm_mullo_epi16(a, b), c);
     };
@@ -786,6 +796,7 @@ struct SimdTraits_avx<complex_64> {
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
 	}; //returns negative value of current type
+    static constexpr auto fmsub = simde_mm_fmsub_ps;
 	inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c){
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm_fmadd_ps(a, b, c);
@@ -1134,9 +1145,10 @@ struct SimdTraits_avx<float16_t>{
 		return subtract(zero(), a);
 	};
 	inline static constexpr auto broadcast = [](const float16_t* a) noexcept -> Type {return SimdTraits_avx<float16_t>::set1(*a);};
-	inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c) noexcept {
+	inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) noexcept {return subtract(c, multiply(a, b));};
+    inline static constexpr auto fmadd = [](Type&& a, Type&& b, Type& c) noexcept {
 		c = SimdTraits_avx<float16_t>::add(SimdTraits_avx<float16_t>::multiply(a,b),c);
-        };
+    };
 	inline static constexpr auto sum_float = [](const simde__m128& x){
 #ifdef SIMDE_ARCH_SSE3
 		simde__m128 hadd = simde_mm_hadd_ps(x, x);  // Horizontal add: vec[0] + vec[1], vec[2] + vec[3]
@@ -1247,6 +1259,7 @@ struct SimdTraits_avx<complex_32>{
 		return subtract(zero(), a);
 	}; //returns negative value of current type
 	inline static constexpr auto broadcast = [](const complex_32* a) noexcept -> Type {return SimdTraits_avx<complex_32>::set1(*a);};
+	inline static constexpr auto fmsub = [](Type&& a, Type&& b, Type& c) noexcept {return subtract(c, multiply(a, b));};
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c) noexcept {
 		c = add(multiply(a,b),c);
         };

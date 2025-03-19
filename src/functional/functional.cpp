@@ -472,44 +472,45 @@ inline static constexpr auto cat_arr_void_perms = [](auto begin_a, auto end_a, A
 	
 };
 
-Tensor cat_permute_dim(const Tensor& _a, const Tensor& _b, int8_t dim){
-	::nt::utils::THROW_EXCEPTION(_a.dims() == _b.dims(), "\nDims must be equal $ != $", _a.dims(), _b.dims());
-	::nt::utils::THROW_EXCEPTION(_a.dtype == _b.dtype, "\nDTypes must be equal $ != $", _a.dtype, _b.dtype);
-	for(typename SizeRef::value_type i = 0; i < _a.dims(); ++i){
-		if(i == dim) continue;
-		utils::THROW_EXCEPTION(_a.shape()[i] == _b.shape()[i],
-				"\nRuntimeError: Sizes of tensors must match except in dimension $. Expected size $ but got size $ for second tensor.", i, _a.shape()[i], _b.shape()[i]);
-	}
+// Tensor cat_permute_dim(const Tensor& _a, const Tensor& _b, int8_t dim){
+// 	::nt::utils::THROW_EXCEPTION(_a.dims() == _b.dims(), "\nDims must be equal $ != $", _a.dims(), _b.dims());
+// 	::nt::utils::THROW_EXCEPTION(_a.dtype == _b.dtype, "\nDTypes must be equal $ != $", _a.dtype, _b.dtype);
+// 	for(typename SizeRef::value_type i = 0; i < _a.dims(); ++i){
+// 		if(i == dim) continue;
+// 		utils::THROW_EXCEPTION(_a.shape()[i] == _b.shape()[i],
+// 				"\nRuntimeError: Sizes of tensors must match except in dimension $. Expected size $ but got size $ for second tensor.", i, _a.shape()[i], _b.shape()[i]);
+// 	}
 	
-	std::vector<typename SizeRef::value_type> _a_strides(_a.strides().cbegin() + 1, _a.strides().cend());
-	std::vector<typename SizeRef::value_type> _b_strides(_b.strides().cbegin() + 1, _b.strides().cend());
-	std::vector<typename SizeRef::value_type> _a_shape = _a.shape().Vec();
-	std::vector<typename SizeRef::value_type> _b_shape = _b.shape().Vec();
-	std::vector<typename SizeRef::value_type> _o_shape = _a_shape;
-	_o_shape[dim] += _b_shape[dim];
-	Tensor outp(SizeRef(_o_shape), _a.dtype);
-	std::vector<typename SizeRef::value_type> _o_strides(outp.strides().cbegin() + 1, outp.strides().cend());
-	std::swap(_a_shape[0], _a_shape[dim]);	
-	std::swap(_a_strides[0], _a_strides[dim]);	
-	std::swap(_b_shape[0], _b_shape[dim]);	
-	std::swap(_b_strides[0], _b_strides[dim]);	
-	std::swap(_o_shape[0], _o_shape[dim]);	
-	std::swap(_o_strides[0], _o_strides[dim]);
-	std::unique_ptr<permute::PermND> o_perm = permute::create_perm(_o_strides, _o_shape);
-	std::unique_ptr<permute::PermND> a_perm = permute::create_perm(_a_strides, _a_shape);
-	std::unique_ptr<permute::PermND> b_perm = permute::create_perm(_b_strides, _b_shape);
-	std::shared_ptr<permute::PermIndexItND> o_begin = o_perm->begin();
-	std::shared_ptr<permute::PermIndexItND> a_begin = a_perm->begin();
-	std::shared_ptr<permute::PermIndexItND> b_begin = b_perm->begin();
-	std::shared_ptr<permute::PermIndexItND> a_end = a_perm->end();
-	std::shared_ptr<permute::PermIndexItND> b_end = b_perm->end();
-	_a.arr_void().cexecute_function(cat_arr_void_perms, outp.arr_void(), *a_begin, *a_end, *o_begin);
-	_b.arr_void().cexecute_function(cat_arr_void_perms, outp.arr_void(), *b_begin, *b_end, *o_begin);
-	return outp;
-}
+// 	std::vector<typename SizeRef::value_type> _a_strides(_a.strides().cbegin() + 1, _a.strides().cend());
+// 	std::vector<typename SizeRef::value_type> _b_strides(_b.strides().cbegin() + 1, _b.strides().cend());
+// 	std::vector<typename SizeRef::value_type> _a_shape = _a.shape().Vec();
+// 	std::vector<typename SizeRef::value_type> _b_shape = _b.shape().Vec();
+// 	std::vector<typename SizeRef::value_type> _o_shape = _a_shape;
+// 	_o_shape[dim] += _b_shape[dim];
+// 	Tensor outp(SizeRef(_o_shape), _a.dtype);
+// 	std::vector<typename SizeRef::value_type> _o_strides(outp.strides().cbegin() + 1, outp.strides().cend());
+// 	std::swap(_a_shape[0], _a_shape[dim]);	
+// 	std::swap(_a_strides[0], _a_strides[dim]);	
+// 	std::swap(_b_shape[0], _b_shape[dim]);	
+// 	std::swap(_b_strides[0], _b_strides[dim]);	
+// 	std::swap(_o_shape[0], _o_shape[dim]);	
+// 	std::swap(_o_strides[0], _o_strides[dim]);
+// 	std::unique_ptr<permute::PermND> o_perm = permute::create_perm(_o_strides, _o_shape);
+// 	std::unique_ptr<permute::PermND> a_perm = permute::create_perm(_a_strides, _a_shape);
+// 	std::unique_ptr<permute::PermND> b_perm = permute::create_perm(_b_strides, _b_shape);
+// 	std::shared_ptr<permute::PermIndexItND> o_begin = o_perm->begin();
+// 	std::shared_ptr<permute::PermIndexItND> a_begin = a_perm->begin();
+// 	std::shared_ptr<permute::PermIndexItND> b_begin = b_perm->begin();
+// 	std::shared_ptr<permute::PermIndexItND> a_end = a_perm->end();
+// 	std::shared_ptr<permute::PermIndexItND> b_end = b_perm->end();
+// 	_a.arr_void().cexecute_function(cat_arr_void_perms, outp.arr_void(), *a_begin, *a_end, *o_begin);
+// 	_b.arr_void().cexecute_function(cat_arr_void_perms, outp.arr_void(), *b_begin, *b_end, *o_begin);
+// 	return outp;
+// }
 
 Tensor cat(const Tensor& _a, const Tensor& _b, int8_t dim){
-	return (dim == 0) ? cat_0_dim(_a, _b) : cat_permute_dim(_a, _b, dim);
+    if(dim == 0) return cat_0_dim(_a, _b);
+    return cat_0_dim(_a.transpose(0, dim), _b.transpose(0, dim)).transpose(0, dim);
 }
 
 Tensor hadamard_multiply(const Tensor& a, const Tensor& b){return functional_operator_out(a, b, functional_operator_num::Multiply);}
@@ -550,7 +551,76 @@ bool any(const Tensor &t){
 }
 
 
+Tensor all(const Tensor t, int64_t dim){
+    if(t.dtype == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&begin_o, &dim](auto begin, auto end){
+            for(;begin != end; ++begin, ++begin_o){
+                *begin_o = all(*begin, dim);
+            }
+		});
+        return std::move(out);
+    }
+	exception_dtypes(t.dtype, DType::Bool);
+    Tensor a = Tensor::Null();
+    if(dim == (t.dims()-1) || dim == -1){
+        a = t.transpose(-1, -2).contiguous();
+        dim = -2;
+    }else{
+        a = t.contiguous();
+    }
+    Tensor split = a.split_axis(dim);
+    
+    Tensor out({split.numel()}, nt::DType::Bool);
+    bool* begin_o = reinterpret_cast<bool*>(out.data_ptr());
+    Tensor* begin_s = reinterpret_cast<Tensor*>(split.data_ptr());
+    tbb::parallel_for(
+    utils::calculateGrainSize1D(split.numel()),
+    [&](const tbb::blocked_range<int64_t> &range){
+        for(int64_t i = range.begin(); i != range.end(); ++i){
+            begin_o[i] = std::all_of(reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr()), reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr_end()),
+                                     [](const uint_bool_t& v){return v.value == 1;});
+        }
+    });
+    return std::move(out);
+}
 
+
+Tensor any(const Tensor t, int64_t dim){
+    if(t.dtype == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&begin_o, &dim](auto begin, auto end){
+            for(;begin != end; ++begin, ++begin_o){
+                *begin_o = any(*begin, dim);
+            }
+		});
+        return std::move(out);
+    }
+	exception_dtypes(t.dtype, DType::Bool);
+    // Tensor a = t.contiguous();
+    Tensor a = Tensor::Null();
+    if(dim == (t.dims()-1) || dim == -1){
+        a = t.transpose(-1, -2).contiguous();
+        dim = -2;
+    }else{
+        a = t.contiguous();
+    }
+    Tensor split = a.split_axis(dim);
+    Tensor out({split.numel()}, nt::DType::Bool);
+    bool* begin_o = reinterpret_cast<bool*>(out.data_ptr());
+    Tensor* begin_s = reinterpret_cast<Tensor*>(split.data_ptr());
+    tbb::parallel_for(
+    utils::calculateGrainSize1D(split.numel()),
+    [&](const tbb::blocked_range<int64_t> &range){
+        for(int64_t i = range.begin(); i != range.end(); ++i){
+            begin_o[i] = std::any_of(reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr()), reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr_end()),
+                                     [](const uint_bool_t& v){return v.value == 1;});
+        }
+    });
+    return std::move(out);
+}
 
 
 
@@ -1373,7 +1443,7 @@ Tensor coordsort(const Tensor& input, Tensor::size_value_t dim, bool descending,
 template <typename T>
 struct NumericVectorHash {
 
-    std::size_t operator()(const nt::Tensor& vec) const {
+    std::size_t operator()(const nt::Tensor& vec){
         return vec.arr_void().cexecute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DTypeFuncs::type_to_dtype<T> > > >([](auto begin, auto end){
             std::size_t hash = 0;
             for(;begin != end; ++begin){
@@ -1427,6 +1497,73 @@ struct NumericVectorEqual {
     }
 };
 
+
+template<typename T>
+struct tensor_hashed{
+    const Tensor* a;
+    std::size_t hash;
+    tensor_hashed(const Tensor* a_) : a(a_) {
+        hash = a_->arr_void().cexecute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DTypeFuncs::type_to_dtype<T> > > >([](auto begin, auto end){
+            std::size_t hash = 0;
+            for(;begin != end; ++begin){
+                if constexpr (std::is_same_v<nt::my_complex<nt::float16_t>, T>){
+                    hash ^= std::hash<float>{}(_NT_FLOAT16_TO_FLOAT32_(begin->real())) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    hash ^= std::hash<float>{}(_NT_FLOAT16_TO_FLOAT32_(begin->imag())) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr (std::is_same_v<nt::my_complex<float>, T>){
+                    hash ^= std::hash<float>{}(begin->real()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    hash ^= std::hash<float>{}(begin->imag()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr (std::is_same_v<nt::my_complex<double>, T>){
+                    hash ^= std::hash<double>{}(begin->real()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    hash ^= std::hash<double>{}(begin->imag()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr (std::is_same_v<nt::float16_t, T>){
+                    hash ^= std::hash<float>{}(_NT_FLOAT16_TO_FLOAT32_(*begin)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr(std::is_same_v<nt::uint_bool_t, T>){
+                    hash ^= std::hash<float>{}(*begin ? float(1) : float(0)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+#ifdef __SIZEOF_INT128__
+                else if constexpr(std::is_same_v<nt::uint128_t, T>){
+                    hash ^= std::hash<int64_t>{}(nt::convert::convert<int64_t, nt::uint128_t>(*begin)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+                else if constexpr(std::is_same_v<nt::int128_t, T>){
+                    hash ^= std::hash<int64_t>{}(nt::convert::convert<int64_t, nt::int128_t>(*begin)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+#endif
+                else{
+                    hash ^= std::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                }
+            }
+            return hash;
+        });
+
+    }
+};
+
+template <typename T>
+struct HashedTensorHash {
+    std::size_t operator()(const tensor_hashed<T>& vec) const { return vec.hash;}
+};
+
+template<typename T>
+struct  HashedTensorEqual {
+    bool operator()(const tensor_hashed<T>& h_a, const tensor_hashed<T>& h_b) const {
+        const Tensor& a = *h_a.a;
+        const Tensor& b = *h_b.a;
+        if(a.numel() != b.numel() || a.dtype != b.dtype){return false;}
+        if(a.is_null() || b.is_null()){return false;}
+        const nt::ArrayVoid& arr_v = b.arr_void();
+        return a.arr_void().cexecute_function<nt::DTypeFuncs::type_to_dtype<T> >([&arr_v](auto begin, auto end) -> bool{
+            using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;
+            return arr_v.cexecute_function<nt::DTypeFuncs::type_to_dtype<value_t>>([&begin, &end](auto second, auto s_end) -> bool{
+                return std::equal(begin, end, second);
+            });
+        });
+    }
+};
+
 nt::Tensor unique(nt::Tensor input, int64_t dim, bool return_sorted, bool return_indices){
     utils::throw_exception(return_sorted || return_indices, "unique function must return indices or the sorted tensor, or both, got none");
     input = input.transpose(-1, dim).contiguous();
@@ -1437,14 +1574,16 @@ nt::Tensor unique(nt::Tensor input, int64_t dim, bool return_sorted, bool return
     return input.arr_void().execute_function<nt::WRAP_DTYPES<nt::NumberTypesL> >(
     [&s_begin, &s_end, &last_dim, &return_sorted, &return_indices](auto begin, auto end) -> nt::Tensor {
         using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;
-        std::unordered_map<nt::Tensor, int64_t, NumericVectorHash<value_t>, NumericVectorEqual<value_t>> unique_map; //tensor and its indice
+        std::unordered_map<tensor_hashed<value_t>, int64_t, 
+            HashedTensorHash<value_t>, HashedTensorEqual<value_t>> unique_map; //tensor and its indice
         int64_t counter = 0;
-        unique_map[*s_begin] = counter;
+        unique_map[tensor_hashed<value_t>(s_begin)] = counter;
         ++counter;
         ++s_begin;
         for(;s_begin != s_end; ++s_begin, ++counter){
-            if (unique_map.find(*s_begin) == unique_map.end()) {
-                unique_map[*s_begin] = counter;
+            tensor_hashed<value_t> check(s_begin);
+            if (unique_map.find(check) == unique_map.end()) {
+                unique_map[check] = counter;
             } 
         }
         if(!return_indices){
@@ -1452,7 +1591,7 @@ nt::Tensor unique(nt::Tensor input, int64_t dim, bool return_sorted, bool return
             nt::Tensor* o_begin = reinterpret_cast<nt::Tensor*>(output.data_ptr());
             nt::Tensor* o_end = o_begin + output.numel();
             for(const auto& [tensor, indice] : unique_map){
-                *o_begin = tensor;
+                *o_begin = *tensor.a;
                 ++o_begin;
             }
             nt::Tensor out = nt::functional::cat_unordered(output);
@@ -1475,7 +1614,7 @@ nt::Tensor unique(nt::Tensor input, int64_t dim, bool return_sorted, bool return
         int64_t* i_begin = reinterpret_cast<int64_t*>(output_indices.data_ptr());
         for(const auto& [tensor, indice] : unique_map){
             *i_begin = indice;
-            *o_begin = tensor;
+            *o_begin = *tensor.a;
             ++i_begin;
             ++o_begin;
         }
@@ -1878,6 +2017,146 @@ Tensor dinvsqrt(const Tensor& x){
 		mp::dinvsqrt(begin, end, begin);
 	});
 	return std::move(a);
+}
+
+//returns c + (a * b);
+Tensor fused_multiply_add(const Tensor& c, const Tensor& a, const Tensor& b){
+    utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
+                           "For optimized fused multiply add, expected all tensors to be the same shape a=($), b=($), c=($)",
+                           a.shape(), b.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype && c.dtype == b.dtype, "Expected dtypes of tensors to match but got $, $, and $", c.dtype, a.dtype, b.dtype);
+    Tensor out = c.clone();
+	ArrayVoid& B_arrv = const_cast<Tensor&>(b).arr_void();
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([&out](auto begin_a, auto end_a, auto begin_b){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        value_t* begin_o = reinterpret_cast<value_t*>(out.data_ptr());
+        mp::fused_multiply_add(begin_a, end_a, begin_b, begin_o);
+	}, B_arrv);
+    return std::move(out);
+}
+
+//returns c += (a * b);
+Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, const Tensor& b){
+    utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
+                           "For optimized fused multiply add, expected all tensors to be the same shape a=($), b=($), c=($)",
+                           a.shape(), b.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype && c.dtype == b.dtype, "Expected dtypes of tensors to match but got $, $, and $", c.dtype, a.dtype, b.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+	ArrayVoid& B_arrv = const_cast<Tensor&>(b).arr_void();
+    const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >([&c](auto begin_a, auto end_a, auto begin_b){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        c.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DTypeFuncs::type_to_dtype<value_t> > > >([&begin_a, &end_a, &begin_b](auto begin_c, auto end_c){
+            mp::fused_multiply_add(begin_a, end_a, begin_b, begin_c);
+            
+        });
+	}, B_arrv);
+    return c;
+}
+
+
+//returns c + (a * b);
+Tensor fused_multiply_add(const Tensor& c, const Tensor& a, Scalar b){
+    utils::throw_exception(c.numel() == a.numel(),
+                           "For optimized fused multiply add, expected all tensors to be the same shape a=($), c=($)",
+                           a.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype, "Expected dtypes of tensors to match but got $ and $", c.dtype, a.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+    Tensor out = c.clone();
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >([&out, &b](auto begin_a, auto end_a){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        value_t num = b.to<value_t>();
+        value_t* begin_o = reinterpret_cast<value_t*>(out.data_ptr());
+        mp::fused_multiply_add_scalar(begin_a, end_a, begin_o, num);
+	});
+    return std::move(out);
+}
+
+
+
+Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, Scalar b){
+    utils::throw_exception(c.numel() == a.numel(),
+                           "For optimized fused multiply add, expected all tensors to be the same shape a=($), c=($)",
+                           a.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype, "Expected dtypes of tensors to match but got $ and $", c.dtype, a.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >([&b](auto begin_a, auto end_a, auto begin_c){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        value_t num = b.to<value_t>();
+        mp::fused_multiply_add_scalar(begin_a, end_a, begin_c, num);
+	}, c.arr_void());
+    return c;
+}
+
+//returns c - (a * b);
+Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, const Tensor& b){
+    utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
+                           "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), b=($), c=($)",
+                           a.shape(), b.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype && c.dtype == b.dtype, "Expected dtypes of tensors to match but got $, $, and $", c.dtype, a.dtype, b.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+    Tensor out(c.shape(), c.dtype);
+	ArrayVoid& B_arrv = const_cast<Tensor&>(b).arr_void();
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >([&c, &out](auto begin_a, auto end_a, auto begin_b){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        const_cast<Tensor&>(c).arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DTypeFuncs::type_to_dtype<value_t> > > >([&begin_a, &end_a, &begin_b, &out](auto begin_c, auto end_c){
+            value_t* begin_o = reinterpret_cast<value_t*>(out.data_ptr());
+            mp::fused_multiply_subtract(begin_a, end_a, begin_b, begin_c, begin_o);
+            
+        });
+	}, B_arrv);
+    return std::move(out);
+}
+
+Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, Scalar b){
+    utils::throw_exception(c.numel() == a.numel(),
+                           "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), c=($)",
+                           a.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype, "Expected dtypes of tensors to match but got $ and $", c.dtype, a.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+    Tensor out(c.shape(), c.dtype);
+	ArrayVoid& C_arrv = const_cast<Tensor&>(c).arr_void();
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL > >([&b, &out](auto begin_a, auto end_a, auto begin_c){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        value_t* begin_o = reinterpret_cast<value_t*>(out.data_ptr());
+        value_t num = b.to<value_t>();
+        mp::fused_multiply_subtract_scalar(begin_a, end_a, begin_c, begin_o, num);
+	}, C_arrv);
+    return std::move(out);
+}
+
+//returns c -= (a * b);
+Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, const Tensor& b){
+    utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
+                           "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), b=($), c=($)",
+                           a.shape(), b.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype && c.dtype == b.dtype, "Expected dtypes of tensors to match but got $, $, and $", c.dtype, a.dtype, b.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+    Tensor out(c.shape(), c.dtype);
+	ArrayVoid& B_arrv = const_cast<Tensor&>(b).arr_void();
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL > >([&c, &out](auto begin_a, auto end_a, auto begin_b){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        c.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DTypeFuncs::type_to_dtype<value_t> > > >([&begin_a, &end_a, &begin_b](auto begin_c, auto end_c){
+            mp::fused_multiply_subtract(begin_a, end_a, begin_b, begin_c, begin_c);
+            
+        });
+	}, B_arrv);
+    return c;
+}
+
+
+Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, Scalar b){
+    utils::throw_exception(c.numel() == a.numel(),
+                           "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), c=($)",
+                           a.shape(), c.shape());
+    utils::throw_exception(c.dtype == a.dtype, "Expected dtypes of tensors to match but got $ and $", c.dtype, a.dtype);
+    utils::throw_exception(c.dtype != DType::TensorObj && c.dtype != DType::Bool, "Optimized fused multiply and op does not support $", c.dtype);
+	ArrayVoid& C_arrv = const_cast<Tensor&>(c).arr_void();
+	const_cast<Tensor&>(a).arr_void().execute_function<WRAP_DTYPES<NumberTypesL > >([&b](auto begin_a, auto end_a, auto begin_c){
+		using value_t = utils::IteratorBaseType_t<decltype(begin_a)>;
+        value_t num = b.to<value_t>();
+        mp::fused_multiply_subtract_scalar(begin_a, end_a, begin_c, begin_c, num);
+	}, C_arrv);
+    return c;
 }
 
 Tensor abs(const Tensor& x){

@@ -23,9 +23,9 @@ objcs/
 build/
 
 #tda old files
-src/tda/old_N
+src/tda/old_tda/old_N
 #tda refinement
-src/tda/refinement
+src/tda/old_tda/refinement
 #old layer stuff
 src/layers/old_layers
 #old intrusive ptr files
