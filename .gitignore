@@ -34,6 +34,7 @@ src/dtype/old
 src/images/old
 old_tests/
 src/functional/matmult/miscellaneous
+src/functional/old
 
 #testing development files
 testing/

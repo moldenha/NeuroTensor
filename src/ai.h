@@ -2,12 +2,12 @@
 #ifndef _NT_AI_H_
 #define _NT_AI_H_
 
-#include "layers/TensorGrad.h"
-#include "layers/Layer.h"
-#include "layers/layers.h"
-#include "layers/LNN.h"
-#include "layers/Loss.h"
-#include "layers/Optimizers.h"
+#include "nn/TensorGrad.h"
+#include "nn/Layer.h"
+#include "nn/layers.h"
+#include "nn/LNN.h"
+#include "nn/Loss.h"
+#include "nn/Optimizers.h"
 
 
 

@@ -105,8 +105,9 @@ template <DType dt> inline constexpr bool is_in_v<dt, DType::Bool> = false;
 
 } // namespace DTypeFuncs
 } // namespace nt
-#include "../Tensor.h"
+// #include "../Tensor.h"
 #include "../types/Types.h"
+#include "../types/TensorDeclare.h"
 #include "../utils/utils.h"
 #include "compatible/DType_compatible.h"
 #include <complex>

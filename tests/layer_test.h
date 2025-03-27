@@ -1,7 +1,7 @@
-#include "../src/layers/Layer.h"
-#include "../src/layers/LNN.h"
-#include "../src/layers/ncps/cfc/cfc.h"
-#include "../src/layers/Optimizers.h"
+#include "../src/nn/Layer.h"
+#include "../src/nn/LNN.h"
+#include "../src/nn/ncps/cfc/cfc.h"
+#include "../src/nn/Optimizers.h"
 #include <iostream>
 #include <sstream>
 
@@ -113,10 +113,10 @@ inline ::nt::reflect::detail::custom_any_map get_named_module_vars(nt::Module* p
 //will be registered and avoid redundancies
 void test_lnn(){
 	auto critereon = nt::loss::MSE;
-	nt::TensorGrad input(nt::functional::randn({1, 2, 20}, nt::DType::Float32));
-	nt::Tensor wanted = nt::functional::randint(0, 1, {1, 10}).to(nt::DType::Float32);
+	nt::TensorGrad input(nt::functional::randn({1, 50, 20}, nt::DType::Float32));
+	nt::Tensor wanted = nt::functional::randint(0, 1, {50, 10}).to(nt::DType::Float32);
 	/* std::cout << "wanted: "<<wanted<<std::endl; */
-	nt::Layer model = nt::layers::LNN(20, 10, 18, nt::layers::LNNOptions::CfC, false);
+	nt::Layer model = nt::layers::LNN(20, 10, 18, nt::layers::LNNOptions::CfC, true);
 	nt::optimizers::Adam optimizer(model.parameters(), 0.1);
 	optimizer.zero_grad();
 

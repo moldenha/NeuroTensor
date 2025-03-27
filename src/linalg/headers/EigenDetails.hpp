@@ -3,7 +3,7 @@
 
 #include <Eigen/Dense>
 #include <complex>
-#include "../../dtype/DType.h"
+#include "../../dtype/DType_enum.h"
 
 namespace nt{
 namespace linalg{

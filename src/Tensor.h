@@ -1,12 +1,7 @@
 #ifndef _NT_TENSOR_H_
 #define _NT_TENSOR_H_
-
-namespace nt{
-class Tensor;
-}
-
+#include "types/TensorDeclare.h"
 #include "dtype/compatible/DType_compatible.h"
-
 
 #include <memory.h>
 #include <memory>

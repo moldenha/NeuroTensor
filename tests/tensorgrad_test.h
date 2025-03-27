@@ -1,7 +1,7 @@
 #include "../src/Tensor.h"
 #include "../src/functional/functional.h"
-#include "../src/layers/TensorGrad.h"
-#include "../src/layers/layers.h"
+#include "../src/nn/TensorGrad.h"
+#include "../src/nn/layers.h"
 #include <memory>
 #include <iostream>
 #include <functional>
@@ -74,7 +74,7 @@ int relu_autograd_test(){
 	A[track] += (nt::functional::randn(shape) * myScalar) * (nt::functional::randn(shape) + myScalar);
 	std::cout << "now getting out..."<<std::endl;
 	nt::TensorGrad out = nt::functional::matmult(A, W);
-	std::cout << "out parent size is "<<out.parents.size()<<std::endl;
+	std::cout << "out parent size is "<<out.parents->size()<<std::endl;
 	nt::Tensor dt = nt::functional::randint(0, 1, out.shape(), nt::DType::Float32); // this acts as the error
 	/* dt[dt < 0.5] = 0; */
 	/* dt[dt != 0] = 1; */
@@ -85,11 +85,11 @@ int relu_autograd_test(){
 	out.backward(dt);
 	std::cout << "Gradient of A: "<<A.grad_value()<<std::endl;
 	std::cout << "A children size: "<<A.children->size()<<std::endl;
-	std::cout << "out parents size: "<<out.parents.size()<<std::endl;
-	std::cout << out.parents[0]->shape()<<std::endl;
-	std::cout << out.parents[1]->shape()<<std::endl;
-	std::cout << out.parents[0]->grad_value()<<std::endl;
-	std::cout << out.parents[0]->children->size()<<std::endl;
+	std::cout << "out parents size: "<<out.parents->size()<<std::endl;
+	// std::cout << out.parents[0]->shape()<<std::endl;
+	// std::cout << out.parents[1]->shape()<<std::endl;
+	// std::cout << out.parents[0]->grad_value()<<std::endl;
+	// std::cout << out.parents[0]->children->size()<<std::endl;
 
 	std::cout << "Add branch grad: "<<Add_Branch.grad_value()<<std::endl;
 	std::cout << "Mult branch grad: "<<Mult_Branch.grad_value() << std::endl;

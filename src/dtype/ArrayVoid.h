@@ -30,7 +30,7 @@ struct IsFirstVectorArrayVoid<std::vector<std::reference_wrapper<const ArrayVoid
 #include <vector>
 #include <cstdlib>
 #include "Scalar.h"
-#include "../Tensor.h"
+// #include "../Tensor.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "../memory/bucket.h"
 #include "../memory/iterator.h"
@@ -240,8 +240,8 @@ class ArrayVoid{
 		ArrayVoid& floating_();
 		ArrayVoid& integer_();
 		ArrayVoid& unsigned_();
-		Tensor split(const uint64_t) const;
-		Tensor split(const uint64_t, SizeRef) const;
+		// Tensor split(const uint64_t) const;
+		// Tensor split(const uint64_t, SizeRef) const;
 		
 		template<typename... arrVds>
 		inline static ArrayVoid cat(const arrVds&... arrs){

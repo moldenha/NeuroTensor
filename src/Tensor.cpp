@@ -4089,7 +4089,15 @@ Tensor Tensor::split_axis(size_value_t dim) const {
     SizeRef n2_size(n_vals);
     const uint64_t splitting = n2_size.multiply();
     size_value_t i = _total_size / splitting;
-    return _vals.split(splitting, n2_size);
+    Tensor buckets = _vals.get_bucket().split<Tensor>(splitting);
+	Tensor* begin = reinterpret_cast<Tensor*>(buckets.data_ptr());
+	Tensor* end = begin + buckets.numel();
+	typedef typename SizeRef::ArrayRefInt::value_type m_size_t;
+	for(;begin != end; ++begin){
+		begin->_size = n2_size;
+		begin->dtype = dtype;
+	}
+	return std::move(buckets); 
 }
 
 // 0 == cols
@@ -4129,7 +4137,17 @@ Tensor Tensor::split_axis_1() const {
     SizeRef n2_size(n_vals);
     size_value_t i = _total_size / n2_size.multiply();
     const uint64_t splitting = n2_size.multiply();
-    return outp._vals.split(splitting, n2_size);
+    // return outp._vals.split(splitting, n2_size);
+
+    Tensor buckets = outp._vals.get_bucket().split<Tensor>(splitting);
+	Tensor* begin = reinterpret_cast<Tensor*>(buckets.data_ptr());
+	Tensor* end = begin + buckets.numel();
+	typedef typename SizeRef::ArrayRefInt::value_type m_size_t;
+	for(;begin != end; ++begin){
+		begin->_size = n2_size;
+		begin->dtype = dtype;
+	}
+	return std::move(buckets); 
 }
 
 Tensor Tensor::unfold(size_value_t dim, size_value_t size,

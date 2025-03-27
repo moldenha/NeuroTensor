@@ -82,35 +82,52 @@ set(CORE_SOURCES
 )
 
 set(MATMULT_SOURCES
-	src/functional/matmult/nt_matmult_float.cpp
-	src/functional/matmult/nt_matmult_float16.cpp
-	src/functional/matmult/nt_matmult_double.cpp
-	src/functional/matmult/nt_matmult_float128.cpp
-	src/functional/matmult/nt_matmult_complex32.cpp
-	src/functional/matmult/nt_matmult_complex64.cpp
-	src/functional/matmult/nt_matmult_complex128.cpp
-	src/functional/matmult/nt_matmult_int128.cpp
-	src/functional/matmult/nt_matmult_uint128.cpp
-	src/functional/matmult/nt_matmult_int64.cpp
-	src/functional/matmult/nt_matmult_uint64.cpp
-	src/functional/matmult/nt_matmult_int32.cpp
-	src/functional/matmult/nt_matmult_uint32.cpp
-	src/functional/matmult/nt_matmult_int16.cpp
-	src/functional/matmult/nt_matmult_uint16.cpp
-	src/functional/matmult/nt_matmult_int8.cpp
-	src/functional/matmult/nt_matmult_uint8.cpp
+	src/functional/cpu/matmult/nt_matmult_float.cpp
+	src/functional/cpu/matmult/nt_matmult_float16.cpp
+	src/functional/cpu/matmult/nt_matmult_double.cpp
+	src/functional/cpu/matmult/nt_matmult_float128.cpp
+	src/functional/cpu/matmult/nt_matmult_complex32.cpp
+	src/functional/cpu/matmult/nt_matmult_complex64.cpp
+	src/functional/cpu/matmult/nt_matmult_complex128.cpp
+	src/functional/cpu/matmult/nt_matmult_int128.cpp
+	src/functional/cpu/matmult/nt_matmult_uint128.cpp
+	src/functional/cpu/matmult/nt_matmult_int64.cpp
+	src/functional/cpu/matmult/nt_matmult_uint64.cpp
+	src/functional/cpu/matmult/nt_matmult_int32.cpp
+	src/functional/cpu/matmult/nt_matmult_uint32.cpp
+	src/functional/cpu/matmult/nt_matmult_int16.cpp
+	src/functional/cpu/matmult/nt_matmult_uint16.cpp
+	src/functional/cpu/matmult/nt_matmult_int8.cpp
+	src/functional/cpu/matmult/nt_matmult_uint8.cpp
 )
 
 set(FUNCTIONAL_SOURCES
+	src/functional/tensor_files/colim_transform.cpp
+	src/functional/tensor_files/combine.cpp
+	src/functional/tensor_files/conv.cpp
+	src/functional/tensor_files/fill.cpp
+	src/functional/tensor_files/fused.cpp
+	src/functional/tensor_files/save_load.cpp
+	src/functional/tensor_files/matmult.cpp
+	src/functional/tensor_files/normalize.cpp
+	src/functional/tensor_files/numpy.cpp
+	src/functional/tensor_files/operators.cpp
+	src/functional/tensor_files/rand.cpp
+    
+    src/functional/cpu/unfold1d.cpp
+    src/functional/cpu/unfold2d.cpp
+    src/functional/cpu/unfold3d.cpp
+    src/functional/cpu/fold.cpp
+    src/functional/cpu/unfold1d_backward.cpp
+    src/functional/cpu/unfold2d_backward.cpp
+    src/functional/cpu/unfold3d_backward.cpp
+    src/functional/cpu/fold_backward.cpp
+    src/functional/cpu/rand.cpp
+    src/functional/cpu/fused.cpp
+    src/functional/cpu/operators.cpp
+    src/functional/cpu/normalize.cpp
+
 	src/functional/functional.cpp
-	src/functional/functional_operator.cpp
-	src/functional/load.cpp
-	src/functional/save.cpp
-	src/functional/functional_matmult.cpp
-	src/functional/functional_fold.cpp
-	src/functional/functional_conv.cpp
-	src/functional/wrbits.cpp
-    src/functional/numpy.cpp
 )
 
 
@@ -185,21 +202,38 @@ set(PERMUTE_SOURCES
 
 #this also includes autograds and layers
 set(AI_SOURCES
-    src/layers/Layer.cpp
-    src/layers/LNN.cpp
-    src/layers/TensorGrad.cpp
-    src/layers/functional.cpp
-    src/layers/Loss.cpp
-    src/layers/Optimizers.cpp
-    src/layers/Module.cpp
+    src/nn/Layer.cpp
+    src/nn/LNN.cpp
+    src/nn/TensorGrad.cpp
+    src/nn/functional.cpp
+    src/nn/Loss.cpp
+    src/nn/Optimizers.cpp
+    src/nn/Module.cpp
     #ncps sources
-    src/layers/ncps/lstm_cell.cpp
-    src/layers/ncps/wiring/wiring.cpp
-    src/layers/ncps/cfc/wired_cfc_cell.cpp
-    src/layers/ncps/cfc/cfc_cell.cpp
-    src/layers/ncps/cfc/cfc.cpp
-    src/layers/ncps/ltc/ltc.cpp
-    src/layers/ncps/ltc/ltc_cell.cpp
+    src/nn/ncps/lstm_cell.cpp
+    src/nn/ncps/wiring/wiring.cpp
+    src/nn/ncps/cfc/wired_cfc_cell.cpp
+    src/nn/ncps/cfc/cfc_cell.cpp
+    src/nn/ncps/cfc/cfc.cpp
+    src/nn/ncps/ltc/ltc.cpp
+    src/nn/ncps/ltc/ltc_cell.cpp
+    #individual layers
+    src/nn/layers/BatchNorm1D.cpp
+    src/nn/layers/Conv1D.cpp
+    src/nn/layers/Conv2D.cpp
+    src/nn/layers/Conv3D.cpp
+    src/nn/layers/ConvTranspose1D.cpp
+    src/nn/layers/ConvTranspose2D.cpp
+    src/nn/layers/ConvTranspose3D.cpp
+    src/nn/layers/Dropout.cpp
+    src/nn/layers/Fold.cpp
+    src/nn/layers/Functional.cpp
+    src/nn/layers/Identity.cpp
+    src/nn/layers/Linear.cpp
+    src/nn/layers/Softplus.cpp
+    src/nn/layers/Unfold1D.cpp
+    src/nn/layers/Unfold2D.cpp
+    src/nn/layers/Unfold3D.cpp
 
 )
 

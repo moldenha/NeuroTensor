@@ -22,4 +22,7 @@
 	url = https://github.com/calccrypto/uint128_t
 [submodule "third_party/eigen"]
 	path = third_party/eigen
-	url = https://gitlab.com/libeigen/eigen.git
+    url = https://gitlab.com/libeigen/eigen.git
+[submodule "src/nn/ncps"]
+    path = src/nn/ncps
+    url = git@github.com:moldenha/NeuroTensor-NCPS.git

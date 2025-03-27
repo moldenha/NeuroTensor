@@ -229,6 +229,62 @@ void sum_as_test(){
 	std::cout << "a += to_sum = "<< a << std::endl;
 }
 
+
+void operator_test(){
+    nt::Tensor a = nt::functional::randint(0, 6, {1, 5}, nt::DType::Float32);
+    nt::Tensor b = nt::functional::randint(0, 6, {3, 5}, nt::DType::Float32);
+    std::cout << nt::noprintdtype;
+    std::cout << "A: "<<a<<std::endl;
+    std::cout << "B: "<<b<<std::endl;
+    std::cout << "A - B[0]: "<< a - b[0] << std::endl;
+    std::cout << "A - B[1]: "<< a - b[1] << std::endl;
+    std::cout << "A - B[2]: "<< a - b[2] << std::endl;
+    // std::cout << "B[0]: "<<b[0 ]<< ',' << *reinterpret_cast<float*>(b[0].data_ptr()) << std::endl;
+    // std::cout << "B[1]: "<<b[1] << ',' << *reinterpret_cast<float*>(b[1].data_ptr()) << std::endl;
+    // std::cout << "B[2]: "<<b[2] << ',' << *reinterpret_cast<float*>(b[2].data_ptr()) << std::endl;
+
+    nt::Tensor s_b = b.sum_as(a);
+    std::cout << "s_b: "<<s_b<<std::endl;
+    nt::Tensor c = a.clone();
+    c -= s_b;
+    std::cout << "C -= B: "<< c << std::endl;
+    nt::Tensor c_a = a.clone();
+    c_a -= b[0];
+    c_a -= b[1];
+    c_a -= b[2];
+    std::cout << "A -= B [individually]: " << c_a << std::endl;
+
+    a -= b;
+    std::cout << "A -= B: " << a << std::endl;
+
+}
+
+void operator_multiply_test(){
+    nt::Tensor a = nt::functional::randint(0, 6, {1, 5}, nt::DType::Float32);
+    nt::Tensor b = nt::functional::randint(0, 6, {3, 5}, nt::DType::Float32);
+    std::cout << nt::noprintdtype;
+    std::cout << "A: "<<a<<std::endl;
+    std::cout << "B: "<<b<<std::endl;
+    std::cout << "A * B[0]: "<< a * b[0] << std::endl;
+    std::cout << "A * B[1]: "<< a * b[1] << std::endl;
+    std::cout << "A * B[2]: "<< a * b[2] << std::endl;
+    // std::cout << "B[0]: "<<b[0 ]<< ',' << *reinterpret_cast<float*>(b[0].data_ptr()) << std::endl;
+    // std::cout << "B[1]: "<<b[1] << ',' << *reinterpret_cast<float*>(b[1].data_ptr()) << std::endl;
+    // std::cout << "B[2]: "<<b[2] << ',' << *reinterpret_cast<float*>(b[2].data_ptr()) << std::endl;
+
+    nt::Tensor c_a = a.clone();
+    c_a *= b[0];
+    c_a *= b[1];
+    c_a *= b[2];
+    std::cout << "A *= B [individually]: " << c_a << std::endl;
+
+    //should cause an error
+    a *= b;
+    std::cout << "A *= B: " << a << std::endl;
+
+}
+
+
 void conv_test(){
 	nt::Tensor a_1d = nt::functional::randn({3,400,500});
 	nt::Tensor k_1d = nt::functional::randn({500,400,10});

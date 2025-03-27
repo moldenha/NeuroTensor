@@ -2,7 +2,7 @@
 #define _NT_TENSORGRAD_GET_H_
 //this is a specialization to split a tensor into a tuple of tensors
 
-#include "../layers/TensorGrad.h"
+#include "../nn/TensorGrad.h"
 #include "../utils/utils.h"
 #include <tuple>
 #include <utility> //std::index_sequence

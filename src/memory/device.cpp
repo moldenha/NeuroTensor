@@ -1,6 +1,7 @@
 #include "device.h"
 #include "../utils/utils.h"
 #include "../dtype/DType.h"
+#include "../Tensor.h"
 #include <iostream>
 
 #include <cstdlib> // For std::aligned_alloc

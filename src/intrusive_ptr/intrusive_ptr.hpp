@@ -5,8 +5,8 @@
 // https://github.com/pytorch/pytorch/blob/main/c10/util/intrusive_ptr.h
 
 #include "../utils/utils.h"
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
+// #include <_types/_uint32_t.h>
+// #include <_types/_uint8_t.h>
 #include <atomic>
 #include <cassert>
 #include <cstdlib>
@@ -15,9 +15,9 @@
 #include <initializer_list>
 #include <iostream>
 #include <memory>
-#include <sys/_types/_key_t.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
+// #include <sys/_types/_key_t.h>
+// #include <sys/ipc.h>
+// #include <sys/shm.h>
 #include <type_traits>
 
 #define _NT_ALIGN_BYTE_SIZE_ 32
@@ -53,24 +53,53 @@ inline int64_t atomic_refcount_increment(std::atomic<int64_t> &refcount) {
     return refcount.fetch_add(1, std::memory_order_acq_rel) + 1;
 }
 
+inline int64_t atomic_weakcount_increment(std::atomic<int64_t> &weakcount) {
+    return weakcount.fetch_add(1, std::memory_order_relaxed) + 1;
+}
+
+
 inline int64_t atomic_refcount_decrement(std::atomic<int64_t> &refcount) {
     return refcount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+}
+
+inline int64_t atomic_weakcount_decrement(std::atomic<int64_t> &weakcount) {
+    return weakcount.fetch_sub(1, std::memory_order_acq_rel) - 1;
 }
 
 inline int64_t atomic_refcount_fetch(const std::atomic<int64_t> &refcount) {
     return refcount.load(std::memory_order_acquire);
 }
 
+inline int64_t atomic_weakcount_fetch(const std::atomic<int64_t> &weakcount) {
+    return weakcount.load(std::memory_order_acquire);
+}
+
+
 inline int64_t atomic_refcount_increment(std::atomic<int64_t> *refcount) {
     return refcount->fetch_add(1, std::memory_order_acq_rel) + 1;
+}
+
+inline int64_t atomic_weakcount_increment(std::atomic<int64_t> *weakcount) {
+    return weakcount->fetch_add(1, std::memory_order_acq_rel) + 1;
 }
 
 inline int64_t atomic_refcount_decrement(std::atomic<int64_t> *refcount) {
     return refcount->fetch_sub(1, std::memory_order_acq_rel) - 1;
 }
+
+inline int64_t atomic_weakcount_decrement(std::atomic<int64_t> *weakcount) {
+    return weakcount->fetch_sub(1, std::memory_order_acq_rel) - 1;
+}
+
+
 inline int64_t atomic_refcount_fetch(const std::atomic<int64_t> *refcount) {
     return refcount->load(std::memory_order_acquire);
 }
+
+inline int64_t atomic_weakcount_fetch(const std::atomic<int64_t> *weakcount) {
+    return weakcount->load(std::memory_order_acquire);
+}
+
 
 template <typename To, typename From>
 inline std::function<void(To *)>
@@ -104,6 +133,9 @@ namespace intrusive_ptr {
 inline void incref(intrusive_ptr_target *self);
 template <typename T> inline void incref(intrusive_ptr_target_array<T> *self);
 } // namespace intrusive_ptr
+namespace weak_intrusive_ptr{
+inline void incref(intrusive_ptr_target* self);
+} //namespace weak_intrusive_ptr
 
 template <typename T> struct is_pointer {
     static constexpr bool value = false;
@@ -112,7 +144,7 @@ template <typename T> struct is_pointer {
 template <typename T> struct is_pointer<T *> {
     static constexpr bool value = true;
 };
-enum class Device { SharedCPU, CPU }; // to come will be cuda, and mlx
+// enum class Device { SharedCPU, CPU }; // to come will be cuda, and mlx
 
 template <typename, typename = void>
 struct has_subscript_operator : std::false_type {};
@@ -145,12 +177,17 @@ inline void passIntrusiveDeleter(void *ptr) { ; }
 
 class intrusive_ptr_target {
     mutable std::atomic<int64_t> refcount_;
+    mutable std::atomic<int64_t> weakcount_;
 
     // Friend declaration for primary template intrusive_ptr
     template <class TTargetCK, class NullTypeCK> friend class intrusive_ptr;
+    template <class TTargetCK, class NullTypeCK> friend class weak_intrusive_ptr;
 
     friend inline void
     detail::intrusive_ptr::incref(intrusive_ptr_target *self);
+
+    friend inline void
+    detail::weak_intrusive_ptr::incref(intrusive_ptr_target *self);
 
     virtual void release_resources() {}
 
@@ -163,7 +200,7 @@ class intrusive_ptr_target {
         /* release_resources(); */
     }
 
-    constexpr intrusive_ptr_target() : refcount_(0) {}
+    constexpr intrusive_ptr_target() : refcount_(0), weakcount_(0) {}
 
     // intrusive_ptr_target supports copy and move: but refcount and weakcount
     // don't participate (since they are intrinsic properties of the memory
@@ -181,7 +218,10 @@ class intrusive_ptr_target {
     }
 };
 
-// Primary template declaration
+// Primary template declarations
+template <class TTarget, class NullType>
+class weak_intrusive_ptr;
+
 template <class TTarget,
           class NullType = detail::intrusive_target_default_null_type<TTarget>>
 class intrusive_ptr;
@@ -193,12 +233,18 @@ class intrusive_ptr<T[], detail::intrusive_target_default_null_type<T[]>>;
 // basically any class that uses an intrusive_ptr, must inherit from
 // intrusive_ptr_target, that way the refcount can be made internally
 
+
+
+//intrusive_ptr<T[]> does not currently have weak_intrusive_ptr support
 template <typename T> class intrusive_ptr_target_array {
     friend class intrusive_ptr<T[],
                                detail::intrusive_target_default_null_type<T[]>>;
     mutable std::atomic<int64_t> refcount_;
+    // mutable std::atomic<int64_t> weakcount_;
     friend inline void
     detail::intrusive_ptr::incref(intrusive_ptr_target_array<T> *self);
+    // friend inline void
+    // detail::weak_intrusive_ptr::incref(intrusive_ptr_target_array<T> *self);
 
     virtual void release_resources() {}
 
@@ -253,6 +299,7 @@ template <class TTarget, class NullType> class intrusive_ptr final {
 
   private:
     template <class TTarget2, class NullType2> friend class intrusive_ptr;
+    friend class weak_intrusive_ptr<TTarget, NullType>;
 
 #ifndef _WIN32
     static_assert(NullType::singleton() == NullType::singleton(),
@@ -270,13 +317,19 @@ template <class TTarget, class NullType> class intrusive_ptr final {
 
     inline void null_self() { target_ = NullType::singleton(); }
     inline void reset_() {
-        /* std::cout << "reset_ called with use count as
-         * "<<use_count()<<std::endl;;
-         */
         if (target_ != NullType::singleton() &&
             detail::atomic_refcount_decrement(target_->refcount_) == 0) {
-            dealc(target_);
-            return;
+            //weakcount is always at least 1 by design
+            bool _dealloc = detail::atomic_weakcount_fetch(target_->weakcount_) == 1;
+            if(!_dealloc){
+                const_cast<std::remove_const_t<TTarget>*>(target_)->release_resources();
+                _dealloc =
+                    detail::atomic_weakcount_decrement(target_->weakcount_) == 0;
+            }
+            if(_dealloc){
+                dealc(target_);
+                return;
+            }
         }
         null_self();
     }
@@ -296,8 +349,10 @@ template <class TTarget, class NullType> class intrusive_ptr final {
         if (!is_null()) {
             if constexpr (std::is_pointer_v<decltype(target_->refcount_)>) {
                 target_->refcount_->store(1, std::memory_order_relaxed);
+                target_->weakcount_->store(1, std::memory_order_relaxed);
             } else {
                 target_->refcount_.store(1, std::memory_order_relaxed);
+                target_->weakcount_.store(1, std::memory_order_relaxed);
             }
         }
     }
@@ -307,8 +362,10 @@ template <class TTarget, class NullType> class intrusive_ptr final {
         if (!is_null()) {
             if constexpr (std::is_pointer_v<decltype(target_->refcount_)>) {
                 target_->refcount_->store(1, std::memory_order_relaxed);
+                target_->weakcount_->store(1, std::memory_order_relaxed);
             } else {
                 target_->refcount_.store(1, std::memory_order_relaxed);
+                target_->weakcount_.store(1, std::memory_order_relaxed);
             }
         }
     }
@@ -375,6 +432,7 @@ template <class TTarget, class NullType> class intrusive_ptr final {
         // std::cout << "move = operator called for
         // intrusive_ptr<T>"<<std::endl;
         target_ = rhs.target_;
+        dealc = rhs.dealc;
         rhs.null_self();
         return *this;
     }
@@ -480,10 +538,13 @@ template <class TTarget, class NullType> class intrusive_ptr final {
         return typename std::remove_reference<decltype((*target_))>::type();
     }
 
+    //UNSAFE
     inline void nullify() noexcept {
         target_ = NullType::singleton();
         dealc = &detail::passIntrusiveDeleter;
     }
+    
+    //UNSAFE
     inline TTarget *release() noexcept {
         TTarget *returning = target_;
         target_ = NullType::singleton();
@@ -543,6 +604,18 @@ template <class TTarget, class NullType> class intrusive_ptr final {
         } else {
             return target_->refcount_.load(std::memory_order_acquire);
         }
+    }
+
+    inline int64_t weak_use_count() const noexcept {
+        if(target_ == NullType::singleton()){
+            return 0;
+        }
+        if constexpr (std::is_pointer_v<decltype(target_->refcount_)>) {
+            return target_->refcount_->load(std::memory_order_acquire);
+        } else {
+            return target_->refcount_.load(std::memory_order_acquire);
+        }
+
     }
 
     inline bool unique() const noexcept { return use_count() == 1; }
@@ -652,7 +725,8 @@ class intrusive_ptr<T[], detail::intrusive_target_default_null_type<T[]>>
             null_self();
         }
     }
-    void reset_() {
+
+    inline void reset_() {
         if (target_ != TNullType::singleton() &&
             detail::atomic_refcount_decrement(target_->refcount_) == 0) {
             /* std::cout << "deallocating T*"<<std::endl; */
@@ -921,216 +995,266 @@ class intrusive_ptr<T[], detail::intrusive_target_default_null_type<T[]>>
             new TTarget(), &detail::defaultCStyleDeallocator<T>);
     }
 
-    /* #ifdef USE_PARALLEL */
-    /* 		static intrusive_ptr make_shared(const std::size_t amt, key_t
-     * key = IPC_PRIVATE){ */
-    /* 			const uint32_t n_size = amt * sizeof(T); */
-    /* 			utils::throw_exception(utils::get_shared_memory_max() >=
-     * n_size, "Expected to allocate at most $ bytes of shared memory, but was
-     * asked to allocate $ bytes of shared memory",
-     * utils::get_shared_memory_max(), n_size); */
-    /* 			int shmid = shmget(key, n_size, IPC_CREAT | 0666); */
-    /* 			utils::throw_exception(shmid != -1, "Making segment ID
-     * failed for shared memory (shmget)"); */
-    /* 			void* sharedArray = shmat(shmid, nullptr, 0); */
-    /* 			utils::throw_exception(sharedArray != (void*)-1, "Making
-     * shared memory failed (shmat)"); */
-    /* 			return intrusive_ptr((T*)sharedArray, */
-    /* 					new TTarget(), */
-    /* 					[shmid](T* ptr){ */
-    /* 						shmdt(ptr); */
-    /* 						shmctl(shmid, IPC_RMID,
-     * nullptr);
-     */
-    /* 					}, */
-    /* 					detail::Device::SharedCPU); */
-    /* 		} */
-    /* #endif */
-
-    /* 		static intrusive_ptr to_cpu(const intrusive_ptr& ptr, const
-     * std::size_t amt){ */
-    /* 			if(ptr.is_cpu()) */
-    /* 				return ptr; */
-    /* 			intrusive_ptr outp(amt); */
-    /* 			T* optr = outp.get(); */
-    /* 			T* iptr = ptr.get(); */
-    /* 			T* iptr_end = iptr + amt; */
-    /* 			for(;iptr != iptr_end; ++iptr, ++optr) */
-    /* 				*optr = *iptr; */
-    /* 			return outp; */
-    /* 		} */
-    /* #ifdef USE_PARALLEL */
-    /* 		static intrusive_ptr to_shared(const intrusive_ptr& ptr, const
-     * std::size_t amt, key_t key = IPC_PRIVATE){ */
-    /* 			if(ptr.is_shared()) */
-    /* 				return ptr; */
-    /* 			intrusive_ptr outp = intrusive_ptr::make_shared(amt,
-     * key);
-     */
-    /* 			T* optr = outp.get(); */
-    /* 			T* iptr = ptr.get(); */
-    /* 			T* iptr_end = iptr + amt; */
-    /* 			for(;iptr != iptr_end; ++iptr, ++optr) */
-    /* 				*optr = *iptr; */
-    /* 			return outp; */
-    /* 		} */
-    /* #endif */
 };
 
-/* //for example, if I wanted a class that would hold onto a particular class
- * like an array: */
-/* //this is a very limited implementation, mainly to serve as an example of
- * what could be used */
-/* //this is an array that holds properties such as operator+, that is why there
- * is a T* original and std::atomic<int64_t>* internal_refcount_; */
-/* template<typename T> */
-/* class intrusive_ptr_array : public intrusive_ptr_target{ */
-/* 	T* ptr; */
-/* 	T* original; */
-/* 	std::atomic<int64_t>* internal_refcount_; */
-/* 	template<typename U> */
-/* 	friend class intrusive_ptr_array; */
 
-/* 	template<typename TargetA, typename NullA> */
-/* 	friend class intrusive_ptr; */
-/* 	//std::function<void(T*)> deleter; = delete[] ptr; */
+template <typename TTarget, class NullType = detail::intrusive_target_default_null_type<TTarget>>
+class weak_intrusive_ptr final{
+  public:
+    using DeleterFunc = void (*)(void *);
 
-/* 	inline void null_self() {ptr = nullptr; original=nullptr;
- * internal_refcount_ = nullptr;} */
-/* 	inline void releaseMemory(){ */
-/* 		if(original &&
- * detail::atomic_refcount_decrement(*internal_refcount_) == 0){ */
-/* 			delete[] original; */
-/* 			delete internal_refcount_; */
-/* 		} */
-/* 		original = nullptr; */
-/* 		ptr = nullptr; */
-/* 		internal_refcount_ = nullptr; */
-/* 	} */
+  private:
+    template <class TTarget2, class NullType2> friend class intrusive_ptr;
+    friend class weak_intrusive_ptr<TTarget, NullType>;
 
-/* 	inline void retain_() const { */
-/* 		if(original != nullptr){ */
-/* 			int64_t new_count =
- * nt::detail::atomic_refcount_increment(*internal_refcount_); */
-/* 			utils::throw_exception(new_count != 1,
- * "IntrusivePtrArray: cannot increase refcount after it reaches zero"); */
-/* 		} */
-/* 	} */
-/* 	explicit intrusive_ptr_array(T* _ptr, T* _original,
- * std::atomic<int64_t>* refcount_) : ptr(_ptr), original(_original),
- * internal_refcount_(refcount_) {} */
+#ifndef _WIN32
+    static_assert(NullType::singleton() == NullType::singleton(),
+                  "NullType must have a constexpr singleton method");
+#endif
 
-/* 	public: */
-/* 		intrusive_ptr_array() */
-/* 			:ptr(nullptr), original(nullptr),
- * internal_refcount_(nullptr) */
-/* 		{} */
+    static_assert(
+        std::is_base_of_v<
+            TTarget, std::remove_pointer_t<decltype(NullType::singleton())>>,
+        "NullType::singleton() must return an target_type* pointer");
 
-/* 		intrusive_ptr_array(int64_t i) */
-/* 			:ptr(nullptr), original(new T[i]),
- * internal_refcount_(new std::atomic<int64_t>(1)) */
-/* 		{ */
-/* 			ptr = original; */
-/* 			internal_refcount_->store(1, std::memory_order_relaxed);
- */
-/* 		} */
-/* 		~intrusive_ptr_array() {releaseMemory();} */
+    TTarget *target_;
+    DeleterFunc dealc;
+    inline void null_self() { target_ = NullType::singleton(); }
+    inline bool is_null() const { return target_ == NullType::singleton(); }
+    
+    template <class TTarget2, class NullType2>
+    friend class weak_intrusive_ptr;
 
-/* 		template<typename From> */
-/* 		inline intrusive_ptr_array(const intrusive_ptr_array<From>& rhs)
- * noexcept */
-/* 			:ptr(rhs.ptr), original(rhs.original),
- * internal_refcount_(rhs.internal_refcount_) */
-/* 		{ */
-/* 			static_assert( */
-/* 				std::is_convertible<From*, T*>::value, */
-/* 				"Move warning, intrusive_ptr got pointer of
- * wrong type"); */
-/* 			retain_(); */
-/* 		} */
+    inline void retain_(){
+        if (target_ != NullType::singleton()) {
+            int64_t new_count = detail::atomic_weakcount_increment(target_->weakcount_);
+            utils::throw_exception(
+                new_count != 1,
+                "weak_intrusive_ptr: cannot increment count after reaching 0");
+        }
+    }
 
-/* 		template<typename From> */
-/* 		inline intrusive_ptr_array& operator=(const
- * intrusive_ptr_array<From>& rhs) noexcept{ */
-/* 			static_assert( */
-/* 				std::is_convertible<From*, T*>::value, */
-/* 				"Move warning, intrusive_ptr got pointer of
- * wrong type"); */
-/* 			ptr = rhs.ptr; */
-/* 			original = rhs.original; */
-/* 			internal_refcount_ = rhs.internal_refcount_; */
-/* 			retain_(); */
-/* 		} */
+    inline void reset_() noexcept {
+        if(target_ != NullType::singleton()
+            && detail::atomic_weakcount_decrement(target_->weakcount_) == 0){
+            dealc(target_);
+        }
+        this->null_self();
+    }
+    
+    constexpr explicit weak_intrusive_ptr(TTarget *target) 
+        :target_(target), dealc(&detail::defaultIntrusiveDeleter<TTarget>)
+    {}
 
-/* 		template<typename From> */
-/* 		inline intrusive_ptr_array(intrusive_ptr_array<From>&& rhs)
- * noexcept */
-/* 			:ptr(rhs.ptr), original(rhs.original),
- * internal_refcount_(rhs.internal_refcount_) */
-/* 		{ */
-/* 			static_assert( */
-/* 				std::is_convertible<From*, T*>::value, */
-/* 				"Move warning, intrusive_ptr got pointer of
- * wrong type"); */
-/* 			rhs.null_self(); */
-/* 		} */
+    constexpr explicit weak_intrusive_ptr(TTarget *target, DeleterFunc func)
+    :target_(target), dealc(func)
+    {}
 
-/* 		template<typename From> */
-/* 		inline intrusive_ptr_array&
- * operator=(intrusive_ptr_array<From>&& rhs) noexcept{ */
+public:
+    using target_type = TTarget;
 
-/* 			static_assert( */
-/* 				std::is_convertible<From*, T*>::value, */
-/* 				"Move warning, intrusive_ptr got pointer of
- * wrong type"); */
-/* 			ptr = rhs.ptr; */
-/* 			original = rhs.original; */
-/* 			internal_refcount_ = rhs.internal_refcount_; */
-/* 			rhs.null_self(); */
-/* 		} */
+    explicit weak_intrusive_ptr(const intrusive_ptr<TTarget, NullType>& ptr)
+    :weak_intrusive_ptr(ptr.get()) {
+        this->retain_();
+    }
 
-/* 		intrusive_ptr_array(const intrusive_ptr_array& rhs) noexcept */
-/* 			:ptr(rhs.ptr), original(rhs.original),
- * internal_refcount_(rhs.internal_refcount_) */
-/* 		{retain_();} */
+    
 
-/* 		intrusive_ptr_array(intrusive_ptr_array&& rhs) noexcept */
-/* 			:ptr(rhs.ptr), original(rhs.original),
- * internal_refcount_(rhs.internal_refcount_) */
-/* 		{rhs.null_self();} */
+    template <typename FromTarget, typename FromNull>
+    weak_intrusive_ptr(const intrusive_ptr<FromTarget, FromNull> &rhs) noexcept
+        : target_(
+              detail::assign_ptr_<TTarget, NullType, FromNull>(rhs.target_)),
+          dealc(rhs.dealc) {
+        static_assert(std::is_convertible<FromTarget *, TTarget *>::value,
+                      "Move warning, intrusive_ptr got pointer of wrong type");
+        retain_();
+    }
+ 
 
-/* 		inline T* getMemory() {return ptr;} */
-/* 		inline const T* getMemory() const {return ptr;} */
+    template <typename FromTarget, typename FromNull>
+    weak_intrusive_ptr(intrusive_ptr<FromTarget, FromNull> &&rhs) noexcept
+        : target_(
+              detail::assign_ptr_<TTarget, NullType, FromNull>(rhs.target_)),
+          dealc(rhs.dealc) {
+        static_assert(std::is_convertible<FromTarget *, TTarget *>::value,
+                      "Move warning, weak_intrusive_ptr got pointer of wrong type");
+        rhs.null_self();
+    }
+    
+    weak_intrusive_ptr(const weak_intrusive_ptr& rhs) : target_(rhs.target_), dealc(rhs.dealc) {
+        retain_();
+    }
 
-/* 		inline T& operator[](const std::ptrdiff_t i){return ptr[i];} */
-/* 		inline const T& operator[](const std::ptrdiff_t i) const {return
- * ptr[i];} */
+    inline weak_intrusive_ptr& operator=(weak_intrusive_ptr&& rhs) & noexcept{
+        target_ = rhs.target_;
+        dealc = rhs.dealc;
+        rhs.null_self();
+        return *this;
+    }
 
-/* 		inline intrusive_ptr<intrusive_ptr_array> operator+(const
- * std::ptrdiff_t i) const { */
-/* 			if(!original){return
- * intrusive_ptr<intrusive_ptr_array<T>>::unsafe_steal_from_new(const_cast<intrusive_ptr_array*>(this));}
- */
-/* 			retain_(); */
-/* 			return intrusive_ptr<intrusive_ptr_array>::make(ptr + i,
- * original, internal_refcount_); */
-/* 		} */
+    template <typename FromTarget, typename FromNullType>
+    weak_intrusive_ptr& operator=(
+      weak_intrusive_ptr<FromTarget, FromNullType>&& rhs) & noexcept {
+        static_assert(std::is_convertible<FromTarget *, TTarget *>::value,
+            "Move warning, weak_intrusive_ptr got pointer of wrong type");
+        weak_intrusive_ptr tmp(std::move(rhs));
+        swap(tmp);
+        return *this;
+    }
 
-/* 		template<typename Parent, typename Child> */
-/* 		inline static intrusive_ptr<intrusive_ptr_array<Parent>>
- * make_children(int64_t i){ */
-/* 			Parent* original = new Child[i]; */
-/* 			for(uint64_t j = 0; j < i; ++j) */
-/* 				std::cout << original[j].getName() << std::endl;
- */
-/* 			std::atomic<int64_t>* counter = new
- * std::atomic<int64_t>(1); */
-/* 			counter->store(1, std::memory_order_relaxed); */
-/* 			return intrusive_ptr<intrusive_ptr_array<Parent>
- * >::make(original, original, counter); */
-/* 		} */
+    weak_intrusive_ptr& operator=(const weak_intrusive_ptr& rhs) & noexcept {
+        if(this == &rhs) return *this;
+        reset_();
+        target_ = rhs.target_;
+        dealc = rhs.dealc;
+        retain_();
+    }
 
-/* }; */
+    template <typename FromTarget, typename FromNullType>
+    weak_intrusive_ptr& operator=(
+      const weak_intrusive_ptr<FromTarget, FromNullType>& rhs) & noexcept {
+        static_assert(std::is_convertible<FromTarget *, TTarget *>::value,
+            "Copy warning, weak_intrusive_ptr got pointer of wrong type");
+        weak_intrusive_ptr tmp(rhs);
+        swap(tmp);
+        return *this;
+    }
+
+    inline void reset() noexcept {
+        reset_();
+    }
+    
+    inline void swap(weak_intrusive_ptr& ptr) noexcept {
+        std::swap(target_, ptr.target_);
+        std::swap(dealc, ptr.dealc);
+
+    }
+    
+    inline TTarget* _unsafe_get_target() const noexcept {
+        return target_;
+    }
+
+    inline int64_t use_count() const noexcept {
+        if (target_ == NullType::singleton()) {
+            return 0;
+        }
+        if constexpr (std::is_pointer_v<decltype(target_->refcount_)>) {
+            return target_->refcount_->load(std::memory_order_acquire);
+        } else {
+            return target_->refcount_.load(std::memory_order_acquire);
+        }
+    }
+
+    inline int64_t weak_use_count() const noexcept {
+        if (target_ == NullType::singleton()) {
+            return 0;
+        }
+        if constexpr (std::is_pointer_v<decltype(target_->weakcount_)>) {
+            return target_->weakcount_->load(std::memory_order_acquire);
+        } else {
+            return target_->weakcount_.load(std::memory_order_acquire);
+        }
+    }
+    
+    inline bool expired() const noexcept {
+        return use_count() == 0;
+    }
+    
+    intrusive_ptr<TTarget, NullType> lock() const noexcept {
+        if(expired()) return intrusive_ptr<TTarget, NullType>();
+        if constexpr (std::is_pointer_v<decltype(target_->refcount_)>) {
+            auto refcount = target_->refcount_->load(std::memory_order_acquire);
+            do{
+                if(refcount == 0){
+                    //no strong references left
+                    return intrusive_ptr<TTarget, NullType>();
+                }
+            }while(
+                !target_->refcount_->compare_exchange_weak(refcount, refcount + 1));
+            return intrusive_ptr<TTarget, NullType>(
+                target_, dealc, detail::DontIncreaseRefCount{});
+        } else {
+            auto refcount = target_->refcount_.load(std::memory_order_acquire);
+            do{
+                if(refcount == 0){
+                    //no strong references left
+                    return intrusive_ptr<TTarget, NullType>();
+                }
+            }while(
+                !target_->refcount_.compare_exchange_weak(refcount, refcount + 1));
+            return intrusive_ptr<TTarget, NullType>(
+                target_, dealc, detail::DontIncreaseRefCount{});
+        }
+    }
+
+    // retrurns the owning pointer
+    // but is weakly referenced
+    //  [*] must be put back into weak_intrusive_ptr
+    // if handled improperly is unsafe
+    //
+    inline TTarget *release() noexcept {
+        TTarget *returning = target_;
+        target_ = NullType::singleton();
+        dealc = &detail::passIntrusiveDeleter;
+        return returning;
+    }
+
+    //ptr must have come from weak_intrusive_ptr::release().
+    inline static weak_intrusive_ptr reclaim(TTarget* owning_weak_ptr) {
+        if constexpr (std::is_pointer_v<decltype(owning_weak_ptr->refcount_)>) {
+            utils::throw_exception(
+                owning_weak_ptr == NullType::singleton() ||
+                owning_weak_ptr->weakcount_->load() > 1 ||
+                (owning_weak_ptr->refcount_->load() == 0 &&
+                owning_weak_ptr->weakcount_->load() > 0),
+                "Pointer passed into weak_intrusive_ptr::reclaim must"
+                "have come from weak_intrusive_ptr::release");
+        }
+        else {
+            utils::throw_exception(
+                owning_weak_ptr == NullType::singleton() ||
+                owning_weak_ptr->weakcount_.load() > 1 ||
+                (owning_weak_ptr->refcount_.load() == 0 &&
+                owning_weak_ptr->weakcount_.load() > 0),
+                "Pointer passed into weak_intrusive_ptr::reclaim must"
+                "have come from weak_intrusive_ptr::release");
+        }
+        return weak_intrusive_ptr(owning_weak_ptr);
+    }
+
+    //ptr must have come from weak_intrusive_ptr::release()
+    inline static weak_intrusive_ptr reclaim(TTarget* owning_weak_ptr, DeleterFunc _dealc) {
+        if constexpr (std::is_pointer_v<decltype(owning_weak_ptr->refcount_)>) {
+            utils::throw_exception(
+                owning_weak_ptr == NullType::singleton() ||
+                owning_weak_ptr->weakcount_->load() > 1 ||
+                (owning_weak_ptr->refcount_->load() == 0 &&
+                owning_weak_ptr->weakcount_->load() > 0),
+                "Pointer passed into weak_intrusive_ptr::reclaim must"
+                "have come from weak_intrusive_ptr::release");
+        }
+        else {
+            utils::throw_exception(
+                owning_weak_ptr == NullType::singleton() ||
+                owning_weak_ptr->weakcount_.load() > 1 ||
+                (owning_weak_ptr->refcount_.load() == 0 &&
+                owning_weak_ptr->weakcount_.load() > 0),
+                "Pointer passed into weak_intrusive_ptr::reclaim must"
+                "have come from weak_intrusive_ptr::release");
+        }
+        return weak_intrusive_ptr(owning_weak_ptr, _dealc);
+    }
+    
+    // raw ptr retains ownership
+    // new weak_intrusive_ptr representing a new weak reference
+    static weak_intrusive_ptr reclaim_copy(TTarget* owning_ptr) {
+        weak_intrusive_ptr out = weak_intrusive_ptr::reclaim(owning_ptr);
+        out.retain_();
+        return out;
+    }
+    
+};
+
 
 // T should be the parent
 template <typename T>
@@ -1284,6 +1408,31 @@ class intrusive_parent_ptr_array : public intrusive_ptr_target {
     }
 };
 
+namespace detail{
+
+namespace intrusive_ptr {
+inline void incref(intrusive_ptr_target *self){
+    if(self){
+        atomic_refcount_increment(self->refcount_);
+    }
+}
+template <typename T> inline void incref(intrusive_ptr_target_array<T> *self){
+    if(self){
+        atomic_refcount_increment(self->refcount_);
+    }
+}
+
+} // namespace intrusive_ptr
+namespace weak_intrusive_ptr{
+inline void incref(intrusive_ptr_target* self){
+    if(self){
+        atomic_weakcount_increment(self->weakcount_);
+    }
+}
+} //namespace weak_intrusive_ptr
+
+} //namespace detail
+
 namespace utils {
 
 template <typename T> struct is_intrusive_ptr : std::false_type {};
@@ -1299,4 +1448,17 @@ inline constexpr bool is_intrusive_ptr_v = is_intrusive_ptr<T>::value;
 } // namespace utils
 
 } // namespace nt
+
+
+namespace std{
+template<typename TTarget, typename NullType>
+inline void swap(::nt::intrusive_ptr<TTarget, NullType>& lhs, ::nt::intrusive_ptr<TTarget, NullType>& rhs){
+    lhs.swap(rhs);
+}
+template<typename TTarget, typename NullType>
+inline void swap(::nt::weak_intrusive_ptr<TTarget, NullType>& lhs, ::nt::weak_intrusive_ptr<TTarget, NullType>& rhs){
+    lhs.swap(rhs);
+}
+}
+
 #endif //_NT_INTRUSIVE_PTR_HPP_

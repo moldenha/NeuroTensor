@@ -228,137 +228,138 @@ inline void divide_num(T begin, T end, U out, utils::IteratorBaseType_t<T> num){
 	}	
 }
 
-//this uses fused multiply add functionality to make this operation much faster
-//for operations such as LU and rank reduction
-//note to self: make an operation such that it doesn't automatically go into c
-template<typename T, typename U, typename V>
-inline void fused_multiply_add(T begin_a, T end_a, U begin_b, V begin_c){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && 
-                    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<V>>
-                , "Expected to get base types the same for simde optimized routes");
-	using base_type = utils::IteratorBaseType_t<T>;
-	if constexpr (simde_supported_v<base_type>){
-		static constexpr size_t pack_size = pack_size_v<base_type>;
-		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_b += pack_size, begin_c += pack_size){
-			simde_type<base_type> a = it_loadu(begin_a);
-			simde_type<base_type> b = it_loadu(begin_b);
-			simde_type<base_type> c = it_loadu(begin_c);
-            SimdTraits<base_type>::fmadd(a, b, c);
-			it_storeu(begin_c, c);
-		}
-		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c)
-			*begin_c += *begin_a * *begin_b;
-	}else{
-		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c)
-			*begin_c += *begin_a * *begin_b;
-	}
+////this uses fused multiply add functionality to make this operation much faster
+////for operations such as LU and rank reduction
+////note to self: make an operation such that it doesn't automatically go into c
+//template<typename T, typename U, typename V>
+//inline void fused_multiply_add(T begin_a, T end_a, U begin_b, V begin_c){
+//	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && 
+//                    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<V>>
+//                , "Expected to get base types the same for simde optimized routes");
+//	using base_type = utils::IteratorBaseType_t<T>;
+//	if constexpr (simde_supported_v<base_type>){
+//		static constexpr size_t pack_size = pack_size_v<base_type>;
+//		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_b += pack_size, begin_c += pack_size){
+//			simde_type<base_type> a = it_loadu(begin_a);
+//			simde_type<base_type> b = it_loadu(begin_b);
+//			simde_type<base_type> c = it_loadu(begin_c);
+//            SimdTraits<base_type>::fmadd(a, b, c);
+//			it_storeu(begin_c, c);
+//		}
+//		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c)
+//			*begin_c += *begin_a * *begin_b;
+//	}else{
+//		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c)
+//			*begin_c += *begin_a * *begin_b;
+//	}
     
-}
+//}
 
-template<typename T, typename U>
-inline void fused_multiply_add_scalar(T begin_a, T end_a, U begin_c, utils::IteratorBaseType_t<T> num){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > 
-                , "Expected to get base types the same for simde optimized routes");
-	using base_type = utils::IteratorBaseType_t<T>;
-	if constexpr (simde_supported_v<base_type>){
-		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> nums = SimdTraits<base_type>::set1(num);
-		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_c += pack_size){
-			simde_type<base_type> a = it_loadu(begin_a);
-			simde_type<base_type> c = it_loadu(begin_c);
-            SimdTraits<base_type>::fmadd(a, nums, c);
-			it_storeu(begin_c, c);
-		}
-		for(; begin_a != end_a; ++begin_a, ++begin_c)
-			*begin_c += *begin_a * num;
-	}else{
-		for(; begin_a != end_a; ++begin_a, ++begin_c)
-			*begin_c += *begin_a * num;
-	}
+//template<typename T, typename U>
+//inline void fused_multiply_add_scalar(T begin_a, T end_a, U begin_c, utils::IteratorBaseType_t<T> num){
+//	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > 
+//                , "Expected to get base types the same for simde optimized routes");
+//	using base_type = utils::IteratorBaseType_t<T>;
+//	if constexpr (simde_supported_v<base_type>){
+//		static constexpr size_t pack_size = pack_size_v<base_type>;
+//		simde_type<base_type> nums = SimdTraits<base_type>::set1(num);
+//		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_c += pack_size){
+//			simde_type<base_type> a = it_loadu(begin_a);
+//			simde_type<base_type> c = it_loadu(begin_c);
+//            SimdTraits<base_type>::fmadd(a, nums, c);
+//			it_storeu(begin_c, c);
+//		}
+//		for(; begin_a != end_a; ++begin_a, ++begin_c)
+//			*begin_c += *begin_a * num;
+//	}else{
+//		for(; begin_a != end_a; ++begin_a, ++begin_c)
+//			*begin_c += *begin_a * num;
+//	}
     
-}
+//}
 
-//this uses fused multiply subtract functionality to make this operation much faster
-//for operations such as LU and rank reduction
-template<typename T, typename U, typename V, typename O>
-inline void fused_multiply_subtract(T begin_a, T end_a, U begin_b, V begin_c, O out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && 
-                    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<V>>
-                , "Expected to get base types the same for simde optimized routes");
-	using base_type = utils::IteratorBaseType_t<T>;
-	if constexpr (simde_supported_v<base_type>){
-		static constexpr size_t pack_size = pack_size_v<base_type>;
-		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_b += pack_size, begin_c += pack_size, out += pack_size){
-			simde_type<base_type> a = it_loadu(begin_a);
-			simde_type<base_type> b = it_loadu(begin_b);
-			simde_type<base_type> c = it_loadu(begin_c);
-            simde_type<base_type> o = SimdTraits<base_type>::fmsub(a, b, c);
-			it_storeu(out, o);
-		}
-		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c, ++out)
-			*out = *begin_c - (*begin_a * *begin_b);
-	}else{
-		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c, ++out)
-			*out = *begin_c - (*begin_a * *begin_b);
-	}
+////this uses fused multiply subtract functionality to make this operation much faster
+////for operations such as LU and rank reduction
+//template<typename T, typename U, typename V, typename O>
+//inline void fused_multiply_subtract(T begin_a, T end_a, U begin_b, V begin_c, O out){
+//	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && 
+//                    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<V>>
+//                , "Expected to get base types the same for simde optimized routes");
+//	using base_type = utils::IteratorBaseType_t<T>;
+//	if constexpr (simde_supported_v<base_type>){
+//		static constexpr size_t pack_size = pack_size_v<base_type>;
+//		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_b += pack_size, begin_c += pack_size, out += pack_size){
+//			simde_type<base_type> a = it_loadu(begin_a);
+//			simde_type<base_type> b = it_loadu(begin_b);
+//			simde_type<base_type> c = it_loadu(begin_c);
+//            simde_type<base_type> o = SimdTraits<base_type>::fmsub(a, b, c);
+//			it_storeu(out, o);
+//		}
+//		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c, ++out)
+//			*out = *begin_c - (*begin_a * *begin_b);
+//	}else{
+//		for(; begin_a != end_a; ++begin_a, ++begin_b, ++begin_c, ++out)
+//			*out = *begin_c - (*begin_a * *begin_b);
+//	}
     
-}
+//}
 
 
 
-template<typename T, typename U, typename O>
-inline void fused_multiply_subtract_scalar(T begin_a, T end_a, U begin_c, O out, utils::IteratorBaseType_t<T> num){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && 
-                    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>
-                , "Expected to get base types the same for simde optimized routes");
-	using base_type = utils::IteratorBaseType_t<T>;
-	if constexpr (simde_supported_v<base_type>){
-		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> nums = SimdTraits<base_type>::set1(num);
-		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_c += pack_size, out += pack_size){
-			simde_type<base_type> a = it_loadu(begin_a);
-			simde_type<base_type> c = it_loadu(begin_c);
-            simde_type<base_type> o = SimdTraits<base_type>::fmsub(a, nums, c);
-			it_storeu(out, o);
-		}
-		for(; begin_a != end_a; ++begin_a, ++begin_c, ++out)
-			*out = *begin_c - (*begin_a * num);
-	}else{
-		for(; begin_a != end_a; ++begin_a, ++begin_c, ++out)
-			*out = *begin_c - (*begin_a * num);
-	}
+//template<typename T, typename U, typename O>
+//inline void fused_multiply_subtract_scalar(T begin_a, T end_a, U begin_c, O out, utils::IteratorBaseType_t<T> num){
+//	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && 
+//                    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>
+//                , "Expected to get base types the same for simde optimized routes");
+//	using base_type = utils::IteratorBaseType_t<T>;
+//	if constexpr (simde_supported_v<base_type>){
+//		static constexpr size_t pack_size = pack_size_v<base_type>;
+//		simde_type<base_type> nums = SimdTraits<base_type>::set1(num);
+//		for(;begin_a + pack_size <= end_a; begin_a += pack_size, begin_c += pack_size, out += pack_size){
+//			simde_type<base_type> a = it_loadu(begin_a);
+//			simde_type<base_type> c = it_loadu(begin_c);
+//            simde_type<base_type> o = SimdTraits<base_type>::fmsub(a, nums, c);
+//			it_storeu(out, o);
+//		}
+//		for(; begin_a != end_a; ++begin_a, ++begin_c, ++out)
+//			*out = *begin_c - (*begin_a * num);
+//	}else{
+//		for(; begin_a != end_a; ++begin_a, ++begin_c, ++out)
+//			*out = *begin_c - (*begin_a * num);
+//	}
     
-}
+//}
 
 
-#define _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(func_name, simde_op, transform_op) \
-template<typename T, typename U, typename O>\
-inline void func_name(T begin, T end, U begin2, O out){\
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");\
-	using base_type = utils::IteratorBaseType_t<T>;\
-	if constexpr (simde_supported_v<base_type>){\
-		static constexpr size_t pack_size = pack_size_v<base_type>;\
-		for(; begin + pack_size <= end; begin += pack_size, begin2 += pack_size, out += pack_size){\
-			simde_type<base_type> a = it_loadu(begin);\
-			simde_type<base_type> b = it_loadu(begin2);\
-			simde_type<base_type> c = SimdTraits<base_type>::simde_op(a, b);\
-			it_storeu(out, c);\
-		}\
-		std::transform(begin, end, begin2, out, transform_op<>{});\
-	}\
-	else{\
-		std::transform(begin, end, begin2, out, transform_op<>{});\
-	}\
-}\
-\
+// #define _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(func_name, simde_op, transform_op) \
+// template<typename T, typename U, typename O>\
+// inline void func_name(T begin, T end, U begin2, O out){\
+// 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> > && std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");\
+// 	using base_type = utils::IteratorBaseType_t<T>;\
+// 	if constexpr (simde_supported_v<base_type>){\
+// 		static constexpr size_t pack_size = pack_size_v<base_type>;\
+// 		for(; begin + pack_size <= end; begin += pack_size, begin2 += pack_size, out += pack_size){\
+// 			simde_type<base_type> a = it_loadu(begin);\
+// 			simde_type<base_type> b = it_loadu(begin2);\
+// 			simde_type<base_type> c = SimdTraits<base_type>::simde_op(a, b);\
+// 			it_storeu(out, c);\
+// 		}\
+// 		std::transform(begin, end, begin2, out, transform_op<>{});\
+// 	}\
+// 	else{\
+// 		std::transform(begin, end, begin2, out, transform_op<>{});\
+// 	}\
+// }\
+// \
 
 
 
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(add, add, std::plus);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(subtract, subtract, std::minus);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(divide, divide, std::divides);
+// _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(add, add, std::plus);
+// _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(subtract, subtract, std::minus);
+// _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies);
+// _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(divide, divide, std::divides);
 
+// #undef _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_ 
 
 
 
