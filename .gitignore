@@ -27,13 +27,13 @@ src/tda/old_tda/old_N
 #tda refinement
 src/tda/old_tda/refinement
 #old layer stuff
-src/layers/old_layers
+src/nn/old_layers
 #old intrusive ptr files
 src/intrusive_ptr/old
 src/dtype/old
 src/images/old
 old_tests/
-src/functional/matmult/miscellaneous
+src/functional/cpu/matmult/miscellaneous
 src/functional/old
 
 #testing development files
