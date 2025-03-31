@@ -1,7 +1,7 @@
-#include "../src/Tensor.h"
-#include "../src/functional/functional.h"
-#include "../src/nn/TensorGrad.h"
-#include "../src/nn/layers.h"
+#include <nt/Tensor.h>
+#include <nt/functional/functional.h>
+#include <nt/nn/TensorGrad.h>
+#include <nt/nn/layers.h>
 #include <memory>
 #include <iostream>
 #include <functional>
@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <variant>
 #include <unordered_map>
-#include "../src/dtype/compatible/DType_compatible.h"
+#include <nt/dtype/compatible/DType_compatible.h>
 #include <typeindex>
 #include <unordered_map>
 #include <utility>

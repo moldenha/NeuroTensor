@@ -21,7 +21,7 @@ else()
     add_subdirectory(third_party/tbb)
     set(TBB_LIB TBB::tbb)  # Use the built TBB target
     include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
-    link_directories(${CMAKE_BINARY_DIR}/third_party/tbb/build/src)
+    link_directories(${CMAKE_BINARY_DIR}/third_party/tbb/build/nt)
 
 endif()
 
@@ -38,8 +38,10 @@ else()
     include_directories(${CMAKE_SOURCE_DIR}/third_party/matplot/source/matplot)
     set(MATPLOT_LIB matplot)
 endif()
-    
-    
+
+
+
+
 
 #add_subdirectory(third_party/xnetwork)
 
@@ -69,65 +71,81 @@ include_directories(
     #For matrix and vector linear algebra calculations
     #This incorperates most of the nt::linalg namespace
     ${CMAKE_SOURCE_DIR}/third_party/eigen
+    ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib
+    ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib
 )
 
 
+# Include NIfTI macros
+include(third_party/nifti_clib/cmake/nifti_macros.cmake)
+
+# Add znzlib for compressed NIfTI support
+add_subdirectory(third_party/nifti_clib/znzlib)
+
+# Add NIfTI core library (creates niftiio target)
+add_subdirectory(third_party/nifti_clib/niftilib)
+
 set(CORE_SOURCES
-    src/refs/ArrayRef.cpp
-    src/refs/SizeRef.cpp
-    src/utils/utils.cpp
-    src/utils/optional.cpp
-    src/utils/CommaOperator.cpp
-    src/Tensor.cpp
+    nt/refs/ArrayRef.cpp
+    nt/refs/SizeRef.cpp
+    nt/utils/utils.cpp
+    nt/utils/optional.cpp
+    nt/utils/CommaOperator.cpp
+    nt/Tensor.cpp
 )
 
 set(MATMULT_SOURCES
-	src/functional/cpu/matmult/nt_matmult_float.cpp
-	src/functional/cpu/matmult/nt_matmult_float16.cpp
-	src/functional/cpu/matmult/nt_matmult_double.cpp
-	src/functional/cpu/matmult/nt_matmult_float128.cpp
-	src/functional/cpu/matmult/nt_matmult_complex32.cpp
-	src/functional/cpu/matmult/nt_matmult_complex64.cpp
-	src/functional/cpu/matmult/nt_matmult_complex128.cpp
-	src/functional/cpu/matmult/nt_matmult_int128.cpp
-	src/functional/cpu/matmult/nt_matmult_uint128.cpp
-	src/functional/cpu/matmult/nt_matmult_int64.cpp
-	src/functional/cpu/matmult/nt_matmult_uint64.cpp
-	src/functional/cpu/matmult/nt_matmult_int32.cpp
-	src/functional/cpu/matmult/nt_matmult_uint32.cpp
-	src/functional/cpu/matmult/nt_matmult_int16.cpp
-	src/functional/cpu/matmult/nt_matmult_uint16.cpp
-	src/functional/cpu/matmult/nt_matmult_int8.cpp
-	src/functional/cpu/matmult/nt_matmult_uint8.cpp
+	nt/functional/cpu/matmult/nt_matmult_float.cpp
+	nt/functional/cpu/matmult/nt_matmult_float16.cpp
+	nt/functional/cpu/matmult/nt_matmult_double.cpp
+	nt/functional/cpu/matmult/nt_matmult_float128.cpp
+	nt/functional/cpu/matmult/nt_matmult_complex32.cpp
+	nt/functional/cpu/matmult/nt_matmult_complex64.cpp
+	nt/functional/cpu/matmult/nt_matmult_complex128.cpp
+	nt/functional/cpu/matmult/nt_matmult_int128.cpp
+	nt/functional/cpu/matmult/nt_matmult_uint128.cpp
+	nt/functional/cpu/matmult/nt_matmult_int64.cpp
+	nt/functional/cpu/matmult/nt_matmult_uint64.cpp
+	nt/functional/cpu/matmult/nt_matmult_int32.cpp
+	nt/functional/cpu/matmult/nt_matmult_uint32.cpp
+	nt/functional/cpu/matmult/nt_matmult_int16.cpp
+	nt/functional/cpu/matmult/nt_matmult_uint16.cpp
+	nt/functional/cpu/matmult/nt_matmult_int8.cpp
+	nt/functional/cpu/matmult/nt_matmult_uint8.cpp
 )
 
 set(FUNCTIONAL_SOURCES
-	src/functional/tensor_files/colim_transform.cpp
-	src/functional/tensor_files/combine.cpp
-	src/functional/tensor_files/conv.cpp
-	src/functional/tensor_files/fill.cpp
-	src/functional/tensor_files/fused.cpp
-	src/functional/tensor_files/save_load.cpp
-	src/functional/tensor_files/matmult.cpp
-	src/functional/tensor_files/normalize.cpp
-	src/functional/tensor_files/numpy.cpp
-	src/functional/tensor_files/operators.cpp
-	src/functional/tensor_files/rand.cpp
+	nt/functional/tensor_files/colim_transform.cpp
+	nt/functional/tensor_files/combine.cpp
+	nt/functional/tensor_files/conv.cpp
+	nt/functional/tensor_files/fill.cpp
+	nt/functional/tensor_files/fused.cpp
+	nt/functional/tensor_files/save_load.cpp
+	nt/functional/tensor_files/matmult.cpp
+	nt/functional/tensor_files/normalize.cpp
+	nt/functional/tensor_files/numpy.cpp
+	nt/functional/tensor_files/operators.cpp
+	nt/functional/tensor_files/rand.cpp
+	nt/functional/tensor_files/min_max.cpp
+	nt/functional/tensor_files/compare.cpp
+	nt/functional/tensor_files/ranges.cpp
     
-    src/functional/cpu/unfold1d.cpp
-    src/functional/cpu/unfold2d.cpp
-    src/functional/cpu/unfold3d.cpp
-    src/functional/cpu/fold.cpp
-    src/functional/cpu/unfold1d_backward.cpp
-    src/functional/cpu/unfold2d_backward.cpp
-    src/functional/cpu/unfold3d_backward.cpp
-    src/functional/cpu/fold_backward.cpp
-    src/functional/cpu/rand.cpp
-    src/functional/cpu/fused.cpp
-    src/functional/cpu/operators.cpp
-    src/functional/cpu/normalize.cpp
+    nt/functional/cpu/unfold1d.cpp
+    nt/functional/cpu/unfold2d.cpp
+    nt/functional/cpu/unfold3d.cpp
+    nt/functional/cpu/fold.cpp
+    nt/functional/cpu/unfold1d_backward.cpp
+    nt/functional/cpu/unfold2d_backward.cpp
+    nt/functional/cpu/unfold3d_backward.cpp
+    nt/functional/cpu/fold_backward.cpp
+    nt/functional/cpu/rand.cpp
+    nt/functional/cpu/fused.cpp
+    nt/functional/cpu/operators.cpp
+    nt/functional/cpu/normalize.cpp
+    nt/functional/cpu/min_max.cpp
+    nt/functional/cpu/compare.cpp
 
-	src/functional/functional.cpp
+	nt/functional/functional.cpp
 )
 
 
@@ -135,33 +153,36 @@ set(FUNCTIONAL_SOURCES
 #this reduces compile times when specific functions need to be changed
 #would like to do this for all general function in the future and current 
 set(LINALG_SOURCES
-    src/linalg/SVD.cpp
-    src/linalg/QR.cpp
-    src/linalg/inv.cpp
-    src/linalg/column_space.cpp
-    src/linalg/process/SVD.cpp
-    src/linalg/process/QR.cpp
-    src/linalg/process/inv.cpp
-    src/linalg/process/null_space.cpp
-    src/linalg/process/column_space.cpp
-    src/linalg/adjugate.cpp
-    src/linalg/determinant.cpp
-    src/linalg/norm.cpp
-    src/linalg/null_space.cpp
-    src/linalg/pivots.cpp
-    src/linalg/eye.cpp
-    src/linalg/independent.cpp
+    nt/linalg/SVD.cpp
+    nt/linalg/QR.cpp
+    nt/linalg/inv.cpp
+    nt/linalg/column_space.cpp
+    nt/linalg/process/SVD.cpp
+    nt/linalg/process/QR.cpp
+    nt/linalg/process/inv.cpp
+    nt/linalg/process/null_space.cpp
+    nt/linalg/process/column_space.cpp
+    nt/linalg/adjugate.cpp
+    nt/linalg/determinant.cpp
+    nt/linalg/norm.cpp
+    nt/linalg/null_space.cpp
+    nt/linalg/pivots.cpp
+    nt/linalg/eye.cpp
+    nt/linalg/independent.cpp
 )
 
+set(FMRI_SOURCES
+    nt/fmri/tensor_files/save_load.cpp
+)
 
 set(TYPES_SOURCES
-    src/dtype/ArrayVoid.cpp
-    src/dtype/DType.cpp
-    src/dtype/DType_operators.cpp
-    src/dtype/ranges.cpp
-    src/dtype/Scalar.cpp
-    src/types/Types.cpp
-    src/convert/Convert.cpp
+    nt/dtype/ArrayVoid.cpp
+    nt/dtype/DType.cpp
+    nt/dtype/DType_operators.cpp
+    nt/dtype/ranges.cpp
+    nt/dtype/Scalar.cpp
+    nt/types/Types.cpp
+    nt/convert/Convert.cpp
 )
 
 # Check for compiler support for __uint128_t
@@ -196,84 +217,88 @@ endif()
 
 
 set(PERMUTE_SOURCES
-    src/permute/permute_old.cpp
-    src/permute/permute.cpp
+    nt/permute/permute_old.cpp
+    nt/permute/permute.cpp
 )
 
 #this also includes autograds and layers
 set(AI_SOURCES
-    src/nn/Layer.cpp
-    src/nn/LNN.cpp
-    src/nn/TensorGrad.cpp
-    src/nn/functional.cpp
-    src/nn/Loss.cpp
-    src/nn/Optimizers.cpp
-    src/nn/Module.cpp
+    nt/nn/Layer.cpp
+    nt/nn/LNN.cpp
+    nt/nn/TensorGrad.cpp
+    nt/nn/functional.cpp
+    nt/nn/Loss.cpp
+    nt/nn/Optimizers.cpp
+    nt/nn/Module.cpp
     #ncps sources
-    src/nn/ncps/lstm_cell.cpp
-    src/nn/ncps/wiring/wiring.cpp
-    src/nn/ncps/cfc/wired_cfc_cell.cpp
-    src/nn/ncps/cfc/cfc_cell.cpp
-    src/nn/ncps/cfc/cfc.cpp
-    src/nn/ncps/ltc/ltc.cpp
-    src/nn/ncps/ltc/ltc_cell.cpp
+    nt/nn/ncps/lstm_cell.cpp
+    nt/nn/ncps/wiring/wiring.cpp
+    nt/nn/ncps/cfc/wired_cfc_cell.cpp
+    nt/nn/ncps/cfc/cfc_cell.cpp
+    nt/nn/ncps/cfc/cfc.cpp
+    nt/nn/ncps/ltc/ltc.cpp
+    nt/nn/ncps/ltc/ltc_cell.cpp
     #individual layers
-    src/nn/layers/BatchNorm1D.cpp
-    src/nn/layers/Conv1D.cpp
-    src/nn/layers/Conv2D.cpp
-    src/nn/layers/Conv3D.cpp
-    src/nn/layers/ConvTranspose1D.cpp
-    src/nn/layers/ConvTranspose2D.cpp
-    src/nn/layers/ConvTranspose3D.cpp
-    src/nn/layers/Dropout.cpp
-    src/nn/layers/Fold.cpp
-    src/nn/layers/Functional.cpp
-    src/nn/layers/Identity.cpp
-    src/nn/layers/Linear.cpp
-    src/nn/layers/Softplus.cpp
-    src/nn/layers/Unfold1D.cpp
-    src/nn/layers/Unfold2D.cpp
-    src/nn/layers/Unfold3D.cpp
+    nt/nn/layers/BatchNorm1D.cpp
+    nt/nn/layers/Conv1D.cpp
+    nt/nn/layers/Conv2D.cpp
+    nt/nn/layers/Conv3D.cpp
+    nt/nn/layers/ConvTranspose1D.cpp
+    nt/nn/layers/ConvTranspose2D.cpp
+    nt/nn/layers/ConvTranspose3D.cpp
+    nt/nn/layers/Dropout.cpp
+    nt/nn/layers/Fold.cpp
+    nt/nn/layers/Functional.cpp
+    nt/nn/layers/Identity.cpp
+    nt/nn/layers/Linear.cpp
+    nt/nn/layers/Softplus.cpp
+    nt/nn/layers/Unfold1D.cpp
+    nt/nn/layers/Unfold2D.cpp
+    nt/nn/layers/Unfold3D.cpp
 
 )
 
 set(MP_SOURCES
-    src/mp/Threading.cpp
+    nt/mp/Threading.cpp
 )
 
 set(TDA_SOURCES
-    src/tda/old_tda/Simplex.cpp
-    src/tda/old_tda/Simplex2d.cpp
-    src/tda/old_tda/Shapes.cpp
-    src/tda/old_tda/Basis.cpp
-    src/tda/old_tda/Points.cpp
-    src/tda/old_tda/Points2d.cpp
-    src/tda/old_tda/KDTree.cpp
-    # src/tda/old_tda/refinement/refine.cpp <- unreleased
-    src/tda/old_tda/BatchBasis.cpp
-    src/tda/old_tda/BatchKDTree.cpp
-    src/tda/old_tda/BatchPoints.cpp
-    src/tda/BasisOverlapping.cpp
-    src/tda/Boundaries.cpp
-    src/tda/Homology.cpp
-    src/tda/MatrixReduction.cpp
-    src/tda/PlotDiagrams.cpp
-    src/tda/Points.cpp
-    src/tda/SimplexConstruct.cpp
-    src/tda/SimplexRadi.cpp
+    nt/tda/old_tda/Simplex.cpp
+    nt/tda/old_tda/Simplex2d.cpp
+    nt/tda/old_tda/Shapes.cpp
+    nt/tda/old_tda/Basis.cpp
+    nt/tda/old_tda/Points.cpp
+    nt/tda/old_tda/Points2d.cpp
+    nt/tda/old_tda/KDTree.cpp
+    # nt/tda/old_tda/refinement/refine.cpp <- unreleased
+    nt/tda/old_tda/BatchBasis.cpp
+    nt/tda/old_tda/BatchKDTree.cpp
+    nt/tda/old_tda/BatchPoints.cpp
+    nt/tda/BasisOverlapping.cpp
+    nt/tda/Boundaries.cpp
+    nt/tda/Homology.cpp
+    nt/tda/MatrixReduction.cpp
+    nt/tda/PlotDiagrams.cpp
+    nt/tda/Points.cpp
+    nt/tda/SimplexConstruct.cpp
+    nt/tda/SimplexRadi.cpp
+    #learned persistent homology
+    nt/tda/nn/distance.cpp
+    nt/tda/nn/filtration.cpp
+    nt/tda/nn/loss.cpp
 )
 
 set(SPARSE_SOURCES
-    src/sparse/SparseTensor.cpp
+    nt/sparse/SparseTensor.cpp
 )
 
 set(IMAGES_SOURCES
-    src/images/image.cpp
+    nt/images/image.cpp
 )
 
 set(MEMORY_SOURCES
-    src/memory/bucket.cpp
-    src/memory/device.cpp
+    nt/memory/bucket.cpp
+    nt/memory/device.cpp
 )
 
 
@@ -289,6 +314,7 @@ set(SOURCES
     ${AI_SOURCES}
     ${MP_SOURCES}
     ${TDA_SOURCES}
+    ${FMRI_SOURCES}
     ${SPARSE_SOURCES}
     ${IMAGES_SOURCES}
     ${MEMORY_SOURCES}
@@ -309,11 +335,18 @@ target_link_libraries(main.out
     ${TBB_LIB}
     ${MATPLOT_LIB}
     pthread
+    niftiio
+    znz
 )
 
 # Set RPATH for runtime
 set_target_properties(main.out PROPERTIES
 	INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+    
+include_directories(
+    # automatically have base directory included
+    ${CMAKE_SOURCE_DIR}
 )
 
 # Install target (optional)

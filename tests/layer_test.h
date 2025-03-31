@@ -1,7 +1,7 @@
-#include "../src/nn/Layer.h"
-#include "../src/nn/LNN.h"
-#include "../src/nn/ncps/cfc/cfc.h"
-#include "../src/nn/Optimizers.h"
+#include <nt/nn/Layer.h>
+#include <nt/nn/LNN.h>
+#include <nt/nn/ncps/cfc/cfc.h>
+#include <nt/nn/Optimizers.h>
 #include <iostream>
 #include <sstream>
 

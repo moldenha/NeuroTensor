@@ -1,5 +1,5 @@
-#include "../src/Tensor.h"
-#include "../src/linalg/linalg.h"
+#include <nt/Tensor.h>
+#include <nt/linalg/linalg.h>
 
 
 void svd_test(){
@@ -31,5 +31,10 @@ void pinv_test(){
     std::cout << inv << std::endl;
 }
 
+void eye_test(){
+    std::cout << "identity matrix of 30, with dtype int8:" << std::endl;
+    nt::Tensor i = nt::linalg::eye(30, 0, nt::DType::int8);
+    std::cout << i << std::endl;
+}
 
 

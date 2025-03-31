@@ -23,18 +23,22 @@ objcs/
 build/
 
 #tda old files
-src/tda/old_tda/old_N
+nt/tda/old_tda/old_N
 #tda refinement
-src/tda/old_tda/refinement
+nt/tda/old_tda/refinement
 #old layer stuff
-src/nn/old_layers
+nt/nn/old_layers
 #old intrusive ptr files
-src/intrusive_ptr/old
-src/dtype/old
-src/images/old
+nt/intrusive_ptr/old
+nt/dtype/old
+nt/images/old
 old_tests/
-src/functional/cpu/matmult/miscellaneous
-src/functional/old
+nt/functional/cpu/matmult/miscellaneous
+nt/functional/old
+nt/fmri/tensor_files/making
+
+#seperate testing files
+files/
 
 #testing development files
 testing/

@@ -1,7 +1,8 @@
 //this is a file for testing the tensor class and some of it's functionality
 //needs to be extended
-#include "../src/Tensor.h"
-
+#include <nt/Tensor.h>
+#include <nt/dtype/ArrayVoid.hpp>
+#include <nt/functional/functional.h>
 
 #include <iostream>
 #include <string>
