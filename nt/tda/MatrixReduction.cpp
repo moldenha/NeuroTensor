@@ -145,7 +145,7 @@ Tensor &finishRowReducing(Tensor &B) {
 
             if (scaleAmt == 0)
                 continue;
-            scaleAmt *= -1;
+            // scaleAmt *= -1;
             functional::fused_multiply_add_(B_begin[otherRow], B_begin[i],
                                             scaleAmt);
         }
@@ -397,7 +397,7 @@ Tensor &finishCatRowReducing(Tensor &B,
 
             if (scaleAmt == 0)
                 continue;
-            scaleAmt *= -1;
+            // scaleAmt *= -1;
             functional::fused_multiply_add_(B_begin[otherRow], B_begin[i],
                                             scaleAmt);
         }
@@ -538,6 +538,8 @@ Tensor& partialColReduce(Tensor &d_k,
 }
 
 
+
+
 Tensor &partialRowReduce(Tensor &B,
                              int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
     utils::throw_exception(
@@ -566,125 +568,6 @@ Tensor &partialRowReduce(Tensor &B,
     for (int64_t i = 0; i < B_split.numel(); ++i) {
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
     }
-
-    int64_t i = 0, j = 0;
-    while(i < start_rows && j < start_cols){
-        if(b_access[i][j] == 0){
-           //if A at row i and column j is 0
-            int64_t nonzeroRow = std::max(i+1, start_rows);
-            //go down that row until it is not zero
-            while (nonzeroRow < end_rows && b_access[nonzeroRow][j] == 0) {
-                ++nonzeroRow;
-            }
-            //if the entire row is 0, just skip this row
-            if (nonzeroRow == end_rows) {
-                ++j;
-                continue;
-            }
- 
-        }
-        ++j;
-        ++i;
-    }
-    while (i < end_rows && j < end_cols) {
-        if (b_access[i][j] == 0) {
-            int64_t nonzeroRow = std::max(i + 1, start_rows);
-            while (nonzeroRow < end_rows && b_access[nonzeroRow][j] == 0) {
-                ++nonzeroRow;
-            }
-            if (nonzeroRow == end_rows) {
-                ++j;
-                continue;
-            }
-            // swap rows
-            std::swap(b_access[i], b_access[nonzeroRow]);
-            std::swap(B_begin[i], B_begin[nonzeroRow]);
-        }
-
-        float pivot = 1.0 / b_access[i][j];
-
-        B_begin[i] *= pivot;
-
-        // could probably use a parallel for loop to speed this up
-        for (int64_t otherRow = 0; otherRow < end_rows; ++otherRow) {
-            if (otherRow == i)
-                continue;
-            float scaleAmt = b_access[otherRow][j];
-
-            if (scaleAmt == 0)
-                continue;
-            scaleAmt *= -1;
-            functional::fused_multiply_add_(B_begin[otherRow], B_begin[i],
-                                            scaleAmt);
-        }
-
-        ++i;
-        ++j;
-    }
-    Tensor catted = nt::functional::cat_unordered(B_split).view(B.shape());
-    std::swap(B, catted);
-    return B;
-}
-
-
-
-void partialColReduce(Tensor*& A_begin, float** &a_access,
-                             int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
-
-
-    std::swap(start_rows, start_cols);
-    std::swap(end_rows, end_cols);
-    int64_t i = 0, j = 0;
-
-    while (i < end_rows && j < end_cols) {
-        // numpy version is i, j [without transpose]
-        //  bool do_continue = false;
-        //  bool was_zero = false;
-        //  int64_t nonzeroCol = 0;
-        if (a_access[j][i] == 0) {
-            //if A at row i and column j is 0
-            int64_t nonzeroCol = std::max(j+1, start_cols);
-            //go down that row until it is not zero
-            while (nonzeroCol < end_cols && a_access[nonzeroCol][i] == 0) {
-                ++nonzeroCol;
-            }
-            //if the entire row is 0, just skip this row
-            if (nonzeroCol == end_cols) {
-                ++i;
-                continue;
-            }
-            // swap cols
-            //
-            std::swap(a_access[j], a_access[nonzeroCol]);
-            std::swap(A_begin[j], A_begin[nonzeroCol]);
-        }
-
-        // without transpose: pivot = A[i, j]
-        const float pivot = 1.0 / a_access[j][i];
-
-        A_begin[j] *= (int64_t)pivot;
-
-        for (int64_t otherCol = 0; otherCol < end_cols; ++otherCol) {
-            if (otherCol == j)
-                continue;
-            float scaleAmt = a_access[otherCol][i];
-            if (scaleAmt == 0)
-                continue;
-            scaleAmt *= -1;
-            functional::fused_multiply_add_(A_begin[otherCol], A_begin[j],
-                                            scaleAmt);
-        }
-
-        ++i;
-        ++j;
-    }
-
-}
-
-
-void partialRowReduce(Tensor*& B_begin, float** &b_access,
-                             int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
-
 
     int64_t i = 0, j = 0;
     //while(i < start_rows && j < start_cols){
@@ -725,7 +608,147 @@ void partialRowReduce(Tensor*& B_begin, float** &b_access,
         B_begin[i] *= pivot;
 
         // could probably use a parallel for loop to speed this up
-        for (int64_t otherRow = 0; otherRow < end_rows; ++otherRow) {
+        //if you want the exact same matrix output at the simultaneous reduce
+        //set otherRow = 0
+        for (int64_t otherRow = i+1; otherRow < end_rows; ++otherRow) {
+            // if (otherRow == i)
+            //     continue;
+            float scaleAmt = b_access[otherRow][j];
+
+            if (scaleAmt == 0)
+                continue;
+            // scaleAmt *= -1;
+            functional::fused_multiply_add_(B_begin[otherRow], B_begin[i],
+                                            scaleAmt);
+        }
+
+        ++i;
+        ++j;
+    }
+    Tensor catted = nt::functional::cat_unordered(B_split).view(B.shape());
+    std::swap(B, catted);
+    return B;
+}
+
+
+void print_matrix(float** mat, int64_t rows, int64_t cols){
+    std::cout << '[';
+    for(int64_t r = 0; r < rows; ++r){
+        std::cout << '[';
+        for(int64_t c = 0; c < cols-1; ++c){
+            std::cout << mat[r][c]<<',';
+        }
+        if(r != rows-1){
+            std::cout << mat[r][cols-1] << "],"<<std::endl;
+        }
+        else{
+            std::cout << mat[r][cols-1] << "]]"<<std::endl;
+        }
+    }
+}
+
+
+void partialColReduce(Tensor*& A_begin, float** &a_access,
+                             int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
+
+    
+
+    std::swap(start_rows, start_cols);
+    std::swap(end_rows, end_cols);
+    // if(end_rows == 30 && end_cols == 13){
+    //     std::cout << "input matrix:"<<std::endl;
+    //     print_matrix(a_access, end_rows, end_cols);
+    // }
+    int64_t i = 0, j = 0;
+
+    while (i < end_rows && j < end_cols) {
+        // numpy version is i, j [without transpose]
+        //  bool do_continue = false;
+        //  bool was_zero = false;
+        //  int64_t nonzeroCol = 0;
+        if (a_access[j][i] == 0) {
+            //if A at row i and column j is 0
+            int64_t nonzeroCol = std::max(j+1, start_cols);
+            //go down that row until it is not zero
+            while (nonzeroCol < end_cols && a_access[nonzeroCol][i] == 0) {
+                ++nonzeroCol;
+            }
+            //if the entire row is 0, just skip this row
+            if (nonzeroCol == end_cols) {
+                // if(end_rows == 30 && end_cols == 25){
+                //     std::cout << "skipping "<<i<<std::endl;
+                // }
+
+                ++i;
+                continue;
+            }
+            // swap cols
+            // if(end_rows == 30 && end_cols == 25){
+            //     std::cout << "swapping "<<j<<" and "<<nonzeroCol<<std::endl;
+            // }
+            std::swap(a_access[j], a_access[nonzeroCol]);
+            std::swap(A_begin[j], A_begin[nonzeroCol]);
+        }
+
+        // without transpose: pivot = A[i, j]
+        const float pivot = 1.0 / a_access[j][i];
+        // if(end_rows == 30 && end_cols == 25){
+        //     std::cout << "pivot is ("<<j<<") "<<pivot<<std::endl;
+        // }
+        // if(end_rows == 30 && end_cols == 25 && (j == 2 || j == 11)){
+        //     print_matrix(a_access, end_rows, end_cols);
+        //     std::cout << "printed"<<std::endl;
+        // }
+
+        A_begin[j] *= (int64_t)pivot;
+        // if(end_rows == 30 && end_cols == 25 && (j == 2 || j == 11)){
+        //     print_matrix(a_access, end_rows, end_cols);
+        //     std::cout << "printed after"<<std::endl;
+        // }
+        for (int64_t otherCol = j+1; otherCol < end_cols; ++otherCol) {
+            if (otherCol == j)
+                continue;
+            float scaleAmt = a_access[otherCol][i];
+            if (scaleAmt == 0)
+                continue;
+            scaleAmt *= -1;
+            functional::fused_multiply_add_(A_begin[otherCol], A_begin[j],
+                                            scaleAmt);
+        }
+        
+        ++i;
+        ++j;
+    }
+
+}
+
+
+void partialRowReduce(Tensor*& B_begin, float** &b_access,
+                             int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
+
+
+    int64_t i = 0, j = 0;
+    while (i < end_rows && j < end_cols) {
+        if (b_access[i][j] == 0) {
+            int64_t nonzeroRow = std::max(i + 1, start_rows);
+            while (nonzeroRow < end_rows && b_access[nonzeroRow][j] == 0) {
+                ++nonzeroRow;
+            }
+            if (nonzeroRow == end_rows) {
+                ++j;
+                continue;
+            }
+            // swap rows
+            std::swap(b_access[i], b_access[nonzeroRow]);
+            std::swap(B_begin[i], B_begin[nonzeroRow]);
+        }
+
+        float pivot = 1.0 / b_access[i][j];
+
+        B_begin[i] *= pivot;
+
+        // could probably use a parallel for loop to speed this up
+        for (int64_t otherRow = i+1; otherRow < end_rows; ++otherRow) {
             if (otherRow == i)
                 continue;
             float scaleAmt = b_access[otherRow][j];
@@ -791,6 +814,7 @@ std::map<double, int64_t>
     //partialColReduce(A_begin, a_access, astart_rows, astart_cols, aend_rows [d_k.shape()[0]], aend_cols)
     int i = 0;
     std::map<double, int64_t> out;
+    int cntr = 0;
     for(const auto& correspond : radi_bounds){
         auto [km1_size, k_size, kp1_size] = correspond.second;
         if(km1_size < astart_rows || km1_size > A.shape()[1]) continue;
@@ -821,6 +845,9 @@ std::map<double, int64_t>
 
         int64_t rank_k = numPivotRows(a_access, k_size, km1_size);
         int64_t rank_kp1 = numPivotRows(b_access, k_size, kp1_size);
+        // std::cout << k_size<<','<<km1_size<<": "<<rank_k<<std::endl;
+        // std::cout << k_size<<','<<kp1_size<<": "<<rank_kp1<<std::endl;
+
         //dimKChains = k_size
         //kernelDim = dimKChains - rank_k = k_size - rank_k;
         //betti = kernelDim - rank_kp1
@@ -832,6 +859,14 @@ std::map<double, int64_t>
         }else if (add_zeros){
             out[correspond.first] = 0;
         }
+        // if(k_size == 25 && km1_size == 30){
+        //     Tensor new_A = nt::functional::cat_unordered(A_split).view(d_k.shape().transpose(-1, -2))[my_range(0, 32)];
+        //     // Tensor new_A = nt::functional::cat_unordered(A_split).view(d_k.shape().transpose(-1, -2));
+        //     std::cout << new_A<<std::endl;
+        //     // d_k.underlying_tensor().transpose(-1, -2)[{my_range(0, k_size), my_range(0, km1_size)}].print();
+        //     std::cout << "rank for a: "<<rank_k<<std::endl;
+        // }
+        ++cntr;
     }
     delete[] a_access;
     delete[] b_access;
@@ -880,7 +915,7 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
         b_access[i] = reinterpret_cast<float *>(B_begin[i].data_ptr());
     }
     //partialColReduce(A_begin, a_access, astart_rows, astart_cols, aend_rows [d_k.shape()[0]], aend_cols)
-    int i = 0;
+    // int cntr = 0;
     std::map<double, Tensor > col_spaces;
     std::map<double, int64_t> betti_numbers;
     for(const auto& correspond : radi_bounds){
@@ -915,6 +950,7 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
 
         int64_t rank_k = numPivotRows(a_access, k_size, km1_size);
         int64_t rank_kp1 = numPivotRows(b_access, k_size, kp1_size);
+
         //dimKChains = k_size
         //kernelDim = dimKChains - rank_k = k_size - rank_k;
         //betti = kernelDim - rank_kp1
@@ -924,6 +960,10 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
         if(betti > 0){
             Tensor new_B = B[{my_range(0, k_size), my_range(0, kp1_size)}];
             Tensor boundary_kp1 = d_kplus1[{my_range(0, k_size), my_range(0, kp1_size)}].underlying_tensor();
+            // if(cntr == 0){
+            //     std::cout << boundary_kp1<<std::endl;
+            //     ++cntr;
+            // }
             Tensor col_space = linalg::col_space(boundary_kp1, new_B).to(DType::Float32);
             col_spaces[correspond.first] = col_space;
             betti_numbers[correspond.first] = betti;
@@ -939,3 +979,26 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
 
 } // namespace tda
 } // namespace nt
+
+
+/*
+
+11,30: 9
+11,2: 2
+13,30: 11
+13,2: 2
+15,30: 12
+15,2: 2
+19,30: 14
+19,5: 5
+23,30: 16
+23,9: 7
+25,30: 18
+25,9: 7
+32,30: 21
+32,13: 11
+36,30: 22
+36,17: 14
+39,30: 24
+
+*/

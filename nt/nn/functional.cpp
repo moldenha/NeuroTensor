@@ -8,8 +8,9 @@
 
 namespace nt {
 namespace functional {
-TensorGrad TensorGrad_Functional_Class::matmult(const TensorGrad &a, const TensorGrad &b) {
+TensorGrad TensorGrad_Functional_Class::matmult(const TensorGrad &a, const TensorGrad &b, bool transpose_a, bool transpose_b) {
     if (!a.do_track_grad) {
+        utils::THROW_EXCEPTION(!transpose_a && !transpose_b, "NOT IMPLEMENTED YET");
         if (!b.do_track_grad) {
             Tensor out = ::nt::functional::matmult(a.tensor, b.tensor);
             TensorGrad result(std::move(out), false);
@@ -19,26 +20,37 @@ TensorGrad TensorGrad_Functional_Class::matmult(const TensorGrad &a, const Tenso
         return matmult(a.tensor, b);
     }
     if (!b.do_track_grad) {
+        utils::THROW_EXCEPTION(!transpose_a && !transpose_b, "NOT IMPLEMENTED YET");
         return matmult(a, b.tensor);
     }
     // a and b are going to have to be cloned anyways so:
 
     intrusive_ptr<tensor_holder> a_c =
-            make_intrusive<tensor_holder>(a.tensor.clone());
+            make_intrusive<tensor_holder>(transpose_a ? a.tensor.transpose(-1,-2).clone() : a.tensor.clone());
     intrusive_ptr<tensor_holder> b_c =
-            make_intrusive<tensor_holder>(b.tensor.clone());
-    TensorGrad result(::nt::functional::matmult(a_c->tensor, b_c->tensor), a.grad_required);
+            make_intrusive<tensor_holder>(transpose_b ? b.tensor.transpose(-1,-2).clone() : b.tensor.clone());
+    TensorGrad result(::nt::functional::matmult(a_c->tensor, b_c->tensor, false, false), true);
     result.track_tensors(a, b);
 
     // Define backward function
     result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
+            [transpose_a, transpose_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
-                parents[0]->grad->tensor +=
+                if(transpose_a){
+                    parents[0]->grad->tensor +=
+                        ::nt::functional::matmult(grad, b->tensor, false, true).transpose(-1, -2);
+                }else{
+                    parents[0]->grad->tensor +=
                         ::nt::functional::matmult(grad, b->tensor, false, true);
-
-                parents[1]->grad->tensor +=
+                }
+                
+                if(transpose_b){
+                    parents[1]->grad->tensor +=
+                        ::nt::functional::matmult(a->tensor, grad, true, false).transpose(-1, -2);
+                }else{
+                    parents[1]->grad->tensor +=
                         ::nt::functional::matmult(a->tensor, grad, true, false);
+                }
             },
             a_c, b_c);
     return result;

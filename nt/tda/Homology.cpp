@@ -3,6 +3,7 @@
 #include "../linalg/linalg.h"
 #include "Boundaries.h"
 #include "MatrixReduction.h"
+#include "cpu/MatrixReduction.h"
 #include "SimplexConstruct.h"
 #include "SimplexRadi.h"
 #include <queue>
@@ -270,6 +271,10 @@ bool GeneratorEqual::operator()(const Tensor &a, const Tensor &b) const {
     return true;
 }
 
+
+/*
+ * I am keeping the code below in comments because it explicitly points out how to get betti
+ * numbers and generators from a boundary matrix, and is good for educational purposes
 int64_t PersistentHomology::get_betti_number(SparseTensor &boundary_k,
                                              SparseTensor &boundary_kp1) {
     // A: a tensor representing the transpose of the reduction of boundary_k
@@ -321,6 +326,7 @@ PersistentHomology::get_generator(SparseTensor &boundary_k,
     return std::make_tuple(betti, std::move(generator));
 }
 
+*/
 inline void radius_to_adjacency(double radius, double *begin, double *end,
                                 bool *out) {
     std::transform(begin, end, out,
@@ -580,7 +586,7 @@ std::map<double, int64_t> PersistentHomology::GetHKBettiNumbers(int64_t k,
                                         SigmaMaps[k],
                                         Radii[k]);
 
-    std::map<double, int64_t> betti_numbers = ::nt::tda::getBettiNumbers(BoundaryMatricies[k-1], BoundaryMatricies[k], boundary_map, max, true);
+    std::map<double, int64_t> betti_numbers = ::nt::tda::cpu::getBettiNumbers(BoundaryMatricies[k-1], BoundaryMatricies[k], boundary_map, max, true);
     return std::move(betti_numbers);
     // for (const auto &r : Radii[k]) {
     //     if (r > max)
@@ -600,28 +606,7 @@ std::map<double, int64_t> PersistentHomology::GetHKBettiNumbers(int64_t k,
 }
 
 std::map<double, int64_t> PersistentHomology::GetHKBettiNumbers(int64_t k) {
-    std::map<double,
-        std::tuple<int64_t, int64_t, int64_t> > boundary_map = 
-            construct_boundary_radi_map(SigmaMaps[k-1],
-                                        SigmaMaps[k],
-                                        Radii[k]);
-
-    std::map<double, int64_t> betti_numbers = ::nt::tda::getBettiNumbers(BoundaryMatricies[k-1], BoundaryMatricies[k], boundary_map, -1.0, true);
-    return std::move(betti_numbers);
-    // std::map<double, int64_t> betti_numbers;
-    // for (const auto &r : Radii[k]) {
-    //     // if(r > radius) break;
-    //     const std::array<int64_t, 2> &M1 = SigmaMaps[k - 1][r];
-    //     const std::array<int64_t, 2> &M2 = SigmaMaps[k][r];
-    //     if (M1[0] == 0 || M1[1] == 0 || M2[0] == 0 || M2[1] == 0)
-    //         continue;
-    //     // last = r;
-    //     SparseTensor s_1 = boundary_to_radius(M1, BoundaryMatricies[k - 1]);
-    //     SparseTensor s_2 = boundary_to_radius(M2, BoundaryMatricies[k]);
-    //     int64_t betti_number = get_betti_number(s_1, s_2);
-    //     betti_numbers[r] = betti_number;
-    // }
-    // return std::move(betti_numbers);
+    return GetHKBettiNumbers(k, -1.0);
 }
 
 std::tuple<std::map<double, int64_t>, std::map<double, Tensor>>
@@ -631,17 +616,17 @@ PersistentHomology::GetHKGenerators(int64_t k, double max) {
             construct_boundary_radi_map(SigmaMaps[k-1],
                                         SigmaMaps[k],
                                         Radii[k]);
-
-    auto [betti_numbers, col_spaces] = ::nt::tda::getBettiNumbersColSpace(BoundaryMatricies[k-1], BoundaryMatricies[k], boundary_map, max, true);
+    
+    auto [betti_numbers, col_spaces] = ::nt::tda::cpu::getBettiNumbersColSpace(BoundaryMatricies[k-1], BoundaryMatricies[k], boundary_map, max, true);
     std::map<double, Tensor> generators;
     for(const auto& val : col_spaces){
         double radius = val.first;
-        const Tensor& col_space = val.second;
+        Tensor col_space = Tensor(val.second).to(DType::Float32);
         auto [km1_size, k_size, kp1_size] = boundary_map[radius];
 
-        SparseTensor boundary_k = BoundaryMatricies[k-1][{my_range(0, km1_size), my_range(0, k_size)}];
+        SparseMatrix boundary_k = BoundaryMatricies[k-1].block(0, km1_size, 0, k_size);
         Tensor kernel = linalg::null_space(
-            boundary_k.underlying_tensor().to(DType::Float32), "lu");
+            Tensor(boundary_k).to(DType::Float32), "lu");
         if (kernel.is_null()) {
             continue;
         }
@@ -676,52 +661,7 @@ PersistentHomology::GetHKGenerators(int64_t k, double max) {
 
 std::tuple<std::map<double, int64_t>, std::map<double, Tensor>>
 PersistentHomology::GetHKGenerators(int64_t k) {
-    std::map<double,
-        std::tuple<int64_t, int64_t, int64_t> > boundary_map = 
-            construct_boundary_radi_map(SigmaMaps[k-1],
-                                        SigmaMaps[k],
-                                        Radii[k]);
-
-    auto [betti_numbers, col_spaces] = ::nt::tda::getBettiNumbersColSpace(BoundaryMatricies[k-1], BoundaryMatricies[k], boundary_map, -1.0, true);
-    std::map<double, Tensor> generators;
-    for(const auto& val : col_spaces){
-        double radius = val.first;
-        const Tensor& col_space = val.second;
-        auto [km1_size, k_size, kp1_size] = boundary_map[radius];
-
-        SparseTensor boundary_k = BoundaryMatricies[k-1][{my_range(0, km1_size), my_range(0, k_size)}];
-        Tensor kernel = linalg::null_space(
-            boundary_k.underlying_tensor().to(DType::Float32), "lu");
-        if (kernel.is_null()) {
-            continue;
-        }
-
-        Tensor M = functional::cat(col_space, kernel, 1);
-        Tensor reduced = rowReduce(M);
-        Tensor pivots = linalg::pivot_cols(reduced);
-        Tensor generator = extract_columns(kernel, pivots, col_space.shape()[-1]);
-        generators[radius] = generator;
-
-    }
-    return std::make_tuple(betti_numbers, generators);
-    // std::map<double, int64_t> betti_numbers;
-    // std::map<double, Tensor> generators;
-    // for (const auto &r : Radii[k]) {
-    //     // if(r > radius) break;
-    //     const std::array<int64_t, 2> &M1 = SigmaMaps[k - 1][r];
-    //     const std::array<int64_t, 2> &M2 = SigmaMaps[k][r];
-    //     if (M1[0] == 0 || M1[1] == 0 || M2[0] == 0 || M2[1] == 0)
-    //         continue;
-    //     // last = r;
-    //     SparseTensor s_1 = boundary_to_radius(M1, BoundaryMatricies[k - 1]);
-    //     SparseTensor s_2 = boundary_to_radius(M2, BoundaryMatricies[k]);
-    //     auto [betti_number, generator] = get_generator(s_1, s_2);
-    //     betti_numbers[r] = betti_number;
-    //     if (!generator.is_null() && betti_number != 0) {
-    //         generators[r] = std::move(generator);
-    //     }
-    // }
-    // return std::make_tuple(std::move(betti_numbers), std::move(generators));
+    return GetHKGenerators(k, -1.0);
 }
 
 double PersistentHomology::get_next_radius(double radius, int64_t k) {
@@ -773,8 +713,8 @@ void PersistentHomology::constructGroups(int64_t max_homologies) {
     for (int64_t i = 1; i < max_homologies + 1; ++i) {
         // returns boundary matrix mapping simplex_(i-1) (rows) -> simplex_i
         // (cols
-        SparseTensor Boundary =
-            compute_boundary_matrix(SimplexConstruct[i][0].item<Tensor>(),
+        SparseMatrix Boundary =
+            compute_boundary_sparse_matrix_index(SimplexConstruct[i][0].item<Tensor>(),
                                     SimplexConstruct[i - 1][0].item<Tensor>());
         BoundaryMatricies.emplace_back(std::move(Boundary));
         if (i == 1) {
@@ -833,9 +773,9 @@ void PersistentHomology::findHomology(int64_t k) {
     Generators.clear();
     Generators.reserve(k);
     Generators.emplace_back(std::move(H0Generators));
-    double max_radi = BettiNumbers[0].rbegin()->first;
+    double max_radi = -1.0;
     // the above is the last radi when B0 is 0
-    max_radi *= max_radi; // to account for radi instead of diameter squared
+    // max_radi *= max_radi; // to account for radi instead of diameter squared
     for (int64_t i = 1; i < k; ++i) {
         auto [HkBettiNumbers, HkGenerators] = GetHKGenerators(i, max_radi);
         BettiNumbers.emplace_back(std::move(HkBettiNumbers));

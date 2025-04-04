@@ -18,7 +18,7 @@ namespace functional {
 class TensorGrad_Functional_Class {
   public:
     TensorGrad_Functional_Class() = default;
-    static TensorGrad matmult(const TensorGrad &, const TensorGrad &);
+    static TensorGrad matmult(const TensorGrad &, const TensorGrad &, bool, bool);
     static TensorGrad matmult(const Tensor &, const TensorGrad &);
     static TensorGrad matmult(const TensorGrad &a, const Tensor &b);
     static TensorGrad unfold1d(const TensorGrad &, Tensor::size_value_t,

@@ -64,7 +64,7 @@ class SparseMemoryData : public intrusive_ptr_target{
     inline int64_t* end_indices() {return &indices[size];}
     inline const int64_t* cbegin_indices() const {return &indices[0];}
     inline const int64_t* cend_indices() const {return &indices[size];}
-    void sort();
+    // void sort();
     
 };
 

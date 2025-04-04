@@ -12,7 +12,7 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
     size_t type_size;
     size_t max_size, size;
     void* memory;
-    std::vector<int> col_indices, row_ptrs;
+    std::vector<int64_t> col_indices, row_ptrs;
     //row ptrs is basically begin -> (char*)memory + (row_ptrs[row] * type_size) to (char*)memory + (row_ptrs[row+1] * type_size);
     //and translating that into columns is the start of a row's cols is col_indices[row_ptrs[row]] and the last column is col_indices[row_ptrs[row+1]]
     public:
@@ -20,9 +20,9 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
     SparseMemoryMatrixData(const SparseMemoryMatrixData&) = delete;
     SparseMemoryMatrixData(SparseMemoryMatrixData&& data)
     :type_size(data.type_size), max_size(std::exchange(data.max_size, 0)), size(std::exchange(data.size, 0)), memory(std::exchange(data.memory, nullptr)),
-        col_indices(std::move(data.col_indices)), row_ptr(std::move(data.row_ptrs))
+        col_indices(std::move(data.col_indices)), row_ptrs(std::move(data.row_ptrs))
     {}
-    SparseMemoryMatrixData(size_t type_size, size_t max_size, size_t size, void* mem, std::vector<int> cols, std::vector<int> rows)
+    SparseMemoryMatrixData(size_t type_size, size_t max_size, size_t size, void* mem, std::vector<int64_t> rows, std::vector<int64_t> cols)
     :type_size(type_size), max_size(max_size), size(size), memory(mem), col_indices(cols), row_ptrs(rows)
     {}
 
@@ -40,17 +40,22 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
             memory = nullptr;
         }
     }
-    inline size_t size() const {return size;}
+    inline size_t Size() const {return size;}
     inline const size_t& capacity() const {return max_size;}
     template<typename T = void>
     inline T* data_ptr() {return reinterpret_cast<T*>(memory);}
     template<typename T = void>
     inline const T* data_ptr() const {return reinterpret_cast<T*>(memory);}
     
-    inline std::vector<int>& get_cols() {return col_indices;}
-    inline const std::vector<int>& get_cols() const {return col_indices;}
-    inline std::vector<int>& get_rows() {return row_ptrs;}
-    inline const std::vector<int>& get_rows() const {return row_ptrs;}
+    template<typename T = void>
+    inline T* data_ptr_end() {return reinterpret_cast<T*>(memory) + size;}
+    template<typename T = void>
+    inline const T* data_ptr_end() const {return reinterpret_cast<T*>(memory) + size;}
+    
+    inline std::vector<int64_t>& get_cols() {return col_indices;}
+    inline const std::vector<int64_t>& get_cols() const {return col_indices;}
+    inline std::vector<int64_t>& get_rows() {return row_ptrs;}
+    inline const std::vector<int64_t>& get_rows() const {return row_ptrs;}
 
     template<typename T>
     inline T& get(int row, int col){
@@ -61,7 +66,7 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
             int cntr = 0;
             for(; begin != end; ++begin, ++cntr){
                 if(*begin == col){
-                    reinterpret_cast<T*>(static_cast<char*>(memory) + (row_ptrs[row] * type_size))[cntr];
+                    return *reinterpret_cast<T*>(static_cast<char*>(memory) + (row_ptrs[row] * type_size))[cntr];
                 }
             }
         }
@@ -122,18 +127,14 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
         }
     }
 
-    inline SparseMemoryMatrixData&& copy(){
+    inline SparseMemoryMatrixData copy(){
         void* mem = std::malloc(type_size * max_size);
         std::memcpy(mem, memory, type_size * size); 
         return SparseMemoryMatrixData(type_size, max_size, size, mem, col_indices, row_ptrs);
     }
 
 
-    inline SparseMemoryMatrixData&& block(int row_start, int row_end, int col_start, int col_end){
-        std::vector<int> n_row_ptrs(row_end-row_start, 0);
-        std::vector<int> n_col_indices;
-        n_col_indices.reserve(col_indices.size());
-    }
+    SparseMemoryMatrixData block(int64_t row_start, int64_t row_end, int64_t col_start, int64_t col_end) const;
     
 };
 

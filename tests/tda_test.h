@@ -8,7 +8,9 @@
 #include <nt/tda/MatrixReduction.h>
 #include <nt/tda/nn/PH.h>
 #include <nt/sparse/SparseTensor.h>
-
+#include <nt/sparse/SparseMatrix.h>
+#include <nt/tda/cpu/MatrixReduction.h>
+#include <nt/dtype/ArrayVoid.hpp>
 
 void persistent_pointcloud_2d(){
     
@@ -17,6 +19,7 @@ void persistent_pointcloud_2d(){
     // nt::Tensor bools = nt::functional::randbools(cloud.shape(), 0.03); //fill 3% with 1's
     int8_t point = 1;
     // cloud[bools] = 1;
+    // nt::Tensor cloud = nt::tda::generate_random_cloud({30, 30});
     nt::Tensor cloud({30, 30}, nt::DType::int8);
     cloud << 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
              0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -667,6 +670,238 @@ void persistent_simplex_complex_gradient(){
     auto [n_simplex_complex, n_radi] = nt::tda::VRfiltration(dist_mat, 3);
     std::cout << "n_radi: "<<n_radi<<std::endl;
     std::cout << "n_simplex_complex: "<<n_simplex_complex<<std::endl;
+    std::cout << std::boolalpha << n_radi.is_contiguous() << std::noboolalpha << std::endl;
+}
+
+//tests gettingg the gradient of a simplex complex
+void persistent_boundary_gradient(){
+    nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
+    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 1, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 1, 0, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 1, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0;
+    nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
+    auto [simplex_complex_3, radi_3] = nt::tda::VRfiltration(dist_mat, 3);
+    auto [simplex_complex_2, radi_2] = nt::tda::VRfiltration(dist_mat, 2);
+    std::cout <<"radi: "<< radi_3 << std::endl;
+    std::cout <<"radi: "<< radi_2 << std::endl;
+    std::cout << std::boolalpha << radi_3.is_contiguous() << std::noboolalpha << std::endl;
+    float alpha = 10.0;
+    nt::TensorGrad sig_radi_3 = nt::functional::sigmoid(alpha * radi_3);
+    nt::TensorGrad sig_radi_2 = nt::functional::sigmoid(alpha * radi_2);
+    std::cout << "sig_radi_3: "<<sig_radi_3 << std::endl;
+    std::cout << "sig_radi_2: "<<sig_radi_2 << std::endl;
+    auto [x_indexes, y_indexes, boundaries] = 
+            nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
+                                                                         sig_radi_3.tensor, sig_radi_2.tensor);
+
+    nt::utils::throw_exception(x_indexes.size() == y_indexes.size()
+                           && x_indexes.size() == boundaries.size(),
+                            "wrong sizes, $, $, $ ", x_indexes.size(), y_indexes.size(), boundaries.size());
+    // for(size_t i = 0; i < x_indexes.size(); ++i){
+    //     std::cout << "("<<x_indexes[i]<<','<<y_indexes[i]<<"): {"<<boundaries[i]<<','<<(boundaries[i] < 0 ? -1 : 1)<<'}'<<std::endl;
+    // }
+    nt::TensorGrad boundary_grad = sig_radi_2.view(-1, 1) * sig_radi_3;
+    std::cout << "boundary_grad: "<<boundary_grad<<std::endl;
+
+    nt::Tensor mult = nt::functional::zeros(boundary_grad.shape(), nt::DType::Float32);
+    const int64_t& cols = mult.shape()[-1];
+    float* access = reinterpret_cast<float*>(mult.data_ptr());
+    for(size_t i = 0; i < x_indexes.size(); ++i){
+        access[x_indexes[i] * cols + y_indexes[i]] = boundaries[i];
+    }
+    boundary_grad *= mult;
+    std::cout << "boundary_grad: "<<boundary_grad<<std::endl;
+}
+
+//n is the number of points
+std::vector<std::vector<int64_t>> findAllPaths(const nt::Tensor& _laplacian, int64_t startNode) {
+    int64_t n = _laplacian.shape()[0];
+    const float* laplacian = reinterpret_cast<const float*>(_laplacian.data_ptr());
+    std::vector<bool> visited(n, false);
+    std::vector<std::vector<int64_t>> allPaths;  // Vector to store all paths
+    std::queue<std::vector<int64_t>> q;  // Queue to store the current path during BFS
+    visited[startNode] = true;
+    q.push({startNode});
+    
+    while (!q.empty()) {
+        // Get the current path
+        std::vector<int64_t> currentPath = q.front();
+        q.pop();
+        int64_t currentNode = currentPath.back();
+        
+        // Check all neighbors of the current node
+        for (int i = 0; i < n; ++i) {
+            if (!visited[i] && std::abs(laplacian[currentNode * n + i]) > 0.1) {
+                // Mark the node as visited and extend the path
+                visited[i] = true;
+                std::vector<int64_t> newPath = currentPath;
+                newPath.push_back(i);
+                q.push(newPath);
+                
+                // If there are no more unvisited neighbors, save the path
+                allPaths.push_back(newPath);
+            }
+        }
+    }
+    
+    return allPaths;
+}
+
+void persistent_laplacian_gradient(){
+    nt::TensorGrad cloud(nt::tda::generate_random_cloud({9, 9, 9}).to(nt::DType::Float32));
+    // cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    //          0, 0, 0, 0, 0, 0, 0, 1, 0,
+    //          0, 0, 1, 0, 0, 0, 0, 0, 0,
+    //          0, 0, 0, 0, 0, 0, 0, 0, 0,
+    //          0, 0, 0, 0, 1, 0, 0, 0, 0,
+    //          1, 0, 0, 0, 0, 0, 0, 0, 0,
+    //          0, 0, 1, 0, 0, 0, 0, 0, 0,
+    //          0, 0, 0, 0, 0, 0, 0, 1, 0,
+    //          0, 0, 0, 0, 0, 0, 0, 0, 0;
+    // nt::TensorGrad cloud(nt::Tensor({30, 30}, nt::DType::Float32));
+    // cloud << 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+    //          0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,1,0,1,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    //          1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0;
+    nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
+    auto [simplex_complex_3, radi_3] = nt::tda::VRfiltration(dist_mat, 3);
+    auto [simplex_complex_2, radi_2] = nt::tda::VRfiltration(dist_mat, 2);
+    auto [simplex_complex_1, radi_1] = nt::tda::VRfiltration(dist_mat, 1);
+    std::cout <<"radi: "<< radi_3 << std::endl;
+    std::cout <<"radi: "<< radi_2 << std::endl;
+    std::cout <<"radi: "<< radi_1 << std::endl;
+    radi_1 += 1.0; //should be all zeros
+    std::cout << std::boolalpha << radi_3.is_contiguous() << std::noboolalpha << std::endl;
+    float alpha = 2.0;
+    nt::TensorGrad sig_radi_3 = nt::functional::sigmoid(alpha * radi_3);
+    nt::TensorGrad sig_radi_2 = nt::functional::sigmoid(alpha * radi_2);
+    nt::TensorGrad sig_radi_1 = nt::functional::sigmoid(alpha * radi_1);
+    std::cout << "sig_radi_3: "<<sig_radi_3 << std::endl;
+    std::cout << "sig_radi_2: "<<sig_radi_2 << std::endl;
+    std::cout << "sig_radi_1: "<<sig_radi_1 << std::endl;
+    auto [x_indexes_kp1, y_indexes_kp1, boundaries_kp1] = 
+            nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
+                                                                         sig_radi_3.tensor, sig_radi_2.tensor);
+
+   auto [x_indexes_k, y_indexes_k, boundaries_k] = 
+            nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_2, simplex_complex_1,
+                                                                         sig_radi_2.tensor, sig_radi_1.tensor);
+    
+
+
+    // nt::SparseTensor old_boundary_kp1 = nt::tda::compute_boundary_matrix_index(simplex_complex_3, simplex_complex_2);
+    // nt::SparseTensor old_boundary_k = nt::tda::compute_boundary_matrix_index(simplex_complex_2, simplex_complex_1);
+
+    // for(size_t i = 0; i < x_indexes.size(); ++i){
+    //     std::cout << "("<<x_indexes[i]<<','<<y_indexes[i]<<"): {"<<boundaries[i]<<','<<(boundaries[i] < 0 ? -1 : 1)<<'}'<<std::endl;
+    // }
+    int64_t km1 = 6;
+    int64_t kp1 = 15;
+    int64_t k = 14;
+    nt::TensorGrad boundary_kp1 = sig_radi_2.view(-1, 1) * sig_radi_3;
+    nt::TensorGrad boundary_k = sig_radi_1.view(-1, 1) * sig_radi_2;
+
+    {
+        nt::Tensor mult = nt::functional::zeros(boundary_kp1.shape(), nt::DType::Float32);
+        const int64_t& cols = mult.shape()[-1];
+        float* access = reinterpret_cast<float*>(mult.data_ptr());
+        for(size_t i = 0; i < x_indexes_kp1.size(); ++i){
+            access[x_indexes_kp1[i] * cols + y_indexes_kp1[i]] = boundaries_kp1[i];
+        }
+        boundary_kp1 *= mult;
+    }
+
+    {
+        nt::Tensor mult = nt::functional::zeros(boundary_k.shape(), nt::DType::Float32);
+        const int64_t& cols = mult.shape()[-1];
+        float* access = reinterpret_cast<float*>(mult.data_ptr());
+        for(size_t i = 0; i < x_indexes_k.size(); ++i){
+            access[x_indexes_k[i] * cols + y_indexes_k[i]] = boundaries_k[i];
+        }
+        boundary_k *= mult;
+    }
+    boundary_kp1 = boundary_kp1[{nt::my_range(0, k), nt::my_range(0, kp1)}];
+    boundary_k = boundary_k[{nt::my_range(0, km1), nt::my_range(0, k)}];
+
+    
+    
+    
+    // obk -= -1;
+    // obkp1 -= -1;
+    auto delta_up = nt::functional::matmult(boundary_kp1, boundary_kp1, false, true);
+    auto delta_down = nt::functional::matmult(boundary_k, boundary_k, true);
+    auto hodge_laplacian = delta_up + delta_down;
+    std::cout << hodge_laplacian << std::endl;
+    for(int64_t i = 0; i < hodge_laplacian.shape()[0]; ++i){
+        auto all_paths = findAllPaths(hodge_laplacian.tensor, i);
+        for(const auto& path : all_paths){
+            std::cout << "path: ";
+            for(const auto& element : path)
+                std::cout << element<< ' ';
+            std::cout << std::endl;
+        }
+    }
+    
+    //example wanted paths:
+    std::vector<std::vector<int64_t> > wanted_paths({ {1, 2, 5, 6},
+                                        {0, 8, 11, 12},
+                                        {9, 3, 10, 4, 5, 7, 8, 1} });
+
+    nt::Tensor wanted_laplacian = nt::functional::zeros(hodge_laplacian.shape(), nt::DType::Float32);
+    float* begin = reinterpret_cast<float*>(wanted_laplacian.data_ptr());
+    for(const auto& path : wanted_paths){
+        for(size_t i = 0; i < path.size(); ++i){
+            for(size_t j = 0; j < path.size(); ++j){
+                if(j == i) continue;
+                begin[path[i] * wanted_laplacian.shape()[0] + path[j]] = 1;
+                begin[path[j] * wanted_laplacian.shape()[0] + path[i]] = 1;
+            }
+        }
+        
+    }
+    std::cout << "wanted laplacian: "<<wanted_laplacian<<std::endl;
+    nt::Tensor gradient = wanted_laplacian - hodge_laplacian.tensor;
+    wanted_laplacian.fill_diagonal_(0);
+    hodge_laplacian.backward(gradient);
+    std::cout << "point cloud: " << std::endl;
+    std::cout << cloud << std::endl;
+
+    std::cout << "updating..."<<std::endl;
+    cloud.update();
+    std::cout << cloud << std::endl;
+
 }
 
 
@@ -753,8 +988,18 @@ void unit_simultaneous_test(int64_t increment){
         bool equal_a = nt::functional::all(equal_A);
         bool equal_b = nt::functional::all(equal_B);
         //the important thing is that these match up
-        std::cout << "ranks: {"<<nt::tda::numPivotRows(new_A)<<','<<nt::tda::numPivotRows(new_B)<<"}, {"
-                    <<nt::tda::numPivotRows(_sub_A) << ',' << nt::tda::numPivotRows(_sub_B) << "}" << std::endl;
+        int64_t rank_k = nt::tda::numPivotRows(new_A);
+        int64_t rank_kp1 = nt::tda::numPivotRows(new_B);
+        int64_t _rank_k = nt::tda::numPivotRows(_sub_A);
+        int64_t _rank_kp1 = nt::tda::numPivotRows(_sub_B);
+        if(rank_k != _rank_k){
+            std::cout << "ERROR got different ranks: "<<rank_k<<','<<_rank_k<<" from (A)"<<std::endl;
+        }
+        if(rank_kp1 != _rank_kp1){
+            std::cout << "ERROR got different ranks: "<<rank_kp1<<','<<_rank_kp1<<" from (B)"<<std::endl;
+        }
+        std::cout << "ranks: {"<< rank_k <<','<< rank_kp1 <<"}, {"
+                    << _rank_k << ',' << _rank_kp1 << "}" << std::endl;
         // if(equal_a == false){
         //     std::cout <<nt::noprintdtype << new_A<<','<<_sub_A<<','<<equal_A<<std::endl << nt::printdtype;
         // }
@@ -762,7 +1007,9 @@ void unit_simultaneous_test(int64_t increment){
                          << " " << nt::functional::all(equal_B)
               << " {"
               << end_rows1<<','<<end_cols1<<','<<k1end_cols1<<"}" << std::endl;; // so far when starting at 0 the algorithm works ! :))
-
+        int64_t betti = (end_cols1 - rank_k) - rank_kp1;
+        int64_t _betti = (end_cols1 - _rank_k) - _rank_kp1;
+        std::cout << "betti numbers: "<<betti<<','<<_betti<<std::endl;
         start_rows1 = 0; //remains 0
         start_cols1 = end_cols1; //increments
         k1start_rows1 = 0; //increments
@@ -991,8 +1238,276 @@ void simultaneous_betti_number_test(){
 }
 
 
+// the sparse matrix and sparse tensor classes were really only made for the tda framework
+// to use less memory, be faster, and more efficient
+// the following function verifies all the functions needed for the persistent homology calculation
+// work properly
+void sparse_matrix_test(){
+    nt::Tensor cloud(nt::Tensor({9, 9}, nt::DType::Float32));
+    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 1, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 1, 0, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 1, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0;
+    nt::Tensor points = nt::tda::extract_points_from_cloud(cloud, 1, 2);
+    nt::tda::BasisOverlapping balls(points);
+    
+    auto [simplex_1, radii_1] = nt::get<2>(nt::tda::find_all_simplicies(1, points, balls, true));
+    auto [simplex_2, radii_2] = nt::get<2>(nt::tda::find_all_simplicies(2, points, balls, true));
+    auto [simplex_3, radii_3] = nt::get<2>(nt::tda::find_all_simplicies(3, points, balls, true));
+    
+    // Print confirms successful print and load
+    nt::SparseMatrix Boundary_K = nt::tda::compute_boundary_sparse_matrix_index(simplex_2.item<nt::Tensor>(),
+                                                                simplex_1.item<nt::Tensor>());
+    Boundary_K.print();
+
+    nt::SparseTensor Boundary_KOld = nt::tda::compute_boundary_matrix_index(simplex_2.item<nt::Tensor>(),
+                                                                            simplex_1.item<nt::Tensor>());
+    std::cout << Boundary_KOld << std::endl;
+
+    //can successfully convert it to a Tensor that is dense
+    nt::Tensor fromSparseMatrix(Boundary_K);
+    nt::Tensor fromSparseTensor = Boundary_KOld.clone();
+    std::cout << fromSparseMatrix << std::endl;
+    std::cout << fromSparseTensor << std::endl; 
+    std::cout << std::boolalpha << nt::functional::all(fromSparseMatrix == fromSparseTensor) << std::noboolalpha << std::endl;
+    // nt::SparseMatrix Boundary_Kp1 = nt::tda::compute_boundary_sparse_matrix_index(simplex_3.item<nt::Tensor>(),
+    //                                                             simplex_2.item<nt::Tensor>()); 
+    
+    // Transpose works properly
+    nt::SparseMatrix _transposed = Boundary_K.transpose();
+    _transposed.print();
+
+    nt::Tensor fromSparseMatrixT(_transposed);
+    nt::Tensor fromSparseTensorT = Boundary_KOld.transpose(-1, -2).clone();
+    std::cout << fromSparseMatrixT << std::endl;
+    std::cout << fromSparseTensorT << std::endl; 
+    std::cout << std::boolalpha << nt::functional::all(fromSparseMatrixT == fromSparseTensorT) << std::noboolalpha << std::endl;
+    // Blocking specific rows and columns works properly
+    nt::SparseMatrix blocked = Boundary_K.block(0, 4, 0, 10);
+    std::cout << "blocked: "<<std::endl;
+    blocked.print();
+    nt::Tensor blocked_KOld = Boundary_KOld.underlying_tensor()[{nt::my_range(0, 4), nt::my_range(0, 10)}];
+    std::cout << blocked_KOld<<std::endl;
+    nt::Tensor fromSparseMatrixB(blocked);
+    nt::Tensor fromSparseTensorB = blocked_KOld.clone();
+    std::cout << std::boolalpha << nt::functional::all(fromSparseMatrixB == fromSparseTensorB) << std::noboolalpha << std::endl;
+    
+}
+
+
+
+//on average, on a cpu, it is over 10 times faster with this new algorithm
+void unit_test_new_betti(int max){
+    int64_t rows = 20, cols = 20;
+    for(int __m__ = 0; __m__ < max; ++__m__){
+        nt::Tensor cloud = nt::tda::generate_random_cloud({rows, cols});
+        nt::Tensor points = nt::tda::extract_points_from_cloud(cloud, 1, 2);
+        nt::tda::BasisOverlapping balls(points);
+        
+        auto [simplex_1, radii_1] = nt::get<2>(nt::tda::find_all_simplicies(1, points, balls, true));
+        auto [simplex_2, radii_2] = nt::get<2>(nt::tda::find_all_simplicies(2, points, balls, true));
+        auto [simplex_3, radii_3] = nt::get<2>(nt::tda::find_all_simplicies(3, points, balls, true));
+        std::cout << "made simplices"<<std::endl;
+        nt::SparseTensor Boundary_K = nt::tda::compute_boundary_matrix_index(simplex_2.item<nt::Tensor>(),
+                                                                    simplex_1.item<nt::Tensor>());
+        nt::SparseTensor Boundary_Kp1 = nt::tda::compute_boundary_matrix_index(simplex_3.item<nt::Tensor>(),
+                                                                    simplex_2.item<nt::Tensor>());
+        
+        std::cout << "made sparse tensor"<<std::endl;
+        nt::SparseMatrix Boundary_KM = nt::tda::compute_boundary_sparse_matrix_index(simplex_2.item<nt::Tensor>(),
+                                                                                     simplex_1.item<nt::Tensor>());
+        nt::SparseMatrix Boundary_Kp1M = nt::tda::compute_boundary_sparse_matrix_index(simplex_3.item<nt::Tensor>(),
+                                                                                       simplex_2.item<nt::Tensor>()); 
+        std::cout << "boundary k: "<<Boundary_K.shape()<<std::endl;
+        std::cout << "boundary k+1: "<<Boundary_Kp1.shape()<<std::endl;
+            
+        std::set<double> rSimplex1 = nt::tda::get_radi_set(radii_1);
+        std::set<double> rSimplex2 = nt::tda::get_radi_set(radii_2);
+        std::set<double> rSimplex3 = nt::tda::get_radi_set(radii_3);
+        std::map<double, std::array<int64_t, 2>> sigma_map_a = 
+            nt::tda::make_simplex_radi_map(
+                Boundary_K.shape()[0],
+                radii_2[0].item<nt::Tensor>());
+        std::map<double, std::array<int64_t, 2>> sigma_map_b = 
+            nt::tda::make_simplex_radi_map(
+                radii_2[0].item<nt::Tensor>(),
+                radii_3[0].item<nt::Tensor>());
+        std::map<double,
+                std::tuple<int64_t, int64_t, int64_t>
+                > radi_map = construct_boundary_radi_map(sigma_map_a, sigma_map_b);
+        std::cout << "starting new function"<<std::endl;
+        auto start = std::chrono::steady_clock::now();
+        auto [betti_numbers_new, col_spaces_new] = nt::tda::cpu::getBettiNumbersColSpace(Boundary_KM, Boundary_Kp1M, radi_map, -1.0, false);
+        auto end = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        int64_t duration_a = duration.count();
+        std::cout << "duration_a: "<<duration_a<<std::endl;
+        start = std::chrono::steady_clock::now();
+        auto [betti_numbers, col_spaces] = nt::tda::getBettiNumbersColSpace(Boundary_K, Boundary_Kp1, radi_map);
+        end = std::chrono::steady_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        int64_t duration_b = duration.count();
+        std::cout << "duration_b: "<<duration_b<<std::endl;
+        if(betti_numbers_new != betti_numbers){
+            std::cout << "UNIT TEST FAILED"<<std::endl;
+            break;
+        }
+        std::cout << "finished test with durations "<<duration_a<<','<<duration_b<<std::endl;
+        ++rows;
+        ++cols;
+    }
+
+}
+
+//the new function is on average 10x faster, which is a very nice speed up
+void cpu_simde_betti_test(){
+    nt::Tensor cloud({30, 30}, nt::DType::int8);
+    cloud << 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+             0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,1,0,1,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+             0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0;
+    nt::Tensor points = nt::tda::extract_points_from_cloud(cloud, 1, 2);
+    nt::tda::BasisOverlapping balls(points);
+    
+    auto [simplex_1, radii_1] = nt::get<2>(nt::tda::find_all_simplicies(1, points, balls, true));
+    auto [simplex_2, radii_2] = nt::get<2>(nt::tda::find_all_simplicies(2, points, balls, true));
+    auto [simplex_3, radii_3] = nt::get<2>(nt::tda::find_all_simplicies(3, points, balls, true));
+    nt::SparseTensor Boundary_K = nt::tda::compute_boundary_matrix_index(simplex_2.item<nt::Tensor>(),
+                                                                simplex_1.item<nt::Tensor>());
+    nt::SparseTensor Boundary_Kp1 = nt::tda::compute_boundary_matrix_index(simplex_3.item<nt::Tensor>(),
+                                                                simplex_2.item<nt::Tensor>());
+
+    nt::SparseMatrix Boundary_KM = nt::tda::compute_boundary_sparse_matrix_index(simplex_2.item<nt::Tensor>(),
+                                                                                 simplex_1.item<nt::Tensor>());
+    nt::SparseMatrix Boundary_Kp1M = nt::tda::compute_boundary_sparse_matrix_index(simplex_3.item<nt::Tensor>(),
+                                                                                   simplex_2.item<nt::Tensor>()); 
+    std::cout << "boundary k: "<<Boundary_K.shape()<<std::endl;
+    std::cout << "boundary k+1: "<<Boundary_Kp1.shape()<<std::endl;
+   
+    std::cout << std::boolalpha;
+    std::cout << "boundary k's equal: "<<nt::functional::all(Boundary_K.underlying_tensor() == nt::Tensor(Boundary_KM)) << std::endl;
+    std::cout << "boundary kp1's equal: "<<nt::functional::all(Boundary_Kp1.underlying_tensor() == nt::Tensor(Boundary_Kp1M)) << std::endl;
+    std::cout << std::noboolalpha;
+    // Boundary_Kp1M.print();
+    auto temp_begin = Boundary_Kp1M.mem_begin<int8_t>();
+    auto temp_end = Boundary_Kp1M.mem_end<int8_t>();
+    for(;temp_begin != temp_end; ++temp_begin){
+        if(temp_begin.Row() > 15) break;
+        if(temp_begin.Col() > 1) continue;
+        std::cout << "("<<temp_begin.Row()<<','<<temp_begin.Col()<<"): "<<int(*temp_begin)<<" ";
+    }
+    std::cout << std::endl;
+    std::cout << Boundary_Kp1.underlying_tensor()[{nt::my_range(0, 15), nt::my_range(0, 2)}];
+    Boundary_Kp1M.block(0, 15, 0, 2).print();
+    // nt::utils::throw_exception(false, "BREAKING");
+    std::set<double> rSimplex1 = nt::tda::get_radi_set(radii_1);
+    std::set<double> rSimplex2 = nt::tda::get_radi_set(radii_2);
+    std::set<double> rSimplex3 = nt::tda::get_radi_set(radii_3);
+    
+    std::map<double, std::array<int64_t, 2>> sigma_map_a = 
+        nt::tda::make_simplex_radi_map(
+            Boundary_K.shape()[0],
+            radii_2[0].item<nt::Tensor>());
+    std::map<double, std::array<int64_t, 2>> sigma_map_b = 
+        nt::tda::make_simplex_radi_map(
+            radii_2[0].item<nt::Tensor>(),
+            radii_3[0].item<nt::Tensor>());
+    std::cout << "sigma a map:"<<std::endl;
+    for(const auto& val : sigma_map_a){
+        std::cout << val.first<<": {"<<val.second[0]<<','<<val.second[1]<<"} ";
+    }
+    std::cout << std::endl;
+    std::cout << "sigma b map:"<<std::endl;
+    for(const auto& val : sigma_map_b){
+        std::cout << val.first<<": {"<<val.second[0]<<','<<val.second[1]<<"} ";
+    }
+    std::cout << std::endl;
+
+    std::map<double,
+        std::tuple<int64_t, int64_t, int64_t>
+        > radi_map = construct_boundary_radi_map(sigma_map_a, sigma_map_b);
+    std::cout << "radi map:"<<std::endl;
+    for(const auto& val : radi_map){
+        auto [km1_size, k_size, kp1_size] = val.second;
+        std::cout << val.first<<": {"<<km1_size<<','<<k_size<<','<<kp1_size<<"} ";
+    }
+    std::cout << std::endl;
+    auto start = std::chrono::steady_clock::now();
+    auto [betti_numbers, col_spaces] = nt::tda::getBettiNumbersColSpace(Boundary_K, Boundary_Kp1, radi_map);
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "betti numbers: ";
+    for(const auto& val : betti_numbers){
+        std::cout << "{"<<val.first<<","<<val.second<<"} "<<std::endl;
+    }
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "duration: "<<duration.count()<< std::endl;
+    std::cout << "col spaces size: "<<col_spaces.size()<<std::endl;
+
+
+    start = std::chrono::steady_clock::now();
+    auto [betti_numbers_new, col_spaces_new] = nt::tda::cpu::getBettiNumbersColSpace(Boundary_KM, Boundary_Kp1M, radi_map, -1.0, false);
+    end = std::chrono::steady_clock::now();
+
+    std::cout << "new algorithm betti numbers: ";
+    for(const auto& val : betti_numbers_new){
+        std::cout << "{"<<val.first<<","<<val.second<<"} "<<std::endl;
+    }
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "duration: "<<duration.count()<< std::endl;
+    std::cout << "there are "<<col_spaces_new.size()<<" new col spaces"<<std::endl;
+    //comes out to true
+    std::cout << std::boolalpha << (betti_numbers_new == betti_numbers) << std::noboolalpha << std::endl;
+
+    auto [radi, mat] = col_spaces_new[0];
+    // std::cout << "col space from new function:"<<std::endl;
+    // mat.print();
+
+    // std::cout << "col space from old function:"<<std::endl;
+    // std::cout << col_spaces[radi] << std::endl;
+
+    nt::Tensor n_mat = nt::Tensor(mat).to(nt::DType::Float);
+    std::cout << n_mat << std::endl<<col_spaces[radi]<<std::endl;
+    std::cout << "col spaces equal: "<<std::boolalpha << nt::functional::all(n_mat == col_spaces[radi]) << std::noboolalpha << std::endl;
+ 
+}
+
 void persistent_diagram_test(){
-    persistent_pointcloud_2d();
+    persistent_laplacian_gradient();
+    // persistent_simplex_complex_gradient();
+    // persistent_pointcloud_2d();
+    // unit_test_new_betti(100);
+    // cpu_simde_betti_test();
     // unit_simultaneous_test(3);
     // simultaneous_betti_number_test(); 
 }

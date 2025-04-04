@@ -278,6 +278,7 @@ set(TDA_SOURCES
     nt/tda/Boundaries.cpp
     nt/tda/Homology.cpp
     nt/tda/MatrixReduction.cpp
+    nt/tda/cpu/MatrixReduction.cpp
     nt/tda/PlotDiagrams.cpp
     nt/tda/Points.cpp
     nt/tda/SimplexConstruct.cpp
@@ -290,6 +291,8 @@ set(TDA_SOURCES
 
 set(SPARSE_SOURCES
     nt/sparse/SparseTensor.cpp
+    nt/sparse/SparseMatrix.cpp
+    nt/sparse/SparseDataMatrix.cpp
 )
 
 set(IMAGES_SOURCES

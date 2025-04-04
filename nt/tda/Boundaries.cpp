@@ -270,6 +270,303 @@ SparseTensor compute_boundary_matrix_index(const Tensor &s_kp1,
                         DType::int8, 0);
 }
 
+SparseMatrix compute_boundary_sparse_matrix_index(const Tensor &s_kp1,
+                                           const Tensor &s_k) {
+    utils::throw_exception(
+        s_kp1.dims() == 2,
+        "Expected to get simplicies of dims 2, corresponding to batches, "
+        "verticies, point dim but got $ for simplex complex k+1",
+        s_kp1.dims());
+    utils::throw_exception(
+        s_k.dims() == 2,
+        "Expected to get simplicies of dims 2, corresponding to batches, "
+        "verticies, point dim but got $ for simplex complex k",
+        s_k.dims());
+    utils::throw_exception(
+        s_kp1.dtype == DType::int64,
+        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype);
+    utils::throw_exception(
+        s_k.dtype == DType::int64,
+        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype);
+    const int64_t &B_kp1 = s_kp1.shape()[0]; // Batches
+    const int64_t Kp1 = s_kp1.shape()[1];    // K+1 verticies
+
+    const int64_t &B_k = s_k.shape()[0]; // Batches
+    const int64_t K = s_k.shape()[1];    // K verticies
+
+    utils::throw_exception(
+        K == (Kp1 - 1), "Expected K ($) to be one less than K+1 ($) ($ -> $)",
+        K, Kp1, s_kp1.shape(), s_k.shape());
+
+    // Tensor faces = functional::combinations(functional::arange(Np1,
+    // DType::int64), Np1-1).contiguous().split_axis(0); Tensor* f_begin =
+    // reinterpret_cast<Tensor*>(faces.data_ptr()); Tensor* f_end =
+    // reinterpret_cast<Tensor*>(faces.data_ptr_end()); Tensor B_dim =
+    // functional::arange(B, DType::int64).view(B, 1).repeat_(-1,
+    // D*(Np1-1)).flatten(0, -1).contiguous(); Tensor point_dim =
+    // functional::arange(D, DType::int64).repeat_((Np1-1) * B).flatten(0,
+    // -1).contiguous();
+
+    std::unordered_map<tensor_index_skip,
+                       std::vector<std::pair<int64_t, int8_t>>, //<- the pair makes it easier to sort and more efficent
+                       TensorSkipHash, TensorSkipEqual<int64_t>>
+        simplex_map;
+    // std::unordered_map<uint64_t, std::pair<int64_t, int64_t>>
+    // Tensor face_map = nt:Tensor::makeNullTensorArray(Kp1);
+    // Tensor* f_begin
+    int64_t total_num = 0;
+    for (int64_t i = 0; i < Kp1; ++i) {
+        // now get all faces
+        Tensor split_faces = s_kp1.split_axis(0);
+        int64_t counter = 0;
+        Tensor *split_begin =
+            reinterpret_cast<Tensor *>(split_faces.data_ptr());
+        Tensor *split_end =
+            reinterpret_cast<Tensor *>(split_faces.data_ptr_end());
+        int8_t boundary = (i % 2 == 0) ? 1 : -1;
+        for (; split_begin != split_end; ++split_begin, ++counter) {
+            // const int64_t* arr_sub = reinterpret_cast<const
+            // int64_t*>(split_begin->data_ptr());
+            tensor_index_skip key(*split_begin, i);
+            auto [it, inserted] =
+                simplex_map.insert({key,
+                    std::vector<std::pair<int64_t, int8_t> > ({{counter, boundary}})});
+            ++total_num;
+            if (!inserted) {
+                auto &pair = it->second;
+                pair.emplace_back(counter, boundary);
+            }
+        }
+    }
+
+    // each collumn refers to a simplex from s_kp1, and each row refers to a
+    // simplex from s_k So, x -> from B_k, and y is from the map
+
+    std::vector<int64_t> x;
+    x.reserve(total_num);
+    std::vector<int64_t> y;
+    y.reserve(total_num);
+    std::vector<int8_t> boundaries;
+    boundaries.reserve(total_num);
+    Tensor sk_split = s_k.split_axis(0);
+    Tensor *sk_begin = reinterpret_cast<Tensor *>(sk_split.data_ptr());
+    Tensor *sk_end = reinterpret_cast<Tensor *>(sk_split.data_ptr_end());
+    int64_t x_counter = 0;
+    // std::vector<size_t> indices;
+    for (; sk_begin != sk_end; ++sk_begin, ++x_counter) {
+        // const int64_t* arr = reinterpret_cast<const
+        // int64_t*>(sk_begin->data_ptr()); std::vector<int64_t> key(arr, arr +
+        // K); nt_index_holder key = to_index_holder(reinterpret_cast<const
+        // int64_t*>(sk_begin->data_ptr()), K);
+        tensor_index_skip cur_key(*sk_begin, -1);
+        if (simplex_map.find(cur_key) == simplex_map.end()) {
+            continue;
+        }
+        auto &pair = simplex_map[cur_key];
+        std::sort(pair.begin(), pair.end(), 
+                  [](const std::pair<int64_t, int8_t>& a, const std::pair<int64_t, int8_t>& b){
+            return a.first < b.first;
+        });
+        y.reserve(pair.size());
+        for(size_t i = 0; i < pair.size(); ++i){
+            y.push_back(pair[i].first);
+        }
+        // y.insert(y.end(), pair.first.cbegin(), pair.first.cend());
+        boundaries.reserve(pair.size());
+        for(size_t i = 0; i < pair.size(); ++i){
+            boundaries.push_back(pair[i].second);
+        }
+        // boundaries.insert(boundaries.end(), pair.second.cbegin(),
+        //                   pair.second.cend());
+        x.insert(x.end(), pair.size(), x_counter);
+    }
+    
+    // std::cout << "y: ";
+    // for( const auto& val : y)
+    //     std::cout << val << ' ';
+    // std::cout << std::endl;
+    // std::cout << "x: ";
+    // for( const auto& val : x)
+    //     std::cout << val << ' ';
+    // std::cout << std::endl;
+
+    ////sorting all of them based on y
+    //std::vector<size_t> indices(x.size());
+    //for (size_t i = 0; i < indices.size(); i++) {
+    //    indices[i] = i;
+    //}
+    
+    //// Sort indices based on values in y
+    //std::sort(indices.begin(), indices.end(), [&](size_t a, size_t b) {
+    //    return x[a] < x[b];
+    //});
+
+
+    //// Apply the sorted order to x, y, and boundaries
+    //std::vector<int64_t> x_sorted(x.size());
+    //std::vector<int64_t> y_sorted(y.size());
+    //std::vector<int8_t> boundaries_sorted(boundaries.size());
+
+    //for (size_t i = 0; i < indices.size(); i++) {
+    //    x_sorted[i] = x[indices[i]];
+    //    y_sorted[i] = y[indices[i]];
+    //    boundaries_sorted[i] = boundaries[indices[i]];
+    //}
+    //x = std::move(x_sorted);
+    //y = std::move(y_sorted);
+    //boundaries = std::move(boundaries_sorted);
+
+
+    // Tensor Boundaries = functional::vector_to_tensor(boundaries);
+    return SparseMatrix::from_sortedX(std::move(x), std::move(y), 
+                        std::move(boundaries), 
+                        B_k, B_kp1, false); //the algorithm now pre-sorts the y values
+}
+
+
+// inline float compute_sigmoid(float val, float alpha) noexcept {
+//     return 1.0 / std::exp(1.0 + (-alpha * val));
+// }
+
+std::tuple<
+    std::vector<int64_t>, //x indexes
+    std::vector<int64_t>, //y indexes
+    std::vector<float>    //boundaries
+        > compute_differentiable_boundary_sparse_matrix_index(const Tensor &s_kp1,
+                                           const Tensor &s_k, 
+                                            const Tensor& rkp1, const Tensor& rk) {
+    //alpha should be like 10.0, it corresponds to the sharpness of the sigmoid
+    //before running this function, the radi should have run on them something like:
+    //functional::sigmoid(alpha * radi)
+    utils::throw_exception(
+        s_kp1.dims() == 2,
+        "Expected to get simplicies of dims 2, corresponding to batches, "
+        "verticies, point dim but got $ for simplex complex k+1",
+        s_kp1.dims());
+    utils::throw_exception(
+        s_k.dims() == 2,
+        "Expected to get simplicies of dims 2, corresponding to batches, "
+        "verticies, point dim but got $ for simplex complex k",
+        s_k.dims());
+    utils::throw_exception(
+        s_kp1.dtype == DType::int64,
+        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype);
+    utils::throw_exception(
+        s_k.dtype == DType::int64,
+        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype);
+    const int64_t &B_kp1 = s_kp1.shape()[0]; // Batches
+    const int64_t Kp1 = s_kp1.shape()[1];    // K+1 verticies
+
+    const int64_t &B_k = s_k.shape()[0]; // Batches
+    const int64_t K = s_k.shape()[1];    // K verticies
+
+    utils::throw_exception(
+        K == (Kp1 - 1), "Expected K ($) to be one less than K+1 ($) ($ -> $)",
+        K, Kp1, s_kp1.shape(), s_k.shape());
+
+    // Tensor faces = functional::combinations(functional::arange(Np1,
+    // DType::int64), Np1-1).contiguous().split_axis(0); Tensor* f_begin =
+    // reinterpret_cast<Tensor*>(faces.data_ptr()); Tensor* f_end =
+    // reinterpret_cast<Tensor*>(faces.data_ptr_end()); Tensor B_dim =
+    // functional::arange(B, DType::int64).view(B, 1).repeat_(-1,
+    // D*(Np1-1)).flatten(0, -1).contiguous(); Tensor point_dim =
+    // functional::arange(D, DType::int64).repeat_((Np1-1) * B).flatten(0,
+    // -1).contiguous();
+
+    std::unordered_map<tensor_index_skip,
+                       std::vector<std::pair<int64_t, float>>, //<- the pair makes it easier to sort and more efficent
+                       TensorSkipHash, TensorSkipEqual<int64_t>>
+        simplex_map;
+    // std::unordered_map<uint64_t, std::pair<int64_t, int64_t>>
+    // Tensor face_map = nt:Tensor::makeNullTensorArray(Kp1);
+    // Tensor* f_begin
+    //w_sigma:
+    const float* rkp1_begin = reinterpret_cast<const float*>(rkp1.data_ptr()); 
+    const float* rkp1_end = reinterpret_cast<const float*>(rkp1.data_ptr_end()); 
+    //w_tau:
+    const float* rk_begin = reinterpret_cast<const float*>(rk.data_ptr()); 
+    const float* rk_end = reinterpret_cast<const float*>(rk.data_ptr_end());
+    // std::cout << Kp1<<','<<(rkp1_end-rkp1_begin)<<std::endl;
+    // std::cout << s_kp1.shape()<<','<<rkp1.shape()<<std::endl;
+    utils::THROW_EXCEPTION((rkp1_end-rkp1_begin) == B_kp1,
+                           "INTERNAL LOGIC ERROR");
+    int64_t total_num = 0;
+    //the radi are seen as the filtration values
+    for (int64_t i = 0; i < Kp1; ++i) {
+        // now get all faces
+        Tensor split_faces = s_kp1.split_axis(0);
+        int64_t counter = 0;
+        Tensor *split_begin =
+            reinterpret_cast<Tensor *>(split_faces.data_ptr());
+        Tensor *split_end =
+            reinterpret_cast<Tensor *>(split_faces.data_ptr_end());
+        int8_t boundary = (i % 2 == 0) ? 1 : -1;
+        rkp1_begin = reinterpret_cast<const float*>(rkp1.data_ptr());
+        for (; split_begin != split_end; ++split_begin, ++counter, ++rkp1_begin) {
+            // const int64_t* arr_sub = reinterpret_cast<const
+            // int64_t*>(split_begin->data_ptr());
+            tensor_index_skip key(*split_begin, i);
+            auto [it, inserted] =
+                simplex_map.insert({key,
+                    std::vector<std::pair<int64_t, float> > 
+                        ({{counter, *rkp1_begin * boundary}})});
+            ++total_num;
+            if (!inserted) {
+                auto &pair = it->second;
+                pair.emplace_back(counter, *rkp1_begin * boundary);
+            }
+        }
+    }
+
+    // each collumn refers to a simplex from s_kp1, and each row refers to a
+    // simplex from s_k So, x -> from B_k, and y is from the map
+
+    std::vector<int64_t> x;
+    x.reserve(total_num);
+    std::vector<int64_t> y;
+    y.reserve(total_num);
+    std::vector<float> boundaries;
+    boundaries.reserve(total_num);
+    //std::vector<int64_t> rk_indexes;
+    //rk_indexes.reserve(total_num); <- x's already index it
+    Tensor sk_split = s_k.split_axis(0);
+    Tensor *sk_begin = reinterpret_cast<Tensor *>(sk_split.data_ptr());
+    Tensor *sk_end = reinterpret_cast<Tensor *>(sk_split.data_ptr_end());
+    int64_t x_counter = 0;
+    // std::vector<size_t> indices;
+    for (; sk_begin != sk_end; ++sk_begin, ++x_counter, ++rk_begin) {
+        // const int64_t* arr = reinterpret_cast<const
+        // int64_t*>(sk_begin->data_ptr()); std::vector<int64_t> key(arr, arr +
+        // K); nt_index_holder key = to_index_holder(reinterpret_cast<const
+        // int64_t*>(sk_begin->data_ptr()), K);
+        tensor_index_skip cur_key(*sk_begin, -1);
+        if (simplex_map.find(cur_key) == simplex_map.end()) {
+            continue;
+        }
+        const float& w_tau = *rk_begin;
+        auto &pair = simplex_map[cur_key];
+        std::sort(pair.begin(), pair.end(), 
+                  [](const std::pair<int64_t, float>& a, 
+                     const std::pair<int64_t, float>& b){
+            return a.first < b.first;
+        });
+        y.reserve(pair.size());
+        for(size_t i = 0; i < pair.size(); ++i){
+            y.push_back(pair[i].first);
+        }
+        // y.insert(y.end(), pair.first.cbegin(), pair.first.cend());
+        boundaries.reserve(pair.size());
+        for(size_t i = 0; i < pair.size(); ++i){
+            boundaries.push_back(pair[i].second * w_tau);
+        }
+        
+        // boundaries.insert(boundaries.end(), pair.second.cbegin(),
+        //                   pair.second.cend());
+        x.insert(x.end(), pair.size(), x_counter);
+    }
+    return std::make_tuple(std::move(x), std::move(y), std::move(boundaries));
+}
+
 SparseTensor compute_boundary_matrix(const Tensor &s_kp1, const Tensor &s_k) {
     utils::throw_exception(
         s_kp1.dims() == s_k.dims(),

@@ -12,8 +12,8 @@
 namespace nt {
 namespace functional {
 
-inline TensorGrad matmult(const TensorGrad &a, const TensorGrad &b) {
-    return TensorGrad_Functional_Class::matmult(a, b);
+inline TensorGrad matmult(const TensorGrad &a, const TensorGrad &b, bool transpose_a = false, bool transpose_b = false) {
+    return TensorGrad_Functional_Class::matmult(a, b, transpose_a, transpose_b);
 }
 
 inline TensorGrad matmult(const Tensor &a, const TensorGrad &b) {
