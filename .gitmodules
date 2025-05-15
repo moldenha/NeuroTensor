@@ -29,3 +29,6 @@
 [submodule "third_party/nifti_clib"]
 	path = third_party/nifti_clib
 	url = https://github.com/NIFTI-Imaging/nifti_clib
+[submodule "nt/reflection/named_parameters"]
+	path = nt/reflection/named_parameters
+	url = https://github.com/moldenha/named_parameters
