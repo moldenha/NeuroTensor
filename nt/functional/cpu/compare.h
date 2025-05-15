@@ -28,6 +28,8 @@ bool _all(const ArrayVoid& a);
 bool _any(const ArrayVoid& a);
 bool _none(const ArrayVoid& a);
 
+int64_t _amount_of(const ArrayVoid& a, Scalar s);
+int64_t _count(const ArrayVoid& a);
 }
 }
 }

@@ -1,7 +1,7 @@
 #include "numpy.h"
 #include <iostream>
 #include <sstream>
-
+#include "exceptions.hpp"
 
 namespace nt {
 namespace functional {
@@ -155,6 +155,7 @@ Tensor from_numpy(std::string filename){
 }
  
 void to_numpy(const Tensor &tensor, std::string filename){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(tensor);
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "Error opening file for writing!" << std::endl;

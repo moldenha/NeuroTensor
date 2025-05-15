@@ -1,8 +1,8 @@
 #include "BatchNorm1D.h"
 #include "../../functional/functional.h"
 #include "../functional.h"
-#include "../layer_reflect/layer_registry.hpp"
-#include "../layer_reflect/reflect_macros.h"
+#include "../../reflection/layer_reflect/layer_registry.hpp"
+#include "../../reflection/layer_reflect/reflect_macros.h"
 
 namespace nt {
 namespace layers {
@@ -16,7 +16,15 @@ BatchNorm1D::BatchNorm1D(int64_t num_features, double epsilon, double momentum,
       running_var(track_running_stats ? functional::ones({num_features})
                                       : Tensor::Null()),
       gamma(affine ? functional::ones({num_features}) : Tensor::Null()),
-      beta(affine ? functional::zeros({num_features}) : Tensor::Null()) {}
+      beta(affine ? functional::zeros({num_features}) : Tensor::Null()) 
+{
+    if(affine){
+        this->register_parameter("gamma", gamma);
+        this->register_parameter("beta", beta);
+        gamma.tensor.set_mutability(false);
+        beta.tensor.set_mutability(false);
+    }
+}
 
 TensorGrad BatchNorm1D::forward(
     TensorGrad x) { // output shape is the same as the input shape
@@ -104,5 +112,4 @@ Tensor BatchNorm1D::eval(Tensor x) {
 
 _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::BatchNorm1D, nt__layers__BatchNorm1D,
                                num_features, epsilon, momentum, affine,
-                               track_running_stats, running_mean, running_var,
-                               gamma, beta)
+                               track_running_stats, running_mean, running_var)

@@ -16,12 +16,34 @@ inline TensorGrad matmult(const TensorGrad &a, const TensorGrad &b, bool transpo
     return TensorGrad_Functional_Class::matmult(a, b, transpose_a, transpose_b);
 }
 
-inline TensorGrad matmult(const Tensor &a, const TensorGrad &b) {
-    return TensorGrad_Functional_Class::matmult(a, b);
+inline TensorGrad matmult(const Tensor &a, const TensorGrad &b, bool transpose_a = false, bool transpose_b = false) {
+    return TensorGrad_Functional_Class::matmult(a, b, transpose_a, transpose_b);
 }
 
-inline TensorGrad matmult(const TensorGrad &a, const Tensor &b) {
-    return TensorGrad_Functional_Class::matmult(a, b);
+inline TensorGrad matmult(const TensorGrad &a, const Tensor &b, bool transpose_a = false, bool transpose_b = false) {
+    return TensorGrad_Functional_Class::matmult(a, b, transpose_a, transpose_b);
+}
+
+inline TensorGrad linear(const TensorGrad& input, const TensorGrad& weight, const TensorGrad& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
+}
+inline TensorGrad linear(const Tensor& input, const TensorGrad& weight, const TensorGrad& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
+}
+inline TensorGrad linear(const TensorGrad& input, const Tensor& weight, const TensorGrad& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
+}
+inline TensorGrad linear(const TensorGrad& input, const TensorGrad& weight, const Tensor& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
+}
+inline TensorGrad linear(const TensorGrad& input, const Tensor& weight, const Tensor& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
+}
+inline TensorGrad linear(const Tensor& input, const TensorGrad& weight, const Tensor& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
+}
+inline TensorGrad linear(const Tensor& input, const Tensor& weight, const TensorGrad& bias, bool transpose_a = false, bool transpose_b = false){
+    return TensorGrad_Functional_Class::linear(input, weight, bias, transpose_a, transpose_b);
 }
 
 inline TensorGrad
@@ -275,6 +297,10 @@ inline TensorGrad log(const TensorGrad &a) {
 }
 
 
+inline TensorGrad logsumexp(const TensorGrad &a, utils::optional_list list = nullptr, bool keepdim = false) {
+    return TensorGrad_Functional_Class::logsumexp(a, list, keepdim);
+}
+
 inline TensorGrad dropout(const TensorGrad &input, double p) {
     return TensorGrad_Functional_Class::dropout(input, p);
 }
@@ -287,62 +313,166 @@ inline TensorGrad softplus(const TensorGrad &input, Scalar beta=1.0, Scalar thre
     return TensorGrad_Functional_Class::softplus(input, beta, threshold);
 }
 
-template<typename T, typename... Args,
-         std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, int>>
-inline TensorGrad list(T&& first, Args&&... rest){
-	static_assert(utils::is_all_same_v<std::decay_t<T>, std::decay_t<Args>...>, 
-                  "Expected to make a list of all TensorGrads");
-
-    // create the result TensorGrad
-    TensorGrad result(list(first.tensor, (rest.tensor) ...),
-                      first.grad_required);
-
-    bool track_grad = first.do_track_grad;
-    bool require_grad = first.grad_required;
-
-    // ensure consistency for tracking and requiring gradients
-    ((utils::throw_exception(std::forward<Args>(rest).do_track_grad ==
-                                 track_grad,
-                             "Expected consistent track_grad values")),
-     ...);
-    ((utils::throw_exception(std::forward<Args>(rest).grad_required ==
-                                 require_grad,
-                             "Expected consistent grad_required values")),
-     ...);
-
-    // update track_grad and grad_required flags
-    if (!require_grad) {
-        track_grad = false;
-    }
-    if (!track_grad) {
-        result.do_track_grad = false;
-        return result; // return directly if tracking is not needed
-    }
-
-
-
-    // initialize grads if not already set
-    if (first.grad == nullptr) {
-        first.grad =
-            make_intrusive<tensor_holder>(functional::zeros_like(first.tensor));
-    }
-    ((rest.grad = (rest.grad == nullptr)
-                      ? make_intrusive<tensor_holder>(
-                            functional::zeros_like(rest.tensor))
-                      : rest.grad),
-     ...);
-    //create the gradient for the result
-    result.grad = make_intrusive<tensor_holder>(
-        list(first.grad->tensor, (rest.grad->tensor) ...));
-    
-    // set up parent references
-    // this also automatically tracks children
-    result.track_tensors(first, rest...);
-
-    return result;
+//by default is stable
+inline TensorGrad softmax(const TensorGrad& input){
+    return TensorGrad_Functional_Class::softmax(input, true);
 }
+
+inline TensorGrad softmax(const TensorGrad& input, typename SizeRef::value_type dim){
+    return TensorGrad_Functional_Class::softmax(input, dim, true);
+}
+
+
+inline TensorGrad softmax_unstable(const TensorGrad& input){
+    return TensorGrad_Functional_Class::softmax(input, false);
+}
+
+inline TensorGrad softmax_unstable(const TensorGrad& input, typename SizeRef::value_type dim){
+    return TensorGrad_Functional_Class::softmax(input, dim, false);
+}
+
+inline TensorGrad gumbel_softmax(const TensorGrad& input, Scalar tau, bool hard, bool stable = true){
+    return TensorGrad_Functional_Class::gumbel_softmax(input, tau, hard, stable);
+}
+
+inline TensorGrad symmetric_bilinear(const TensorGrad& input, const TensorGrad& W1, const TensorGrad& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+inline TensorGrad symmetric_bilinear(const TensorGrad& input, const TensorGrad& W1, const Tensor& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+inline TensorGrad symmetric_bilinear(const TensorGrad& input, const Tensor& W1, const TensorGrad& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+inline TensorGrad symmetric_bilinear(const Tensor& input, const TensorGrad& W1, const TensorGrad& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+inline TensorGrad symmetric_bilinear(const TensorGrad& input, const Tensor& W1, const Tensor& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+inline TensorGrad symmetric_bilinear(const Tensor& input, const Tensor& W1, const TensorGrad& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+inline TensorGrad symmetric_bilinear(const Tensor& input, const TensorGrad& W1, const Tensor& W2){
+    return TensorGrad_Functional_Class::symmetric_bilinear(input, W1, W2);
+}
+
+
+//Average Pooling
+inline TensorGrad avg_pool1d(TensorGrad input, int64_t kernel_size, int64_t stride = -1, int64_t padding = 0, bool ceil_mode = false, bool count_include_pad = true){
+    return TensorGrad_Functional_Class::avg_pool1d(input, kernel_size, stride, padding, ceil_mode, count_include_pad); 
+}
+inline TensorGrad adaptive_avg_pool1d(TensorGrad x, int64_t l_out){
+    return TensorGrad_Functional_Class::adaptive_avg_pool1d(x, l_out); 
+}
+
+inline TensorGrad avg_pool2d(TensorGrad input, utils::my_tuple kernel_size, utils::my_tuple stride = -1, utils::my_tuple padding = 0, 
+                      bool ceil_mode = false, bool count_include_pad = true){
+    return TensorGrad_Functional_Class::avg_pool2d(input, kernel_size, stride, padding, 
+                    ceil_mode, count_include_pad); 
+}
+inline TensorGrad adaptive_avg_pool2d(TensorGrad x, utils::my_tuple out_shape){
+    return TensorGrad_Functional_Class::adaptive_avg_pool2d(x, out_shape); 
+}
+
+inline TensorGrad avg_pool3d(TensorGrad input, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> stride = -1, utils::my_n_tuple<3> padding = 0, 
+                      bool ceil_mode = false, bool count_include_pad = true){
+    return TensorGrad_Functional_Class::avg_pool3d(input, kernel_size, stride, padding, 
+                    ceil_mode, count_include_pad); 
+}
+inline TensorGrad adaptive_avg_pool3d(TensorGrad x, utils::my_n_tuple<3> out_shape){
+    return TensorGrad_Functional_Class::adaptive_avg_pool3d(x, out_shape); 
+}
+
+//LP Pooling
+inline TensorGrad lp_pool1d(TensorGrad input, Scalar power, int64_t kernel_size, int64_t stride = -1, bool ceil_mode = false){
+    return TensorGrad_Functional_Class::lp_pool1d(input, power, kernel_size, stride, ceil_mode); 
+}
+inline TensorGrad adaptive_lp_pool1d(TensorGrad x, int64_t l_out, Scalar power){
+    return TensorGrad_Functional_Class::adaptive_lp_pool1d(x, l_out, power); 
+}
+
+inline TensorGrad lp_pool2d(TensorGrad input, Scalar power, utils::my_tuple kernel_size, utils::my_tuple stride = -1, bool ceil_mode = false){
+    return TensorGrad_Functional_Class::lp_pool2d(input, power, kernel_size, stride, ceil_mode); 
+}
+inline TensorGrad adaptive_lp_pool2d(TensorGrad x, utils::my_tuple out_shape, Scalar power){
+    return TensorGrad_Functional_Class::adaptive_lp_pool2d(x, out_shape, power); 
+}
+
+inline TensorGrad lp_pool3d(TensorGrad input, Scalar power, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> stride = -1, bool ceil_mode = false){
+    return TensorGrad_Functional_Class::lp_pool3d(input, power, kernel_size, stride, ceil_mode); 
+}
+inline TensorGrad adaptive_lp_pool3d(TensorGrad x, utils::my_n_tuple<3> out_shape, Scalar power){
+    return TensorGrad_Functional_Class::adaptive_lp_pool3d(x, out_shape, power); 
+}
+
+
+//Max Pooling
+inline TensorGrad max_pool1d(TensorGrad input, int64_t kernel_size, int64_t stride = -1, int64_t padding = 0, int64_t dilation=1, bool ceil_mode = false, bool return_indices = false){
+    return TensorGrad_Functional_Class::max_pool1d(input, kernel_size, stride, padding, dilation, ceil_mode, return_indices); 
+}
+inline TensorGrad max_unpool1d(TensorGrad input, TensorGrad indices, int64_t kernel_size, int64_t stride = -1, int64_t padding = 0, int64_t output_size=-1){
+    return TensorGrad_Functional_Class::max_unpool1d(input, indices, kernel_size, stride, padding, output_size); 
+}
+inline TensorGrad max_unpool1d(TensorGrad input, Tensor indices, int64_t kernel_size, int64_t stride = -1, int64_t padding = 0, int64_t output_size=-1){
+    return TensorGrad_Functional_Class::max_unpool1d(input, indices, kernel_size, stride, padding, output_size); 
+}
+inline TensorGrad adaptive_max_pool1d(TensorGrad x, int64_t l_out, bool return_indices = false){
+    return TensorGrad_Functional_Class::adaptive_max_pool1d(x, l_out, return_indices); 
+}
+
+inline TensorGrad max_pool2d(TensorGrad input, 
+                      utils::my_tuple kernel_size, utils::my_tuple stride = -1, utils::my_tuple padding = 0,
+                      utils::my_tuple dilation=1, bool ceil_mode = false, bool return_indices = false){
+    return TensorGrad_Functional_Class::max_pool2d(input, 
+                      kernel_size, stride, padding,
+                      dilation, ceil_mode, return_indices);
+}
+inline TensorGrad max_unpool2d(TensorGrad input, TensorGrad indices, utils::my_tuple kernel_size, utils::my_tuple stride = -1, utils::my_tuple padding = 0, utils::my_tuple output_size = -1){
+    return TensorGrad_Functional_Class::max_unpool2d(input, indices, kernel_size, stride, padding, output_size); 
+}
+
+inline TensorGrad max_unpool2d(TensorGrad input, Tensor indices, utils::my_tuple kernel_size, utils::my_tuple stride = -1, utils::my_tuple padding = 0, utils::my_tuple output_size = -1){
+    return TensorGrad_Functional_Class::max_unpool2d(input, indices, kernel_size, stride, padding, output_size); 
+}
+inline TensorGrad adaptive_max_pool2d(TensorGrad x, utils::my_tuple out_shape, bool return_indices = false){
+        return TensorGrad_Functional_Class::adaptive_max_pool2d(x, out_shape, return_indices); 
+    }
+
+inline TensorGrad max_pool3d(TensorGrad input, 
+                      utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> stride = -1, utils::my_n_tuple<3> padding = 0,
+                      utils::my_n_tuple<3> dilation=1, bool ceil_mode = false, bool return_indices = false){
+    return TensorGrad_Functional_Class::max_pool3d(input, 
+                  kernel_size, stride, padding,
+                  dilation, ceil_mode, return_indices); 
+}
+inline TensorGrad max_unpool3d(TensorGrad input, TensorGrad indices, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> stride = -1, utils::my_n_tuple<3> padding = 0, utils::my_n_tuple<3> output_size = -1){
+    return TensorGrad_Functional_Class::max_unpool3d(input, indices, kernel_size, stride, padding, output_size); 
+}
+inline TensorGrad max_unpool3d(TensorGrad input, Tensor indices, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> stride = -1, utils::my_n_tuple<3> padding = 0, utils::my_n_tuple<3> output_size = -1){
+    return TensorGrad_Functional_Class::max_unpool3d(input, indices, kernel_size, stride, padding, output_size); 
+}
+
+inline TensorGrad adaptive_max_pool3d(TensorGrad x, utils::my_n_tuple<3> out_shape, bool return_indices = false){
+    return TensorGrad_Functional_Class::adaptive_max_pool3d(x, out_shape, return_indices); 
+}
+
+//Fractional Max Pooling
+inline TensorGrad fractional_max_pool2d(TensorGrad input, utils::my_tuple kernel_size, utils::my_tuple output_size = -1, 
+                                 std::variant<double, std::tuple<double, double>> output_ratio = double(-1.0), bool return_indices = false){
+    return TensorGrad_Functional_Class::fractional_max_pool2d(input, kernel_size, output_size, 
+                         output_ratio, return_indices); 
+}
+inline TensorGrad fractional_max_pool3d(TensorGrad input, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> output_size = -1, 
+                                 std::variant<double, std::tuple<double, double, double>> output_ratio = double(-1.0), bool return_indices = false){
+    return TensorGrad_Functional_Class::fractional_max_pool3d(input, kernel_size, output_size, 
+                         output_ratio, return_indices);
+}
+
 
 } // namespace functional
 } // namespace nt
+
+#include "functional/functional_list.h"
 
 #endif // _NT_TENSORGAD_FUNCTIONAL_H_

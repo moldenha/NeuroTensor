@@ -407,7 +407,7 @@ Tensor find_all_simplicies(int64_t simplicies_amt, const Tensor &points,
 
 //for num points, it is only indexes only
 std::pair<Tensor, Tensor> find_all_simplicies(int64_t simplicies_amt, const int64_t num_points,
-                           const Tensor &distance_matrix) {
+                           const Tensor &distance_matrix, double max_radi, bool sort) {
     //distance matrix gives the distance between index i and j as distance_matrix[i][j];
     utils::throw_exception(num_points > 0,
                            "Cannot find simplex complex from 0 points");
@@ -433,11 +433,14 @@ std::pair<Tensor, Tensor> find_all_simplicies(int64_t simplicies_amt, const int6
     Tensor simplex_complex = functional::unique(sorted.view(-1, simplicies_amt), -1,
                                        true, false).contiguous(); // return unique only
     std::pair<Tensor, Tensor> radi_gr = compute_point_grad_radii(simplex_complex, distance_matrix);
-    sort_simplex_on_radi(simplex_complex, radi_gr.first, radi_gr.second);
+    if(sort)
+        sort_simplex_on_radi(simplex_complex, radi_gr.first, radi_gr.second);
 
-
-    return {functional::list(simplex_complex, radi_gr.first), radi_gr.second};
-    
+    if(max_radi < 0)
+        return {functional::list(simplex_complex, radi_gr.first), radi_gr.second};
+    Tensor less_than = radi_gr.first <= max_radi;
+    utils::throw_exception(!functional::none(less_than), "No simplex radi is less than $", max_radi);
+    return {functional::list(simplex_complex[less_than], radi_gr.first[less_than]), radi_gr.second[less_than]};
 
 }
 

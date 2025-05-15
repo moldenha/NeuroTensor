@@ -9,7 +9,7 @@ void SGD::step(){
 		if(t.do_track_grad && t.grad != nullptr && !t.is_null()){
 			t.grad->tensor.clip_(-10, 10);
 			t.grad->tensor *= learning_rate;
-			t.update();
+			t.update_mutable();
 		}
 	}
 	this->erase_grad_tracking();
@@ -98,7 +98,7 @@ void Adam::step(){
 		//self.lr * m_hat / (np.sqrt(v_hat) + self.epsilon)
 		grad.set_((this->learning_rate * m_hat) / (std::sqrt(v_hat) + this->epsilon));
 		grad.clip_(-10, 10);
-		begin->update();
+		begin->update_mutable();
 	}
     this->erase_grad_tracking();
 }

@@ -4,6 +4,7 @@
 #include "../../dtype/ArrayVoid.hpp"
 #include "fill.h" //ones, arange
 #include "../functional.h" //softmax_
+#include "exceptions.hpp"
 
 namespace nt{
 namespace functional{

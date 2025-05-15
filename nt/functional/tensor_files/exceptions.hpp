@@ -46,6 +46,17 @@ inline void exception_shapes(const SizeRef& a, const SizeRef& b, bool singletons
 	}
 }
 
+inline void _NT_FUNCTIONAL_ALWAYS_CHECK_(const Tensor& t){
+    utils::throw_exception(!t.is_null(),
+                           "Cannot perform operations on a null tensor");
+}
+
+template<typename... T>
+inline void _NT_FUNCTIONAL_ALWAYS_CHECK_(const Tensor& t, const T&... tensors){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(tensors...);
+}
+
 }
 }
 

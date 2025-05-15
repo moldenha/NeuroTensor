@@ -1,5 +1,6 @@
 #include "ranges.h"
 #include "combine.h"
+#include "exceptions.hpp"
 
 namespace nt{
 namespace functional{
@@ -12,6 +13,7 @@ inline bool idx_is_total(const my_range &range, const SizeRef &shape,
 
 
 Tensor get_range(const Tensor &t, const my_range &r, size_t idx) {
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     if (idx == 0) {
         if (idx_is_total(r, t.shape(), 0)) {
             return t.split_axis(0);
@@ -30,14 +32,13 @@ Tensor get_range(const Tensor &t, const my_range &r, size_t idx) {
         for(int64_t i = a; i < b; ++i, ++begin){
             *begin = splits[i];
         }
-        return std::move(out);
+        return out.set_mutability(t.is_mutable());
     }
     utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
                            "Error with dtype format");
     const Tensor *begin_i = reinterpret_cast<const Tensor *>(t.data_ptr());
     const Tensor *end_i = begin_i + t.numel();
     if (begin_i->dims() == 1) {
-        /* std::cout << "doing dims1"<<std::endl; */
         if (idx_is_total(r, begin_i->shape(), 0)) {
             return t;
         }
@@ -46,26 +47,27 @@ Tensor get_range(const Tensor &t, const my_range &r, size_t idx) {
         for (; begin_i != end_i; ++begin_i, ++begin_o) {
             *begin_o = op_range(*begin_i, r);
         }
-        return std::move(output);
+        return output.set_mutability(t.is_mutable());
     }
+
     Tensor output = Tensor::makeNullTensorArray(r.length() * t.numel());
     Tensor *begin_o = reinterpret_cast<Tensor *>(output.data_ptr());
 
     for (; begin_i != end_i; ++begin_i) {
-        /* std::cout << "before split shape: "<<begin_i->shape()<<std::endl; */
         Tensor o = begin_i->split_axis(0);
         Tensor *o_b = reinterpret_cast<Tensor *>(o.data_ptr()) + r.begin;
         Tensor *o_e = reinterpret_cast<Tensor *>(o.data_ptr()) + r.end;
         for (; o_b != o_e; ++o_b, ++begin_o) {
-            /* std::cout << o_b->shape() << std::endl; */
-            *begin_o = std::move(*o_b);
+            *begin_o = *o_b;
         }
     }
+    output.set_mutability(t.is_mutable());
     return std::move(output);
 }
 
 Tensor op_range(Tensor t, my_range r){
-   if (idx_is_total(r, t.shape(), 0)) {
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    if (idx_is_total(r, t.shape(), 0)) {
         return t;
     }
     // std::cout << "op range "<<r.begin<<','<<r.end<<std::endl;
@@ -83,11 +85,13 @@ Tensor op_range(Tensor t, my_range r){
     int64_t multiply = n_size.multiply(1);
     Tensor out(t.arr_void().share_array(a * multiply, (b - a) * multiply),
             std::move(n_size));
+    out.set_mutability(t.is_mutable());
     return std::move(out);
 }
 
 //I am considering making this just transpose(0, idx) -> op_range(t, r[idx]) -> transpose(0, idx)
 Tensor op_range(const Tensor& t, std::vector<my_range> r){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     Tensor cpy = t;
     const SizeRef& shape = cpy.shape();
     std::vector<Tensor::size_value_t> vec = shape.Vec();
@@ -131,14 +135,20 @@ Tensor op_range(const Tensor& t, std::vector<my_range> r){
     for (Tensor::size_value_t i = 0; i < r.size(); ++i) {
         r[i].fix(t.shape()[i]);
     }
+    size_t i = 0;
+    while(idx_is_total(r[i], t.shape(), i)){
+        ++i;
+    }
 
-    Tensor outs = get_range(t, r[0], 0);
-    for (size_t i = 1; i < r.size(); ++i) {
+    Tensor outs = i == 0 ? get_range(t, r[0], 0) : t.split_axis(i-1);
+    if(i == 0) ++i;
+    for (; i < r.size(); ++i) {
         outs = get_range(outs, r[i], i);
     }
     std::vector<Tensor::size_value_t> n_shape = t.shape().Vec();
     for (Tensor::size_value_t i = 0; i < r.size(); ++i)
         n_shape[i] = r[i].length();
+    outs.set_mutability(t.is_mutable());
 
     return cat_unordered(outs).view(n_shape);
 }

@@ -140,94 +140,6 @@ Tensor any(const Tensor t, int64_t dim){
 
 
 
-//this applies a softmax function over the entire inputted tensor
-void softmax_(Tensor& inp){
-	inp.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
-		mp::softmax(begin, end, begin);
-	});
-	if(inp.dtype == DType::TensorObj){
-		inp.exp_();
-		Scalar element = inp.sum().toScalar();
-		inp.divide_(element);
-	}
-}
-
-void softmax_(Tensor& inp, typename SizeRef::value_type dim){
-	inp.exp_();
-	Tensor tensors = inp.split_axis(dim);
-	tensors.arr_void().for_each<DType::TensorObj>([](auto& val){
-				Scalar element = val.sum().toScalar();
-				val.divide_(element);
-			});
-}
-
-Tensor softmax(const Tensor& inp){
-	Tensor outp = inp.clone();
-	softmax_(outp);
-	return std::move(outp);
-}
-
-Tensor softmax(const Tensor& inp, typename SizeRef::value_type dim){
-	Tensor outp = inp.exp();
-	Tensor tensors = outp.split_axis(dim);
-	tensors.arr_void().for_each<DType::TensorObj>([](auto& val){
-				Scalar element = val.sum().toScalar();
-				val.divide_(element);
-			});
-	return std::move(outp);
-}
-
-void softmax_stable_(Tensor& inp){
-	Scalar max = inp.max().values.toScalar();
-	inp.exp_();
-	inp -= max;
-	Scalar element = inp.sum().toScalar();
-	inp.divide_(element);
-}
-
-void softmax_stable_(Tensor& inp, typename SizeRef::value_type dim){
-	Tensor tensors = inp.split_axis(dim);
-	tensors.arr_void().for_each<DType::TensorObj>([](auto& val){
-				Scalar max = val.max().values.toScalar();
-				val.exp_();
-				val -= max;
-				Scalar element = val.sum().toScalar();
-				val.divide_(element);
-			});
-}
-
-Tensor softmax_stable(const Tensor& inp){
-	Scalar max = inp.max().values.toScalar();
-	Tensor outp = inp.exp() - max;
-	Scalar element = outp.sum().toScalar();
-	outp.divide_(element);
-	return std::move(outp);
-}
-
-
-Tensor softmax_stable(const Tensor& inp, typename SizeRef::value_type dim){
-	Tensor outp(inp);
-	Tensor tensors = outp.split_axis(dim);
-	tensors.arr_void().for_each<DType::TensorObj>([](auto& val){
-				Scalar max = val.max().values.toScalar();
-				val.exp_();
-				val -= max;
-				Scalar element = val.sum().toScalar();
-				val.divide_(element);
-			});
-	return std::move(outp);
-
-}
-
-
-
-
-
-
-
-
-
-
 std::vector<Tensor> get_all(Tensor& t){
 	std::vector<Tensor> output(t.shape()[0]);
 	for(typename SizeRef::value_type i = 0; i < t.shape()[0]; ++i)
@@ -1188,18 +1100,7 @@ Tensor abs(const Tensor& x){
 }
 
 
-//ln(x)
-Tensor log(const Tensor& x){
-	Tensor a = x.clone();
-	a.arr_void().execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
-		mp::log(begin, end, begin);
-	});
-	return std::move(a);
-}
-//derivative of ln(x) is just 1/x
-Tensor dlog(const Tensor& x){
-	return x.inverse();
-}
+
 
 
 Tensor softplus(const Tensor& x, Scalar beta, Scalar threshold){
@@ -1244,39 +1145,6 @@ Tensor dot(const Tensor& a, const Tensor& b, utils::optional_list dim, bool keep
 	return c.sum(dim, keepdim);
 }
 
-size_t amount_of(const Tensor& t, Scalar s){
-	if(t.dtype == DType::Bool){
-		uint_bool_t b = s.to<uint_bool_t>();
-		return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-				[&b](auto begin, auto end) -> size_t{
-					size_t amt = 0;
-					for(;begin != end; ++begin)
-						if(*begin == b){++amt;}
-					return amt;
-				});
-	}
-	return t.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-			[&s](auto a_begin, auto a_end) -> size_t{
-				using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
-				value_t ns = s.to<value_t>();
-				size_t amt = 0;
-				for(;a_begin != a_end; ++a_begin)
-					if(*a_begin == ns){++amt;}
-				return amt;
-			});
-}
-
-size_t count(const Tensor& t){
-	utils::THROW_EXCEPTION(t.dtype == DType::Bool, "Expected to get bool tensor for count function but got $", t.dtype);
-	uint_bool_t b = uint_bool_t(true);
-	return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-			[&b](auto begin, auto end) -> size_t{
-				size_t amt = 0;
-				for(;begin != end; ++begin)
-					if(*begin == b){++amt;}
-				return amt;
-			});
-}
 
 
 void next_index(const SizeRef& s, std::vector<int64_t>& v, typename SizeRef::value_type index){
@@ -1296,80 +1164,7 @@ void next_index(const SizeRef& s, std::vector<int64_t>& v, typename SizeRef::val
 }
 
 
-//inefficient, but for some reason seems to be the only way it works?
-//maybe look back into this function in the future
-Tensor where(Tensor t){
-	utils::THROW_EXCEPTION(t.is_contiguous(), "Expected contiguous tensor for where");
-    if(t.dtype == DType::TensorObj){
-        Tensor output = Tensor::makeNullTensorArray(t.numel());
-        Tensor* ts_begin = reinterpret_cast<Tensor*>(output.data_ptr());
-        Tensor* ts_end = ts_begin + t.numel();
-        Tensor* begin = reinterpret_cast<Tensor*>(t.data_ptr());
-        for(;ts_begin != ts_end; ++ts_begin, ++begin)
-            *ts_begin = where(*begin);
-        return std::move(output);
-    }
-	utils::THROW_EXCEPTION(t.dtype == DType::Bool, "Expected dtype to be DType::Bool but got $", t.dtype);
-	uint_bool_t looking(true);
-	size_t amt = amount_of(t, looking);
-    if(amt == 0){
-        return nt::Tensor::Null();
-    }
-    //special case to speed this up because this happens a lot in the persistent homology class
-    if(amt == 1 && t.dims() == 1){
-        int64_t counter = 0;
-        uint_bool_t* begin = reinterpret_cast<uint_bool_t*>(t.data_ptr());
-        uint_bool_t* end = begin + t.numel();
-        for(;begin != end; ++begin, ++counter){
-            if(*begin == looking)
-                break;
-        }
-        Tensor outp = Tensor::makeNullTensorArray(1);
-        Tensor& cords = *reinterpret_cast<Tensor*>(outp.data_ptr());
-        cords = Tensor({1}, DType::int64);
-        *reinterpret_cast<int64_t*>(cords.data_ptr()) = counter;
-        return std::move(outp);
-    }
-    if(t.dims() == 1){
-        Tensor outp = Tensor::makeNullTensorArray(1);
-        Tensor& cords = *reinterpret_cast<Tensor*>(outp.data_ptr());
-        cords = Tensor({static_cast<int64_t>(amt)}, DType::int64);
-        int64_t* data = reinterpret_cast<int64_t*>(cords.data_ptr());
-        int64_t counter = 0;
-        uint_bool_t* begin = reinterpret_cast<uint_bool_t*>(t.data_ptr());
-        uint_bool_t* end = begin + t.numel();
-        for(;begin != end; ++begin, ++counter){
-            if(*begin == looking){
-                *data = counter;
-                ++data;
-            }
-        }
-        return std::move(outp); 
-    }
-	Tensor outp({static_cast<typename SizeRef::value_type>(t.dims()), static_cast<typename SizeRef::value_type>(amt)}, DType::int64);
-	
-	Tensor ts = outp.split_axis_1();
-	std::vector<int64_t> indexes(t.dims(), 0);
-	uint_bool_t* begin = reinterpret_cast<uint_bool_t*>(t.data_ptr());
-	uint_bool_t* end = begin + t.numel();
-	const typename SizeRef::value_type index = indexes.size() - 1;
-	int64_t keeping = 0;
-	Tensor* ts_begin = reinterpret_cast<Tensor*>(ts.data_ptr());
-	Tensor* ts_end = ts_begin + ts.numel();
-	Tensor* ts_cpy = ts_begin;
-	for(;begin != end; ++begin, next_index(t.shape(), indexes, index)){
-		if(*begin == looking){
-			auto cbegin = indexes.cbegin();
-			ts_begin->arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::int64>>>([&cbegin](auto a_begin, auto a_end){
-				for(;a_begin != a_end; ++a_begin, ++cbegin){
-					*a_begin = *cbegin;
-				}
-			});
-			++ts_begin;
-		}
-	}
-	return outp.split_axis(0);
-}
+
 
 Tensor meshgrid(Tensor&& x, Tensor&& y){
 	utils::THROW_EXCEPTION(x.dtype == y.dtype, "Runtime Error: Expected tensors to have same dtype but got $ and $", x.dtype, y.dtype);
@@ -1406,95 +1201,6 @@ Tensor meshgrid(Tensor&& x, Tensor&& y){
 
 
 
-
-
-//this is for when the stride is already changed, makes certain functions easier
-//this is more akin to pytorch's version
-//however, purely because of the way that the cat function works, this could be dangerous
-//for example if I did cat(A, B[2], C)
-//it would look at all of B, not just B[2]
-Tensor as_strided_force_contiguity(const Tensor& input, const SizeRef& n_size, const SizeRef& n_stride, const int64_t& storage_offset){
-	utils::THROW_EXCEPTION(n_size.size() == n_stride.size(), "Expected to have same amount of strides as dimensions for as strided");
-	//bound force contiguity bucket basically takes the tensor's memory
-	//and looks at each bucket of memory (for example if there was a concatenation that happened)
-	//and it looks at all instances of memory
-	ArrayVoid strided_vals = input.strides() != input.getChangedStrides() ? input.arr_void().bound_force_contiguity_bucket() : (input.arr_void().get_bucket().is_strided()) ? input.arr_void() : input.arr_void().bucket_all_indices(); //make input strided so that memory can be accessed one at a time
-	ArrayVoid output = strided_vals.new_strides(n_size.multiply()); //make the output strided but with the new size
-	void** in_begin = strided_vals.stride_begin(); //start at the correct indice to begin
-	void** out_begin = output.stride_begin();//the starting point of the new tensor
-	// Calculate the total number of elements in the new tensor
-	Tensor::size_value_t total_elements = n_size.multiply();
-	//get contiguous strides of the new size
-	std::vector<Tensor::size_value_t> multiplicities = n_size.strides();
-	//make a reference to numel (reduce overhead)
-	const uint64_t& num = strided_vals.Size();
-	// Fill the output tensor with strided values from the input tensor
-	for (Tensor::size_value_t i = 0; i < total_elements; ++i) {
-		Tensor::size_value_t offset = storage_offset;
-		Tensor::size_value_t index = i;
-			for (Tensor::size_value_t j = 0; j < n_size.size()-1; ++j) {
-				Tensor::size_value_t mult = (index / multiplicities[j+1]);
-				offset += mult * n_stride[j];
-				index -= mult * multiplicities[j+1];
-			}
-		offset += index * n_stride.back();
-		//make sure offset isn't out of range, if so, subtract by input.numel() until it is back in range
-		offset = (offset < num) ? offset : offset % num;
-		out_begin[i] = in_begin[offset];
-	}
-	
-	if(n_stride.size() == n_size.size()){
-		std::vector<Tensor::size_value_t> out_strides = {n_size.multiply()};
-		out_strides.insert(out_strides.end(), n_stride.begin(), n_stride.end());
-		return Tensor(output, std::move(n_size), out_strides);
-	}
-	return Tensor(output, std::move(n_size), n_stride.Vec());
-}
-
-
-//this goes based off a comparison of the original strides inputted
-//so based off of input.strides()
-//which is basically contiguous viewing
-//but it goes based off of the way the strides are already implanted in memory
-Tensor as_strided(const Tensor& input, const SizeRef n_size, SizeRef n_stride, const int64_t storage_offset, bool whole_tensor){
-	if(n_stride.size() == n_size.size()+1){n_stride = n_stride.pop_front();}
-	if(whole_tensor){return as_strided_force_contiguity(input, n_size, n_stride, storage_offset);}
-	utils::THROW_EXCEPTION(n_size.size() == n_stride.size(), "Expected to have same amount of strides as dimensions for as size or one more, where the last dimension represents n_size.multiply()");
-	//bound force contiguity bucket basically takes the tensor's memory
-	//and looks at each bucket of memory (for example if there was a concatenation that happened)
-	//and it looks at all instances of memory
-	ArrayVoid strided_vals = (input.arr_void().get_bucket().is_strided()) ? input.arr_void() : input.arr_void().bucket_all_indices(); //make input strided so that memory can be accessed one at a time
-	ArrayVoid output = strided_vals.new_strides(n_size.multiply()); //make the output strided but with the new size
-	void** in_begin = strided_vals.stride_begin(); //start at the correct indice to begin
-	void** out_begin = output.stride_begin();//the starting point of the new tensor
-	// Calculate the total number of elements in the new tensor
-	Tensor::size_value_t total_elements = n_size.multiply();
-	//get contiguous strides of the new size
-	std::vector<Tensor::size_value_t> multiplicities = n_size.strides();
-	//make a reference to numel (reduce overhead)
-	const uint64_t& num = strided_vals.Size();
-	// Fill the output tensor with strided values from the input tensor
-	for (Tensor::size_value_t i = 0; i < total_elements; ++i) {
-		Tensor::size_value_t offset = storage_offset;
-		Tensor::size_value_t index = i;
-			for (Tensor::size_value_t j = 0; j < n_size.size()-1; ++j) {
-				Tensor::size_value_t mult = (index / multiplicities[j+1]);
-				offset += mult * n_stride[j];
-				index -= mult * multiplicities[j+1];
-			}
-		offset += index * n_stride.back();
-		//make sure offset isn't out of range, if so, subtract by input.numel() until it is back in range
-		offset = (offset < num) ? offset : offset % num;
-		out_begin[i] = in_begin[offset];
-	}
-	
-	if(n_stride.size() == n_size.size()){
-		std::vector<Tensor::size_value_t> out_strides = {n_size.multiply()};
-		out_strides.insert(out_strides.end(), n_stride.begin(), n_stride.end());
-		return Tensor(output, std::move(n_size), out_strides);
-	}
-	return Tensor(output, std::move(n_size), n_stride.Vec());
-}
 
 Tensor droupout(const Tensor& input, double p){
 	Tensor bools = randbools(input.shape(), p);

@@ -75,7 +75,7 @@ class Tensor final{
 		SizeRef _size;
 		size_value_t _total_size;
 		intrusive_ptr<size_value_t[]> stored_strides;
-		const bool sub_tensor;
+        bool _is_mutable;
 		/* Tensor(float*, const std::vector<long long>&); */
 		/* Tensor(const float*, const float*, const std::vector<long long>&); */
 		/* Tensor(ArrayVoid, std::shared_ptr<SizeRef>); */
@@ -101,6 +101,7 @@ class Tensor final{
 
 		}
 		Tensor view_Tensor_vector(std::vector<size_value_t> v) const;
+        inline bool is_sub_tensor() const {return _vals.get_bucket().is_sub_memory() && !this->is_null();}
 	public:
 
 		Tensor(DType _dt = DType::Float);
@@ -180,6 +181,7 @@ class Tensor final{
         CommaOperator operator<<(Scalar s);   
 
 		Tensor clone() const;
+        Tensor conditional_mutate_clone() const; //only clone if mutatable, otherwise, return *this
 		Tensor contiguous() const;
 		template<typename T>
 		const T& item() const;
@@ -355,7 +357,8 @@ class Tensor final{
 		inline Tensor force_contiguity() const {return Tensor(_vals.force_contiguity(), shape());}	
 		//this is going to pad based on what is given
 		//for example if the tuple is : {1,1}, then pad the last dimension with 1 up and 1 down
-		Tensor pad(std::vector<size_value_t>, const char* mode="constant", double value=0) const;
+		Tensor pad(std::vector<size_value_t>, const char* mode="constant", Scalar value=0) const;
+        Tensor unpad(std::vector<size_value_t>) const;
 		Tensor flip() const;
 		Tensor flip(size_value_t dim) const; //contiguous copies of the original tensor
 		Tensor flip_() const; //strided copy of the original version
@@ -377,6 +380,17 @@ class Tensor final{
 		Tensor repeat_(size_value_t dim, size_value_t amt) const;
 		Tensor expand(SizeRef s) const;
 		Tensor expand_as(const Tensor&) const;
+        inline const bool& is_mutable() const {return _is_mutable;}
+        inline Tensor& set_mutability(bool mut) {
+            //this is important for things like autograd updates
+            //and making sure undefined behavior doesn't happen
+            utils::throw_exception(!(_is_mutable == false && mut == true),
+                                   "Once a tensor is marked as immutable, it cannot be marked as mutable"
+                                   "please clone the tensor");
+            _is_mutable = mut; 
+            return *this;
+        }
+        Tensor& force_mutable_function(std::function<void(Tensor&)>);
 
 
 		//this is only available for if the dtype is DType::TensorObj
@@ -387,7 +401,7 @@ class Tensor final{
 		class Iterator{
 			public:
 				explicit Iterator(const Tensor& p, int64_t index) : ptr(p), index(index) {}
-				inline const Tensor operator*() {return ptr.dtype == DType::TensorObj ? reinterpret_cast<const Tensor*>(ptr.data_ptr())[index] : ptr[index];}
+				inline const Tensor operator*() {return ptr.dtype == DType::TensorObj ? ptr[index].item<Tensor>() : ptr[index];}
 				inline const Iterator& operator++() {++index;return *this;}
 				inline bool operator!=(const Iterator& other) const {return other.index != index;}
 			private:

@@ -12,6 +12,7 @@
 #include <tbb/blocked_range.h>
 #include <tbb/blocked_range2d.h>
 #include <tbb/blocked_range3d.h>
+#include <unordered_map>
 
 namespace nt {
 namespace tda {
@@ -758,6 +759,41 @@ std::pair<std::map<double, int64_t>, std::vector<std::pair<double, SparseMatrix>
 //    freeSIMDeArray<value_t>(B_simde, d_kplus1.Rows());
 //    return std::pair<std::map<double, int64_t>, std::vector<std::pair<double, SparseMatrix>>>{std::move(out), std::move(col_spaces)};
 //}
+
+
+
+//I am going to try something a little new where I have a memory arena, and it loads the data into one big chunk, and holds onto it as simde pointers as well
+struct MemoryArena {
+    char* memory;
+    size_t capacity;
+    size_t offset;
+
+    MemoryArena(size_t size) {
+        memory = reinterpret_cast<char*>(new mp::SimdTraits<int8_t>::Type[size]);
+        capacity = size;
+        offset = 0;
+    }
+
+    void* allocate(size_t size, size_t alignment = alignof(std::max_align_t)) {
+        size_t current = reinterpret_cast<size_t>(memory + offset);
+        size_t aligned = (current + alignment - 1) & ~(alignment - 1);
+        size_t padding = aligned - current;
+
+        if (offset + size + padding > capacity) return nullptr;
+
+        void* ptr = memory + offset + padding;
+        offset += size + padding;
+        return ptr;
+    }
+
+    void reset() {
+        offset = 0; // reuse the whole block
+    }
+
+    ~MemoryArena() {
+        delete[] memory;
+    }
+};
 
 
 } // namespace cpu

@@ -319,6 +319,10 @@ class Bucket{
 		Bucket to_shared() const;
 		Bucket to_cpu() const;
 		Bucket to_device(DeviceType) const;
+        // the following returns if you have a contiguous block of memory that fits into one of the buckets
+        // and is a subset of that bucket of memory
+        // [if it is blocked or strided it automatically returns true]
+        const bool is_sub_memory() const;
 /* #ifdef USE_PARALLEL */
 /* 		static Bucket FromShared(intrusive_ptr<void[]> ptr, uint64_t s, DType d); */
 /* #endif */

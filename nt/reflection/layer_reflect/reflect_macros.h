@@ -1,11 +1,11 @@
-#ifndef _NT_REFLECT_MACROS_H_
-#define _NT_REFLECT_MACROS_H_
+#ifndef _NT_REFLECT_LAYER_MACROS_H_
+#define _NT_REFLECT_LAYER_MACROS_H_
 //this is a libaray for the macros related to reflection
 #include "../../utils/type_traits.h"
 //#include "tie_structure.hpp"
 #include "custom_iterator.hpp"
 #include "custom_iterator_map.hpp"
-#include "../Module.h"
+#include "../../nn/Module.h"
 
 namespace nt{
 namespace reflect{

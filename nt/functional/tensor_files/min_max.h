@@ -25,6 +25,18 @@ Tensor min(std::vector<Tensor>);
 Tensor max(std::vector<Tensor>);
 Tensor min(std::vector<Tensor>, Scalar);
 Tensor max(std::vector<Tensor>, Scalar);
+result_types::max<Tensor, Tensor> max(const Tensor&, utils::optional_list list = nullptr);
+result_types::max<Tensor, Tensor> min(const Tensor&, utils::optional_list list = nullptr);
+Tensor& max_indices(const Tensor& tensor, Tensor& indices, utils::optional_list list = nullptr);
+Tensor& min_indices(const Tensor& tensor, Tensor& indices, utils::optional_list list = nullptr);
+Tensor max_indices(const Tensor& tensor, utils::optional_list list = nullptr);
+Tensor min_indices(const Tensor& tensor, utils::optional_list list = nullptr);
+
+//need to implement the Tensor::min and Tensor::max here as well
+Tensor argmin(Tensor);
+Tensor argmax(Tensor);
+Tensor argmin(Tensor, int64_t dim, bool keepdims=false);
+Tensor argmax(Tensor, int64_t dim, bool keepdims=false);
 
 } // namespace functional
 } // namespace nt

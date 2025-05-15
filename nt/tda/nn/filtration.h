@@ -11,7 +11,10 @@ namespace tda {
 // this is for vector rips
 // other simplex types are planned to be added in the near future
 // k represents the number of simplexes to get
-std::tuple<Tensor, TensorGrad> VRfiltration(const TensorGrad &dist_matrix, int64_t k);
+std::tuple<Tensor, TensorGrad> VRfiltration(const TensorGrad &dist_matrix, int64_t k, double max_radi = -1.0, bool sort=true);
+//this is for a vector metric space where there are multiple distances outputted from a metric
+std::tuple<Tensor, TensorGrad, TensorGrad> VRfiltration(const TensorGrad& dist_matrix1, const TensorGrad& dist_matrix2, int64_t k, double max_radi = -1.0, bool sort = true);
+
 
 } // namespace tda
 } // namespace nt

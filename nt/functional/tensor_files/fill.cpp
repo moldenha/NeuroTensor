@@ -1,6 +1,7 @@
 #include "fill.h"
 #include "../../dtype/ArrayVoid.h"
 #include "../../dtype/ArrayVoid.hpp"
+#include "exceptions.hpp"
 
 namespace nt{
 namespace functional{
@@ -14,9 +15,12 @@ Tensor zeros(SizeRef inp, DType dt){
 }
 
 Tensor zeros_like(const Tensor& t){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
 	if(t.dtype != DType::TensorObj){
 		return zeros(t.shape(), t.dtype);
 	}
+    for(const auto& _t : t)
+        _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
 	Tensor out = Tensor::makeNullTensorArray(t.numel());
 	out = out.view(t.shape());
 	Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
@@ -35,9 +39,12 @@ Tensor ones(SizeRef inp, DType dt){
 }
 
 Tensor ones_like(const Tensor& t){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
 	if(t.dtype != DType::TensorObj){
 		return ones(t.shape(), t.dtype);
 	}
+    for(const auto& _t : t)
+        _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
 	Tensor out = Tensor::makeNullTensorArray(t.numel());
 	out = out.view(t.shape());
 	Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
@@ -54,9 +61,12 @@ Tensor nums(SizeRef inp, const Scalar k, DType dt){
 }
 
 Tensor nums_like(const Tensor& t, const Scalar k){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
 	if(t.dtype != DType::TensorObj){
 		return nums(t.shape(), k, t.dtype);
 	}
+    for(const auto& _t : t)
+        _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
 	Tensor out = Tensor::makeNullTensorArray(t.numel());
 	out = out.view(t.shape());
 	Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());

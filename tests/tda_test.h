@@ -455,11 +455,83 @@ std::vector<std::tuple<nt::Tensor, double, double> > getHomologyGrouping(nt::Ten
 }
 
 
+void displayHomologyGrouping(nt::Tensor& cloud, int64_t& dims, int8_t point){
+    nt::tda::PersistentHomology homologies = nt::tda::PersistentHomology::FromPointCloud(cloud, point, dims);
+    homologies.constructGroups(2); //Max is H1
+    homologies.findHomology();
+    auto homology_groups = homologies.getHomologyGroups();
+    nt::tda::plotPersistentDiagram(homology_groups);
+    matplot::save("homology_diagram_no_weight.png");
+    matplot::show();
+}
+
 void print_homology_group(std::vector<std::tuple<nt::Tensor, double, double> >& group){
     for(auto& tup : group){
         auto [generator, birth, death] = tup;
         std::cout << "\t" << generator << ", birth: "<<birth<<", death: "<<death<<std::endl;
     }
+}
+
+void displayHomologyGrouping(nt::Tensor& cloud, int64_t& dims, int8_t point, nt::Tensor weight){
+    nt::tda::PersistentHomology homologies = nt::tda::PersistentHomology::FromPointCloud(cloud, point, dims);
+    homologies.add_weight(weight);
+    homologies.constructGroups(2); //Max is H1
+    homologies.findHomology();
+    auto homology_groups = homologies.getHomologyGroups();
+    print_homology_group(homology_groups[1]);
+    nt::tda::plotPersistentDiagram(homology_groups);
+    matplot::save("homology_diagram_weighted.png");
+    matplot::show();
+}
+
+
+
+
+
+
+void weighted_tda_test(){
+    int64_t dims = 2;
+    // nt::Tensor cloud = nt::functional::zeros({6, 30, 30}, nt::DType::uint8);
+    // nt::Tensor bools = nt::functional::randbools(cloud.shape(), 0.03); //fill 3% with 1's
+    int8_t point = 1;
+    // cloud[bools] = 1;
+    // nt::Tensor cloud = nt::tda::generate_random_cloud({30, 30});
+    nt::Tensor cloud({30, 30}, nt::DType::int8);
+    cloud << 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+             0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,1,0,1,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+             0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+             1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0;
+    // displayHomologyGrouping(cloud, dims, point);
+    int64_t amt_of_pts = nt::functional::count(cloud == point);
+    nt::Tensor weight = nt::functional::rand(1, 2, {amt_of_pts, amt_of_pts}, nt::DType::Float64);
+    displayHomologyGrouping(cloud, dims, point, weight);
+
 }
 
 
@@ -608,301 +680,11 @@ void persistent_gradient(){
 
 }
 
-void persistent_dist_mat_gradient(){
-    
-    int64_t dims = 2;
-    // nt::Tensor cloud = nt::functional::zeros({6, 30, 30}, nt::DType::uint8);
-    // nt::Tensor bools = nt::functional::randbools(cloud.shape(), 0.03); //fill 3% with 1's
-    int8_t point = 1;
-    // cloud[bools] = 1;
-    nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
-    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 1, 0,
-             0, 0, 1, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 1, 0, 0, 0, 0,
-             1, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 1, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 1, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0;
-
-    
-    nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
-    std::cout << "dist mat: "<<dist_mat<<std::endl;
-    nt::Tensor wanted = nt::functional::rand(0.3, 2.5, dist_mat.shape(), dist_mat.dtype);
-    nt::Tensor grad = dist_mat.tensor - wanted;
-    dist_mat.backward(grad);
-    std::cout << "cloud: " << cloud << std::endl;
-    std::cout << "cloud grad: " << cloud.grad_value() << std::endl;
-    cloud.update();
-    std::cout << "cloud: " << cloud << std::endl;
-
-}
-
-//tests gettingg the gradient of a simplex complex
-void persistent_simplex_complex_gradient(){
-    nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
-    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 1, 0,
-             0, 0, 1, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 1, 0, 0, 0, 0,
-             1, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 1, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 1, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0;
-    nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
-    auto [simplex_complex, radi] = nt::tda::VRfiltration(dist_mat, 3);
-    std::cout <<"radi: "<< radi << std::endl;
-    std::cout << "simplex complex: "<<simplex_complex<<std::endl;
-    //negative values increase the radii
-    //positive values decrease the radii
-    nt::Tensor wanted = nt::functional::rand(1.0, 6.0, radi.shape(), nt::DType::Float32);
-    nt::TensorGrad loss = nt::tda::loss::filtration_loss(radi, wanted);
-    loss.backward();
-    std::cout << "cloud: " << cloud << std::endl;
-    std::cout << "cloud grad: " << cloud.grad_value() << std::endl;
-    cloud.update();
-    std::cout << "cloud: " << cloud << std::endl;
-    std::cout << "wanted: "<<wanted<<std::endl;
-    std::cout << "loss: "<<loss<<std::endl;
-    dist_mat = nt::tda::cloudToDist(cloud, 1);
-    auto [n_simplex_complex, n_radi] = nt::tda::VRfiltration(dist_mat, 3);
-    std::cout << "n_radi: "<<n_radi<<std::endl;
-    std::cout << "n_simplex_complex: "<<n_simplex_complex<<std::endl;
-    std::cout << std::boolalpha << n_radi.is_contiguous() << std::noboolalpha << std::endl;
-}
-
-//tests gettingg the gradient of a simplex complex
-void persistent_boundary_gradient(){
-    nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
-    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 1, 0,
-             0, 0, 1, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 1, 0, 0, 0, 0,
-             1, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 1, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 1, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0;
-    nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
-    auto [simplex_complex_3, radi_3] = nt::tda::VRfiltration(dist_mat, 3);
-    auto [simplex_complex_2, radi_2] = nt::tda::VRfiltration(dist_mat, 2);
-    std::cout <<"radi: "<< radi_3 << std::endl;
-    std::cout <<"radi: "<< radi_2 << std::endl;
-    std::cout << std::boolalpha << radi_3.is_contiguous() << std::noboolalpha << std::endl;
-    float alpha = 10.0;
-    nt::TensorGrad sig_radi_3 = nt::functional::sigmoid(alpha * radi_3);
-    nt::TensorGrad sig_radi_2 = nt::functional::sigmoid(alpha * radi_2);
-    std::cout << "sig_radi_3: "<<sig_radi_3 << std::endl;
-    std::cout << "sig_radi_2: "<<sig_radi_2 << std::endl;
-    auto [x_indexes, y_indexes, boundaries] = 
-            nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
-                                                                         sig_radi_3.tensor, sig_radi_2.tensor);
-
-    nt::utils::throw_exception(x_indexes.size() == y_indexes.size()
-                           && x_indexes.size() == boundaries.size(),
-                            "wrong sizes, $, $, $ ", x_indexes.size(), y_indexes.size(), boundaries.size());
-    // for(size_t i = 0; i < x_indexes.size(); ++i){
-    //     std::cout << "("<<x_indexes[i]<<','<<y_indexes[i]<<"): {"<<boundaries[i]<<','<<(boundaries[i] < 0 ? -1 : 1)<<'}'<<std::endl;
-    // }
-    nt::TensorGrad boundary_grad = sig_radi_2.view(-1, 1) * sig_radi_3;
-    std::cout << "boundary_grad: "<<boundary_grad<<std::endl;
-
-    nt::Tensor mult = nt::functional::zeros(boundary_grad.shape(), nt::DType::Float32);
-    const int64_t& cols = mult.shape()[-1];
-    float* access = reinterpret_cast<float*>(mult.data_ptr());
-    for(size_t i = 0; i < x_indexes.size(); ++i){
-        access[x_indexes[i] * cols + y_indexes[i]] = boundaries[i];
-    }
-    boundary_grad *= mult;
-    std::cout << "boundary_grad: "<<boundary_grad<<std::endl;
-}
-
-//n is the number of points
-std::vector<std::vector<int64_t>> findAllPaths(const nt::Tensor& _laplacian, int64_t startNode) {
-    int64_t n = _laplacian.shape()[0];
-    const float* laplacian = reinterpret_cast<const float*>(_laplacian.data_ptr());
-    std::vector<bool> visited(n, false);
-    std::vector<std::vector<int64_t>> allPaths;  // Vector to store all paths
-    std::queue<std::vector<int64_t>> q;  // Queue to store the current path during BFS
-    visited[startNode] = true;
-    q.push({startNode});
-    
-    while (!q.empty()) {
-        // Get the current path
-        std::vector<int64_t> currentPath = q.front();
-        q.pop();
-        int64_t currentNode = currentPath.back();
-        
-        // Check all neighbors of the current node
-        for (int i = 0; i < n; ++i) {
-            if (!visited[i] && std::abs(laplacian[currentNode * n + i]) > 0.1) {
-                // Mark the node as visited and extend the path
-                visited[i] = true;
-                std::vector<int64_t> newPath = currentPath;
-                newPath.push_back(i);
-                q.push(newPath);
-                
-                // If there are no more unvisited neighbors, save the path
-                allPaths.push_back(newPath);
-            }
-        }
-    }
-    
-    return allPaths;
-}
-
-void persistent_laplacian_gradient(){
-    nt::TensorGrad cloud(nt::tda::generate_random_cloud({9, 9, 9}).to(nt::DType::Float32));
-    // cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //          0, 0, 0, 0, 0, 0, 0, 1, 0,
-    //          0, 0, 1, 0, 0, 0, 0, 0, 0,
-    //          0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //          0, 0, 0, 0, 1, 0, 0, 0, 0,
-    //          1, 0, 0, 0, 0, 0, 0, 0, 0,
-    //          0, 0, 1, 0, 0, 0, 0, 0, 0,
-    //          0, 0, 0, 0, 0, 0, 0, 1, 0,
-    //          0, 0, 0, 0, 0, 0, 0, 0, 0;
-    // nt::TensorGrad cloud(nt::Tensor({30, 30}, nt::DType::Float32));
-    // cloud << 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
-    //          0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,1,0,1,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    //          1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0;
-    nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
-    auto [simplex_complex_3, radi_3] = nt::tda::VRfiltration(dist_mat, 3);
-    auto [simplex_complex_2, radi_2] = nt::tda::VRfiltration(dist_mat, 2);
-    auto [simplex_complex_1, radi_1] = nt::tda::VRfiltration(dist_mat, 1);
-    std::cout <<"radi: "<< radi_3 << std::endl;
-    std::cout <<"radi: "<< radi_2 << std::endl;
-    std::cout <<"radi: "<< radi_1 << std::endl;
-    radi_1 += 1.0; //should be all zeros
-    std::cout << std::boolalpha << radi_3.is_contiguous() << std::noboolalpha << std::endl;
-    float alpha = 2.0;
-    nt::TensorGrad sig_radi_3 = nt::functional::sigmoid(alpha * radi_3);
-    nt::TensorGrad sig_radi_2 = nt::functional::sigmoid(alpha * radi_2);
-    nt::TensorGrad sig_radi_1 = nt::functional::sigmoid(alpha * radi_1);
-    std::cout << "sig_radi_3: "<<sig_radi_3 << std::endl;
-    std::cout << "sig_radi_2: "<<sig_radi_2 << std::endl;
-    std::cout << "sig_radi_1: "<<sig_radi_1 << std::endl;
-    auto [x_indexes_kp1, y_indexes_kp1, boundaries_kp1] = 
-            nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
-                                                                         sig_radi_3.tensor, sig_radi_2.tensor);
-
-   auto [x_indexes_k, y_indexes_k, boundaries_k] = 
-            nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_2, simplex_complex_1,
-                                                                         sig_radi_2.tensor, sig_radi_1.tensor);
-    
 
 
-    // nt::SparseTensor old_boundary_kp1 = nt::tda::compute_boundary_matrix_index(simplex_complex_3, simplex_complex_2);
-    // nt::SparseTensor old_boundary_k = nt::tda::compute_boundary_matrix_index(simplex_complex_2, simplex_complex_1);
 
-    // for(size_t i = 0; i < x_indexes.size(); ++i){
-    //     std::cout << "("<<x_indexes[i]<<','<<y_indexes[i]<<"): {"<<boundaries[i]<<','<<(boundaries[i] < 0 ? -1 : 1)<<'}'<<std::endl;
-    // }
-    int64_t km1 = 6;
-    int64_t kp1 = 15;
-    int64_t k = 14;
-    nt::TensorGrad boundary_kp1 = sig_radi_2.view(-1, 1) * sig_radi_3;
-    nt::TensorGrad boundary_k = sig_radi_1.view(-1, 1) * sig_radi_2;
 
-    {
-        nt::Tensor mult = nt::functional::zeros(boundary_kp1.shape(), nt::DType::Float32);
-        const int64_t& cols = mult.shape()[-1];
-        float* access = reinterpret_cast<float*>(mult.data_ptr());
-        for(size_t i = 0; i < x_indexes_kp1.size(); ++i){
-            access[x_indexes_kp1[i] * cols + y_indexes_kp1[i]] = boundaries_kp1[i];
-        }
-        boundary_kp1 *= mult;
-    }
 
-    {
-        nt::Tensor mult = nt::functional::zeros(boundary_k.shape(), nt::DType::Float32);
-        const int64_t& cols = mult.shape()[-1];
-        float* access = reinterpret_cast<float*>(mult.data_ptr());
-        for(size_t i = 0; i < x_indexes_k.size(); ++i){
-            access[x_indexes_k[i] * cols + y_indexes_k[i]] = boundaries_k[i];
-        }
-        boundary_k *= mult;
-    }
-    boundary_kp1 = boundary_kp1[{nt::my_range(0, k), nt::my_range(0, kp1)}];
-    boundary_k = boundary_k[{nt::my_range(0, km1), nt::my_range(0, k)}];
-
-    
-    
-    
-    // obk -= -1;
-    // obkp1 -= -1;
-    auto delta_up = nt::functional::matmult(boundary_kp1, boundary_kp1, false, true);
-    auto delta_down = nt::functional::matmult(boundary_k, boundary_k, true);
-    auto hodge_laplacian = delta_up + delta_down;
-    std::cout << hodge_laplacian << std::endl;
-    for(int64_t i = 0; i < hodge_laplacian.shape()[0]; ++i){
-        auto all_paths = findAllPaths(hodge_laplacian.tensor, i);
-        for(const auto& path : all_paths){
-            std::cout << "path: ";
-            for(const auto& element : path)
-                std::cout << element<< ' ';
-            std::cout << std::endl;
-        }
-    }
-    
-    //example wanted paths:
-    std::vector<std::vector<int64_t> > wanted_paths({ {1, 2, 5, 6},
-                                        {0, 8, 11, 12},
-                                        {9, 3, 10, 4, 5, 7, 8, 1} });
-
-    nt::Tensor wanted_laplacian = nt::functional::zeros(hodge_laplacian.shape(), nt::DType::Float32);
-    float* begin = reinterpret_cast<float*>(wanted_laplacian.data_ptr());
-    for(const auto& path : wanted_paths){
-        for(size_t i = 0; i < path.size(); ++i){
-            for(size_t j = 0; j < path.size(); ++j){
-                if(j == i) continue;
-                begin[path[i] * wanted_laplacian.shape()[0] + path[j]] = 1;
-                begin[path[j] * wanted_laplacian.shape()[0] + path[i]] = 1;
-            }
-        }
-        
-    }
-    std::cout << "wanted laplacian: "<<wanted_laplacian<<std::endl;
-    nt::Tensor gradient = wanted_laplacian - hodge_laplacian.tensor;
-    wanted_laplacian.fill_diagonal_(0);
-    hodge_laplacian.backward(gradient);
-    std::cout << "point cloud: " << std::endl;
-    std::cout << cloud << std::endl;
-
-    std::cout << "updating..."<<std::endl;
-    cloud.update();
-    std::cout << cloud << std::endl;
-
-}
 
 
 
@@ -1503,13 +1285,13 @@ void cpu_simde_betti_test(){
 }
 
 void persistent_diagram_test(){
-    persistent_laplacian_gradient();
+    // persistent_laplacian_gradient();
     // persistent_simplex_complex_gradient();
     // persistent_pointcloud_2d();
     // unit_test_new_betti(100);
     // cpu_simde_betti_test();
     // unit_simultaneous_test(3);
-    // simultaneous_betti_number_test(); 
+    simultaneous_betti_number_test(); 
 }
 
 

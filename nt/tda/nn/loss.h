@@ -13,6 +13,7 @@ namespace tda{
 namespace loss{
 
 TensorGrad filtration_loss(const TensorGrad& output, const Tensor& target, Scalar epsilon = 1e-5);
+TensorGrad path_loss(const TensorGrad& output, const Tensor& wanted);
 }
 }
 }

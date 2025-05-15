@@ -1,8 +1,8 @@
 #include "Softplus.h"
 #include "../../functional/functional.h"
 #include "../functional.h"
-#include "../layer_reflect/layer_registry.hpp"
-#include "../layer_reflect/reflect_macros.h"
+#include "../../reflection/layer_reflect/layer_registry.hpp"
+#include "../../reflection/layer_reflect/reflect_macros.h"
 
 namespace nt {
 namespace layers {

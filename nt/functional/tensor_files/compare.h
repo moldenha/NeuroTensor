@@ -24,6 +24,10 @@ Tensor greater_than_equal(const Tensor &, Scalar);
 bool all(const Tensor &);
 bool any(const Tensor &);
 bool none(const Tensor &);
+int64_t amount_of(Tensor, Scalar val = 0);
+int64_t count(Tensor);
+
+Tensor where(Tensor);
 
 } // namespace functional
 } // namespace nt

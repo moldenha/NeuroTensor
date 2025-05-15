@@ -1,5 +1,5 @@
-#ifndef _NT_REFLECT_CUSTOM_ITERATOR_HPP_
-#define _NT_REFLECT_CUSTOM_ITERATOR_HPP_
+#ifndef _NT_REFLECT_LAYER_CUSTOM_ITERATOR_HPP_
+#define _NT_REFLECT_LAYER_CUSTOM_ITERATOR_HPP_
 
 #include <vector>
 #include <unordered_set>

@@ -9,6 +9,9 @@ TensorGrad cloudToDist(const TensorGrad& _cloud, Scalar threshold, Scalar grad_l
 //creates a learnable distance matrix from a tensor of points with shape {N,D}
 TensorGrad coordsToDist(const TensorGrad&);
 
+Tensor cloudToDist(const Tensor& _cloud, Scalar threshold, int64_t dims = -1);
+Tensor coordsToDist(const Tensor&);
+
 
 }
 }

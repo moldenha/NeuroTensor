@@ -16,6 +16,7 @@ class ConstScalarRef;
 
 #include <type_traits>
 #include <complex>
+#include <string>
 
 namespace nt{
 namespace dtype_valid_checker_scalar{
@@ -102,6 +103,8 @@ class Scalar{
 
 		template<typename T, std::enable_if_t<std::is_same_v<T, uint_bool_t>, bool> = true>
 		Scalar(T vv);
+        
+        Scalar(std::string);
 
 		bool isComplex() const;
 		bool isFloatingPoint() const;
@@ -109,16 +112,23 @@ class Scalar{
 		bool isBoolean() const;
 		bool isZero() const;
 		bool isNegative() const;
-
-		/* Scalar operator+(const Scalar&) const; */
-		/* Scalar operator-(const Scalar&) const; */
-		/* Scalar operator/(const Scalar&) const; */
-		/* Scalar operator*(const Scalar&) const; */
+        bool isInfinity() const;
+        bool isNan() const;
+        bool isEqual(Scalar) const;
+        Scalar toComplex() const;
+        Scalar toIntegral() const;
+        Scalar toFloatingPoint() const;
+        Scalar toBoolean() const;
+        
+		Scalar operator+(const Scalar&) const;
+		Scalar operator-(const Scalar&) const;
+		Scalar operator/(const Scalar&) const;
+		Scalar operator*(const Scalar&) const;
 		
-		/* Scalar& operator+=(const Scalar&); */
-		/* Scalar& operator-=(const Scalar&); */
-		/* Scalar& operator/=(const Scalar&); */
-		/* Scalar& operator*=(const Scalar&); */
+		Scalar& operator+=(const Scalar&);
+		Scalar& operator-=(const Scalar&);
+		Scalar& operator/=(const Scalar&);
+		Scalar& operator*=(const Scalar&);
 		
 		Scalar& operator=(const Scalar&);
 		Scalar operator-() const;
@@ -133,12 +143,16 @@ class Scalar{
 
 		template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_floating_v<DTypeFuncs::type_to_dtype<T>>, bool> = true>
 		T to() const;
+        
 
 		template<typename T, std::enable_if_t<DTypeFuncs::type_to_dtype<T> == DType::Bool, bool> = true>
 		uint_bool_t to() const;
 		Scalar inverse() const;
 		friend std::ostream& operator<<(std::ostream&, const Scalar&);
 };
+
+static Scalar inf = Scalar("inf");
+static Scalar nan = Scalar("nan");
 
 namespace utils{
 

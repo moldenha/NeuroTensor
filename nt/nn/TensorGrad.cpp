@@ -241,8 +241,9 @@ void TensorGrad::check_children() {
 void TensorGrad::check_self_done(weak_intrusive_ptr<TensorGrad> self) {
     if (this->backwardFunc == nullptr)
         return;
-    if (this->backwardFunc->used())
+    if (this->backwardFunc->used()){
         return;
+    }
     this->check_children();
     if (this->backwardFunc == nullptr)
         return;
@@ -304,10 +305,13 @@ void TensorGrad::run_backward(weak_intrusive_ptr<TensorGrad> self) {
         if (parent->backwardFunc->used())
             continue;
         parent->run_backward(weak_intrusive_ptr<TensorGrad>(parent));
-        if (lock->parents == nullptr)
+
+        if (lock->parents == nullptr){
             break;
-        if (lock->parents->size() == 0)
+        }
+        if (lock->parents->size() == 0){
             break;
+        }
     }
     lock.reset();
     if(self.expired()) return;
@@ -472,7 +476,9 @@ TensorGrad TensorGrad::operator+(const TensorGrad &other) const {
     handle_null_tensors(*this, other);
     TensorGrad result(this->tensor + other.tensor);
     result.do_track_grad = is_tracking_grad(*this, other);
+    // std::cout << "operator + called on tensor grad"<<std::endl;
     result.track_tensors(*this, other);
+    // std::cout << "result parents size is now "<<result.parents->size() << std::endl;
 
     // Define backward function
     result.create_backward_function(
@@ -504,7 +510,7 @@ TensorGrad TensorGrad::operator+(const Scalar other) const {
 
 void TensorGrad::redefine_tracking(
     TensorGrad &tg, const TensorGrad &parent,
-    std::function<void(const Tensor &, intrusive_ptr<TensorGrad> &)> func) {
+    std::function<void(const Tensor &, intrusive_ptr<TensorGrad> &)> func, const char* func_name) {
     if (tg.is_null()) {
         return;
     }
@@ -516,6 +522,7 @@ void TensorGrad::redefine_tracking(
                std::vector<intrusive_ptr<TensorGrad>> &parents) {
             func(grad, parents[0]);
         });
+    tg.backwardFunc->set_name(std::string(func_name));
     // tg.ensure_grads_initialized();
     // this will ensure there is no segmentation faults or anything if a
     // gradient has not been initialized
@@ -885,9 +892,9 @@ TensorGrad &TensorGrad::operator/=(const TensorGrad &other) {
     }
 
     intrusive_ptr<tensor_holder> this_clone =
-        make_intrusive<tensor_holder>(this->tensor.clone());
+        make_intrusive<tensor_holder>(this->tensor.conditional_mutate_clone());
     intrusive_ptr<tensor_holder> other_clone =
-        make_intrusive<tensor_holder>(other.tensor.clone());
+        make_intrusive<tensor_holder>(other.tensor.conditional_mutate_clone());
     this->track_self_mod_tensors(other);
     this->tensor /=
         other_clone->tensor; // faster because I already know it is contiguous
@@ -914,7 +921,7 @@ TensorGrad &TensorGrad::operator/=(const Tensor &other) {
         return *this;
     }
     intrusive_ptr<tensor_holder> other_clone =
-        make_intrusive<tensor_holder>(other.clone());
+        make_intrusive<tensor_holder>(other.conditional_mutate_clone());
     this->track_self_mod_tensors();
     this->tensor /=
         other_clone->tensor; // faster because I already know it is contiguous
@@ -1062,9 +1069,9 @@ TensorGrad &TensorGrad::operator*=(const TensorGrad &other) {
         return *this;
     }
     intrusive_ptr<tensor_holder> this_clone =
-        make_intrusive<tensor_holder>(this->tensor.clone());
+        make_intrusive<tensor_holder>(this->tensor.conditional_mutate_clone());
     intrusive_ptr<tensor_holder> other_clone =
-        make_intrusive<tensor_holder>(other.tensor.clone());
+        make_intrusive<tensor_holder>(other.tensor.conditional_mutate_clone());
     this->track_self_mod_tensors(other);
     this->tensor *=
         other_clone->tensor; // faster because I already know it is contiguous
@@ -1091,7 +1098,7 @@ TensorGrad &TensorGrad::operator*=(const Tensor &other) {
         return *this;
     }
     intrusive_ptr<tensor_holder> other_clone =
-        make_intrusive<tensor_holder>(other.clone());
+        make_intrusive<tensor_holder>(other.conditional_mutate_clone());
     this->track_self_mod_tensors();
     this->tensor *=
         other_clone->tensor; // faster because I already know it is contiguous
@@ -1134,7 +1141,11 @@ std::ostream &operator<<(std::ostream &out, const TensorGrad &tg) {
     if (tg.is_null()) {
         return out << "Null";
     } else {
-        return out << tg.tensor;
+        out << tg.tensor;
+        if(tg.backwardFunc != nullptr){
+            return out << ", grad_fn = " << tg.backwardFunc->get_name();
+        }
+        return out << ", grad_fn = None";
     }
 }
 
@@ -1313,7 +1324,7 @@ TensorGrad &TensorGrad::exp_() {
     // this will save computational time on the way backward
     // because the gradient of exp(x) is exp(x)
     intrusive_ptr<tensor_holder> this_clone =
-        make_intrusive<tensor_holder>(this->tensor.clone());
+        make_intrusive<tensor_holder>(this->tensor.conditional_mutate_clone());
     this->create_bool_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            bool first, intrusive_ptr<tensor_holder> a) {
@@ -1380,7 +1391,7 @@ TensorGrad TensorGrad::contiguous() const {
 
 TensorGrad TensorGrad::clone() const {
     handle_null_tensors(*this);
-    TensorGrad result(this->tensor.clone());
+    TensorGrad result(this->tensor.conditional_mutate_clone());
     if (!is_tracking_grad(*this)) {
         result.do_track_grad = false;
         return std::move(result);
@@ -1395,7 +1406,7 @@ TensorGrad TensorGrad::clone() const {
     return std::move(result);
 }
 
-TensorGrad TensorGrad::pow(size_value_t exponent) const {
+TensorGrad TensorGrad::pow(Scalar exponent) const {
     handle_null_tensors(*this);
     TensorGrad result(this->tensor.pow(exponent));
     if (!is_tracking_grad(*this)) {
@@ -1406,11 +1417,12 @@ TensorGrad TensorGrad::pow(size_value_t exponent) const {
     result.track_tensors(*this);
 
     result.create_backward_function(
-        [&exponent](const Tensor &grad,
+        [exponent](const Tensor &grad,
                     std::vector<intrusive_ptr<TensorGrad>> &parents,
                     intrusive_ptr<tensor_holder> a) {
+            Scalar one(complex_64(1,1));
             parents[0]->grad->tensor +=
-                exponent * a->tensor.pow(exponent - 1) * grad;
+                exponent * a->tensor.pow(exponent - one) * grad;
         },
         *this);
 
@@ -1489,7 +1501,7 @@ TensorGrad &TensorGrad::clip_(Scalar lower, Scalar higher) {
 }
 
 TensorGrad TensorGrad::pad(std::vector<size_value_t> p, const char *mode,
-                           double value) const {
+                           Scalar value) const {
     handle_null_tensors(*this);
     utils::throw_exception(
         p.size() % 2 == 0,
@@ -1522,6 +1534,19 @@ TensorGrad TensorGrad::pad(std::vector<size_value_t> p, const char *mode,
                  std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->grad->tensor += grad[ranges];
         });
+    return std::move(result);
+}
+
+TensorGrad TensorGrad::unpad(std::vector<size_value_t> p) const {
+    TensorGrad result(this->tensor.unpad(p), this->grad_required);
+    if(!is_tracking_grad(*this)){
+        result.do_track_grad = false;
+        return result;
+    }
+    result.track_grad(
+    *this, [p](Tensor& grad){
+        return functional::unpad(grad, p, false);
+    }); 
     return std::move(result);
 }
 
@@ -1837,8 +1862,30 @@ Tensor TensorGrad::grad_value() const {
 }
 
 void TensorGrad::update() {
+    if(this->is_null()) return;
     handle_null_tensors(*this);
     this->tensor -= this->grad->tensor;
+}
+
+void TensorGrad::update_mutable(){
+    if(this->is_null()) return;
+    handle_null_tensors(*this);
+    if(tensor.is_mutable()){update(); return;}
+    utils::throw_exception(!this->backwardFunc || this->backwardFunc->used(),
+                           "Trying to update immutable tensor inside of tensor grad"
+                           "But the backward function has not been used"
+                           "Could still potentially be being used by auto grad");
+    utils::throw_exception(!this->parents || this->parents->size() == 0,
+                           "Trying to update immutable tensor inside of tensor grad"
+                           "But parents are not empty"
+                           "Could still potentially be being used by auto grad");
+    utils::throw_exception(!this->children || this->children->size() == 0,
+                           "Trying to update immutable tensor inside of tensor grad"
+                           "But children are not empty"
+                           "Could still potentially be being used by auto grad");
+    Tensor& grad = this->grad->tensor;
+    this->tensor.force_mutable_function(
+        [&grad](Tensor& self){self -= grad;});
 }
 
 // this function doesn't change any grads

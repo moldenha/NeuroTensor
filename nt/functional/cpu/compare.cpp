@@ -245,6 +245,45 @@ bool _any(const ArrayVoid& a){
 			return std::any_of(begin, end, [](const uint_bool_t& v){return v.value == 1;});});
 }
 
+
+int64_t _amount_of(const ArrayVoid& a, Scalar s){
+    if(a.dtype == DType::Bool){
+		uint_bool_t b = s.to<uint_bool_t>();
+		return a.cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
+				[&b](auto begin, auto end) -> int64_t{
+					int64_t amt = 0;
+					for(;begin != end; ++begin)
+						if(*begin == b){++amt;}
+					return amt;
+				});
+	}
+	return a.cexecute_function<WRAP_DTYPES<NumberTypesL>>(
+			[&s](auto a_begin, auto a_end) -> int64_t{
+				using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
+				value_t ns = s.to<value_t>();
+				int64_t amt = 0;
+				for(;a_begin != a_end; ++a_begin)
+					if(*a_begin == ns){++amt;}
+				return amt;
+			});
+}
+
+int64_t _count(const ArrayVoid& a){
+    if(a.dtype != DType::Bool){
+        throw std::logic_error("expected bools to detect count");
+    }
+	uint_bool_t b = uint_bool_t(true);
+	return a.cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
+			[&b](auto begin, auto end) -> int64_t{
+				int64_t amt = 0;
+				for(;begin != end; ++begin)
+					if(*begin == b){++amt;}
+				return amt;
+			});
+}
+
+
+
 }
 }
 }

@@ -19,6 +19,9 @@ class TensorGrad; // Forward declaration
 #include "../utils/optional_list.h"
 #include <atomic>
 #include "functional_class.h"
+#include "../utils/name_func_macro.h"
+
+
 
 namespace nt{
 
@@ -103,22 +106,37 @@ class intrusive_back_func : public intrusive_ptr_target{
 	private:
 		std::variant<std::monostate, function_type, function_type_b> Func;
         mutable bool _used;
+        std::string name;
 	public:
 		intrusive_back_func()
-			:Func(std::monostate{}), _used(false)
+			:Func(std::monostate{}), _used(false), name("NoneBackward")
 		{utils::throw_exception(Func.index() == 0, "Loaded a function type into backward function and index was expected to be 0 but got $", Func.index());}
-		intrusive_back_func(function_type func)
-			:Func(func), _used(false)
-		{utils::throw_exception(Func.index() == 1, "Loaded a function type into backward function and index was expected to be 1 but got $", Func.index());}
-		intrusive_back_func(function_type_b func)
-			:Func(func), _used(false)
-		{utils::throw_exception(Func.index() == 2, "Loaded a function type into backward function and index was expected to be 2 but got $", Func.index());}
+		intrusive_back_func(std::string _name)
+			:Func(std::monostate{}), _used(false), name(_name+"Backward")
+		{
+        utils::throw_exception(Func.index() == 0, "Loaded a function type into backward function and index was expected to be 0 but got $", Func.index());
+        name[0] = std::toupper(name[0]);
+        }
+		intrusive_back_func(function_type func, std::string _name)
+			:Func(func), _used(false), name(_name+"Backward")
+		{
+        utils::throw_exception(Func.index() == 1, "Loaded a function type into backward function and index was expected to be 1 but got $", Func.index());
+        name[0] = std::toupper(name[0]);
+        }
+		intrusive_back_func(function_type_b func, std::string _name)
+			:Func(func), _used(false), name(_name + "Backward")
+		{
+        utils::throw_exception(Func.index() == 2, "Loaded a function type into backward function and index was expected to be 2 but got $", Func.index());
+        name[0] = std::toupper(name[0]);
+        }
 		/* inline function_type& get() noexcept {return Func;} */
 		/* inline const function_type& get() const noexcept {return Func;} */
 		inline void set(function_type func) noexcept {Func = func; _used = false;}
 		inline void set(function_type_b func) noexcept {Func = func; _used = false;}
         inline void set(std::nullptr_t) noexcept {Func = std::monostate{}; _used = false;}
-		// inline void clear() noexcept {Func = std::monostate{}; _has_been_cleared = true;}
+        inline void set_name(std::string _name) noexcept {name = _name + "Backward"; name[0] = std::toupper(name[0]);}
+		inline const std::string& get_name() const noexcept {return name;}
+        // inline void clear() noexcept {Func = std::monostate{}; _has_been_cleared = true;}
 		inline size_t index() const noexcept {return Func.index();}
         inline const bool& used() const noexcept {return _used;}
         inline void un_use() const noexcept {_used = false;}
@@ -198,11 +216,11 @@ class TensorGrad : public intrusive_ptr_target{
     friend class functional::TensorGrad_Functional_Class;
 
 	inline static intrusive_ptr<tensor_holder> make_tensor_holder(const TensorGrad& t){
-		return nt::intrusive_ptr<tensor_holder>::make(t.tensor.clone());
+		return nt::intrusive_ptr<tensor_holder>::make(t.tensor.conditional_mutate_clone());
 	}
 	inline static intrusive_ptr<tensor_holder> make_tensor_holder(intrusive_ptr<tensor_holder> t){return t;}
 	inline static intrusive_ptr<tensor_holder> make_tensor_holder(const Tensor& t){
-		return intrusive_ptr<tensor_holder>::make(t.clone());
+		return intrusive_ptr<tensor_holder>::make(t.conditional_mutate_clone());
 	}
 	
 	// template<typename... Args>
@@ -230,13 +248,31 @@ class TensorGrad : public intrusive_ptr_target{
     //function designed to track view and stride changes of gradient
     //[when memory remains unmodified]
     template<typename OutOperator>
-    void track_grad(const TensorGrad& t, OutOperator&& op);
+    void track_grad(const TensorGrad& t, OutOperator&& op, const char* func_name = __NT_FUNCTION_NAME__);
     //create backward function for output
-    template<typename backward_func, typename... Args>
-    void create_backward_function(backward_func&& func, Args&&... args);
+    template<typename backward_func>
+    void create_backward_function(backward_func&& func, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1>
+    void create_backward_function(backward_func&& func, Arg1&& arg1, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1, typename Arg2>
+    void create_backward_function(backward_func&& func, Arg1&& arg1, Arg2&& arg2, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1, typename Arg2, typename Arg3>
+    void create_backward_function(backward_func&& func, Arg1&& arg1, Arg2&& arg2, Arg3&& arg3, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+    void create_backward_function(backward_func&& func, Arg1&& arg1, Arg2&& arg2, Arg3&& arg3, Arg4&& arg4, const char* func_name = __NT_FUNCTION_NAME__);
     //for when knowing if this was the first tensor is important
-    template<typename backward_func, typename... Args>
-    void create_bool_backward_function(backward_func&& func, Args&&... args);
+    template<typename backward_func>
+    void create_bool_backward_function(backward_func&& func, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1>
+    void create_bool_backward_function(backward_func&& func, Arg1&& arg1, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1, typename Arg2>
+    void create_bool_backward_function(backward_func&& func, Arg1&& arg1, Arg2&& arg2, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1, typename Arg2, typename Arg3>
+    void create_bool_backward_function(backward_func&& func, Arg1&& arg1, Arg2&& arg2, Arg3&& arg3, const char* func_name = __NT_FUNCTION_NAME__);
+    template<typename backward_func, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+    void create_bool_backward_function(backward_func&& func, Arg1&& arg1, Arg2&& arg2, Arg3&& arg3, Arg4&& arg4, const char* func_name = __NT_FUNCTION_NAME__);
+    // template<typename backward_func, typename... Args, const char* func_name = __NT_FUNCTION_NAME__>
+    // void create_bool_backward_function(backward_func&& func, Args&&... args);
 
     void delete_parents();
     void clear_parents();
@@ -440,12 +476,13 @@ class TensorGrad : public intrusive_ptr_target{
 		result_types::max<TensorGrad, Tensor> max(size_value_t dim) const;
 		TensorGrad exp() const;
 		TensorGrad& exp_();
-		TensorGrad pow(size_value_t) const;
+		TensorGrad pow(Scalar) const;
 		TensorGrad& inverse_();
 		TensorGrad inverse() const;
 		TensorGrad clip(Scalar, Scalar) const;
 		TensorGrad& clip_(Scalar, Scalar);
-		TensorGrad pad(std::vector<size_value_t> p, const char* mode = "constant", double value = 0.0) const;
+		TensorGrad pad(std::vector<size_value_t> p, const char* mode = "constant", Scalar value = 0.0) const;
+		TensorGrad unpad(std::vector<size_value_t> p) const;
 		TensorGrad flip(size_value_t) const;
 		TensorGrad flip() const;
 		TensorGrad flip_() const;
@@ -478,7 +515,8 @@ class TensorGrad : public intrusive_ptr_target{
         void ensure_grads_initialized();
 		Tensor grad_value() const;
 		void update(); // updates current values based on gradient
-		static void redefine_tracking(TensorGrad&, const TensorGrad&, std::function<void(const Tensor&, intrusive_ptr<TensorGrad>&)>);
+		void update_mutable(); // updates current values based on gradient even if the tensor is immutable
+        static void redefine_tracking(TensorGrad&, const TensorGrad&, std::function<void(const Tensor&, intrusive_ptr<TensorGrad>&)>, const char* func_name = __NT_FUNCTION_NAME__);
         //the underlying tensor, the function to update the gradient, the parents
         template<typename... Args>
         static TensorGrad make_tensor_grad(Tensor&, std::function<void(const Tensor&, std::vector<intrusive_ptr<TensorGrad>>&)>, const TensorGrad&, Args&&...);

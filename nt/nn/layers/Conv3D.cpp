@@ -1,8 +1,8 @@
 #include "Conv3D.h"
 #include "../../functional/functional.h"
 #include "../functional.h"
-#include "../layer_reflect/layer_registry.hpp"
-#include "../layer_reflect/reflect_macros.h"
+#include "../../reflection/layer_reflect/layer_registry.hpp"
+#include "../../reflection/layer_reflect/reflect_macros.h"
 
 namespace nt {
 namespace layers {
@@ -23,6 +23,11 @@ Conv3D::Conv3D(int64_t in_channels, int64_t out_channels,
                            "Expected in channels to be divisible by groups");
     utils::THROW_EXCEPTION(in_channels % groups == 0,
                            "Expected in channels to be divisible by groups");
+    if(use_bias){
+        this->register_parameter("Bias", Bias);
+        Bias.tensor.set_mutability(false);
+    }
+    Weight.tensor.set_mutability(false);
 }
 
 TensorGrad Conv3D::forward(TensorGrad x) {
@@ -42,4 +47,4 @@ TensorGrad Conv3D::forward(TensorGrad x) {
 } // namespace nt
 
 _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Conv3D, nt__layers__Conv3D, use_bias,
-                               groups, in_channels, out_channels, Weight, Bias)
+                               groups, in_channels, out_channels, Weight)

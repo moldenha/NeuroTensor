@@ -7,21 +7,15 @@
 #include "memory/iterator.h"
 #include "refs/SizeRef.h"
 
-#include <_types/_uint32_t.h>
 #include <functional>
-// #include <i386/types.h>
 #include <algorithm>
 #include <set>
-#include <ios>
-#include <memory.h>
 #include <memory>
 #include <numeric>
 #include <ratio>
-#include <sys/_types/_int64_t.h>
 #include <sys/wait.h>
 
 #include <cassert>
-// #include <format>
 #include "dtype/ArrayVoid.hpp"
 #include "dtype/Scalar.h"
 #include "mp/Threading.h"
@@ -31,9 +25,9 @@
 #include "utils/utils.h"
 #include <cmath>
 #include <set>
-#include <sys/types.h>
 #include <type_traits>
 #include <vector>
+#include "utils/macros.h"
 
 #ifdef USE_PARALLEL
 #include <tbb/parallel_for.h>
@@ -41,7 +35,44 @@
 #include <unistd.h>
 #endif
 
-#define assertm(exp, msg) assert(((void)msg, exp))
+#define _NT_HANDLE_NULL_TENSORS_NON_EMPTY_4_(T1, T2, T3, T4) \
+    utils::THROW_EXCEPTION(!is_null() && !T4.is_null() && !T3.is_null() && !T2.is_null() && !T1.is_null(), \
+                           "Cannot perform operation $"\
+                           " on a null tensor", __NT_FUNCTION_NAME__);
+
+#define _NT_HANDLE_NULL_TENSORS_NON_EMPTY_3_(T1, T2, T3) \
+    utils::THROW_EXCEPTION(!is_null() && !T3.is_null() && !T2.is_null() && !T1.is_null(), \
+                           "Cannot perform operation $"\
+                           " on a null tensor", __NT_FUNCTION_NAME__);
+
+#define _NT_HANDLE_NULL_TENSORS_NON_EMPTY_2_(T1, T2) \
+    utils::THROW_EXCEPTION(!is_null() && !T2.is_null() && !T1.is_null(), \
+                           "Cannot perform operation $"\
+                           " on a null tensor", __NT_FUNCTION_NAME__);
+
+
+#define _NT_HANDLE_NULL_TENSORS_NON_EMPTY_1_(T1) \
+    utils::THROW_EXCEPTION(!is_null() && !T1.is_null(), \
+                           "Cannot perform operation $"\
+                           " on a null tensor", __NT_FUNCTION_NAME__);
+
+#define _NT_HANDLE_NULL_TENSORS_NON_EMPTY_0_() \
+    utils::THROW_EXCEPTION(!is_null(), \
+                           "Cannot perform operation $"\
+                           " on a null tensor", __NT_FUNCTION_NAME__);
+
+
+
+#define _NT_HANDLE_NULL_TENSORS_EMPTY_1(...) utils::THROW_EXCEPTION(!is_null(), "Cannot perform operation $" \
+                                                                        " on a null tensor", __NT_FUNCTION_NAME__);
+#define _NT_HANDLE_NULL_TENSORS_NON_EMPTY_SELECT_(_1, _2, _3, _4, NAME, ...) NAME
+#define _NT_HANDLE_NULL_TENSORS_EMPTY_0(...) _NT_HANDLE_NULL_TENSORS_NON_EMPTY_SELECT_(__VA_ARGS__, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_4_, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_3_, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_2_, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_1_, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_0_)(__VA_ARGS__)
+
+#define __NT_HANDLE_NULL_TENSORS__(...) _NT_GLUE_(_NT_HANDLE_NULL_TENSORS_EMPTY_, _NT_IS_EMPTY_(__VA_ARGS__))(__VA_ARGS__);
+
+#define __NT_HANDLE_MUTABILITY__() \
+    utils::THROW_EXCEPTION(_is_mutable, "Cannot perform operation $" \
+                                        " on an immutable tensor", __NT_FUNCTION_NAME__);
 
 namespace nt {
 
@@ -54,18 +85,18 @@ DType specify_dtype_from_scalar(const Scalar &s) {
 }
 
 Tensor::Tensor(DType dt)
-    : _vals(1, dt), _total_size(1), _size({1}), dtype(dt), sub_tensor(false),
-      stored_strides(nullptr) {}
+    : _vals(1, dt), _total_size(1), _size({1}), dtype(dt),
+      stored_strides(nullptr), _is_mutable(true) {}
 
 Tensor::Tensor(SizeRef v, DType dt)
     : _vals(v.unsigned_multiply(), dt), _size(std::move(v)), dtype(dt),
-      sub_tensor(false), stored_strides(nullptr) {
+      stored_strides(nullptr), _is_mutable(true) {
     _total_size = _vals.Size();
 }
 
 Tensor::Tensor(ArrayVoid ptr, SizeRef v)
-    : _vals(ptr), _size(std::move(v)), sub_tensor(true), dtype(ptr.dtype),
-      _total_size(ptr.Size()), stored_strides(nullptr) {
+    : _vals(ptr), _size(std::move(v)), dtype(ptr.dtype),
+      _total_size(ptr.Size()), stored_strides(nullptr), _is_mutable(true) {
     /* std::cout << "setting dtype"<<std::endl; */
     _total_size = _vals.Size();
     dtype = _vals.dtype;
@@ -73,8 +104,8 @@ Tensor::Tensor(ArrayVoid ptr, SizeRef v)
 }
 Tensor::Tensor(std::string_view _sv)
     : _vals(_sv.size(), DType::uint8),
-      _size({static_cast<SizeRef::value_type>(_sv.size())}), sub_tensor(false),
-      dtype(DType::uint8), _total_size(_sv.size()), stored_strides(nullptr) {
+      _size({static_cast<SizeRef::value_type>(_sv.size())}),
+      dtype(DType::uint8), _total_size(_sv.size()), stored_strides(nullptr), _is_mutable(true) {
     char *begin = reinterpret_cast<char *>(data_ptr());
     std::transform(_sv.cbegin(), _sv.cend(), begin,
                    [](const char &v) { return v; });
@@ -82,27 +113,22 @@ Tensor::Tensor(std::string_view _sv)
 
 Tensor::Tensor(std::nullptr_t)
     : dtype(nt::DType::Float32), _vals(nullptr), _size(nullptr), _total_size(0),
-      stored_strides(nullptr), sub_tensor(false) {}
+      stored_strides(nullptr), _is_mutable(false) {}
 
-/* Tensor::Tensor(ArrayVoid ptr, std::shared_ptr<SizeRef> v) */
-/* 	:_vals(ptr), _size(v), sub_tensor(true), dtype(ptr.dtype) */
-/* { */
-/* 	_total_size = _vals.Size(); */
-/* } */
 
 Tensor::Tensor(const Tensor &t)
     : _vals(t._vals), _total_size(t._total_size), _size(t._size),
-      sub_tensor(false), dtype(t.dtype), stored_strides(t.stored_strides) {}
+      dtype(t.dtype), stored_strides(t.stored_strides), _is_mutable(t._is_mutable) {}
 
 Tensor::Tensor(Tensor &&t)
     : _vals(std::move(t._vals)), _total_size(t._total_size),
-      _size(std::move(t._size)), sub_tensor(false), dtype(t.dtype),
-      stored_strides(std::move(t.stored_strides)) {}
+      _size(std::move(t._size)), dtype(t.dtype),
+      stored_strides(std::move(t.stored_strides)), _is_mutable(t._is_mutable) {}
 
 Tensor::Tensor(Scalar s)
     : _vals(1, specify_dtype_from_scalar(s)), _total_size(1), _size({1}),
-      sub_tensor(false), dtype(specify_dtype_from_scalar(s)),
-      stored_strides(nullptr) {
+      dtype(specify_dtype_from_scalar(s)),
+      stored_strides(nullptr), _is_mutable(true){
     if (s.isZero()) {
         _vals.fill_(0);
     } else {
@@ -110,29 +136,13 @@ Tensor::Tensor(Scalar s)
     }
 }
 
-/* template<std::size_t N> */
-/* Tensor::Tensor(typename utils::NestedInitializerLists_type<Scalar, N>::type
- * v, DType dt) */
-/* 	:_vals(SizeRef(utils::aquire_shape<Scalar, N>(v)).multiply(), dt), */
-/* 	_size(std::make_unique<SizeRef>(utils::aquire_shape<Scalar, N>(v))), */
-/* 	sub_tensor(false), */
-/* 	dtype(dt) */
-/* { */
-/* 	_total_size = _vals.Size(); */
-/* 	_vals.execute_function([&v](auto& begin, auto& end){ */
-/* 				using value_type = typename
- * std::remove_const<typename decltype(begin)::value_type>::type; */
-/* 				utils::flatten_func<N, Scalar>(v, [&begin](const
- * Scalar& a){*begin = a.to<value_type>();}); */
-/* 			}); */
-/* } */
+
 
 /* template<> */
 /* Tensor::Tensor(typename utils::NestedInitializerLists_type<Scalar, 1>::type
  * v, DType dt) */
 /* 	:_vals(SizeRef(utils::aquire_shape<Scalar, 1>(v)).multiply(), dt), */
 /* 	_size(std::make_unique<SizeRef>(utils::aquire_shape<Scalar, 1>(v))), */
-/* 	sub_tensor(false), */
 /* 	dtype(dt) */
 /* { */
 /* 	_total_size = _vals.Size(); */
@@ -169,14 +179,14 @@ Tensor::Tensor(Scalar s)
  * 11>::type, DType); */
 
 void Tensor::swap(Tensor &other) {
+    // utils::throw_exception(_is_mutable && other._is_mutable,
+    //                     "Cannot swap immutable tensors");
     _vals.swap(other._vals);
     std::swap(_total_size, other._total_size);
     _size.swap(other._size);
-    const bool ob = other.sub_tensor;
-    const_cast<bool &>(other.sub_tensor) = sub_tensor;
-    const_cast<bool &>(sub_tensor) = ob;
     std::swap(dtype, other.dtype);
     std::swap(stored_strides, other.stored_strides);
+    std::swap(_is_mutable, other._is_mutable);
 }
 
 Tensor &Tensor::operator=(const Tensor &t) {
@@ -186,8 +196,10 @@ Tensor &Tensor::operator=(const Tensor &t) {
         _total_size = t._total_size;
         dtype = t.dtype;
         stored_strides = t.stored_strides;
+        _is_mutable = t._is_mutable;
         return *this;
     }
+    __NT_HANDLE_MUTABILITY__();
     if (shape() == t.shape() && dtype == t.dtype) {
         _vals.transform_function([](auto &a, auto &b) { return b; }, t._vals);
         return *this;
@@ -210,16 +222,28 @@ Tensor &Tensor::set_(const Tensor &t) {
     utils::THROW_EXCEPTION(t.shape() == shape(),
                            "Expected shape to be $ but got shape $", shape(),
                            t.shape());
+    __NT_HANDLE_NULL_TENSORS__(t);
+    __NT_HANDLE_MUTABILITY__();
     _vals.transform_function([](auto &a, auto &b) { return b; }, t._vals);
     return *this;
 }
 
 Tensor &Tensor::operator=(Tensor &&t) {
-    if (dtype == DType::TensorObj && sub_tensor && _total_size == 1) {
+    if(is_null()){
+        _vals = std::move(t._vals);
+        _size = std::move(t._size);
+        dtype = t.dtype;
+        _total_size = t._total_size;
+        stored_strides = std::move(t.stored_strides);
+        _is_mutable = t._is_mutable;
+        return *this;
+    }
+    if (dtype == DType::TensorObj && this->is_sub_tensor() && _total_size == 1) {
         *reinterpret_cast<Tensor *>(data_ptr()) = std::move(t);
         return *this;
     }
-
+    // __NT_HANDLE_NULL_TENSORS__(t);
+    __NT_HANDLE_MUTABILITY__();
     _vals = std::move(t._vals);
     _size = std::move(t._size);
     dtype = t.dtype;
@@ -231,16 +255,23 @@ Tensor &Tensor::operator=(Tensor &&t) {
 Tensor &Tensor::operator++() { return add_(1); }
 
 Tensor &Tensor::operator=(Scalar val) {
+    utils::THROW_EXCEPTION(_is_mutable,
+                           "Cannot set immutable tensor");
+    utils::THROW_EXCEPTION(!is_null(), "Cannot set null tensor");
     _vals = (val);
     return *this;
 }
 
 Tensor &Tensor::operator+=(Scalar val) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     _vals += val;
     return *this;
 }
 
 Tensor &Tensor::operator+=(const Tensor &val) {
+    __NT_HANDLE_NULL_TENSORS__(val);
+    __NT_HANDLE_MUTABILITY__();
     if (val.numel() == 1 && val.dtype != DType::TensorObj) {
         return (*this) += val.toScalar();
     }
@@ -248,11 +279,15 @@ Tensor &Tensor::operator+=(const Tensor &val) {
 }
 
 Tensor &Tensor::operator-=(Scalar val) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     _vals -= val;
     return *this;
 }
 
 Tensor &Tensor::operator-=(const Tensor &val) {
+    __NT_HANDLE_NULL_TENSORS__(val);
+    __NT_HANDLE_MUTABILITY__();
     if (val.numel() == 1 && val.dtype != DType::TensorObj) {
         return (*this) -= val.toScalar();
     }
@@ -260,11 +295,13 @@ Tensor &Tensor::operator-=(const Tensor &val) {
 }
 
 Tensor Tensor::operator+(Scalar val) const {
+    __NT_HANDLE_NULL_TENSORS__();
     Tensor outp(_vals + val, shape());
     return std::move(outp);
 }
 
 Tensor Tensor::operator+(const Tensor &val) const {
+    __NT_HANDLE_NULL_TENSORS__(val);
     if (val.numel() == 1 && val.dtype != DType::TensorObj) {
         return (*this) + val.toScalar();
     }
@@ -275,11 +312,13 @@ Tensor Tensor::operator+(const Tensor &val) const {
 // std::move(outp);\r}
 
 Tensor Tensor::operator*(Scalar val) const {
+    __NT_HANDLE_NULL_TENSORS__();
     Tensor output(_vals * val, shape());
     return std::move(output);
 }
 
 Tensor Tensor::operator*(const Tensor &a) const {
+    __NT_HANDLE_NULL_TENSORS__(a);
     if (a.numel() == 1 && a.dtype != DType::TensorObj) {
         return (*this) * a.toScalar();
     }
@@ -288,11 +327,15 @@ Tensor Tensor::operator*(const Tensor &a) const {
 
 // s/;/{\r\t_multiply(val);\r\treturn *this;\r}
 Tensor &Tensor::operator*=(Scalar val) {
+    __NT_HANDLE_MUTABILITY__();
+    __NT_HANDLE_NULL_TENSORS__();
     _vals *= val;
     return *this;
 }
 
 Tensor &Tensor::operator*=(const Tensor &a) {
+    __NT_HANDLE_NULL_TENSORS__(a);
+    __NT_HANDLE_MUTABILITY__();
     if (a.numel() == 1 && a.dtype != DType::TensorObj) {
         return (*this) *= a.toScalar();
     }
@@ -304,18 +347,22 @@ Tensor &Tensor::operator*=(const Tensor &a) {
 // s/;/{\r\tTensor outp = this->contiguous();\r\toutp._subtract(val);\r\treturn
 // std::move(outp);\r}
 Tensor Tensor::operator-(Scalar val) const {
+    __NT_HANDLE_NULL_TENSORS__();
     return Tensor(_vals - val, shape());
 }
 
 Tensor Tensor::operator-(const Tensor &val) const {
+    __NT_HANDLE_NULL_TENSORS__(val);
     return functional::subtract(*this, val);
 }
 
 Tensor Tensor::operator/(Scalar val) const {
+    __NT_HANDLE_NULL_TENSORS__();
     return Tensor(_vals / val, shape());
 }
 
 Tensor Tensor::operator/(const Tensor &val) const {
+    __NT_HANDLE_NULL_TENSORS__(val);
     if (val.numel() == 1 && val.dtype != DType::TensorObj) {
         return (*this) / val.toScalar();
     }
@@ -323,11 +370,15 @@ Tensor Tensor::operator/(const Tensor &val) const {
 }
 
 Tensor &Tensor::operator/=(Scalar val) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     _vals /= val;
     return *this;
 }
 
 Tensor &Tensor::operator/=(const Tensor &val) {
+    __NT_HANDLE_NULL_TENSORS__(val);
+    __NT_HANDLE_MUTABILITY__();
     if (val.numel() == 1 && val.dtype != DType::TensorObj) {
         return (*this) /= val.toScalar();
     }
@@ -354,6 +405,7 @@ Tensor Tensor::operator>(const Tensor &val) const {return functional::greater_th
 Tensor Tensor::operator<(const Tensor &val) const {return functional::less_than(*this, val);}
 
 Tensor Tensor::contiguous() const {
+    __NT_HANDLE_NULL_TENSORS__();
     if (is_contiguous())
         return *this;
     /* std::copy((const float*)_vals.get(), (const float*)(_vals.get() +
@@ -361,11 +413,23 @@ Tensor Tensor::contiguous() const {
     return Tensor(_vals.contiguous(), _size);
 }
 
-Tensor Tensor::clone() const { return Tensor(_vals.clone(), _size); }
+Tensor Tensor::clone() const { __NT_HANDLE_NULL_TENSORS__(); return Tensor(_vals.clone(), _size); }
+Tensor Tensor::conditional_mutate_clone() const {return this->_is_mutable ? clone() : *this;}
+
+//this function is really in place to make the user fully aware they are potentially altering a tensor
+//that has been marked as immutable
+Tensor& Tensor::force_mutable_function(std::function<void(Tensor&)> func){
+    if(this->_is_mutable){func(*this); return *this;}
+    this->_is_mutable = true;
+    func(*this);
+    this->_is_mutable = false;
+    return *this;
+}
 
 const size_t Tensor::dims() const { return shape().size(); }
 
 template <typename T> T &Tensor::item() {
+    __NT_HANDLE_NULL_TENSORS__();
     assert(_total_size == 1);
     T *casted = reinterpret_cast<T *>(data_ptr());
     return *(casted);
@@ -434,6 +498,7 @@ template const float128_t &Tensor::item<float128_t>() const;
 
 template<typename T>
 T& Tensor::item(const std::vector<size_value_t>& vec){
+    __NT_HANDLE_NULL_TENSORS__();
     if(vec.size() == 0){return item<T>();}
     utils::throw_exception(vec.size() <= dims(), "Expected to get at most $ indices for item but got $", dims(), vec.size());
 
@@ -482,6 +547,7 @@ template float128_t &Tensor::item<float128_t>(const std::vector<Tensor::size_val
 
 template<typename T>
 const T& Tensor::item(const std::vector<size_value_t>& vec) const{
+    __NT_HANDLE_NULL_TENSORS__();
     if(vec.size() == 0){return item<T>();}
     utils::throw_exception(vec.size() <= dims(), "Expected to get at most $ indices for item but got $", dims(), vec.size());
 
@@ -529,6 +595,7 @@ template const float128_t &Tensor::item<float128_t>(const std::vector<Tensor::si
 #endif
 
 Scalar Tensor::toScalar() const {
+    __NT_HANDLE_NULL_TENSORS__();
     switch (dtype) {
     case DType::Integer:
         return Scalar(reinterpret_cast<const int32_t *>(_vals.data_ptr())[0]);
@@ -583,240 +650,11 @@ Scalar Tensor::toScalar() const {
 
 const SizeRef &Tensor::shape() const { return _size; }
 
-Tensor Tensor::operator[](size_value_t x) {
-    x = x < 0 ? x + dims() : x;
-    uint64_t nx = static_cast<uint64_t>(x);
-    if (_total_size == 1) {
-        utils::THROW_EXCEPTION(
-            x == 0,
-            "\nRuntimeError: Expected singleton to have indexed "
-            "of at most $ but instead got $",
-            0, x);
-        return *this;
-    }
+Tensor Tensor::operator[](size_value_t x) {return functional::at(*this, x);}
+const Tensor Tensor::operator[](size_value_t x) const { return functional::at(*this, x);}
+Tensor Tensor::operator[](const Tensor &t) const { return functional::at(*this, t);}
 
-    // I do really like the assertion below
-    // assert(x < shape()[0]);
-    utils::THROW_EXCEPTION(
-        x < shape()[0], "RuntimeError: Expected x to be less than $ but got $",
-        shape()[0], x);
-    /* if(dims() == 1 && dtype == DType::TensorObj) */
-    /* 	return reinterpret_cast<Tensor*>(data_ptr())[x]; */
-    if (dims() == 1) {
-        return Tensor(_vals.share_array(x, 1), SizeRef({1}));
-        /* std::cout<<"dims 1"<<std::endl; */
-        /* std::cout << n_size.multiply()<<std::endl; */
-        /* std::cout << n_size<<std::endl; */
-        /* return Tensor(_vals.share_array( */
-    }
-
-    SizeRef n_size = shape().pop_front();
-    uint64_t mult = static_cast<uint64_t>(n_size.multiply());
-    return Tensor(_vals.share_array(nx * mult, mult), std::move(n_size));
-    // return Tensor(_vals.share_array(nx * mult, mult), std::move(n_size));
-}
-
-const Tensor Tensor::operator[](size_value_t x) const {
-    x = x < 0 ? x + dims() : x;
-    uint64_t nx = static_cast<uint64_t>(x);
-    if (_total_size == 1) {
-        utils::THROW_EXCEPTION(
-            x == 0,
-            "\nRuntimeError: Expected singleton to have indexed "
-            "of at most $ but instead got $",
-            0, x);
-        return *this;
-    }
-
-    utils::THROW_EXCEPTION(
-        x < shape()[0], "RuntimeError: Expected x to be less than $ but got $",
-        shape()[0], x);
-    /* if(dims() == 1 && dtype == DType::TensorObj) */
-    /* 	return reinterpret_cast<const Tensor*>(data_ptr())[x]; */
-    if (dims() == 1) {
-        return Tensor(_vals.share_array(x, 1), SizeRef({1}));
-    }
-
-    SizeRef n_size = shape().pop_front();
-    uint64_t mult = static_cast<uint64_t>(n_size.multiply());
-    return Tensor(_vals.share_array(nx * mult, mult), std::move(n_size));
-}
-
-
-Tensor Tensor::operator[](const Tensor &t) const {
-    utils::THROW_EXCEPTION(
-        t.dtype == DType::Bool || t.dtype == DType::TensorObj || t.dtype == DType::int64,
-        "RuntimeError: expected DType Bool, TensorObj, or int64 but got $", t.dtype);
-    if (t.dtype == DType::TensorObj) {
-        //if it is operations of tensors of tensors, then jus repeat the operation
-        if(dtype == DType::TensorObj){
-            Tensor output = Tensor::makeNullTensorArray(numel());
-            Tensor* ts_begin = reinterpret_cast<Tensor*>(output.data_ptr());
-            Tensor* ts_end = ts_begin + numel();
-            const Tensor* begin = reinterpret_cast<const Tensor*>(data_ptr());
-            const Tensor* t_begin = reinterpret_cast<const Tensor*>(t.data_ptr());
-            for(;ts_begin != ts_end; ++ts_begin, ++begin, ++t_begin)
-                *ts_begin = (*begin)[*t_begin];
-            return std::move(output);
-        }
-        utils::THROW_EXCEPTION(
-            t.is_contiguous(),
-            "RuntimeError: Expected indexing tensor to be contiguous");
-        utils::THROW_EXCEPTION(
-            t.numel() == dims(),
-            "Expected indexing tensor to have $ tensors but had $", dims(),
-            t.numel());
-        ArrayVoid my_vals = _vals.bucket_all_indices();
-        const Tensor *begin = reinterpret_cast<const Tensor *>(t.data_ptr());
-        const Tensor *end = begin + t.numel();
-        const Tensor *begin_cpy = begin;
-        for (; begin != end; ++begin)
-            utils::THROW_EXCEPTION(
-                begin->dtype == DType::int64 && begin->is_contiguous(),
-                "Expected indexing tensor to have dtype int64 but got $ and expected to be contiguous",
-                begin->dtype);
-        begin = begin_cpy;
-
-        // making the strides for indexing:
-        const std::vector<size_value_t> s = strides();
-        std::vector<const size_value_t> ns;
-        for (size_value_t i = 0; i < s.size(); ++i)
-            ns.emplace_back(s[i]);
-
-        // keeping track of each int64_t pointer for the indexing
-        const size_value_t *ptrs[dims()];
-        size_value_t i = 0;
-        for (; begin != end; ++begin, ++i) {
-            ptrs[i] = reinterpret_cast<const int64_t *>(begin->data_ptr());
-        }
-        // making a new ArrayVoid to keep track of all the indices
-        const size_value_t &n_size = begin_cpy->numel();
-        ArrayVoid new_vals = _vals.new_strides(n_size);
-        void **out_begin = new_vals.stride_begin();
-        void **my_begin = my_vals.stride_begin();
-        // finding each index
-        for (size_value_t i = 0; i < n_size; ++i, ++out_begin) {
-            // getting the ith index to copy
-            size_value_t index = 0;
-            for (size_value_t j = 0; j < t.numel() - 1; ++j) {
-                index += ptrs[j][i] * ns[j + 1];
-            }
-            index += ptrs[t.numel() - 1][i];
-            *out_begin = my_begin[index];
-        }
-
-        return Tensor(new_vals, {static_cast<size_value_t>(n_size)});
-    }
-    else if (t.dtype == DType::int64){
-       utils::THROW_EXCEPTION(
-            t.is_contiguous(),
-            "RuntimeError: Expected indexing tensor to be contiguous");
-        const int64_t* t_begin = reinterpret_cast<const int64_t*>(t.data_ptr());
-        const int64_t* t_end = reinterpret_cast<const int64_t*>(t.data_ptr_end());
-        if(dims() == 1){
-            const size_value_t &n_size = t.numel();
-            ArrayVoid my_vals = _vals.bucket_all_indices();
-            ArrayVoid new_vals = _vals.new_strides(n_size);
-            void **out_begin = new_vals.stride_begin();
-            void **my_begin = my_vals.stride_begin();
-            const int64_t& max = shape()[0];
-            for(;t_begin != t_end; ++t_begin, ++out_begin){
-                utils::THROW_EXCEPTION(*t_begin < max,
-                                "Trying to get index of tensor at dim 0 of $ with that dimension only holding $", *t_begin, max);
-                *out_begin = my_begin[*t_begin];
-            }
-            return Tensor(new_vals, {static_cast<size_value_t>(n_size)});
-        }
-        std::vector<SizeRef::value_type> Vec = this->shape().Vec();
-        Vec[0] = t.numel();
-        Tensor split = this->split_axis(0);
-        std::vector<Tensor> catting(t.numel(), Tensor::Null());
-        auto out_begin = catting.begin();
-        Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
-        for(;t_begin != t_end; ++t_begin, ++out_begin){
-            *out_begin = s_begin[*t_begin];
-        }
-        return functional::cat(std::move(catting)).view(SizeRef(std::move(Vec)));
-    
-    }
-    utils::THROW_EXCEPTION(
-        t.dtype == DType::Bool,
-        "RuntimeError (at end, logic error): expected DType Bool, TensorObj, or int64 but got $", t.dtype);
-    utils::THROW_EXCEPTION(
-        t.is_contiguous(),
-        "RuntimeError: Expected indexing tensor to be contiguous");
-    if(t.numel() != numel() && t.numel() == shape()[0]){
-        const uint_bool_t *begin =
-            reinterpret_cast<const uint_bool_t *>(t.data_ptr());
-        const uint_bool_t *end = begin + t.numel();
-
-        std::vector<SizeRef::value_type> Vec = this->shape().Vec();
-        Vec[0] = functional::count(t);
-        Tensor split = this->split_axis(0);
-        std::vector<Tensor> catting(functional::count(t), Tensor::Null());
-        auto out_begin = catting.begin();
-        Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
-        for(;begin != end; ++begin, ++s_begin){
-            if(*begin){
-                *out_begin++ = *s_begin;
-            }
-        }
-        return functional::cat(std::move(catting)).view(SizeRef(std::move(Vec)));
- 
-    }
-    utils::THROW_EXCEPTION(
-        t.numel() == numel(),
-        "Numels must be equal for [] operator on Tensor DType::Bool, or equal to shape()[0] ($)", shape()[0]);
-
-    ArrayVoid my_vals = _vals.bucket_all_indices();
-    size_value_t new_size = ::nt::functional::count(t);
-    ArrayVoid new_vals = _vals.new_strides(new_size);
-    const uint_bool_t *begin =
-        reinterpret_cast<const uint_bool_t *>(t.data_ptr());
-    const uint_bool_t *end = begin + numel();
-    void **my_stride = my_vals.stride_begin();
-    void **new_stride = new_vals.stride_begin();
-    for (; begin != end; ++begin, ++my_stride) {
-        if (*begin == true) {
-            *new_stride = *my_stride;
-            ++new_stride;
-        }
-    }
-    return Tensor(std::move(new_vals), {static_cast<size_value_t>(new_size)});
-}
-
-Tensor Tensor::index_except(int64_t dim, int64_t excluding_index) const {
-    dim = dim < 0 ? dim + dims() : dim;
-    utils::THROW_EXCEPTION(dim < dims() && dim >= 0, "Got invalid dim $", dim);
-    bool end_dim = (dim == dim-1);
-    auto sh = shape();
-    excluding_index = excluding_index < 0 ? excluding_index + sh[dim] : excluding_index;
-    utils::THROW_EXCEPTION(excluding_index < sh[dim] && excluding_index >= 0, "Got invalid index $", excluding_index);
-    std::vector<size_value_t> Vec = sh.Vec();
-    Vec[dim] -= 1;
-
-    Tensor split = this->split_axis(dim);
-    int64_t total = (split.numel() / sh[dim]) * Vec[dim];
-    Tensor out = makeNullTensorArray(total);
-    Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
-    Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
-    Tensor* s_end = reinterpret_cast<Tensor*>(split.data_ptr_end());
-    int64_t counter = 0;
-    const int64_t max_dim = (sh[dim]-1);
-    while(s_begin != s_end){
-        if(counter != excluding_index){
-            *o_begin = *s_begin;
-            ++o_begin;
-        }
-        ++s_begin;
-        counter = counter == max_dim ? 0 : counter + 1;
-    }
-    if(end_dim){
-        std::swap(Vec[dim], Vec[dim-1]);
-        return functional::cat_unordered(out).view(SizeRef(std::move(Vec))).transpose(-1, -2);
-    }
-    return functional::cat_unordered(out).view(SizeRef(std::move(Vec)));
-}
+Tensor Tensor::index_except(int64_t dim, int64_t excluding_index) const { return functional::index_except(*this, dim, excluding_index);}
 
 // going to re-think the following,
 // just going to go along the guise of pop_back
@@ -836,58 +674,8 @@ inline bool idx_is_total(const my_range &range, const SizeRef &shape,
 
 Tensor Tensor::operator[](std::vector<my_range> r) {return functional::op_range(*this, r); }
 const Tensor Tensor::operator[](std::vector<my_range> r) const {return functional::op_range(*this, r); }
-
-const Tensor Tensor::operator[](std::vector<size_value_t> xs) const {
-    utils::THROW_EXCEPTION(
-            xs.size() <= dims(),
-            "Expected to get less than or equal to $ indices but got $ indices",
-            dims(), xs.size());
-    if(xs.size() == 1){return (*this)[xs[0]];}
-    if(xs.size() == 0){return *this;}
-    for (size_value_t i = 0; i < xs.size(); ++i) {
-        xs[i] = xs[i] < 0 ? xs[i] + dims() : xs[i];
-    }
-
-    uint64_t cur_mult = 1;
-    auto begin = xs.begin();
-    auto end = xs.end();
-    cur_mult *= *begin;
-    SizeRef n_size = shape().pop_front();
-    ++begin;
-    for(;begin != end; ++begin){
-        cur_mult *= *begin;
-        n_size = n_size.pop_front();
-    }
-    uint64_t mult = n_size.size() == 0 ? 1 : static_cast<uint64_t>(n_size.multiply());
-    return Tensor(_vals.share_array(cur_mult * mult, mult), std::move(n_size));
-
-}
-
-Tensor Tensor::operator[](std::vector<size_value_t> xs) {
-    utils::THROW_EXCEPTION(
-            xs.size() <= dims(),
-            "Expected to get less than or equal to $ indices but got $ indices",
-            dims(), xs.size());
-    if(xs.size() == 1){return (*this)[xs[0]];}
-    if(xs.size() == 0){return *this;}
-    for (size_value_t i = 0; i < xs.size(); ++i) {
-        xs[i] = xs[i] < 0 ? xs[i] + dims() : xs[i];
-    }
-
-    uint64_t cur_mult = 1;
-    auto begin = xs.begin();
-    auto end = xs.end();
-    cur_mult *= *begin;
-    SizeRef n_size = shape().pop_front();
-    ++begin;
-    for(;begin != end; ++begin){
-        cur_mult *= *begin;
-        n_size = shape().pop_front();
-    }
-    uint64_t mult = static_cast<uint64_t>(n_size.multiply());
-    return Tensor(_vals.share_array(cur_mult * mult, mult), std::move(n_size));
-
-}
+const Tensor Tensor::operator[](std::vector<size_value_t> xs) const {return functional::at(*this, std::move(xs));}
+Tensor Tensor::operator[](std::vector<size_value_t> xs) {return functional::at(*this, std::move(xs));}
 
 
 // this was the old way which was not nearly as efficient:
@@ -1226,17 +1014,19 @@ std::ostream &operator<<(std::ostream &out, const Tensor &_t) {
 }
 
 Tensor Tensor::view(SizeRef nv) const {
+    __NT_HANDLE_NULL_TENSORS__();
     size_value_t total = nv.multiply();
     utils::THROW_EXCEPTION(
         total == _total_size,
         "problem with converting shape $ to shape $ my numel is $ and shape numel is $", shape(), nv,
         _total_size, total);
     /* assert(total == _total_size); */
-    return Tensor(_vals, std::move(nv));
+    return Tensor(_vals, std::move(nv)).set_mutability(_is_mutable);
 }
 
 // this is a view to happen to every single tensor
 Tensor Tensor::view_Tensors(SizeRef nv) const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         dtype == DType::TensorObj,
         "Expected view_Tensors to be used on a tensor of tensors");
@@ -1244,11 +1034,13 @@ Tensor Tensor::view_Tensors(SizeRef nv) const {
     Tensor *outputIt = reinterpret_cast<Tensor *>(outp.data_ptr());
     _vals.transform_function<DType::TensorObj>(
         [&nv](auto &inp) { return inp.view(nv); }, outputIt);
+    outp.set_mutability(_is_mutable);
     return std::move(outp);
 }
 
 
 Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         dtype == DType::TensorObj,
         "Expected view_Tensors to be used on a tensor of tensors");
@@ -1282,11 +1074,13 @@ Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
             return inp.view(SizeRef(std::move(nv_cpy)));
         },
         reinterpret_cast<Tensor *>(outp.data_ptr()));
+    outp.set_mutability(_is_mutable);
     return std::move(outp);
 }
 
 // this is a transpose to happen to every single tensor
 Tensor Tensor::transpose_Tensors(size_value_t a, size_value_t b) const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         dtype == DType::TensorObj,
         "Expected transpose_Tensors to be used on a tensor of tensors");
@@ -1294,11 +1088,13 @@ Tensor Tensor::transpose_Tensors(size_value_t a, size_value_t b) const {
     Tensor *outputIt = reinterpret_cast<Tensor *>(outp.data_ptr());
     _vals.transform_function<DType::TensorObj>(
         [&a, &b](auto &inp) { return inp.transpose(a, b); }, outputIt);
+    outp.set_mutability(_is_mutable);
     return std::move(outp);
 }
 
 
 Tensor Tensor::flatten(size_value_t _a, size_value_t _b) const {
+    __NT_HANDLE_NULL_TENSORS__();
     _a = _a < 0 ? _a + dims() : _a;
     _b = _b < 0 ? _b + dims() : _b;
     size_value_t begin = _a < _b ? _a : _b;
@@ -1313,7 +1109,7 @@ Tensor Tensor::flatten(size_value_t _a, size_value_t _b) const {
                         std::multiplies<value_t>());
     std::copy(shape().cbegin() + end, shape().cend(),
               n_vals.begin() + begin + 1);
-    return Tensor(_vals, std::move(n_vals));
+    return Tensor(_vals, std::move(n_vals)).set_mutability(_is_mutable);
 }
 
 void insert_ones(std::vector<Tensor::size_value_t> &vec, Tensor::size_value_t a,
@@ -1329,6 +1125,7 @@ void insert_ones(std::vector<Tensor::size_value_t> &vec, Tensor::size_value_t a,
 }
 
 Tensor Tensor::unflatten(size_value_t _a, size_value_t _b) const {
+    __NT_HANDLE_NULL_TENSORS__();
     _a = _a < 0 ? _a + dims() : _a;
     _b = _b < 0 ? _b + dims() : _b;
     size_value_t begin = _a < _b ? _a : _b;
@@ -1339,15 +1136,6 @@ Tensor Tensor::unflatten(size_value_t _a, size_value_t _b) const {
     auto vec = shape().Vec();
     insert_ones(vec, begin, amt);
     return this->view(SizeRef(std::move(vec)));
-}
-
-void printTransposes(
-    const std::vector<std::pair<Tensor::size_value_t, Tensor::size_value_t>>
-        &transposes) {
-    for (const auto &p : transposes) {
-        std::cout << "(" << p.first << "," << p.second << ") ";
-    }
-    std::cout << std::endl;
 }
 
 void reduceTransposesHelper(
@@ -1482,6 +1270,7 @@ template <typename T> void print_vector(const std::vector<T> &vec) {
 // it wouldn't be super hard, just use the permute functions above
 Tensor Tensor::permute(std::vector<size_value_t> Perm)
     const { // going to figure out a better one for this
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         Perm.size() <= dims(),
         "Expected to permute at most $ dims but got $ dims to permute", dims(),
@@ -1625,6 +1414,7 @@ SizeRef squeeze_and_adjust_transpose(std::vector<Tensor::size_value_t> size_vec,
 // when dims are 1 away from each other this is a great and wonderfully
 // optimized design when they are not, there is probably much to be desired
 Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
+    __NT_HANDLE_NULL_TENSORS__();
     _a = _a < 0 ? dims() + _a : _a;
     _b = _b < 0 ? dims() + _b : _b;
     
@@ -1648,7 +1438,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
         //fill in squeeze and adjust
         SizeRef out_shape = shape().transpose(_a, _b);
         SizeRef n_shape = squeeze_and_adjust_transpose(shape().Vec(), _a, _b);
-        return this->view(n_shape).transpose(_a, _b).view(out_shape);
+        return this->view(n_shape).transpose(_a, _b).view(out_shape).set_mutability(_is_mutable);
     }
     std::vector<size_value_t> cur_strides = getChangedStrides();
     std::swap(cur_strides[_a + 1], cur_strides[_b + 1]);
@@ -1683,12 +1473,12 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
                     });
 #endif
                 return Tensor(std::move(out_vals), shape().transpose(_a, _b),
-                              cur_strides);
+                              cur_strides).set_mutability(_is_mutable);
             }
             void **o_end = out_vals.stride_end();
             transpose_RowColSwap(o_begin, o_end, rows, mn1, total);
             return Tensor(std::move(out_vals), shape().transpose(_a, _b),
-                          cur_strides);
+                          cur_strides).set_mutability(_is_mutable);
         }
         Tensor parts = split_axis(_b).view(shape().range(0, _b + 1));
         // split axis makes a list of all the tensors that have that many
@@ -1699,7 +1489,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
         // its rows and cols are then transposed
         return functional::cat(parts)
             .view(shape().transpose(_a, _b))
-            .set_stored_strides(cur_strides);
+            .set_stored_strides(cur_strides).set_mutability(_is_mutable);
     }
 
     if (_b == dims() - 1) {
@@ -1737,7 +1527,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
         }
         *(outp + numel() - 1) = *mine;
         return Tensor(std::move(output), std::move(out_shape))
-            .set_stored_strides(cur_strides);
+            .set_stored_strides(cur_strides).set_mutability(_is_mutable);
     }
 
     // basically, by splitting, this will do all the lower dimensions at the
@@ -1787,7 +1577,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const {
     *(outp + out.numel() - 1) = *mine;
     return nt::functional::cat(out)
         .view(shape().transpose(_a, _b))
-        .set_stored_strides(cur_strides);
+        .set_stored_strides(cur_strides).set_mutability(_is_mutable);
 
     /* size_value_t original_a = _a; */
     /* size_value_t original_b = _b; */
@@ -1844,7 +1634,7 @@ void transpose_RowColSwap_contiguous(T *first, T *last,
 /* 			visited[a] = true; */
 /* 		}while((first + a) != cycle); */
 /* 	} */
-/* }; */
+/* } */
 
 inline static constexpr auto transposeRC_once =
     [](auto first, auto last, const Tensor::size_value_t &n,
@@ -1869,6 +1659,8 @@ inline static constexpr auto transposeRC_once =
 // this swaps rows and collumns in memory
 // potentially faster than transpose(-1,-2)
 const Tensor &Tensor::RowColSwap() const {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     utils::THROW_EXCEPTION(dims() >= 2,
                            "RuntimeError: Expected dims to be greater than or "
                            "equal to 2 but got $",
@@ -2580,6 +2372,7 @@ t\t\tvalue_type\* last = first + total;\n\t\t\t\t\ttranspose_RowColSwap_contiguo
 t\t\tvalue_type\* last = first + total;\n\t\t\t\t\ttranspose_RowColSwap_contiguous(first, last, rows, mn1, total);\n\t\t\t\t}\n#ifdef USE_PARALLEL\n\t\t\t\t});\n#endif
 
 Tensor &Tensor::RowColSwap_Tensors() {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(dtype == DType::TensorObj,
                            "RowColSwap_Tensors is meant to be used on a tensor "
                            "that holds tensors");
@@ -2588,6 +2381,8 @@ Tensor &Tensor::RowColSwap_Tensors() {
 }
 
 Tensor &Tensor::RowColSwap() {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     utils::THROW_EXCEPTION(dims() >= 2,
                            "RuntimeError: Expected dims to be greater than or "
                            "equal to 2 but got $",
@@ -3202,6 +2997,7 @@ Tensor &Tensor::RowColSwap() {
 
 
 Tensor Tensor::swap_axis(size_value_t dim, size_value_t a, size_value_t b) const{
+    __NT_HANDLE_NULL_TENSORS__();
     dim = (dim < 0) ? dims() + dim : dim;
     utils::throw_exception(b < dims(), "cannot swap axis ($) that are greater than dims ($)", b, dims());
     if(a > b) std::swap(a, b);
@@ -3218,11 +3014,13 @@ Tensor Tensor::swap_axis(size_value_t dim, size_value_t a, size_value_t b) const
     for(int64_t i = 0; i < batches; ++i, begin += sizes){
         begin[a].swap(begin[b]);
     }
-    return functional::cat_unordered(split).view(shape());
+    return functional::cat_unordered(split).view(shape()).set_mutability(is_mutable());
 
 }
 
 Tensor& Tensor::swap_axis_(size_value_t dim, size_value_t a, size_value_t b){
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     dim = (dim < 0) ? dims() + dim : dim;
     utils::throw_exception(b < dims(), "cannot swap axis ($) that are greater than dims ($)", b, dims());
     if(a > b) std::swap(a, b);
@@ -3247,6 +3045,7 @@ Tensor& Tensor::swap_axis_(size_value_t dim, size_value_t a, size_value_t b){
 }
 
 Tensor Tensor::real() const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         DTypeFuncs::is_complex(dtype),
         "RuntimeError: Expected dtype to be a complex number but got $", dtype);
@@ -3264,10 +3063,11 @@ Tensor Tensor::real() const {
 #endif
     out_vals.get_bucket().dtype = out_vals.dtype;
 
-    return Tensor(std::move(out_vals), shape());
+    return Tensor(std::move(out_vals), shape()).set_mutability(_is_mutable);
 }
 
 Tensor Tensor::to_complex_from_real() const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
 #ifdef _HALF_FLOAT_SUPPORT_
         dtype == DType::Double || dtype == DType::Float ||
@@ -3378,6 +3178,7 @@ Tensor Tensor::to_complex_from_real() const {
 }
 
 Tensor Tensor::imag() const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         DTypeFuncs::is_complex(dtype),
         "RuntimeError: Expected dtype to be a complex number but got $", dtype);
@@ -3405,10 +3206,11 @@ Tensor Tensor::imag() const {
     for (; begin != end; ++begin) {
         *begin = reinterpret_cast<uint8_t *>(*begin) + imag_size;
     }
-    return Tensor(std::move(out_vals), shape());
+    return Tensor(std::move(out_vals), shape()).set_mutability(_is_mutable);
 }
 
 Tensor Tensor::to_complex_from_imag() const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
 #ifdef _HALF_FLOAT_SUPPORT_
         dtype == DType::Double || dtype == DType::Float ||
@@ -3524,8 +3326,8 @@ Tensor Tensor::to_complex_from_imag() const {
 // that way there is very little overhead, except for at the beggining
 
 Tensor::Tensor(size_value_t i, const ArrayVoid &Arr, SizeRef &&_s)
-    : _size({i}), _total_size(i), sub_tensor(false), _vals(i, DType::TensorObj),
-      dtype(DType::TensorObj), stored_strides(nullptr) {
+    : _size({i}), _total_size(i), _vals(i, DType::TensorObj),
+      dtype(DType::TensorObj), stored_strides(nullptr), _is_mutable(true) {
     size_value_t count = 0;
     size_value_t inner = _s.multiply();
     Tensor *it = reinterpret_cast<Tensor *>(this->data_ptr());
@@ -3539,18 +3341,18 @@ Tensor::Tensor(size_value_t i, const ArrayVoid &Arr, SizeRef &&_s)
 }
 
 Tensor::Tensor(ArrayVoid Arr, SizeRef _s, intrusive_ptr<size_value_t[]> strides)
-    : _size(std::move(_s)), _total_size(0), sub_tensor(false),
+    : _size(std::move(_s)), _total_size(0), 
       _vals(std::move(Arr)), dtype(DType::Float),
-      stored_strides(std::move(strides)) {
+      stored_strides(std::move(strides)), _is_mutable(true) {
     _total_size = _vals.Size();
     dtype = _vals.dtype;
 }
 
 Tensor::Tensor(ArrayVoid Arr, SizeRef _s,
                const std::vector<size_value_t> &strides)
-    : _size(std::move(_s)), _total_size(0), sub_tensor(false),
+    : _size(std::move(_s)), _total_size(0), 
       _vals(std::move(Arr)), dtype(DType::Float),
-      stored_strides(strides.size()) {
+      stored_strides(strides.size()), _is_mutable(true) {
     _total_size = _vals.Size();
     dtype = _vals.dtype;
     for (size_t i = 0; i < strides.size(); ++i)
@@ -3743,6 +3545,7 @@ void generate_ranges(const std::vector<my_range> &ranges,
 }
 
 Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(ranges.size() <= dims(),
                            "expected to have at most $ ranges but got $ ranges "
                            "for split_axis on tensor shape $",
@@ -3766,12 +3569,15 @@ Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
     if (result_ranges.size() == 1 || result_ranges.size() == 0)
         return *this;
     Tensor output = Tensor::makeNullTensorArray(result_ranges.size());
+    output._is_mutable = this->_is_mutable;
     output._size = SizeRef({static_cast<size_value_t>(result_ranges.size())});
     Tensor *begin = reinterpret_cast<Tensor *>(output.data_ptr());
     Tensor *end = begin + result_ranges.size();
     auto ra_begin = result_ranges.cbegin();
-    for (; begin != end; ++begin, ++ra_begin)
+    for (; begin != end; ++begin, ++ra_begin){
         *begin = (*this)[*ra_begin];
+        begin->_is_mutable = this->_is_mutable;
+    }
     return output;
 }
 
@@ -3802,6 +3608,7 @@ Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
 // this reduced time from 106 seconds to 0.016 seconds in some cases, (much
 // faster)
 Tensor Tensor::split_axis(size_value_t dim) const {
+    __NT_HANDLE_NULL_TENSORS__();
     typedef typename SizeRef::ArrayRefInt::value_type value_t;
     dim = dim < 0 ? dim + dims() : dim;
     if (dim == (dims() - 1) && dims() >= 2) {
@@ -3823,8 +3630,9 @@ Tensor Tensor::split_axis(size_value_t dim) const {
 	for(;begin != end; ++begin){
 		begin->_size = n2_size;
 		begin->dtype = dtype;
+        begin->_is_mutable = this->_is_mutable;
 	}
-	return std::move(buckets); 
+	return buckets.set_mutability(this->_is_mutable); 
 }
 
 // 0 == cols
@@ -3852,6 +3660,7 @@ Tensor Tensor::split_axis(size_value_t dim) const {
 
 // this is for a column like view
 Tensor Tensor::split_axis_1() const {
+    __NT_HANDLE_NULL_TENSORS__();
     typedef typename SizeRef::ArrayRefInt::value_type value_t;
     Tensor outp = transpose(-1, -2);
     /* RowColSwap(); */
@@ -3873,12 +3682,14 @@ Tensor Tensor::split_axis_1() const {
 	for(;begin != end; ++begin){
 		begin->_size = n2_size;
 		begin->dtype = dtype;
+        begin->_is_mutable = this->_is_mutable;
 	}
-	return std::move(buckets); 
+	return buckets.set_mutability(this->_is_mutable); 
 }
 
 Tensor Tensor::unfold(size_value_t dim, size_value_t size,
                       size_value_t step) const {
+    __NT_HANDLE_NULL_TENSORS__();
     dim = dim < 0 ? dims() + dim : dim;
     utils::THROW_EXCEPTION(
         dim < dims(),
@@ -3920,6 +3731,7 @@ Tensor Tensor::unfold(size_value_t dim, size_value_t size,
     get_strides.push_back(inserting_g);
     get_strides.insert(get_strides.begin(), outp_size.multiply());
     output.set_stored_strides(get_strides);
+    output._is_mutable = this->_is_mutable;
     return std::move(output);
 }
 
@@ -4172,6 +3984,7 @@ void *Tensor::data_ptr() { return _vals.data_ptr(); }
 const void *Tensor::data_ptr() const { return _vals.data_ptr(); }
 
 void *Tensor::data_ptr_end() {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         is_contiguous(),
         "Can only find end of data pointer on contiguous tensor");
@@ -4180,6 +3993,7 @@ void *Tensor::data_ptr_end() {
 }
 
 const void *Tensor::data_ptr_end() const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         is_contiguous(),
         "Can only find end of data pointer on contiguous tensor");
@@ -4189,83 +4003,18 @@ const void *Tensor::data_ptr_end() const {
 
 // share from a specific point in memory
 Tensor Tensor::div(size_value_t i) const {
-    return Tensor(_vals.share_array(i, i), {i});
+    __NT_HANDLE_NULL_TENSORS__();
+    return Tensor(_vals.share_array(i, i), {i}).set_mutability(this->_is_mutable);
 }
 
 ArrayVoid &Tensor::arr_void() { return _vals; }
 const ArrayVoid &Tensor::arr_void() const { return _vals; }
 
-Tensor Tensor::repeat_(size_value_t amt) const {
-    if (dtype == DType::TensorObj) {
-        Tensor output = Tensor::makeNullTensorArray(amt * numel());
-        this->_vals.cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
-            [&output, &amt](auto start, auto end) {
-                Tensor *begin = reinterpret_cast<Tensor *>(output.data_ptr());
-                auto start_cpy = start;
-                for (size_value_t i = 0; i < amt; ++i) {
-                    for (; start != end; ++start, ++begin) {
-                        *begin = *start;
-                    }
-                    start = start_cpy;
-                }
-            });
-        return std::move(output);
-    }
-    Tensor output = Tensor::makeNullTensorArray(amt);
-    Tensor *begin = reinterpret_cast<Tensor *>(output.data_ptr());
-    Tensor *end = begin + output.numel();
-    for (; begin != end; ++begin)
-        *begin = *this;
-    return functional::cat(output);
-}
+Tensor Tensor::repeat_(size_value_t amt) const {return functional::repeat_(*this, amt);}
+Tensor Tensor::repeat_(size_value_t dim, size_value_t amt) const {return functional::repeat_(*this, dim, amt);}
+Tensor Tensor::expand(SizeRef s) const {return functional::expand(*this, s);} 
+Tensor Tensor::expand_as(const Tensor &t) const {return functional::expand_as(*this, t);}
 
-Tensor Tensor::repeat_(size_value_t dim, size_value_t amt) const {
-    dim = dim < 0 ? dim + dims() : dim;
-    if (dim == 0) {
-        return this->repeat_(amt);
-    }
-    Tensor transposed = transpose(0, dim);
-    return transposed.repeat_(amt).transpose(0, dim);
-}
-
-Tensor Tensor::expand(SizeRef s) const {
-    if (shape() == s) {
-        return *this;
-    }
-    utils::THROW_EXCEPTION(
-        s.size() >= shape().size(),
-        "Expected to expand with same dimensions but got $ compared to $",
-        s.size(), dims());
-    if (s.size() > shape().size())
-        return unsqueeze_as(s).expand(s);
-    std::vector<std::pair<size_value_t, size_value_t>>
-        expandings; // which dimensions to repeat by how many
-    for (int64_t i = 0; i < s.size(); ++i) {
-        if (s[i] != shape()[i] && s[i] != 1) {
-            utils::THROW_EXCEPTION(
-                shape()[i] == 1,
-                "The expanded size of the tensor ($) must match "
-                "the existing size ($) at non-singleton dimension "
-                "$.  Target sizes: $.  Tensor sizes: $",
-                s[i], shape()[i], i, s, shape());
-            expandings.push_back({i, s[i]});
-        }
-    }
-    if (expandings.size() == 0) {
-        return *this;
-    }
-    Tensor expanded = this->repeat_(expandings[0].first, expandings[0].second);
-    for (size_t i = 1; i < expandings.size(); ++i)
-        expanded = expanded.repeat_(expandings[i].first, expandings[i].second);
-    return std::move(expanded);
-}
-
-Tensor Tensor::expand_as(const Tensor &t) const {
-    if (shape() == t.shape()) {
-        return *this;
-    }
-    return expand(t.shape());
-}
 
 // fill, subtract, add, multiply
 Tensor &Tensor::subtract_(Scalar val) {
@@ -4294,6 +4043,8 @@ Tensor &Tensor::fill_(Scalar val) {
     return *this;
 }
 Tensor &Tensor::fill_(const Tensor &val) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     if (dtype != DType::TensorObj) {
         utils::THROW_EXCEPTION(
             val.dtype == dtype,
@@ -4313,6 +4064,8 @@ Tensor &Tensor::fill_(const Tensor &val) {
 }
 
 Tensor& Tensor::fill_diagonal_(Scalar c){
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     if(dims() == 2){
         const int64_t& rows = shape()[-2];
         const int64_t& cols = shape()[-1];
@@ -4362,6 +4115,7 @@ Tensor& Tensor::fill_diagonal_(Scalar c){
 }
 
 Tensor Tensor::diagonal() const {
+    __NT_HANDLE_NULL_TENSORS__();
     if(dims() == 2){
         const int64_t& rows = shape()[-2];
         const int64_t& cols = shape()[-1];
@@ -4373,7 +4127,7 @@ Tensor Tensor::diagonal() const {
         for(int64_t r = 0; r < out_cols; ++r, ++out_begin){
             *out_begin = my_begin[r * cols + r];
         }
-        return Tensor(new_vals, {static_cast<size_value_t>(out_cols)});
+        return Tensor(new_vals, {static_cast<size_value_t>(out_cols)}).set_mutability(this->_is_mutable);
     }
     if(dtype == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(numel());
@@ -4382,6 +4136,7 @@ Tensor Tensor::diagonal() const {
             for(;begin != end; ++begin, ++out_begin)
                 *out_begin = begin->diagonal();
         });
+        out.set_mutability(this->_is_mutable);
         return std::move(out); 
     }
     utils::throw_exception(dims() > 2, "cannot get diagonal from a tensor with dims less than 2, but got $", dims());
@@ -4402,37 +4157,28 @@ Tensor Tensor::diagonal() const {
     std::vector<size_value_t> out_sh = shape().Vec();
     out_sh.pop_back();
     out_sh.back() = out_cols;
-    return Tensor(new_vals, SizeRef(std::move(out_sh)));
+    return Tensor(new_vals, SizeRef(std::move(out_sh))).set_mutability(this->_is_mutable);
 
 }
 
 Tensor &Tensor::add_(Scalar val) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     _vals += val;
     return *this;
 }
 Tensor &Tensor::add_(const Tensor &val) { return functional::add_(*this, val); }
 
-Tensor Tensor::operator==(Scalar c) const {
-    return Tensor(_vals == c, shape());
-}
-
-Tensor Tensor::operator!=(Scalar c) const {
-    return Tensor(_vals != c, shape());
-}
-
-Tensor Tensor::operator<=(Scalar c) const {
-    return Tensor(_vals <= c, shape());
-}
-
-Tensor Tensor::operator>=(Scalar c) const {
-    return Tensor(_vals >= c, shape());
-}
-
-Tensor Tensor::operator<(Scalar c) const { return Tensor(_vals < c, shape()); }
-
-Tensor Tensor::operator>(Scalar c) const { return Tensor(_vals > c, shape()); }
+Tensor Tensor::operator==(Scalar c) const { return functional::equal(*this, c); }
+Tensor Tensor::operator!=(Scalar c) const { return functional::not_equal(*this, c); }
+Tensor Tensor::operator<=(Scalar c) const { return functional::less_than_equal(*this, c); }
+Tensor Tensor::operator>=(Scalar c) const { return functional::greater_than_equal(*this, c); }
+Tensor Tensor::operator<(Scalar c) const { return functional::less_than(*this, c); }
+Tensor Tensor::operator>(Scalar c) const { return functional::greater_than(*this, c); }
 
 CommaOperator Tensor::operator<<(Scalar s) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     utils::throw_exception(is_contiguous(), "Must be contiguous to use comma operator");
     CommaOperator out(data_ptr(), data_ptr_end(), dtype);
     return out , s;
@@ -4440,6 +4186,8 @@ CommaOperator Tensor::operator<<(Scalar s) {
 
 
 std::string_view Tensor::sv() const {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     utils::THROW_EXCEPTION(
         dtype == DType::uint8,
         "\nRuntimeError: Expected DType for string_view to be uint8 but got $",
@@ -4451,20 +4199,22 @@ std::string_view Tensor::sv() const {
 }
 
 Tensor Tensor::to_dtype(DType _dt) const {
+    __NT_HANDLE_NULL_TENSORS__();
     if (dtype == _dt)
         return *this;
     return Tensor(_vals.to(_dt), shape());
 }
 
 Tensor Tensor::to_device(DeviceType _dt) const {
+    __NT_HANDLE_NULL_TENSORS__();
     return Tensor(_vals.to(_dt), shape());
 }
 
-Tensor Tensor::Int() const { return Tensor(_vals.int32(), shape()); }
-
-Tensor Tensor::Long() const { return Tensor(_vals.uint32(), shape()); }
+Tensor Tensor::Int() const { __NT_HANDLE_NULL_TENSORS__(); return Tensor(_vals.int32(), shape()); }
+Tensor Tensor::Long() const { __NT_HANDLE_NULL_TENSORS__(); return Tensor(_vals.uint32(), shape()); }
 
 Tensor Tensor::unsqueeze(size_value_t dim) const {
+    __NT_HANDLE_NULL_TENSORS__();
     dim = dim < 0 ? (dim + dims() + 1) : dim;
     std::vector<SizeRef::ArrayRefInt::value_type> Vec = shape().Vec();
     Vec.insert(Vec.begin() + dim, 1);
@@ -4472,6 +4222,7 @@ Tensor Tensor::unsqueeze(size_value_t dim) const {
 }
 
 Tensor Tensor::unsqueeze_as(const Tensor &t) const {
+    __NT_HANDLE_NULL_TENSORS__(t);
     std::vector<SizeRef::ArrayRefInt::value_type> Vec = shape().Vec();
     while (Vec.size() < t.dims())
         Vec.insert(Vec.begin(), 1);
@@ -4479,6 +4230,7 @@ Tensor Tensor::unsqueeze_as(const Tensor &t) const {
 }
 
 Tensor Tensor::unsqueeze_as(const SizeRef &s) const {
+    __NT_HANDLE_NULL_TENSORS__();
     std::vector<SizeRef::ArrayRefInt::value_type> Vec = shape().Vec();
     while (Vec.size() < s.size())
         Vec.insert(Vec.begin(), 1);
@@ -4487,6 +4239,7 @@ Tensor Tensor::unsqueeze_as(const SizeRef &s) const {
 
 // now gets rid of all dimensions that are 1
 Tensor Tensor::squeeze(utils::optional_list list) const {
+    __NT_HANDLE_NULL_TENSORS__();
     std::vector<SizeRef::ArrayRefInt::value_type> Vec;
     Vec.reserve(shape().size());
     if(!list){
@@ -4516,87 +4269,15 @@ Tensor Tensor::squeeze(utils::optional_list list) const {
 
 }
 
-inline static constexpr auto sumation_func = [](auto begin, auto end,
-                                                ArrayVoid &outp) -> Scalar {
-    return std::reduce(begin, end);
-};
-
-Tensor sum_one(const Tensor &t, Tensor::size_value_t dim) {
-    if (dim == t.dims() || dim == (-1) * (t.dims() + 1))
-        return t;
-    dim = dim < 0 ? dim + t.dims() : dim;
-    if (t.dtype == DType::TensorObj) {
-        Tensor outp(t.shape(), DType::TensorObj);
-        t.arr_void().transform_function<DType::TensorObj>(
-            [&dim](const Tensor &output) -> Tensor { return output.sum(dim); },
-            reinterpret_cast<Tensor *>(outp.data_ptr()));
-        return std::move(outp);
-    }
-    if(dim != 0){
-        return sum_one(t.transpose(0, dim), 0).transpose(0, dim);
-    }
-    Tensor::size_value_t total_size = t.shape()[0];
-    Tensor split = t.split_axis(0);
-    Tensor a = split[0].item<Tensor>().clone();
-    const Tensor *begin = reinterpret_cast<const Tensor *>(split.data_ptr());
-    // in the future, use a mutex to lock this and save individual indices
-    // otherwise it returns the incorrect result
-    // threading::preferential_parallel_for(
-    //     threading::block_ranges<1>(1, split.numel()),
-    //     [&a, &begin](const auto &range) {
-    //         for (int64_t i = range.begin[0]; i < range.end[0]; ++i) {
-    //             a += begin[i];
-    //         }
-    //     });
-    const Tensor* end = reinterpret_cast<const Tensor*>(split.data_ptr_end());
-    ++begin;
-    for(;begin != end; ++begin){
-        a += *begin;
-    }
-    auto Vec = t.shape().Vec();
-    Vec[0] = 1;
-    return a.view(SizeRef(std::move(Vec)));
-}
 
 
 
-Tensor Tensor::sum(utils::optional_list list, bool keepdim) const {
-    if (dtype == DType::TensorObj) {
-        Tensor outp(shape(), DType::TensorObj);
-        _vals.transform_function<DType::TensorObj>(
-            [&](const Tensor &output) -> Tensor {
-                return output.sum(list, keepdim);
-            },
-            reinterpret_cast<Tensor *>(outp.data_ptr()));
-        return std::move(outp);
-    }
-    if (!list) {
-        Tensor outp(1, dtype);
-        outp = _vals.cexecute_function<WRAP_DTYPES<NumberTypesL>>()(
-            [](auto begin, auto end) -> Scalar {
-                return mp::accumulate(
-                    begin, end, utils::IteratorBaseType_t<decltype(begin)>(0));
-            });
-        if (keepdim) {
-            std::vector<SizeRef::ArrayRefInt::value_type> Vec(dims());
-            std::fill(Vec.begin(), Vec.end(), 1);
-            outp = outp.view(SizeRef(std::move(Vec)));
-        }
-        return std::move(outp);
-    }
-    int64_t dim = list[0] < 0 ? list[0] + dims() : list[0];
-    Tensor output = sum_one(*this, dim);
-    for (auto begin = list->cbegin() + 1; begin != list->cend(); ++begin) {
-        dim = *begin < 0 ? *begin + dims() : *begin;
-        output = sum_one(output, dim);
-    }
-    if (!keepdim) {
-        return output.squeeze();
-    }
-    return std::move(output);
-}
+
+
+Tensor Tensor::sum(utils::optional_list list, bool keepdim) const { return functional::sum(*this, list, keepdim); }
 
 Tensor Tensor::mean(utils::optional_list list, bool keepdim) const {
+    __NT_HANDLE_NULL_TENSORS__();
     if (dtype == DType::TensorObj) {
         Tensor outp(shape(), DType::TensorObj);
         _vals.transform_function<DType::TensorObj>(
@@ -4607,26 +4288,27 @@ Tensor Tensor::mean(utils::optional_list list, bool keepdim) const {
         return std::move(outp);
     }
     if (!list) {
-        size_value_t total_scale = shape().multiply();
+        size_value_t total_scale = numel();
         double div = 1.0 / (double)total_scale;
         Tensor output = sum(nullptr, keepdim);
         return output * div;
     }
-    size_value_t total_scale = 0;
+    size_value_t total_scale = 1;
     for (const auto &dim : list) {
-        total_scale += shape()[dim];
+        total_scale *= shape()[dim];
     }
     Tensor output = sum(list, keepdim);
+    if(output.shape() == shape()) return output;
     if (total_scale == 0) {
         output.arr_void().fill_(0);
         return std::move(output);
     }
-    double div = 1.0 / (double)total_scale;
-    output *= div;
+    output /= total_scale;
     return std::move(output);
 }
 
 Tensor Tensor::sum_as(const SizeRef &s) const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(s.size() == dims(),
                            "Expected to have information about all dimensions "
                            "whether to sum or not but got $ and $",
@@ -4661,6 +4343,7 @@ Tensor Tensor::sum_as(const SizeRef &s) const {
 }
 
 Tensor Tensor::sum_as(const Tensor &t) const {
+    __NT_HANDLE_NULL_TENSORS__(t);
     utils::THROW_EXCEPTION(
         t.dims() == dims(),
         "Expected dims to be equal for sum as but got $ and $", t.dims(),
@@ -4671,315 +4354,13 @@ Tensor Tensor::sum_as(const Tensor &t) const {
     return sum_as(t.shape());
 }
 
-result_types::max<Tensor, Tensor> max_(const Tensor &_x) {
-    if (_x.dtype == DType::TensorObj) {
-        result_types::max<Tensor, Tensor> output(
-            Tensor(_x.shape(), DType::TensorObj),
-            Tensor(_x.shape(), DType::TensorObj));
-        _x.arr_void()
-            .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
-                [&output](auto begin, auto end) {
-                    Tensor *v_begin =
-                        reinterpret_cast<Tensor *>(output.values.data_ptr());
-                    Tensor *i_begin =
-                        reinterpret_cast<Tensor *>(output.indices.data_ptr());
-                    for (; begin != end; ++begin, ++v_begin, ++i_begin) {
-                        result_types::max<Tensor, Tensor> o = begin->max();
-                        *v_begin = o.values;
-                        *i_begin = o.indices;
-                    }
-                });
-        return std::move(output);
-    }
-    Tensor outp(1, _x.dtype);
-    Tensor indices(_x.shape(), DType::Bool);
-    indices.fill_(false);
-    outp = _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        [&indices](auto begin, auto end) -> Scalar {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            uint_bool_t *i_begin =
-                reinterpret_cast<uint_bool_t *>(indices.data_ptr());
-            value_t max_element = *begin;
-            uint_bool_t *max_indice = i_begin;
-            ++begin;
-            for (; begin != end; ++begin, ++i_begin) {
-                if (*begin > max_element) {
-                    max_element = *begin;
-                    max_indice = i_begin;
-                }
-            }
-            *max_indice = uint_bool_t(true);
-            return max_element;
-        });
-    return result_types::max<Tensor, Tensor>(std::move(outp),
-                                             std::move(indices));
-}
 
-result_types::max<Tensor, Tensor> max_(const Tensor &_x,
-                                       Tensor::size_value_t dim) {
-    dim = dim < 0 ? dim + _x.dims() : dim;
-    if (_x.dtype == DType::TensorObj) {
-        result_types::max<Tensor, Tensor> output(
-            Tensor(_x.shape(), DType::TensorObj),
-            Tensor(_x.shape(), DType::TensorObj));
-        _x.arr_void()
-            .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
-                [&output, &dim](auto begin, auto end) {
-                    Tensor *v_begin =
-                        reinterpret_cast<Tensor *>(output.values.data_ptr());
-                    Tensor *i_begin =
-                        reinterpret_cast<Tensor *>(output.indices.data_ptr());
-                    for (; begin != end; ++begin, ++v_begin, ++i_begin) {
-                        result_types::max<Tensor, Tensor> o = begin->max(dim);
-                        *v_begin = o.values;
-                        *i_begin = o.indices;
-                    }
-                });
-        return output;
-    }
-    Tensor bools(_x.shape(), DType::Bool);
-    SizeRef o_shape = _x.shape().delete_index(dim);
-    if (dim == _x.dims() - 1) {
-        _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-            [&bools](auto begin, auto end) {
-                using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-                uint_bool_t *b_begin =
-                    reinterpret_cast<uint_bool_t *>(bools.data_ptr());
-                const Tensor::size_value_t &rows = bools.shape()[-1];
-                while (begin != end) {
-                    uint_bool_t *b_max_ele = b_begin;
-                    value_t max_ele = *begin;
-                    auto current_end = begin + rows;
-                    ++begin;
-                    ++b_begin;
-                    for (; begin != current_end; ++begin, ++b_begin) {
-                        if (*begin > max_ele) {
-                            max_ele = *begin;
-                            b_max_ele = b_begin;
-                        }
-                    }
-                    *b_max_ele = uint_bool_t(true);
-                }
-            });
-        return result_types::max<Tensor, Tensor>((_x)[bools].view(o_shape),
-                                                 std::move(bools));
-    }
-    Tensor bools_t = bools.transpose(dim, -1);
-    Tensor _t = _x.transpose(dim, -1);
-    _t.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        [&bools_t](auto begin, auto end) {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            auto b_begin =
-                bools_t.arr_void().get_bucket().begin<3, uint_bool_t>();
-            const Tensor::size_value_t &rows = bools_t.shape()[-1];
-            while (begin != end) {
-                auto b_max_ele = b_begin;
-                value_t max_ele = *begin;
-                auto current_end = begin + rows;
-                ++begin;
-                ++b_begin;
-                for (; begin != current_end; ++begin, ++b_begin) {
-                    if (*begin > max_ele) {
-                        max_ele = *begin;
-                        b_max_ele = b_begin;
-                    }
-                }
-                *b_max_ele = uint_bool_t(true);
-            }
-        });
+result_types::max<Tensor, Tensor> Tensor::max(utils::optional_list list) const { return functional::max(*this, list); }
+result_types::max<Tensor, Tensor> Tensor::min(utils::optional_list list) const { return functional::max(*this, list); }
 
-    return result_types::max<Tensor, Tensor>((_x)[bools].view(o_shape),
-                                             std::move(bools));
-    /* if(dim == dims()-1){ */
-
-    /* } */
-
-    /* size_value_t total_size = shape().flatten(0,dim)[0]; */
-    /* Tensor outp(shape()[my_range(0, dim)], dtype); */
-    /* const Tensor split = this->split_axis(dim); */
-    /* outp._vals.execute_function<WRAP_DTYPES<RealNumberTypesL>>()([](auto
-     * begin, auto end, const Tensor* vals){ */
-    /* 			using value_t =
-     * utils::IteratorBaseType_t<decltype(begin)>; */
-    /* 			for(;begin != end; ++begin, ++vals){ */
-    /* 				*begin = vals->max().toScalar().to<value_t>();
-     */
-    /* 			} */
-    /* 		}, reinterpret_cast<const Tensor*>(split.data_ptr())); */
-    /* return std::move(outp); */
-}
-
-result_types::max<Tensor, Tensor> Tensor::max(utils::optional_list list) const {
-    if (!list) {
-        return max_(*this);
-    }
-    result_types::max<Tensor, Tensor> res_1 = max_(*this, list[0]);
-    Tensor cur_indices = std::move(res_1.indices);
-    SizeRef o_shape = shape().delete_index(list[0]);
-    for (auto begin = list->cbegin() + 1; begin != list->cend(); ++begin) {
-        result_types::max<Tensor, Tensor> res = max_(*this, *begin);
-        cur_indices = cur_indices || res.indices;
-        o_shape = o_shape.delete_index(*begin);
-    }
-    return result_types::max<Tensor, Tensor>((*this)[cur_indices].view(o_shape),
-                                             std::move(cur_indices));
-}
-
-result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
-    if (_x.dtype == DType::TensorObj) {
-        result_types::max<Tensor, Tensor> output(
-            Tensor(_x.shape(), DType::TensorObj),
-            Tensor(_x.shape(), DType::TensorObj));
-        _x.arr_void()
-            .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
-                [&output](auto begin, auto end) {
-                    Tensor *v_begin =
-                        reinterpret_cast<Tensor *>(output.values.data_ptr());
-                    Tensor *i_begin =
-                        reinterpret_cast<Tensor *>(output.indices.data_ptr());
-                    for (; begin != end; ++begin, ++v_begin, ++i_begin) {
-                        result_types::max<Tensor, Tensor> o = begin->min();
-                        *v_begin = o.values;
-                        *i_begin = o.indices;
-                    }
-                });
-        return std::move(output);
-    }
-    Tensor outp(1, _x.dtype);
-    Tensor indices(_x.shape(), DType::Bool);
-    indices.fill_(false);
-    outp = _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>()(
-        [&indices](auto begin, auto end) -> Scalar {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            uint_bool_t *i_begin =
-                reinterpret_cast<uint_bool_t *>(indices.data_ptr());
-            value_t min_element = *begin;
-            uint_bool_t *min_indice = i_begin;
-            ++begin;
-            for (; begin != end; ++begin, ++i_begin) {
-                if (*begin < min_element) {
-                    min_element = *begin;
-                    min_indice = i_begin;
-                }
-            }
-            *min_indice = uint_bool_t(true);
-            return min_element;
-        });
-    return result_types::max<Tensor, Tensor>(std::move(outp),
-                                             std::move(indices));
-}
-
-result_types::max<Tensor, Tensor> min_(const Tensor &_x,
-                                       Tensor::size_value_t dim) {
-    dim = dim < 0 ? dim + _x.dims() : dim;
-    if (_x.dtype == DType::TensorObj) {
-        result_types::max<Tensor, Tensor> output(
-            Tensor(_x.shape(), DType::TensorObj),
-            Tensor(_x.shape(), DType::TensorObj));
-        _x.arr_void()
-            .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
-                [&output, &dim](auto begin, auto end) {
-                    Tensor *v_begin =
-                        reinterpret_cast<Tensor *>(output.values.data_ptr());
-                    Tensor *i_begin =
-                        reinterpret_cast<Tensor *>(output.indices.data_ptr());
-                    for (; begin != end; ++begin, ++v_begin, ++i_begin) {
-                        result_types::max<Tensor, Tensor> o = begin->min(dim);
-                        *v_begin = o.values;
-                        *i_begin = o.indices;
-                    }
-                });
-        return output;
-    }
-    Tensor bools(_x.shape(), DType::Bool);
-    SizeRef o_shape = _x.shape().delete_index(dim);
-    if (dim == _x.dims() - 1) {
-        _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-            [&bools](auto begin, auto end) {
-                using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-                uint_bool_t *b_begin =
-                    reinterpret_cast<uint_bool_t *>(bools.data_ptr());
-                const Tensor::size_value_t &rows = bools.shape()[-1];
-                while (begin != end) {
-                    uint_bool_t *b_min_ele = b_begin;
-                    value_t min_ele = *begin;
-                    auto current_end = begin + rows;
-                    ++begin;
-                    ++b_begin;
-                    for (; begin != current_end; ++begin, ++b_begin) {
-                        if (*begin < min_ele) {
-                            min_ele = *begin;
-                            b_min_ele = b_begin;
-                        }
-                    }
-                    *b_min_ele = uint_bool_t(true);
-                }
-            });
-        return result_types::max<Tensor, Tensor>((_x)[bools].view(o_shape),
-                                                 std::move(bools));
-    }
-    Tensor bools_t = bools.transpose(dim, -1);
-    Tensor _t = _x.transpose(dim, -1);
-    _t.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        [&bools_t](auto begin, auto end) {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            auto b_begin =
-                bools_t.arr_void().get_bucket().begin<3, uint_bool_t>();
-            const Tensor::size_value_t &rows = bools_t.shape()[-1];
-            while (begin != end) {
-                auto b_min_ele = b_begin;
-                value_t min_ele = *begin;
-                auto current_end = begin + rows;
-                ++begin;
-                ++b_begin;
-                for (; begin != current_end; ++begin, ++b_begin) {
-                    if (*begin < min_ele) {
-                        min_ele = *begin;
-                        b_min_ele = b_begin;
-                    }
-                }
-                *b_min_ele = uint_bool_t(true);
-            }
-        });
-
-    return result_types::max<Tensor, Tensor>((_x)[bools].view(o_shape),
-                                             std::move(bools));
-    /* if(dim == dims()-1){ */
-
-    /* } */
-
-    /* size_value_t total_size = shape().flatten(0,dim)[0]; */
-    /* Tensor outp(shape()[my_range(0, dim)], dtype); */
-    /* const Tensor split = this->split_axis(dim); */
-    /* outp._vals.execute_function<WRAP_DTYPES<RealNumberTypesL>>()([](auto
-     * begin, auto end, const Tensor* vals){ */
-    /* 			using value_t =
-     * utils::IteratorBaseType_t<decltype(begin)>; */
-    /* 			for(;begin != end; ++begin, ++vals){ */
-    /* 				*begin = vals->max().toScalar().to<value_t>();
-     */
-    /* 			} */
-    /* 		}, reinterpret_cast<const Tensor*>(split.data_ptr())); */
-    /* return std::move(outp); */
-}
-
-result_types::max<Tensor, Tensor> Tensor::min(utils::optional_list list) const {
-    if (!list) {
-        return min_(*this);
-    }
-    result_types::max<Tensor, Tensor> res_1 = min_(*this, list[0]);
-    Tensor cur_indices = std::move(res_1.indices);
-    SizeRef o_shape = shape().delete_index(list[0]);
-    for (auto begin = list->cbegin() + 1; begin != list->cend(); ++begin) {
-        result_types::max<Tensor, Tensor> res = min_(*this, *begin);
-        cur_indices = cur_indices || res.indices;
-        o_shape = o_shape.delete_index(*begin);
-    }
-    return result_types::max<Tensor, Tensor>((*this)[cur_indices].view(o_shape),
-                                             std::move(cur_indices));
-}
 
 Tensor Tensor::exp() const {
+    __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
         dtype != DType::Bool,
         "\nRuntimeError: Tried running unsupported DType Bool "
@@ -4988,6 +4369,8 @@ Tensor Tensor::exp() const {
 }
 
 Tensor &Tensor::exp_() {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     utils::THROW_EXCEPTION(
         dtype != DType::Bool,
         "\nRuntimeError: Tried running unsupported DType Bool "
@@ -4999,22 +4382,27 @@ Tensor &Tensor::exp_() {
 // this was the function that made me implement the ability to choose a specific
 // dtype for a for_each, execute, and transform_function
 Tensor &Tensor::inverse_() {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     _vals.inverse_();
     dtype = _vals.dtype;
     return *this;
 }
 
-Tensor Tensor::inverse() const { return Tensor(_vals.inverse(), shape()); }
-
-Tensor Tensor::pow(Scalar i) const { return Tensor(_vals.pow(i), shape()); }
+Tensor Tensor::inverse() const { __NT_HANDLE_NULL_TENSORS__(); return Tensor(_vals.inverse(), shape()); }
+Tensor Tensor::pow(Scalar i) const { __NT_HANDLE_NULL_TENSORS__(); return Tensor(_vals.pow(i), shape()); }
 
 Tensor &Tensor::pow_(Scalar i) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     _vals.pow_(i);
     dtype = _vals.dtype;
     return *this;
 }
 
 Tensor &Tensor::clip_(Scalar a, Scalar b) {
+    __NT_HANDLE_NULL_TENSORS__();
+    __NT_HANDLE_MUTABILITY__();
     /* std::cout << "clip min: "<<a << */
     _vals.execute_function<WRAP_DTYPES<NumberTypesL>>()(
         [&a, &b](auto begin, auto end) {
@@ -5220,47 +4608,18 @@ template Tensor Tensor::FromInitializer<6ul>(
     utils::NestedInitializerLists_type<Scalar, 6ul>::type, DType);
 
 Tensor Tensor::clip(Scalar a, Scalar b) const {
+    __NT_HANDLE_NULL_TENSORS__();
     Tensor outp = this->clone();
     outp.clip_(a, b);
     return std::move(outp);
 }
 
 Tensor Tensor::pad(std::vector<size_value_t> p, const char *mode,
-                   double value) const {
-    utils::THROW_EXCEPTION(
-        p.size() % 2 == 0,
-        "RuntimeError: The size of the pad must have 2 per dimension");
-    utils::THROW_EXCEPTION(
-        (p.size() / 2) <= dims(),
-        "RuntimeError: expected padding for at most $ dims but instead got $",
-        dims(), int(p.size() / 2));
-
-    std::vector<size_value_t> n_shape = shape().Vec();
-    size_value_t i = 0;
-    size_value_t last_dims = size_value_t(p.size() / 2);
-    for (; i < (p.size() / 2); ++i) {
-        n_shape[n_shape.size() - (i + 1)] += p[i * 2];
-        n_shape[n_shape.size() - (i + 1)] += p[i * 2 + 1];
-    }
-    Tensor output(SizeRef(std::move(n_shape)), dtype);
-    output = value;
-    std::vector<nt::my_range> ranges(dims());
-    auto begin = p.cbegin();
-    size_value_t start = dims() - size_value_t(p.size() / 2);
-    for (i = 0; i < dims(); ++i) {
-        if (i < (start)) {
-            ranges[i] = nt::my_range(0, shape()[i]);
-            continue;
-        }
-        ranges[i] = nt::my_range(*begin, (-1) * size_value_t(*(begin + 1)));
-        ++begin;
-        ++begin;
-    }
-    output[ranges].fill_(*this);
-    return std::move(output);
-}
+                   Scalar value) const {return functional::pad(*this, std::move(p), mode, value);}
+Tensor Tensor::unpad(std::vector<size_value_t> p) const {return functional::unpad(*this, std::move(p), /*return_contiguous = */true);}
 
 Tensor Tensor::flip(size_value_t dim) const {
+    __NT_HANDLE_NULL_TENSORS__();
     dim = dim < 0 ? dim + dims() : dim;
     if (dim == 0) {
         return functional::cat(this->split_axis(0).flip()).view(shape());
@@ -5295,6 +4654,7 @@ Tensor Tensor::flip(size_value_t dim) const {
 }
 
 Tensor Tensor::flip() const {
+    __NT_HANDLE_NULL_TENSORS__();
     Tensor output(shape(), dtype);
     _vals.cexecute_function(
         [](auto begin, auto end, ArrayVoid &v, const size_value_t &numel) {
@@ -5309,6 +4669,7 @@ Tensor Tensor::flip() const {
 }
 
 Tensor Tensor::flip_() const {
+    __NT_HANDLE_NULL_TENSORS__();
     ArrayVoid cpy1 = _vals.bucket_all_indices();
     ArrayVoid cpy = cpy1.copy_strides(false);
     void **my_strides = cpy1.stride_begin();
@@ -5316,94 +4677,13 @@ Tensor Tensor::flip_() const {
     for (size_value_t i = numel() - 1; i >= 0; --i, ++my_strides) {
         out_strides[i] = *my_strides;
     }
-    return Tensor(cpy, shape());
+    return Tensor(cpy, shape()).set_mutability(this->_is_mutable);
 }
 
-/* //there is an issue with dim = -1 */
-/* //it seems as though maybe the transpose in split axis isn't it letting it
- * access the exact pointer values? */
-/* //Which does not make sense */
-/* //Wait, no, that does make sense */
-/* //this is because the permute function automatically makes a new stride in
- * memory if the use_count > 1 */
-/* //therefore, the solution would be to get the RowColSwap function working
- * again (which needs to happen anyways) */
-/* Tensor Tensor::flip_(size_value_t dim){ */
-/* 	dim = dim < 0 ? dim + dims() : dim; */
-/* 	utils::THROW_EXCEPTION(dim < dims() && dim > 0, "RuntimeError: Expected
- * input dim for flip to be less than $ but got $", dims(), dim); */
-/* 	Tensor output(_vals.copy_strides(false), shape()); */
-/* 	Tensor my_tensors = (dim == (dims()-1)) ?
- * this->RowColSwap().split_axis(-2) : this->split_axis(dim); */
-/* 	Tensor out_tensors = (dim == (dims()-1)) ?
- * output.RowColSwap().split_axis(-2) : output.split_axis(dim); */
-/* 	tdtype_list<Tensor> begin = my_tensors.arr_void().tbegin<Tensor>(); */
-/* 	Tensor* outp = reinterpret_cast<Tensor*>(out_tensors.data_ptr()); */
-/* 	if(dim > 0){ */
-/* 		uint32_t a = dim == (dims() - 1) ? shape().flatten(0,-3)[0] :
- * shape().flatten(0,dim-1)[0]; */
-/* 		uint32_t b = uint32_t(out_tensors.shape()[0] / a); */
-/* 		for(uint32_t i = 0; i < a; ++i, outp += b){ */
-/* 			for(int32_t j = b-1; j >= 0; --j, ++begin){ */
-/* 				Tensor& from = *begin; */
-/* 				Tensor& to = (*(outp + j)); */
-/* 				void** to_strides = to._vals.strides_begin(); */
-/* 				void** to_strides_e = to._vals.strides_end(); */
-/* 				void** from_strides =
- * from._vals.strides_begin(); */
-/* 				void** from_strides_e =
- * from._vals.strides_end(); */
-/* 				for(;from_strides != from_strides_e & to_strides
- * != to_strides_e; ++from_strides, ++to_strides) */
-/* 					*to_strides = *from_strides; */
-/* 			} */
-/* 		} */
-/* 		if(dim == (dims()-1)){ */
-/* 			this->RowColSwap(); */
-/* 			output.RowColSwap(); */
-/* 		} */
-/* 		return output; */
-/* 	} */
-/* 	for(int32_t i = out_tensors.numel()-1; i >= 0; --i, ++begin){ */
-/* 		Tensor& to = outp[i]; */
-/* 		Tensor& from = (*begin); */
-/* 		void** to_strides = to._vals.strides_begin(); */
-/* 		void** from_strides = from._vals.strides_begin(); */
-/* 		void** from_strides_e = from._vals.strides_end(); */
-/* 		for(;from_strides != from_strides_e; ++from_strides,
- * ++to_strides) */
-/* 			*to_strides = *from_strides; */
-/* 	} */
-/* 	if(dim == (dims()-1)){ */
-/* 		this->RowColSwap(); */
-/* 		output.RowColSwap(); */
-/* 	} */
-/* 	return output; */
-
-/* } */
-
-/* Tensor Tensor::dilate_(size_value_t dil) const{ */
-/* 	ArrayVoid cpy1 = _vals.bucket_all_indices(); */
-/* 	ArrayVoid cpy = cpy1.copy_strides(false); */
-/* 	void** my_strides = cpy1.stride_begin(); */
-/* 	void** outp_strides = cpy.stride_begin(); */
-
-/* 	size_value_t cols = shape()[-1]; */
-/* 	size_value_t i_total = shape().multiply(-2); */
-/* 	for(size_value_t i = 0; i < numel(); ++i, ++my_strides){ */
-/* 		*outp_strides = *my_strides; */
-/* 		if((i+1) % cols == 0){ */
-/* 			if((i+1) % i_total == 0){outp_strides += 1; continue;}
- */
-/* 			outp_strides += outp.shape().back()+(dil-1);continue; */
-/* 		} */
-/* 		outp_strides += dil; */
-/* 	} */
-/* 	return outp; */
-/* } */
 
 Tensor Tensor::dilate(size_value_t dil) const {
-    if (dil == 0)
+    __NT_HANDLE_NULL_TENSORS__();
+    if (dil == 0 || dil == 1)
         return contiguous();
     utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for dilation but got $", dims());
     std::vector<size_value_t> vec = shape().Vec();
@@ -5442,6 +4722,7 @@ Tensor Tensor::dilate(size_value_t dil) const {
 }
 
 Tensor Tensor::dilate(size_value_t row_dil, size_value_t col_dil) const {
+    __NT_HANDLE_NULL_TENSORS__();
     if (row_dil == 0 && col_dil == 0)
         return contiguous();
 
@@ -5489,80 +4770,8 @@ Tensor Tensor::dilate(size_value_t row_dil, size_value_t col_dil) const {
     return outp;
 }
 
-// template<typename value_t>
-// void process_dilate(std::vector<Tensor::size_value_t>& multiplies,
-//                     std::vector<Tensor::size_value_t>& back_adds,
-//                     std::vector<Tensor::size_value_t>& dils,
-//                     const SizeRef& shape,
-//                     const uint64_t& i, 
-//                     value_t*& begin){
-//     if(!((i+1) % multiplies[multiplies.size()-2] == 0)){begin += dils.back();return;}
-    
-// }
-
-//Tensor Tensor::dilate(std::vector<size_value_t> dils) const {
-//    if(std::all_of(dils.cbegin(), dils.cend(), [](const size_value_t& val){return val <= 1;}))
-//            return contiguous();
-
-//    utils::throw_exception(!std::any_of(dils.cbegin(), dils.cend(), 
-//                                        [](const size_value_t& val){val < 1;}), 
-//                           "cannot dilate less than 1 at any dimension");
-//    utils::throw_exception(dims() >= dils.size(), 
-//                           "Expected dim size to be greater than or equal to $ for dilation but got $", 
-//                           dils.size(), dims());
-
-//    std::vector<size_value_t> vec = shape().Vec();
-
-//    // Adjust shape for dilation (applies to the last two dimensions)
-//    auto v_rbegin = vec.rbegin();
-//    auto d_rbegin = dils.crbegin();
-//    auto d_rend = dils.crend();
-//    for(;d_rbegin != d_rend; ++d_rbegin, ++v_rbegin){
-//        *v_rbegin *= *d_rbegin;
-//        *v_rbegin -= (*d_drbegin - 1);
-//    }
-
-//    Tensor outp = functional::zeros(SizeRef(vec), dtype);
-//    //size_value_t back_add = (outp.shape().back()  * (row_dil-1)) + 1;
-
-//    auto sh = shape();
-//    auto outp_shape = outp.shape();
-//    std::vector<size_value_t> multiplies(dils.size());
-//    for (int i = dils.size() - 1; i >= 1; --i) {
-//        multiplies[dils.size() - 1 - i] = x.shape().multiply(-1 * i);
-//    }
-//    multiplies.back() = 0;
-//    std::vector<size_value_t> back_adds(dils.size());
-//    for(int i = 0; i < dils.size(); ++i){
-//        back_adds[i] =  multiplies[i] * (dils[i]-1) + 1; 
-//    }
-
-//    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
-//        [&sh, &outp_shape, &dils, &multiplies](auto abegin, auto aend, void *obegin) {
-//            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
-//            size_value_t cols = sh[-1];
-//            size_value_t i_total = sh.multiply(-2);
-//            value_t *begin = reinterpret_cast<value_t *>(obegin);
-//            for (uint64_t i = 0; abegin != aend; ++abegin, ++i) {
-//                *begin = *abegin;
-//                if ((i + 1) % cols == 0) {
-//                    if ((i + 1) % i_total == 0) {
-//                        ++begin;
-//                        continue;
-//                    }
-//                    begin += back_add;
-//                    continue;
-//                }
-//                begin += col_dil;
-//            }
-//        },
-//        outp.data_ptr());
-//    return outp;
-//}
-
-
-
 Tensor Tensor::dilate(size_value_t channel_dil, size_value_t row_dil, size_value_t col_dil) const {
+    __NT_HANDLE_NULL_TENSORS__();
     if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (channel_dil == 0 || channel_dil == 1))
         return contiguous();
 
@@ -5629,267 +4838,23 @@ Tensor Tensor::dilate(size_value_t channel_dil, size_value_t row_dil, size_value
 }
 
 
-Tensor Tensor::undilate(size_value_t dil) const {
-        return this->undilate(dil, dil);
-}
+Tensor Tensor::undilate(size_value_t dil) const {return functional::undilate_(*this, dil).clone();}
+Tensor Tensor::undilate(size_value_t row_dil, size_value_t col_dil) const {return functional::undilate_(*this, row_dil, col_dil).clone(); }
+Tensor Tensor::undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const {return functional::undilate_(*this, row_dil, col_dil).clone(); }
+Tensor Tensor::undilate_(size_value_t dil) const {return functional::undilate_(*this, dil);}
+Tensor Tensor::undilate_(size_value_t row_dil, size_value_t col_dil) const {return functional::undilate_(*this, row_dil, col_dil);}
+Tensor Tensor::undilate_(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const { return functional::undilate_(*this, row_dil, col_dil, chan_dil);}
 
-Tensor Tensor::undilate(size_value_t row_dil, size_value_t col_dil) const {
-    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1)) {
-        return contiguous();
-    }
-    utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for undilation but got $", dims());
-    utils::throw_exception(row_dil >= 1 && col_dil >= 1,
-                           "Cannot dilate less than 1 but got dilations of {$, $}",
-                           row_dil, col_dil);
+} // namespace nt
 
-    std::vector<size_value_t> vec = shape().Vec();
-    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;
-    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;
-    Tensor outp = functional::zeros(SizeRef(vec), dtype);
+#undef __NT__HANDLE_MUTABILITY__
+#undef _NT_HANDLE_NULL_TENSORS_NON_EMPTY_4_
+#undef _NT_HANDLE_NULL_TENSORS_NON_EMPTY_3_
+#undef _NT_HANDLE_NULL_TENSORS_NON_EMPTY_2_
+#undef _NT_HANDLE_NULL_TENSORS_NON_EMPTY_1_
+#undef _NT_HANDLE_NULL_TENSORS_NON_EMPTY_0_
+#undef _NT_HANDLE_NULL_TENSORS_EMPTY_1
+#undef _NT_HANDLE_NULL_TENSORS_EMPTY_0
+#undef __NT_HANDLE_NULL_TENSORS__
+#undef __NT__HANDLE_MUTABILITY__
 
-    auto sh = shape();
-    size_value_t original_cols = sh.back();
-    size_value_t original_rows = sh[-2];
-    size_value_t matrix_size = original_rows * original_cols;
-    size_value_t batches = numel() / matrix_size;
-    size_value_t row_add = (sh[-2] * (row_dil - 1));  // Adjust row dilation
-    size_value_t col_add = (sh.back() * (col_dil - 1));          // Adjust column dilation
-    // size_value_t back_add = sh.back() + (dil - 1);
-    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
-        [&original_rows, &batches, &matrix_size, &original_cols, &row_dil, &col_dil](auto abegin, auto aend, void *obegin) {
-            // std::cout << "called undilate function"<<std::endl;
-            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
-            value_t *begin = reinterpret_cast<value_t *>(obegin);
-            // std::cout << "starting undilate for loop"<<std::endl;
-            // int64_t b_counter = 0;
-            for(int64_t b = 0; b < batches; ++b, abegin += matrix_size){
-                auto cur_begin = abegin;
-                for(int64_t r = 0; r < original_rows; r += row_dil, cur_begin += (original_cols * row_dil)){
-                    auto mBegin = cur_begin;
-                    for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
-                        *begin++ = *mBegin;
-                    }
-                }
-            }
-        },
-        outp.data_ptr());
-
-    return outp;
-}
-
-Tensor Tensor::undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const {
-    // If no dilation, return contiguous tensor
-    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1)) {
-        return contiguous();
-    }
-
-    // Check dimensionality and validate dilation values
-    utils::throw_exception(dims() >= 3, "Expected dim size to be greater than or equal to 3 for 3D undilation but got $", dims());
-    utils::throw_exception(row_dil >= 1 && col_dil >= 1 && chan_dil >= 1,
-                           "Cannot dilate less than 1 but got dilations of {$, $, $}",
-                           row_dil, col_dil, chan_dil);
-
-    // Calculate the new shape after undilation for each dimension
-    std::vector<size_value_t> vec = shape().Vec();
-    vec[vec.size() - 3] = (vec[vec.size() - 3] + (chan_dil - 1)) / chan_dil; // Channel dimension
-    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;    // Row dimension
-    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;                        // Column dimension
-
-    Tensor outp = functional::zeros(SizeRef(vec), dtype);
-
-    auto sh = shape();
-    size_value_t original_cols = sh.back();
-    size_value_t original_rows = sh[-2];
-    size_value_t original_channels = sh[-3];
-    size_value_t matrix_size = original_rows * original_cols;
-    size_value_t channel_size = matrix_size * original_channels;
-    size_value_t batches = numel() / channel_size;
-    // size_value_t back_add = sh.back() + (dil - 1);
-    _vals.cexecute_function<WRAP_DTYPES<AllTypesL>>(
-        [&original_channels, &original_rows, &batches, &channel_size, &matrix_size, &original_cols, &chan_dil, &row_dil, &col_dil]
-            (auto abegin, auto aend, void *obegin) {
-            // std::cout << "called undilate function"<<std::endl;
-            using value_t = utils::IteratorBaseType_t<decltype(abegin)>;
-            value_t *begin = reinterpret_cast<value_t *>(obegin);
-            // std::cout << "starting undilate for loop"<<std::endl;
-            // int64_t b_counter = 0;
-            for(int64_t b = 0; b < batches; ++b, abegin += channel_size){
-                auto cur_begin = abegin;
-                for(int64_t d = 0; d < original_channels; d += chan_dil, cur_begin += matrix_size * chan_dil){
-                    auto dBegin = cur_begin;
-                    for(int64_t r = 0; r < original_rows; r += row_dil, dBegin += (original_cols * row_dil)){
-                        auto mBegin = dBegin;
-                        for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
-                            *begin++ = *mBegin;
-                        }
-                    }
-                }
-            }
-        },
-        outp.data_ptr());
-    return std::move(outp);
-}
-
-
-Tensor Tensor::undilate_(size_value_t dil) const {
-    return this->undilate_(dil, dil);
-    // if (dil == 0) {
-    //     return contiguous();
-    // }
-
-    // // Calculate the original shape before dilation
-    // std::vector<size_value_t> vec = shape().Vec();
-    // vec.back() = (vec.back() + (dil - 1)) / dil;
-    // vec[vec.size() - 2] = (vec[vec.size() - 2] + (dil - 1)) / dil;
-    // SizeRef outp_shape(std::move(vec));
-    // /* Tensor outp = functional::zeros(SizeRef(vec), dtype); */
-
-    // ArrayVoid cpy1 = _vals.bucket_all_indices();
-    // ArrayVoid cpy = cpy1.new_strides(outp_shape.multiply());
-    // void **my_strides = cpy1.stride_begin();
-    // void **outp_strides = cpy.stride_begin();
-
-    // size_value_t cols = shape()[-1];
-    // size_value_t i_total = shape().multiply(-2);
-    // size_value_t outp_cols = vec.back();
-    // size_value_t outp_i_total = vec[vec.size() - 2];
-
-    // for (size_value_t i = 0; i < numel(); ++i, ++my_strides) {
-    //     // Check if the current element should be part of the original tensor
-    //     if ((i % (outp_cols * dil)) % dil == 0 &&
-    //         (i / (outp_cols * dil)) % dil == 0) {
-    //         *outp_strides = *my_strides;
-    //         ++outp_strides;
-    //     }
-    // }
-
-    // return Tensor(std::move(cpy), std::move(outp_shape));
-}
-
-Tensor Tensor::undilate_(size_value_t row_dil, size_value_t col_dil) const {
-    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1)) {
-        return *this;
-    }
-    utils::throw_exception(dims() >= 2, "Expected dim size to be greater than or equal to 2 for undilation but got $", dims());
-    utils::throw_exception(row_dil >= 1 && col_dil >= 1,
-                           "Cannot dilate less than 1 but got dilations of {$, $}",
-                           row_dil, col_dil);
-
-    std::vector<size_value_t> vec = shape().Vec();
-    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;
-    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;
-    SizeRef outp_shape(std::move(vec));
-    
-    ArrayVoid cpy1 = _vals.bucket_all_indices();
-    ArrayVoid cpy = cpy1.new_strides(outp_shape.multiply());
-    void **my_strides = cpy1.stride_begin();
-    void **outp_strides = cpy.stride_begin();
-
-
-    auto sh = shape();
-    size_value_t original_cols = sh.back();
-    size_value_t original_rows = sh[-2];
-    size_value_t matrix_size = original_rows * original_cols;
-    size_value_t batches = numel() / matrix_size;
-    for(int64_t b = 0; b < batches; ++b, my_strides += matrix_size){
-        void **cur_begin = my_strides;
-        for(int64_t r = 0; r < original_rows; r += row_dil, cur_begin += (original_cols * row_dil)){
-            void **mBegin = cur_begin;
-            for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
-                *outp_strides++ = *mBegin;
-            }
-        }
-    }
-
-    return Tensor(std::move(cpy), std::move(outp_shape));
-}
-
-Tensor Tensor::undilate_(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const {
-    if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1)) {
-        return *this;
-    }
-
-    // Check dimensionality and validate dilation values
-    utils::throw_exception(dims() >= 3, "Expected dim size to be greater than or equal to 3 for 3D undilation but got $", dims());
-    utils::throw_exception(row_dil >= 1 && col_dil >= 1 && chan_dil >= 1,
-                           "Cannot dilate less than 1 but got dilations of {$, $, $}",
-                           row_dil, col_dil, chan_dil);
-
-    // Calculate the new shape after undilation for each dimension
-    std::vector<size_value_t> vec = shape().Vec();
-    vec[vec.size() - 3] = (vec[vec.size() - 3] + (chan_dil - 1)) / chan_dil; // Channel dimension
-    vec[vec.size() - 2] = (vec[vec.size() - 2] + (row_dil - 1)) / row_dil;    // Row dimension
-    vec.back() = (vec.back() + (col_dil - 1)) / col_dil;                        // Column dimension
-    SizeRef outp_shape(std::move(vec));
-    
-    ArrayVoid cpy1 = _vals.bucket_all_indices();
-    ArrayVoid cpy = cpy1.new_strides(outp_shape.multiply());
-    void **my_strides = cpy1.stride_begin();
-    void **outp_strides = cpy.stride_begin();
-
-
-    auto sh = shape();
-    size_value_t original_cols = sh.back();
-    size_value_t original_rows = sh[-2];
-    size_value_t original_channels = sh[-3];
-    size_value_t matrix_size = original_rows * original_cols;
-    size_value_t channel_size = matrix_size * original_channels;
-    size_value_t batches = numel() / channel_size;
-
-    for(int64_t b = 0; b < batches; ++b, my_strides += channel_size){
-        void **cur_begin = my_strides;
-        for(int64_t d = 0; d < original_channels; d += chan_dil, cur_begin += matrix_size * chan_dil){
-            void **dBegin = cur_begin;
-            for(int64_t r = 0; r < original_rows; r += row_dil, dBegin += (original_cols * row_dil)){
-                void **mBegin = dBegin;
-                for(int64_t c = 0; c < original_cols; c += col_dil, mBegin += col_dil){
-                    *outp_strides++ = *mBegin;
-                }
-            }
-        }
-    }
-
-    return Tensor(std::move(cpy), std::move(outp_shape));
-}
-
-// a second look at this, this is a really bad idea below
-
-// this version only makes 1 extra value in the amount of a certain element
-// then it only expands the size of the actual void** ptr
-/* Tensor Tensor::dilate_mem_(size_value_t dil) const{ */
-/* 	std::vector<size_value_t> vec = shape().Vec(); */
-/* 	/1* dil -= 1; *1/ */
-/* 	vec.back() *= dil; */
-/* 	vec.back() -= (dil-1); */
-/* 	vec[vec.size()-2] *= dil; */
-/* 	vec[vec.size()-2] -= (dil-1); */
-/* 	ArrayVoid outp_arr_b(1, dtype); */
-/* 	outp_arr_b = 1; */
-/* 	SizeRef outp_shape(std::move(vec)); */
-/* 	ArrayVoid outp_arr = outp_arr_b.new_stride(outp_shape.multiply()); */
-/* 	void** outp_strides = outp_arr.strides_begin(); */
-/* 	void** my_strides = _vals.strides_cbegin(); */
-/* 	size_value_t cols = shape()[-1]; */
-/* 	size_value_t i_total = shape().multiply(-2); */
-/* 	void* ptr = outp_arr.data_ptr(); */
-/* 	for(size_value_t i = 0; i < numel(); ++i, ++my_strides){ */
-/* 		*outp_strides = *my_strides; */
-/* 		if((i+1) % cols == 0){ */
-/* 			if((i+1) % i_total == 0){ */
-/* 				*outp_strides = ptr; */
-/* 				outp_strides += 1; */
-/* 				continue; */
-/* 			} */
-/* 			for(size_value_t j = 0; j < outp_shape.back() + (dil -
- * 1); ++j, ++outp_strides){ */
-/* 				*outp_strides = ptr; */
-/* 			} */
-/* 			continue; */
-/* 		} */
-/* 		outp_strides += dil; */
-/* 	} */
-/* 	return Tensor(outp_arr, std::move(outp_shape)); */
-
-/* } */
-
-}; // namespace nt

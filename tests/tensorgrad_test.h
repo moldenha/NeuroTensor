@@ -2,6 +2,7 @@
 #include <nt/functional/functional.h>
 #include <nt/nn/TensorGrad.h>
 #include <nt/nn/layers.h>
+#include <nt/nn/Loss.h>
 #include <memory>
 #include <iostream>
 #include <functional>
@@ -305,6 +306,155 @@ int test_autograd_cat(){
 
 }
 
+
+//this function can take 2 activation functions and show that they are able to reduce the loss
+//this is not meant to be a solid model
+//there are a few different things implemented to help with exploding gradients:
+//  - weights are pre-normalized and multiplied by 0.01
+//  - gradients are clipped
+//  - once the loss starts to increase again after enough iterations, the training stops
+//these are implemented because this function is only meant to make sure that the activation
+//functions work, properly reduce the loss, and that the autograd properly handles gradients
+//it is not meant to be a good model or anything like that
+template<typename ActivationFunction1, typename ActivationFunction2>
+bool activation_function_test(ActivationFunction1&& func1, ActivationFunction2&& func2, 
+                              nt::DType dt = nt::DType::Float32,
+                              nt::Tensor wanted = nt::functional::rand(0, 1, {3, 300}, nt::DType::Float32),
+                              int iterations = 500, float lr = 0.001, int it_greater=10,
+                              bool clip = true, bool verbose_grad = false,
+                              nt::Scalar clip_min=-0.1, nt::Scalar clip_max=0.1,
+                              std::function<nt::Tensor(nt::SizeRef, nt::DType)> init = nt::functional::randn,
+                              int64_t hidden = 5){
+    using namespace nt;
+    auto critereon = loss::MSE;
+    const int64_t& out_cols = wanted.shape()[-1];
+    //the reason they are multiplied by 0.01 is because 
+    //(especitally if out cols is small) the weights are skewed
+    //this makes functions like softmax sometimes not be able to properly reduce the loss
+    TensorGrad weight1(init({10, hidden}, dt));
+    TensorGrad bias1(init({hidden}, dt));
+    TensorGrad weight2(init({hidden, out_cols}, dt));
+    TensorGrad bias2(init({out_cols}, dt));
+    float loss1, lossl, curl = 1.0;
+    //sometimes values were wanted to be printed
+    auto val_grad_getter = [](const TensorGrad& tg)->float{
+        return std::abs(tg.grad->tensor).max().values.toScalar().to<float>();
+    };
+    auto update = [&lr, &weight1, &bias1, &weight2, &bias2, &clip, &val_grad_getter, &verbose_grad, &curl,
+                    &clip_min, &clip_max](){
+        //clipping helps with gradients exploding
+        if(verbose_grad){
+            std::cout << "("
+                << val_grad_getter(weight1) << ',' 
+                << val_grad_getter(weight2) << ',' 
+                << val_grad_getter(bias1) << ',' 
+                << val_grad_getter(bias2) << ')' << std::endl;
+
+        }
+        if(clip){
+            weight1.grad->tensor.clip_(clip_min,clip_max) *= lr;
+            bias1.grad->tensor.clip_(clip_min, clip_max) *= lr;
+            weight2.grad->tensor.clip_(clip_min, clip_max) *= lr;
+            bias2.grad->tensor.clip_(clip_min, clip_max) *= lr;
+        }else{
+            // if(val_grad_getter(weight1) < 1e-3 && curl > 0.4){
+            //     weight1.grad->tensor *= 10.0;
+            //     bias1.grad->tensor *= 10.0;
+            //     weight2.grad->tensor *= 10.0;
+            //     bias2.grad->tensor *= 10.0;
+            // }else{
+                weight1.grad->tensor *= lr;
+                bias1.grad->tensor *= lr;
+                weight2.grad->tensor *= lr;
+                bias2.grad->tensor *= lr;
+            // }
+        }
+        weight1.update();
+        bias1.update();
+        weight2.update();
+        bias2.update();
+    };
+
+    auto run = [&weight1, &bias1, &weight2, &bias2, &func1, &func2](const TensorGrad& x){
+        TensorGrad x1 = functional::linear(x, weight1, bias1);
+        // TensorGrad x1 = functional::matmult(x, weight1) + bias1;
+        TensorGrad f_x1 = func1(x1);
+        TensorGrad x2 = functional::linear(f_x1, weight2, bias2);
+        // TensorGrad x2 = functional::matmult(f_x1, weight2) + bias2;
+        TensorGrad f_x2 = func2(x2);
+        return std::move(f_x2);
+    };
+
+    TensorGrad original(functional::rand(0, 20, {3, 10}, dt));
+    int i;
+    for(i = 0; i < iterations ; ++i){
+        TensorGrad out = run(original);
+        TensorGrad loss = critereon(out, wanted);
+        //eventually there is an exploding gradient
+        //the point of this is purely to see if the activation function works and the
+        //autograd handles the gradients properly
+        //not to make a working model
+        //if(loss.item().to<float>() == 0.0){lossl = 0.0; break;}
+        if(it_greater > 0 && i > it_greater && loss.item().to<float>() > curl){
+            lossl = curl; break;
+        }
+        curl = loss.item().to<float>();
+        std::cout << "loss["<<i<<"]:\t"<<loss.item();
+        if(!verbose_grad)
+            std::cout << std::endl;
+        if(i == 0){
+            loss1 = curl;
+            std::cout << out << std::endl;
+        }
+        if(i == iterations-1){
+            lossl = loss.item().to<float>();
+        }
+        if(curl < 0.1) {lr = 0.001;}
+        // if(loss.item().to<float>() == 0.0){continue;}
+        loss.backward();
+        update();
+    }
+    std::cout << run(original) << std::endl;
+    std::cout << wanted << std::endl;
+    std::cout << original << std::endl;
+    std::cout << weight1 << std::endl;
+    std::cout << iterations << std::endl;
+    std::cout << i << std::endl;
+    std::cout << loss1 << std::endl;
+    std::cout << lossl << std::endl;
+    return std::abs(lossl) < std::abs(loss1);
+}
+
+
+//works properly
+bool test_softmax_activation(){
+    auto func1 = [](const nt::TensorGrad& x){return x;}; 
+    auto func2 = [](const nt::TensorGrad& x){return nt::functional::softmax(x, -1);}; 
+    nt::DType dt = nt::DType::Float32;
+    nt::Tensor wanted = nt::functional::zeros({3, 3}, nt::DType::Float32);
+    wanted[1][0] = 1;
+    wanted[0][2] = 1;
+    wanted[2][1] = 1;
+    return activation_function_test(func1, func2, dt, wanted, 2000, 0.01, 10, true, false,
+                                    -.1, .1, [](nt::SizeRef sz, nt::DType dt){return nt::functional::randn(sz, dt) * 0.01;});
+}
+
+bool test_gumbel_softmax_activation(){
+    auto func1 = [](const nt::TensorGrad& x){return x;}; 
+    auto func2 = [](const nt::TensorGrad& x){
+        // return nt::functional::softmax(x, -1);
+        // auto nx = nt::functional::tanh(x) * 10;
+        return nt::functional::gumbel_softmax(x, 1.0, true);
+    }; 
+    nt::DType dt = nt::DType::Float64;
+    nt::Tensor wanted = nt::functional::zeros({3, 3}, dt);
+    wanted[1][0] = 1;
+    wanted[0][2] = 1;
+    wanted[2][1] = 1;
+    return activation_function_test(func1, func2, dt, wanted, 1000, 0.01, -1, false, false, -10.0, 10.0,
+                                    [](nt::SizeRef sz, nt::DType dt){return nt::functional::rand(0, 0.3, sz, dt);}, 7);
+
+}
 
 int test_autograd(){
 	relu_autograd_test();

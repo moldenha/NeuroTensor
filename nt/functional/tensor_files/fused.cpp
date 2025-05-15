@@ -1,11 +1,13 @@
 #include "fused.h"
 #include "../cpu/fused.h"
+#include "exceptions.hpp"
 
 namespace nt{
 namespace functional{
 
 //returns c + (a * b);
 Tensor fused_multiply_add(const Tensor& c, const Tensor& a, const Tensor& b){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, b, c);
     utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
                            "For optimized fused multiply add, expected all tensors to be the same shape a=($), b=($), c=($)",
                            a.shape(), b.shape(), c.shape());
@@ -19,6 +21,8 @@ Tensor fused_multiply_add(const Tensor& c, const Tensor& a, const Tensor& b){
 
 //returns c += (a * b);
 Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, const Tensor& b){
+    utils::THROW_EXCEPTION(c.is_mutable(), "Output from fused operation must be mutable");
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, b, c);
     utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
                            "For optimized fused multiply add, expected all tensors to be the same shape a=($), b=($), c=($)",
                            a.shape(), b.shape(), c.shape());
@@ -32,6 +36,7 @@ Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, const Tensor& b){
 
 //returns c + (a * b);
 Tensor fused_multiply_add(const Tensor& c, const Tensor& a, Scalar b){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, c);
     utils::throw_exception(c.numel() == a.numel(),
                            "For optimized fused multiply add, expected all tensors to be the same shape a=($), c=($)",
                            a.shape(), c.shape());
@@ -45,6 +50,8 @@ Tensor fused_multiply_add(const Tensor& c, const Tensor& a, Scalar b){
 
 
 Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, Scalar b){
+    utils::THROW_EXCEPTION(c.is_mutable(), "Output from fused operation must be mutable");
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, c);
     utils::throw_exception(c.numel() == a.numel(),
                            "For optimized fused multiply add, expected all tensors to be the same shape a=($), c=($)",
                            a.shape(), c.shape());
@@ -56,6 +63,7 @@ Tensor& fused_multiply_add_(Tensor& c, const Tensor& a, Scalar b){
 
 //returns c - (a * b);
 Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, const Tensor& b){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, c, b);
     utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
                            "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), b=($), c=($)",
                            a.shape(), b.shape(), c.shape());
@@ -67,6 +75,7 @@ Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, const Tensor& b
 }
 
 Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, Scalar b){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, c);
     utils::throw_exception(c.numel() == a.numel(),
                            "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), c=($)",
                            a.shape(), c.shape());
@@ -81,6 +90,8 @@ Tensor fused_multiply_subtract(const Tensor& c, const Tensor& a, Scalar b){
 
 //returns c -= (a * b);
 Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, const Tensor& b){
+    utils::THROW_EXCEPTION(c.is_mutable(), "Output from fused operation must be mutable");
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, c, b);
     utils::throw_exception(c.numel() == a.numel() && c.numel() == b.numel(),
                            "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), b=($), c=($)",
                            a.shape(), b.shape(), c.shape());
@@ -92,6 +103,8 @@ Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, const Tensor& b){
 
 
 Tensor& fused_multiply_subtract_(Tensor& c, const Tensor& a, Scalar b){
+    utils::THROW_EXCEPTION(c.is_mutable(), "Output from fused operation must be mutable");
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, c);
     utils::throw_exception(c.numel() == a.numel(),
                            "For optimized fused multiply subtract, expected all tensors to be the same shape a=($), c=($)",
                            a.shape(), c.shape());

@@ -26,10 +26,9 @@ class optional_list{
 		optional_list(T element)
 		:list(nullptr)
 		{}
-		template<typename T, std::enable_if_t<!std::is_same_v<T, std::nullptr_t>, bool> = true>
-		optional_list(T element)
-		:optional_list({static_cast<int64_t>(element)})
-		{}
+		template<typename T, std::enable_if_t<!std::is_same_v<T, std::nullptr_t> && std::is_convertible_v<T, int64_t>, bool> = true>
+        optional_list(T element)
+        : optional_list({static_cast<int64_t>(element)}) {}
 
 		optional_list();
 		optional_list& operator=(const optional_list&);
@@ -42,7 +41,7 @@ class optional_list{
 			if(*this){this->list.reset();}
 			return *this;
 		}
-		template<typename T, std::enable_if_t<!std::is_same_v<T, std::nullptr_t>, bool> = true>
+		template<typename T, std::enable_if_t<!std::is_same_v<T, std::nullptr_t> && std::is_convertible_v<T, int64_t>, bool> = true>
 		inline optional_list& operator=(T element){
 			return *this = {static_cast<int64_t>(element)};
 		}

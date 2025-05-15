@@ -45,7 +45,7 @@ class TimeAwareHiddenLayer : public nt::Module{
         TimeAwareHiddenLayer(int64_t input_size, int64_t hidden_size)
         :_input_size(input_size),
         _hidden_size(hidden_size),
-        input_proj(nt::layers::Linear(input_size, hidden_size)),
+        input_proj(nt::layers::Linear(ntarg_(in_channels) = input_size, ntarg_(out_channels) = hidden_size)),
         hidden_proj(nt::layers::Linear(hidden_size, hidden_size)),
         time_proj(nt::layers::Linear(1, hidden_size)), // Scalar time which is going to be a tensor of shape (1,1)
         output_proj(nt::layers::Linear(hidden_size, hidden_size))

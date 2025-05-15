@@ -1,9 +1,8 @@
 #include "Conv1D.h"
 #include "../functional.h"
 #include "../../functional/functional.h"
-#include "../layer_reflect/layer_registry.hpp"
-#include "../layer_reflect/reflect_macros.h"
-
+#include "../../reflection/layer_reflect/layer_registry.hpp"
+#include "../../reflection/layer_reflect/reflect_macros.h"
 namespace nt{
 namespace layers{
 
@@ -24,6 +23,11 @@ Conv1D::Conv1D(int64_t in_channels, int64_t out_channels, int64_t kernel_size,
     utils::THROW_EXCEPTION(
         in_channels % groups == 0,
         "Expected in channels to be divisible by groups");
+    if(use_bias){
+        this->register_parameter("Bias", Bias);
+        Bias.tensor.set_mutability(false);
+    }
+    Weight.tensor.set_mutability(false);
 }
 
 TensorGrad Conv1D::forward(TensorGrad x) {
@@ -44,5 +48,5 @@ TensorGrad Conv1D::forward(TensorGrad x) {
 
 
 _NT_REGISTER_LAYER_NAMESPACED_(nt::layers::Conv1D, nt__layers__Conv1D, use_bias,
-                               groups, in_channels, out_channels, Weight, Bias)
+                               groups, in_channels, out_channels, Weight)
 

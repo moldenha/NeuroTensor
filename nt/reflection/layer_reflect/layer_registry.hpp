@@ -1,6 +1,6 @@
 #ifndef _NT_LAYER_REGISTRY_HPP_
 #define _NT_LAYER_REGISTRY_HPP_
-#include "../Module.h"
+#include "../../nn/Module.h"
 #include "custom_iterator.hpp"
 #include "custom_iterator_map.hpp"
 #include <functional>

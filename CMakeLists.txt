@@ -129,6 +129,23 @@ set(FUNCTIONAL_SOURCES
 	nt/functional/tensor_files/min_max.cpp
 	nt/functional/tensor_files/compare.cpp
 	nt/functional/tensor_files/ranges.cpp
+	nt/functional/tensor_files/softmax.cpp
+	nt/functional/tensor_files/sum_exp_log.cpp
+	nt/functional/tensor_files/mesh.cpp
+	nt/functional/tensor_files/repeat.cpp
+	nt/functional/tensor_files/stride.cpp
+	nt/functional/tensor_files/index.cpp
+	nt/functional/tensor_files/padding.cpp
+    nt/functional/tensor_files/pooling/avg_pool1d.cpp
+    nt/functional/tensor_files/pooling/avg_pool2d.cpp
+    nt/functional/tensor_files/pooling/avg_pool3d.cpp
+    nt/functional/tensor_files/pooling/lp_pool1d.cpp
+    nt/functional/tensor_files/pooling/lp_pool2d.cpp
+    nt/functional/tensor_files/pooling/lp_pool3d.cpp
+    nt/functional/tensor_files/pooling/max_pool1d.cpp
+    nt/functional/tensor_files/pooling/max_pool2d.cpp
+    nt/functional/tensor_files/pooling/max_pool3d.cpp
+    nt/functional/tensor_files/pooling/fractional.cpp
     
     nt/functional/cpu/unfold1d.cpp
     nt/functional/cpu/unfold2d.cpp
@@ -144,6 +161,9 @@ set(FUNCTIONAL_SOURCES
     nt/functional/cpu/normalize.cpp
     nt/functional/cpu/min_max.cpp
     nt/functional/cpu/compare.cpp
+    nt/functional/cpu/softmax.cpp
+    nt/functional/cpu/sum_exp_log.cpp
+    nt/functional/cpu/fractional_pooling.cpp
 
 	nt/functional/functional.cpp
 )
@@ -226,7 +246,8 @@ set(AI_SOURCES
     nt/nn/Layer.cpp
     nt/nn/LNN.cpp
     nt/nn/TensorGrad.cpp
-    nt/nn/functional.cpp
+    nt/nn/functional/functional.cpp
+    nt/nn/functional/pooling.cpp
     nt/nn/Loss.cpp
     nt/nn/Optimizers.cpp
     nt/nn/Module.cpp
@@ -251,11 +272,34 @@ set(AI_SOURCES
     nt/nn/layers/Functional.cpp
     nt/nn/layers/Identity.cpp
     nt/nn/layers/Linear.cpp
+    nt/nn/layers/SymmetricBilinear.cpp
     nt/nn/layers/Softplus.cpp
     nt/nn/layers/Unfold1D.cpp
     nt/nn/layers/Unfold2D.cpp
     nt/nn/layers/Unfold3D.cpp
-
+    nt/nn/layers/AdaptiveAvgPool1D.cpp
+    nt/nn/layers/AdaptiveAvgPool2D.cpp
+    nt/nn/layers/AdaptiveAvgPool3D.cpp
+    nt/nn/layers/AdaptiveLPPool1D.cpp
+    nt/nn/layers/AdaptiveLPPool2D.cpp
+    nt/nn/layers/AdaptiveLPPool3D.cpp
+    nt/nn/layers/AdaptiveMaxPool1D.cpp
+    nt/nn/layers/AdaptiveMaxPool2D.cpp
+    nt/nn/layers/AdaptiveMaxPool3D.cpp
+    nt/nn/layers/AvgPool1D.cpp
+    nt/nn/layers/AvgPool2D.cpp
+    nt/nn/layers/AvgPool3D.cpp
+    nt/nn/layers/FractionalMaxPool2D.cpp
+    nt/nn/layers/FractionalMaxPool3D.cpp
+    nt/nn/layers/LPPool1D.cpp
+    nt/nn/layers/LPPool2D.cpp
+    nt/nn/layers/LPPool3D.cpp
+    nt/nn/layers/MaxPool1D.cpp
+    nt/nn/layers/MaxPool2D.cpp
+    nt/nn/layers/MaxPool3D.cpp
+    nt/nn/layers/MaxUnPool1D.cpp
+    nt/nn/layers/MaxUnPool2D.cpp
+    nt/nn/layers/MaxUnPool3D.cpp
 )
 
 set(MP_SOURCES
@@ -286,6 +330,8 @@ set(TDA_SOURCES
     #learned persistent homology
     nt/tda/nn/distance.cpp
     nt/tda/nn/filtration.cpp
+    nt/tda/nn/laplacian.cpp
+    nt/tda/nn/boundaries.cpp
     nt/tda/nn/loss.cpp
 )
 

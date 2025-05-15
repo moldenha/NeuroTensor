@@ -210,7 +210,7 @@ struct SimdTraits_avx2<float> {
 		c = simde_mm256_add_ps(simde_mm256_mul_ps(a,b),c);
 #endif //defined(__FMA__) || defined(SIMDE_X86_FMA)
 	};
-	inline static constexpr auto sum = [](const simde__m256& x) -> float{
+	inline static constexpr auto sum = [](Type x) -> float{
 #ifdef SIMDE_ARCH_SSE3
 		x = simde_mm256_hadd_ps(x, x);
 		x = simde_mm256_hadd_ps(x, x);
@@ -1012,7 +1012,7 @@ struct SimdTraits_avx2<float16_t>{
 		c = simde_mm256_add_ps(simde_mm256_mul_ps(a,b),c);
 #endif //defined(__FMA__) || defined(SIMDE_X86_FMA)
        };
-	inline static constexpr auto sum = [](const simde__m256&& x) noexcept -> float16_t{
+	inline static constexpr auto sum = [](Type x) noexcept -> float16_t{
 #ifdef SIMDE_ARCH_SSE3
 		x = simde_mm256_hadd_ps(x, x);
 		x = simde_mm256_hadd_ps(x, x);
@@ -1126,7 +1126,7 @@ struct SimdTraits_avx2<complex_32>{
 		c = simde_mm256_add_ps(simde_mm256_mul_ps(a,b),c);
 #endif //defined(__FMA__) || defined(SIMDE_X86_FMA)
        };
-	inline static constexpr auto sum = [](const simde__m256&& x) noexcept -> complex_32{
+	inline static constexpr auto sum = [](Type x) noexcept -> complex_32{
 #ifdef SIMDE_ARCH_SSE3
 		x = simde_mm256_hadd_ps(x, x);
 		x = simde_mm256_hadd_ps(x, x);

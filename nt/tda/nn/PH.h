@@ -5,5 +5,8 @@
 #include "distance.h"
 #include "filtration.h"
 #include "loss.h"
+#include "laplacian.h"
+#include "boundaries.h"
+
 
 #endif

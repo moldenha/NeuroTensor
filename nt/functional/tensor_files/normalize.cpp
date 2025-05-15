@@ -3,11 +3,14 @@
 #include "../../dtype/ArrayVoid.h"
 #include "../../dtype/ArrayVoid.hpp"
 #include <cmath>
+#include "exceptions.hpp"
 
 namespace nt{
 namespace functional{
 
 void xavier_uniform_(Tensor& tensor){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(tensor);
+    utils::throw_exception(tensor.is_mutable(), "Can only perform xavier_uniform_ on a mutable tensor");
     utils::throw_exception(tensor.dims() >= 2, "For xavier uniform the dimensions of the tensor must be greater than or equal to 2");
     int64_t fan_in = tensor.shape()[-1]; //switch to [1] maybe
     int64_t fan_out = tensor.shape()[-2]; //switch to [0] maybe

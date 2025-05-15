@@ -895,7 +895,21 @@ ArrayVoid& ArrayVoid::operator*=(Scalar c){
 
 ArrayVoid& ArrayVoid::operator/=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "/= operation is invalid for DType::Bool");
-	return *this *= c.inverse();
+    //if floating or complex, a multiplication (times the inverse) is the same thing and faster
+    if(DTypeFuncs::is_complex(dtype) || DTypeFuncs::is_floating(dtype))
+        return *this *= c.inverse();
+    if(dtype != DType::TensorObj){
+		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
+			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+			auto v = c.to<value_t>();
+			mp::divide_num(begin, end, begin, v);
+		});
+	}
+	else{
+		this->for_each<DType::TensorObj>([&c](auto& inp){inp /= c;});
+	}
+    return *this;
+
 }
 
 ArrayVoid& ArrayVoid::operator-=(Scalar c){
@@ -936,8 +950,7 @@ ArrayVoid ArrayVoid::operator*(Scalar c) const{
 
 
 ArrayVoid ArrayVoid::operator/(Scalar c) const{
-	utils::throw_exception(dtype != DType::Bool, "/ operation is invalid for DType::Bool");
-	return *this * c.inverse();
+    return this->clone() /= c;
 }
 
 ArrayVoid ArrayVoid::operator-(Scalar c) const{
@@ -1525,6 +1538,7 @@ ArrayVoid& ArrayVoid::pow_(Scalar p) {
 		this->execute_function_chunk<WRAP_DTYPES<RealNumberTypesL, ComplexTypesL> >(
 			[&p](auto a_begin, auto a_end){
 				using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
+                if(p.to<value_t>() == 1) return;
 				mp::pow(a_begin, a_end, a_begin, p.to<value_t>());
 		});
 	}

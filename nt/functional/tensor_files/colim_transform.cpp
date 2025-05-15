@@ -2,13 +2,15 @@
 #include "../cpu/colim_transform.h"
 #include "../../Tensor.h"
 #include "fill.h"
+#include "exceptions.hpp"
 
 
 namespace nt{
 namespace functional{
 
 Tensor unfold(const Tensor& x, utils::my_tuple kernel_size, utils::my_tuple dilation, utils::my_tuple padding, utils::my_tuple stride, bool transpose_out){
-	utils::throw_exception(x.dims() >= 3, "Expected input tensot to unfold to have dims greater than or equal to 3 but got $D", x.dims());
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
+    utils::throw_exception(x.dims() >= 3, "Expected input tensot to unfold to have dims greater than or equal to 3 but got $D", x.dims());
 
 	const int64_t LKern = kernel_size[0] * kernel_size[1];
 
@@ -34,6 +36,7 @@ Tensor unfold(const Tensor& x, utils::my_tuple kernel_size, utils::my_tuple dila
 
 
 Tensor unfold_backward(const Tensor& x, const utils::my_tuple& output_size, const utils::my_tuple& kernel_size, const utils::my_tuple& dilation, const utils::my_tuple& padding, const utils::my_tuple& stride, const bool& transpose_out){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BROWS = output_size[0];
 	const int64_t& BCOLS = output_size[1];
@@ -64,6 +67,7 @@ Tensor unfold_backward(const Tensor& x, const utils::my_tuple& output_size, cons
 }
 
 Tensor& unfold_backward(const Tensor& x, Tensor& output, const utils::my_tuple& output_size, const utils::my_tuple& kernel_size, const utils::my_tuple& dilation, const utils::my_tuple& padding, const utils::my_tuple& stride, const bool& transpose_out){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x, output);
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BROWS = output_size[0];
 	const int64_t& BCOLS = output_size[1];
@@ -99,6 +103,7 @@ Tensor& unfold_backward(const Tensor& x, Tensor& output, const utils::my_tuple& 
 
 
 Tensor fold(const Tensor& x, utils::my_tuple output_size, utils::my_tuple kernel_size, utils::my_tuple dilation, utils::my_tuple padding, utils::my_tuple stride){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $D", x.dims());
     const int64_t& BROWS = output_size[0];
     const int64_t& BCOLS = output_size[1];
@@ -132,6 +137,7 @@ Tensor fold(const Tensor& x, utils::my_tuple output_size, utils::my_tuple kernel
 
 
 Tensor fold_backward(const Tensor& grad_output, const utils::my_tuple& output_size, const utils::my_tuple& kernel_size, const utils::my_tuple& dilation, const utils::my_tuple& padding, const utils::my_tuple& stride){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(grad_output);
     utils::throw_exception(grad_output.dims() == 4 || grad_output.dims() == 3, "Expected to get a shape with a dimensionality of 4D or 3D, but got $D for fold backward", grad_output.dims());
     const int64_t& BROWS = output_size[0];
     const int64_t& BCOLS = output_size[1];
@@ -161,6 +167,7 @@ Tensor fold_backward(const Tensor& grad_output, const utils::my_tuple& output_si
 }
 
 Tensor& fold_backward(const Tensor& grad_output, Tensor& output, const utils::my_tuple& output_size, const utils::my_tuple& kernel_size, const utils::my_tuple& dilation, const utils::my_tuple& padding, const utils::my_tuple& stride){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(grad_output, output);
     utils::throw_exception(grad_output.dims() == 4 || grad_output.dims() == 3, "Expected to get a shape with a dimensionality of 4D or 3D, but got $D for fold backward", grad_output.dims());
     const int64_t& BROWS = output_size[0];
     const int64_t& BCOLS = output_size[1];
@@ -196,6 +203,7 @@ Tensor& fold_backward(const Tensor& grad_output, Tensor& output, const utils::my
 
 
 Tensor unfold3d(const Tensor& x, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> dilation, utils::my_n_tuple<3> padding, utils::my_n_tuple<3> stride, bool transpose_out) {
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     utils::throw_exception(x.dims() >= 4, "Expected input tensor to unfold to have dims greater than or equal to 4 but got $D", x.dims());
 
     const int64_t LKern = kernel_size[0] * kernel_size[1] * kernel_size[2];
@@ -233,6 +241,7 @@ Tensor unfold3d(const Tensor& x, utils::my_n_tuple<3> kernel_size, utils::my_n_t
 
 Tensor unfold3d_backward(const Tensor& x, const utils::my_n_tuple<3>& output_size, const utils::my_n_tuple<3>& kernel_size, const utils::my_n_tuple<3>& dilation, const utils::my_n_tuple<3>& padding, const utils::my_n_tuple<3>& stride, const bool transpose_out){
 
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BDEPTH = output_size[0];
 	const int64_t& BROWS = output_size[1];
@@ -288,6 +297,7 @@ Tensor unfold3d_backward(const Tensor& x, const utils::my_n_tuple<3>& output_siz
 
 Tensor& unfold3d_backward(const Tensor& x, Tensor& output, const utils::my_n_tuple<3>& output_size, const utils::my_n_tuple<3>& kernel_size, const utils::my_n_tuple<3>& dilation, const utils::my_n_tuple<3>& padding, const utils::my_n_tuple<3>& stride, const bool transpose_out){
 
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x, output);
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BDEPTH = output_size[0];
 	const int64_t& BROWS = output_size[1];
@@ -345,6 +355,7 @@ Tensor& unfold3d_backward(const Tensor& x, Tensor& output, const utils::my_n_tup
 
 
 Tensor unfold1d(const Tensor& x, int64_t kernel_size, int64_t dilation, int64_t padding, int64_t stride, bool transpose_out){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
 	utils::throw_exception(x.dims() >= 2, "Expected input tensor to unfold to have dims greater than or equal to 2 but got $D", x.dims());
 
 	const int64_t LKern = kernel_size;
@@ -370,6 +381,7 @@ Tensor unfold1d(const Tensor& x, int64_t kernel_size, int64_t dilation, int64_t 
 
 
 Tensor unfold1d_backward(const Tensor& x, Tensor::size_value_t output_size, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x);
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BCOLS = output_size;
 	const int64_t L_c = ((output_size + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1;
@@ -399,6 +411,7 @@ Tensor unfold1d_backward(const Tensor& x, Tensor::size_value_t output_size, Tens
 
 
 Tensor& unfold1d_backward(const Tensor& x, Tensor& output, Tensor::size_value_t output_size, Tensor::size_value_t kernel_size, Tensor::size_value_t dilation, Tensor::size_value_t padding, Tensor::size_value_t stride, bool transpose_out){
+	_NT_FUNCTIONAL_ALWAYS_CHECK_(x, output);
 	utils::throw_exception(x.dims() == 2 || x.dims() == 3, "Expected to get a shape with a dimensionality of 3D or 2D, but got $ dimensions", x.dims());
 	const int64_t& BCOLS = output_size;
 	const int64_t L_c = ((output_size + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1;

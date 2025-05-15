@@ -12,8 +12,8 @@
 #include "Module.h"
 #include "functional.h"
 #include "TensorGrad.h"
-#include "layer_reflect/reflect_macros.h"
-#include "layer_reflect/layer_registry.hpp"
+#include "../reflection/layer_reflect/reflect_macros.h"
+#include "../reflection/layer_reflect/layer_registry.hpp"
 #include "layers.h"
 #include "ncps/wiring/wiring.h"
 

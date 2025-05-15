@@ -1,5 +1,5 @@
-#ifndef _NT_LAYERS_H_
-#define _NT_LAYERS_H_
+#ifndef _NT_NN_LAYERS_H_
+#define _NT_NN_LAYERS_H_
 
 #include "layers/Linear.h"
 #include "layers/Identity.h"
@@ -17,9 +17,32 @@
 #include "layers/Dropout.h"
 #include "layers/BatchNorm1D.h"
 #include "layers/Functional.h"
+#include "layers/AdaptiveAvgPool1D.h"
+#include "layers/AdaptiveAvgPool2D.h"
+#include "layers/AdaptiveAvgPool3D.h"
+#include "layers/AdaptiveLPPool1D.h"
+#include "layers/AdaptiveLPPool2D.h"
+#include "layers/AdaptiveLPPool3D.h"
+#include "layers/AdaptiveMaxPool1D.h"
+#include "layers/AdaptiveMaxPool2D.h"
+#include "layers/AdaptiveMaxPool3D.h"
+#include "layers/AvgPool1D.h"
+#include "layers/AvgPool2D.h"
+#include "layers/AvgPool3D.h"
+#include "layers/FractionalMaxPool2D.h"
+#include "layers/FractionalMaxPool3D.h"
+#include "layers/LPPool1D.h"
+#include "layers/LPPool2D.h"
+#include "layers/LPPool3D.h"
+#include "layers/MaxPool1D.h"
+#include "layers/MaxPool2D.h"
+#include "layers/MaxPool3D.h"
+#include "layers/MaxUnPool1D.h"
+#include "layers/MaxUnPool2D.h"
+#include "layers/MaxUnPool3D.h"
 
-#include "layer_reflect/layer_registry.hpp"
-#include "layer_reflect/reflect_macros.h"
+#include "../reflection/layer_reflect/layer_registry.hpp"
+#include "../reflection/layer_reflect/reflect_macros.h"
 
 #include "functional.h"
 

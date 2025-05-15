@@ -1,8 +1,8 @@
 #include "Functional.h"
 #include "../../functional/functional.h"
 #include "../functional.h"
-#include "../layer_reflect/layer_registry.hpp"
-#include "../layer_reflect/reflect_macros.h"
+#include "../../reflection/layer_reflect/layer_registry.hpp"
+#include "../../reflection/layer_reflect/reflect_macros.h"
 
 #define _NT_DEFINE_FUNCTIONAL_SINGLE_LAYER_(name, function)                    \
     namespace nt {                                                             \

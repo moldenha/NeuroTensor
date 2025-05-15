@@ -8,8 +8,8 @@ class Module; // forward declaration
 #include "../utils/any_ref.h"
 #include "TensorGrad.h"
 #include "forward_Layer.h"
-#include "layer_reflect/custom_iterator.hpp"
-#include "layer_reflect/custom_iterator_map.hpp"
+#include "../reflection/layer_reflect/custom_iterator.hpp"
+#include "../reflection/layer_reflect/custom_iterator_map.hpp"
 #include <functional>
 #include <map>
 #include <memory>

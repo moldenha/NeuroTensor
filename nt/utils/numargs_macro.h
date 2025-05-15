@@ -73,6 +73,19 @@ namespace nt{
    20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1))
 #define _NT_NUMARGS_(...) _NT_GLUE_(_NT_VAR_COUNT_EMPTY_, _NT_IS_EMPTY_(__VA_ARGS__))(__VA_ARGS__)
 
+//example usage:
+/*
+
+1 means empty
+#define _NT_HANDLE_NULL_TENSORS_EMPTY_1(...) throw_exception(!is_null(), "Cannot perform operation"
+                                                                         __NT_FUNCTION_NAME__
+                                                                        "on a null tensor")
+0 means non-empty
+#define _NT_HANDLE_NULL_TENSORS_EMPTY_0(...) _NT_HANDLE_NULL_TENSORS_NON_EMPTY_SELECT_(__VA_ARGS__, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_4, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_3, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_2, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_1, _NT_HANDLE_NULL_TENSORS_NON_EMPTY_0)(__VA_ARGS__)
+#define _NT_HANDLE_NULL_TENSORS_(...) _NT_GLUE_(_NT_HANDLE_NULL_TENSORS_EMPTY_, _NT_IS_EMPTY_(__VA_ARGS__))(__VA_ARGS__)
+
+*/
+
 }
 
 #endif  

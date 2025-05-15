@@ -11,7 +11,7 @@ Tensor zeros_like(const Tensor &);
 Tensor ones(SizeRef, DType dt = DType::Float);
 Tensor ones_like(const Tensor &);
 Tensor nums(SizeRef, const Scalar, DType dt = DType::Float);
-Tensor nums_like(SizeRef, const Scalar);
+Tensor nums_like(const Tensor& t, const Scalar);
 Tensor arange(typename Tensor::size_value_t total_size, DType dt = DType::Float, Scalar start = 0);
 Tensor arange(SizeRef, DType dt = DType::Float, Scalar start = 0);
 

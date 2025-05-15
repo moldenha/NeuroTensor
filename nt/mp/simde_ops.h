@@ -510,15 +510,6 @@ inline void dsigmoid(T begin, T end, U out, bool apply_sigmoid){
 	}
 }
 
-template<typename T, typename U>
-inline void softmax(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
-	using base_type = utils::IteratorBaseType_t<T>;
-	U end_out = out + (end - begin);
-	exp(begin, end, out);
-	base_type total = accumulate(out, end_out, base_type(0.0));
-	divide_num(out, end_out, out, total);
-}
 
 
 template<typename T, typename U>

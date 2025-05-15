@@ -34,6 +34,7 @@ namespace functional{
 
 //basically, for all functions, the shape out is the same as a in no matter if b has to be expanded or summed to fit into a.
 Tensor functional_operator_out(const Tensor& _a, const Tensor& _b, const functional_operator_num op){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(_a, _b);
 	exception_dtypes(_a.dtype, _b.dtype);
 	if(_a.shape() == _b.shape()){
 		Tensor output(_a.shape(), _a.dtype);
@@ -97,7 +98,9 @@ Tensor functional_operator_out(const Tensor& _a, const Tensor& _b, const functio
 	Tensor b = (_a.dims() > _b.dims()) ? _b.unsqueeze_as(_a) : _b;
 	Tensor a = (_b.dims() > _a.dims()) ? _a.unsqueeze_as(_b) : _a;
 	if(b.shape() == a.shape()){return functional_operator_out(a, b, op).view(_a.shape());}
-	b = b.expand_as(a).clone();
+    // std::cout << "Expanding "<<b.shape()<<" as "<<a.shape()<<std::endl;
+    b = b.expand_as(a).clone();
+    // std::cout << "Expanding "<<a.shape()<<" as "<<b.shape()<<std::endl;
 	a = a.expand_as(b).clone();
 	utils::throw_exception(a.shape() == b.shape(), "Shape error for functional operator $ != $", a.shape(), b.shape());
     // const Tensor& _larger_dim = (_a.dims() > _b.dims()) ? _a : _b;
@@ -116,6 +119,9 @@ Tensor functional_operator_out(const Tensor& _a, const Tensor& _b, const functio
 // are not
 // (everything inside the brackets are shapes)
 void functional_operator_this(Tensor& _a, const Tensor& _b, const functional_operator_num op){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(_a, _b);
+    utils::throw_exception(_a.is_mutable(),
+                           "Can only perform operation that alters a tensor if the tensor is mutable");
 	exception_dtypes(_a.dtype, _b.dtype);
 	if(_a.shape() == _b.shape()){
         if(_a.dtype == DType::TensorObj){
@@ -181,6 +187,13 @@ void functional_operator_this(Tensor& _a, const Tensor& _b, const functional_ope
     else if(op == functional_operator_num::Subtract){
         b = b.expand_as(a);
         b = b.sum_as(a);
+        if(std::all_of(b.shape().begin(), b.shape().end(), [](const auto& var){return var == 1;}) 
+            && std::all_of(a.shape().begin(), a.shape().end(), [](const auto& var){return var == 1;})){
+            if(a.dims() > b.dims())
+                b = b.view(a.shape());
+            else if(b.dims() > a.dims())
+                a = a.view(b.shape());
+        }
         utils::throw_exception(a.shape() == b.shape(), "Shape error for subtraction functional this operator $ != $", a.shape(), b.shape());
         Tensor c = functional_operator_out(a, b, op);
         Tensor s = (c.dims() > _a.dims()) ? _a.unsqueeze_as(c) : _a;

@@ -74,7 +74,7 @@ reflect::detail::custom_typed_map<TensorGrad> Layer::named_parameters(){
 
 void Layer::update(){
 	for(auto& parameter : this->parameters()){
-		parameter.update();
+		parameter.update_mutable();
 	}
 }
 

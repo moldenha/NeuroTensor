@@ -28,7 +28,7 @@ Tensor find_all_simplicies(int64_t simplicies_amt, const Tensor &points,
                            bool indexes_only = false);
 
 std::pair<Tensor, Tensor> find_all_simplicies(int64_t simplicies_amt, const int64_t num_points,
-                           const Tensor &distance_matrix);
+                           const Tensor &distance_matrix, double max_radi=-1.0, bool sort = true);
 } // namespace tda
 } // namespace nt
 

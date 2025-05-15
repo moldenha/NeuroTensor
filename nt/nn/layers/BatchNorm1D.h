@@ -4,6 +4,7 @@
 #include "../../Tensor.h"
 #include "../Module.h"
 #include "../TensorGrad.h"
+#include "../../reflection/named_parameters/named_parameters.hpp"
 
 namespace nt {
 namespace layers {
@@ -18,9 +19,13 @@ class BatchNorm1D : public Module {
     bool affine, track_running_stats;
     Tensor running_mean, running_var; // tracking stats
     TensorGrad gamma, beta;           // learnable parameters; scale, shift
-    BatchNorm1D(int64_t num_features, double epsilon = 1e-5,
-                double momentum = 0.1, bool affine = true,
-                bool track_running_stats = true);
+    _NT_MAKE_NAMED_ARGUMENT_CLASS_CONSTRUCTOR_(BatchNorm1D,
+        _NT_NAMED_CLASS_CONSTRUCTOR_CLASS_ARG_NAMES_(num_features, epsilon, momentum, affine, track_running_stats),
+        _NT_NAMED_CLASS_CONSTRUCTOR_CLASS_DEFAULT_VALS_(1e-5,0.1,true,true),
+        _NT_NAMED_CLASS_CONSTRUCTOR_CLASS_ARG_TYPES_(int64_t, double, double, bool, bool));
+    // BatchNorm1D(int64_t num_features, double epsilon = 1e-5,
+    //             double momentum = 0.1, bool affine = true,
+    //             bool track_running_stats = true);
 
     TensorGrad forward(TensorGrad x);
     Tensor eval(Tensor x);

@@ -489,7 +489,7 @@ std::tuple<
     // std::cout << Kp1<<','<<(rkp1_end-rkp1_begin)<<std::endl;
     // std::cout << s_kp1.shape()<<','<<rkp1.shape()<<std::endl;
     utils::THROW_EXCEPTION((rkp1_end-rkp1_begin) == B_kp1,
-                           "INTERNAL LOGIC ERROR");
+                           "INTERNAL LOGIC ERROR $ $", (rkp1_end-rkp1_begin), B_kp1);
     int64_t total_num = 0;
     //the radi are seen as the filtration values
     for (int64_t i = 0; i < Kp1; ++i) {

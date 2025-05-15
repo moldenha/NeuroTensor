@@ -1599,6 +1599,20 @@ void Bucket::swap(Bucket& other){
 	
 }
 
+
+const bool Bucket::is_sub_memory() const{
+    if(this->is_null()) return false;
+    if(iterator_type() != 1) return true; //not contiguous
+    if(this->stride_size != 2) return true;
+    if(this->bs != 1) return true;
+    const void* begin = this->data_ptr();
+    const void* end = this->data_ptr_end();
+    const intrusive_ptr<Device>& dev = (*buckets_)[0];
+    if(!dev->in_block(begin)) return true;
+    if(dev->get_memory() == begin && dev->get_end_memory() == end) return false;
+    return true;
+}
+
 Bucket Bucket::bucket_all_indices() const{
 	if(!strides_blocked){return *this;}
 	const uint32_t dtype_s = DTypeFuncs::size_of_dtype(dtype);

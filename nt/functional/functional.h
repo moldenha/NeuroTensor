@@ -18,6 +18,14 @@
 #include "tensor_files/min_max.h"
 #include "tensor_files/compare.h"
 #include "tensor_files/ranges.h"
+#include "tensor_files/softmax.h"
+#include "tensor_files/sum_exp_log.h"
+#include "tensor_files/mesh.h"
+#include "tensor_files/repeat.h"
+#include "tensor_files/stride.h"
+#include "tensor_files/index.h"
+#include "tensor_files/padding.h"
+#include "tensor_files/pooling.h"
 #include <cstring>
 #include <functional>
 #include <optional>
@@ -33,10 +41,7 @@ Tensor dot(const Tensor &, const Tensor &, utils::optional_list dim = nullptr,
 Tensor all(const Tensor, int64_t dim);
 Tensor any(const Tensor, int64_t dim);
 
-void softmax_(Tensor &);
-void softmax_(Tensor &, uint32_t);
-void softmax_stable_(Tensor &);
-void softmax_stable_(Tensor &, uint32_t);
+
 Tensor dropout(const Tensor &, double);
 Tensor sigmoid(const Tensor &);
 Tensor dsigmoid(const Tensor &, bool apply_sigmoid = true);
@@ -61,17 +66,10 @@ Tensor dvar(const Tensor &dx, const Tensor &x,
             int64_t correction = 1); // derivative of the var function with
                                      // respect to xi element of the the tensor
 Tensor abs(const Tensor &); // absolute value
-Tensor log(const Tensor &);
-Tensor dlog(const Tensor &);
 Tensor softplus(const Tensor &x, Scalar beta = 1.0, Scalar threshold = 20.0);
-Tensor softmax(Tensor &);
-Tensor softmax(Tensor &, uint32_t);
-Tensor softmax_stable(Tensor &);
-Tensor softmax_stable(Tensor &, uint32_t);
 
-size_t amount_of(const Tensor &, Scalar);
-size_t count(const Tensor &);
-Tensor where(Tensor);
+
+
 Tensor index_select(Tensor input, int8_t dim, Tensor index);
 Tensor select(Tensor input, int8_t dim, typename Tensor::size_value_t index);
 Tensor meshgrid(Tensor &&, Tensor &&);
@@ -83,8 +81,6 @@ split(Tensor input, std::vector<typename Tensor::size_value_t> split_sections,
       int64_t dim = 0); // splits into a specified amount on the given dimension
 Tensor chunk(Tensor input, typename Tensor::size_value_t chunks,
              int64_t dim = 0); // splits into that many chunks
-Tensor as_strided(const Tensor &input, const SizeRef n_size, SizeRef n_stride,
-                  const int64_t storage_offset = 0, bool whole_tensor = false);
 Tensor sort(const Tensor &, const Tensor::size_value_t dim = -1,
             bool descending = false, bool return_sorted = true,
             bool return_indices = true);

@@ -1,7 +1,7 @@
 #include "Layer.h"
 #include "layers.h"
 #include "LNN.h"
-#include "layer_reflect/reflect_macros.h"
+#include "../reflection/layer_reflect/reflect_macros.h"
 #include "ncps/ltc/ltc.h"
 #include "ncps/cfc/cfc.h"
 

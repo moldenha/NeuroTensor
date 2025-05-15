@@ -499,6 +499,7 @@ class my_n_tuple{
 		bool operator <= (const int64_t x) const; 
 };
 
+
 template<std::size_t N>
 std::ostream& operator<<(std::ostream& out, const my_n_tuple<N>& t);
 

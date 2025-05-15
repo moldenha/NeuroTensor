@@ -4,6 +4,7 @@
 #include <memory>
 #include "../../nn/functional.h"
 #include <algorithm>
+#include "exceptions.hpp"
 
 namespace nt{
 namespace functional{
@@ -13,6 +14,7 @@ namespace functional{
 
 Tensor conv2d(const Tensor &image, const Tensor &kernel, utils::my_tuple stride, utils::my_tuple padding, utils::my_tuple dilation, int64_t groups,
               intrusive_ptr<tensor_holder> original_x, intrusive_ptr<tensor_holder> original_w){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(image, kernel);
 	utils::THROW_EXCEPTION(image.dims() >= 3, "Expected to get a 3D or greater tensor as the input for a 2d convolution, but got $D", image.dims());
 	utils::THROW_EXCEPTION(kernel.dims() == 3 || kernel.dims() == 4, "Expected to get a 4D or 3D tensor as the kernel for a 2d convolution, but got $D", kernel.dims());
 	utils::THROW_EXCEPTION(image.dtype == kernel.dtype, "Expected both kernel and image to have the same dtype for conv2d but got $ and $", kernel.dtype, image.dtype);
@@ -61,6 +63,7 @@ Tensor conv2d(const Tensor &image, const Tensor &kernel, utils::my_tuple stride,
 
 Tensor conv3d(const Tensor& image, const Tensor& kernel, utils::my_n_tuple<3> stride, utils::my_n_tuple<3> padding, utils::my_n_tuple<3> dilation, int64_t groups,
               intrusive_ptr<tensor_holder> original_x, intrusive_ptr<tensor_holder> original_w){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(image, kernel);
 	utils::THROW_EXCEPTION(image.dims() >= 4, "Expected to get a 4D or greater tensor as the input for a 3d convolution, but got $D", image.dims());
 	utils::THROW_EXCEPTION(kernel.dims() == 5 || kernel.dims() == 4, "Expected to get a 4D or 5D tensor as the kernel for a 3d convolution, but got $D", kernel.dims());
 	utils::THROW_EXCEPTION(image.dtype == kernel.dtype, "Expected both kernel and image to have the same dtype for conv3d but got $ and $", kernel.dtype, image.dtype);
@@ -114,6 +117,7 @@ Tensor conv3d(const Tensor& image, const Tensor& kernel, utils::my_n_tuple<3> st
 //kernel input shape: (out_channels, in_channels/groups, k_cols)
 Tensor conv1d(const Tensor& image, const Tensor& kernel, Tensor::size_value_t stride, Tensor::size_value_t padding, Tensor::size_value_t dilation, int64_t groups,
               intrusive_ptr<tensor_holder> original_x, intrusive_ptr<tensor_holder> original_w){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(image, kernel);
 	utils::THROW_EXCEPTION(image.dims() >= 2, "Expected to get a 2D or greater tensor as the input for a 1d convolution, but got $D", image.dims());
 	utils::THROW_EXCEPTION(kernel.dims() == 3 || kernel.dims() == 2, "Expected to get a 3D or 2D tensor as the kernel for a 1d convolution, but got $D", kernel.dims());
 	utils::THROW_EXCEPTION(image.dtype == kernel.dtype, "Expected both kernel and image to have the same dtype for conv1d but got $ and $", kernel.dtype, image.dtype);
@@ -194,6 +198,9 @@ Tensor conv1d(const Tensor& image, const Tensor& kernel, Tensor::size_value_t st
 //this finds the gradient of the image with respect to the gradient
 //works for any dimension of the convolution operations
 void conv_dimage(Tensor grad, Tensor kernel, Tensor& d_img, std::vector<int64_t> kernel_size, std::vector<int64_t> stride, std::vector<int64_t> padding, std::vector<int64_t> dilation, int64_t groups){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, kernel, d_img);
+    utils::THROW_EXCEPTION(d_img.is_mutable(),
+                           "Cannot set tensor for gradient of convolution that is immutible");
     utils::throw_exception(stride.size() == padding.size() && padding.size() == dilation.size(),
                            "Expected to get same amount for padding ($) , stride ($) , and dilation ($) for conv dimage ", 
                            padding.size(), stride.size(), dilation.size());
@@ -281,6 +288,9 @@ void conv_dimage(Tensor grad, Tensor kernel, Tensor& d_img, std::vector<int64_t>
 //this finds the gradient of the kernel with respect to the gradient
 //works for any dimension of the convolution operations
 void conv_dkernel(Tensor grad, Tensor image, Tensor& d_kernel, std::vector<int64_t> img_size, int64_t groups){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, image, d_kernel);
+    utils::THROW_EXCEPTION(d_kernel.is_mutable(),
+                           "Cannot set tensor for gradient of convolution that is immutible");
     int64_t dim = grad.dims()-2;
     utils::throw_exception(dim == img_size.size(),
                            "Expected img_size.size() to be equal to the number of dims for the convolution which has been evaluated at $d, but got $",
@@ -367,6 +377,7 @@ void conv_dkernel(Tensor grad, Tensor image, Tensor& d_kernel, std::vector<int64
 // !-- CONVOLUTION TRANSPOSE IN MATRIX MULTIPLICATION FUNCTIONS --!
 
 Tensor conv_transpose1d(const Tensor& image, const Tensor& kernel, Tensor::size_value_t stride, Tensor::size_value_t padding, Tensor::size_value_t output_padding, Tensor::size_value_t dilation, int64_t groups, intrusive_ptr<tensor_holder> original_x, intrusive_ptr<tensor_holder> original_w){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(image, kernel);
 	utils::THROW_EXCEPTION(image.dims() >= 2, "Expected to get a 2D or greater tensor as the input for a conv1d transpose, but got $D", image.dims());
 	utils::THROW_EXCEPTION(kernel.dims() == 3 || kernel.dims() == 2, "Expected to get a 3D or 2D tensor as the kernel for a conv1d transpose, but got $D", kernel.dims());
 	utils::THROW_EXCEPTION(image.dtype == kernel.dtype, 
@@ -451,6 +462,7 @@ Tensor conv_transpose1d(const Tensor& image, const Tensor& kernel, Tensor::size_
 
 Tensor conv_transpose2d(const Tensor& image, const Tensor& kernel, utils::my_tuple stride, utils::my_tuple padding, utils::my_tuple output_padding, utils::my_tuple dilation, int64_t groups, intrusive_ptr<tensor_holder> original_x, intrusive_ptr<tensor_holder> original_w){
 
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(image, kernel);
     utils::THROW_EXCEPTION(image.dims() >= 3, "Expected to get a 3D or greater tensor as the input for a conv2d transpose, but got $D", image.dims());
 	utils::THROW_EXCEPTION(kernel.dims() == 3 || kernel.dims() == 4, "Expected to get a 3D or 4D tensor as the kernel for a conv2d transpose, but got $D", kernel.dims());
 	utils::THROW_EXCEPTION(image.dtype == kernel.dtype, 
@@ -519,6 +531,7 @@ Tensor conv_transpose2d(const Tensor& image, const Tensor& kernel, utils::my_tup
 
 Tensor conv_transpose3d(const Tensor& image, const Tensor& kernel, utils::my_n_tuple<3> stride, utils::my_n_tuple<3> padding, utils::my_n_tuple<3> output_padding, utils::my_n_tuple<3> dilation, int64_t groups, intrusive_ptr<tensor_holder> original_x, intrusive_ptr<tensor_holder> original_w){
 
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(image, kernel);
     utils::THROW_EXCEPTION(image.dims() >= 4, "Expected to get a 4D or greater tensor as the input for a conv3d transpose, but got $D", image.dims());
 	utils::THROW_EXCEPTION(kernel.dims() == 5 || kernel.dims() == 4, "Expected to get a 5D or 4D tensor as the kernel for a conv3d transpose, but got $D", kernel.dims());
 	utils::THROW_EXCEPTION(image.dtype == kernel.dtype, 
@@ -614,6 +627,9 @@ std::vector<my_range> make_ranges(const std::vector<int64_t>& padding, const Siz
 }
 
 void convt_dimage(Tensor grad, Tensor kernel, Tensor& d_img, std::vector<int64_t> kernel_size, std::vector<int64_t> stride, std::vector<int64_t> padding, std::vector<int64_t> output_padding, std::vector<int64_t> dilation, int64_t groups){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, kernel, d_img);
+    utils::THROW_EXCEPTION(d_img.is_mutable(),
+                           "Cannot set tensor for gradient of convolution that is immutible");
     utils::throw_exception(stride.size() == padding.size() && padding.size() == dilation.size() && padding.size() == output_padding.size(),
                            "Expected to get same amount for  padding ($) , output_padding ($), stride ($) , and dilation ($) for conv dimage ", 
                            padding.size(), output_padding.size(), stride.size(), dilation.size());
@@ -776,6 +792,9 @@ void convt_dimage(Tensor grad, Tensor kernel, Tensor& d_img, std::vector<int64_t
 //this finds the gradient of the kernel with respect to the gradient
 //works for any dimension of the convolution operations
 void convt_dkernel(Tensor grad, Tensor image, Tensor& d_kernel, std::vector<int64_t> padding,  std::vector<int64_t> img_size, int64_t groups){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, image, d_kernel);
+    utils::THROW_EXCEPTION(d_kernel.is_mutable(),
+                           "Cannot set tensor for gradient of convolution that is immutible");
     int64_t dim = grad.dims()-2;
     utils::throw_exception(dim == img_size.size(),
                            "Expected img_size.size() to be equal to the number of dims for the convolution which has been evaluated at $d, but got $",

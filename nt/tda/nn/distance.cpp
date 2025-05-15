@@ -6,7 +6,7 @@
 namespace nt{
 namespace tda{
 
-TensorGrad pointsToDist(const TensorGrad& points){
+TensorGrad coordsToDist(const TensorGrad& points){
     if(points.dtype != DType::TensorObj){
         utils::throw_exception(points.dims() == 2, "Expected to get point dim of 2 but with shape {N,D} where there are N points for D dimensions but got shape $", points.shape());
         int64_t D = points.shape()[1];
@@ -18,10 +18,28 @@ TensorGrad pointsToDist(const TensorGrad& points){
     TensorGrad array = TensorGrad::makeNullTensorArray(points.numel());
     int64_t num = points.numel();
     for(int64_t i = 0; i < num; ++i){
-        array[i] = pointsToDist(points[i]);
+        array[i] = coordsToDist(points[i]);
     }
     return array;
 }
+
+Tensor coordsToDist(const Tensor& points){
+    if(points.dtype != DType::TensorObj){
+        utils::throw_exception(points.dims() == 2, "Expected to get point dim of 2 but with shape {N,D} where there are N points for D dimensions but got shape $", points.shape());
+        int64_t D = points.shape()[1];
+        Tensor dif = points.view(-1, 1, D) - points.view(1, -1, D);
+        Tensor a = dif.pow(2).sum(-1);
+        Tensor out = functional::sqrt(a);
+        return std::move(out);
+    }
+    Tensor array = Tensor::makeNullTensorArray(points.numel());
+    int64_t num = points.numel();
+    for(int64_t i = 0; i < num; ++i){
+        array[i].item<Tensor>() = coordsToDist(points[i]);
+    }
+    return array;
+}
+
 
 
 
@@ -120,6 +138,34 @@ TensorGrad cloudToDist(const TensorGrad& _cloud, Scalar threshold, Scalar grad_l
                     }, _cloud);
         return out;
     }    
+}
+
+Tensor cloudToDist(const Tensor& _cloud, Scalar threshold, int64_t dims){
+    if(dims == -1) dims = _cloud.dims();
+    const Tensor& cloud = _cloud;
+    utils::throw_exception(
+        cloud.dims() >= dims,
+        "Expected to process cloud with dims of at least $ but got $", dims,
+        cloud.dims());
+    if (cloud.dims() > dims) {
+
+        Tensor c_cloud = _cloud.flatten(-1, dims);
+        Tensor out_mat = Tensor::makeNullTensorArray(c_cloud.shape()[0]);
+        for(int64_t i = 0; i < c_cloud.shape()[0]; ++i){
+            out_mat[i] = cloudToDist(c_cloud[i].item<Tensor>(), threshold, dims);
+        }
+        return std::move(out_mat);
+    }else{
+        // int64_t D = cloud.dims();
+        Tensor where = cloud >= threshold;
+        Tensor points_w = functional::where(where);
+        Tensor points_s = functional::stack(points_w).transpose(-1, -2).to(nt::DType::Float32);
+        int64_t D = points_s.shape()[-1];
+        utils::THROW_EXCEPTION(D == dims, "Internal logic error");
+        Tensor dif = points_s.view(-1, 1, D) - points_s.view(1, -1, D);
+        Tensor dist_matrix = functional::sqrt(dif.pow(2).sum(-1));
+        return std::move(dist_matrix);
+    }
 }
 
 }
