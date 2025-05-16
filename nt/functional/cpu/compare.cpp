@@ -4,7 +4,7 @@
 #include "../../mp/Threading.h"
 #include <stdexcept>
 #include <algorithm>
-
+#include <atomic>
 
 namespace nt{
 namespace functional{
@@ -14,19 +14,19 @@ template<typename DualFunc>
 inline void run_dual_compare(bool* o_begin, const ArrayVoid& a, const ArrayVoid& b, DualFunc&& func){
     a.cexecute_function<WRAP_DTYPES<NumberTypesL> >(
         [&o_begin, func](auto begin, auto end, auto begin2){
-            for(;begin != end; ++begin, ++begin2, ++o_begin){
-                *o_begin = func(*begin, *begin2);
-            }
-            // threading::preferential_parallel_for(
-            //     threading::block_ranges<1>(0, end-begin),
-            //     [&](threading::blocked_range<1> block) {
-            //         auto cur_begin = begin + block.begin[0];
-            //         auto cur_begin2 = begin2 + block.begin[0];
-            //         for (int64_t i = block.begin[0]; i < block.end[0]; ++i, ++cur_begin, ++cur_begin2){
-            //             o_begin[i] = func(*cur_begin, *cur_begin2);
-            //         }
-            //     }
-            // );
+            // for(;begin != end; ++begin, ++begin2, ++o_begin){
+            //     *o_begin = func(*begin, *begin2);
+            // }
+            threading::preferential_parallel_for(
+                threading::block_ranges<1>(0, end-begin),
+                [&](threading::blocked_range<1> block) {
+                    auto cur_begin = begin + block.begin[0];
+                    auto cur_begin2 = begin2 + block.begin[0];
+                    for (int64_t i = block.begin[0]; i < block.end[0]; ++i, ++cur_begin, ++cur_begin2){
+                        o_begin[i] = func(*cur_begin, *cur_begin2);
+                    }
+                }
+            );
         },
     b);
 }
@@ -275,10 +275,16 @@ int64_t _count(const ArrayVoid& a){
 	uint_bool_t b = uint_bool_t(true);
 	return a.cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
 			[&b](auto begin, auto end) -> int64_t{
-				int64_t amt = 0;
-				for(;begin != end; ++begin)
-					if(*begin == b){++amt;}
-				return amt;
+                std::atomic<int64_t> amt{0};
+                threading::preferential_parallel_for(
+                    threading::block_ranges<1>(0, end-begin),
+                    [&](threading::blocked_range<1> block) {
+                        auto cur_begin = begin + block.begin[0];
+                        auto cur_end = begin + block.end[0];
+                        for(;cur_begin != cur_end; ++cur_begin)
+                            if(*cur_begin == b) ++amt;
+                });
+				return amt.load();
 			});
 }
 
