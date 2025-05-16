@@ -1605,7 +1605,6 @@ ArrayVoid ArrayVoid::exp() const{
 }
 
 ArrayVoid& ArrayVoid::exp_(){
-	ArrayVoid output(size, dtype);
 	if(DTypeFuncs::is_complex(dtype) || DTypeFuncs::is_floating(dtype) || DTypeFuncs::is_integer(dtype)){
 		this->execute_function_chunk<WRAP_DTYPES<FloatingTypesL, ComplexTypesL, IntegerTypesL> >([](auto begin, auto end){
 			mp::exp(begin, end, begin);
