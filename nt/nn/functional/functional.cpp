@@ -1146,44 +1146,9 @@ TensorGrad TensorGrad_Functional_Class::sigmoid(const TensorGrad &x) {
     return std::move(result);
 }
 
-TensorGrad TensorGrad_Functional_Class::silu(const TensorGrad &x) {
-    Tensor a = ::nt::functional::silu(x.tensor);
-    intrusive_ptr<tensor_holder> saved_x =
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone());
-    TensorGrad result(std::move(a), x.grad_required);
-    result.track_tensors(x);
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                 intrusive_ptr<tensor_holder> x) {
-                parents[0]->grad->tensor += grad * ::nt::functional::dsilu(x->tensor);
-            },
-            saved_x);
-    return std::move(result);
-}
 
-TensorGrad TensorGrad_Functional_Class::gelu(const TensorGrad &x) {
-    // Forward pass
-    Tensor a = ::nt::functional::gelu(x.tensor);
 
-    // Save the input tensor for use in the backward pass
-    intrusive_ptr<tensor_holder> saved_x =
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone());
 
-    // Create TensorGrad object for the result
-    TensorGrad result(std::move(a), x.grad_required);
-    result.track_tensors(x);
-
-    // Define the backward function
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                 intrusive_ptr<tensor_holder> saved_x) {
-                // Compute the gradient using the saved input tensor
-                parents[0]->grad->tensor += grad * ::nt::functional::dgelu(saved_x->tensor);
-            },
-            saved_x);
-
-    return std::move(result);
-}
 
 TensorGrad TensorGrad_Functional_Class::clamp(const TensorGrad &x,
                                                 std::optional<int64_t> min,
@@ -1227,73 +1192,6 @@ TensorGrad TensorGrad_Functional_Class::var(const TensorGrad &x,
     return std::move(result);
 }
 
-TensorGrad TensorGrad_Functional_Class::invsqrt(const TensorGrad &x) {
-    TensorGrad result(::nt::functional::invsqrt(x.tensor), x.grad_required);
-    if (!x.do_track_grad) {
-        result.do_track_grad = false;
-        return std::move(result);
-    }
-
-    result.track_tensors(x);
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                                                    intrusive_ptr<tensor_holder> saved_x) {
-                parents[0]->grad->tensor += grad * ::nt::functional::dinvsqrt(saved_x->tensor);
-            },
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone()));
-    return std::move(result);
-}
-
-TensorGrad TensorGrad_Functional_Class::sqrt(const TensorGrad &x) {
-    TensorGrad result(::nt::functional::sqrt(x.tensor), x.grad_required);
-    if (!x.do_track_grad) {
-        result.do_track_grad = false;
-        return std::move(result);
-    }
-
-    result.track_tensors(x);
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                                                    intrusive_ptr<tensor_holder> saved_x) {
-                parents[0]->grad->tensor += grad * ::nt::functional::dsqrt(saved_x->tensor);
-            },
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone()));
-    return std::move(result);
-}
-
-TensorGrad TensorGrad_Functional_Class::tanh(const TensorGrad &x) {
-    TensorGrad result(::nt::functional::tanh(x.tensor), x.grad_required);
-    if (!x.do_track_grad) {
-        result.do_track_grad = false;
-        return std::move(result);
-    }
-
-    result.track_tensors(x);
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                 intrusive_ptr<tensor_holder> saved_x) {
-                parents[0]->grad->tensor += grad * ::nt::functional::dtanh(saved_x->tensor);
-            },
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone()));
-    return std::move(result);
-}
-
-TensorGrad TensorGrad_Functional_Class::tan(const TensorGrad &x) {
-    TensorGrad result(::nt::functional::tan(x.tensor), x.grad_required);
-    if (!x.do_track_grad) {
-        result.do_track_grad = false;
-        return std::move(result);
-    }
-
-    result.track_tensors(x);
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                 intrusive_ptr<tensor_holder> saved_x) {
-                parents[0]->grad->tensor += grad * ::nt::functional::dtan(saved_x->tensor);
-            },
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone()));
-    return std::move(result);
-}
 
 Tensor cat_vec(std::vector<TensorGrad> &tgs) {
     const typename SizeRef::value_type &num = tgs.size();
@@ -1563,23 +1461,6 @@ TensorGrad TensorGrad_Functional_Class::chunk(
     TensorGrad result(::nt::functional::chunk(input.tensor, chunks, dim), input.grad_required);
     result.track_grad(
             input, [chunks, dim](Tensor &grad) { return ::nt::functional::chunk(grad, chunks, dim); });
-    return std::move(result);
-}
-
-TensorGrad TensorGrad_Functional_Class::log(const TensorGrad &x) {
-    TensorGrad result(::nt::functional::log(x.tensor), x.grad_required);
-    if (!x.do_track_grad) {
-        result.do_track_grad = false;
-        return std::move(result);
-    }
-
-    result.track_tensors(x);
-    result.create_backward_function(
-            [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
-                 intrusive_ptr<tensor_holder> saved_x) {
-                parents[0]->grad->tensor += grad * ::nt::functional::dlog(saved_x->tensor);
-            },
-            make_intrusive<tensor_holder>(x.tensor.conditional_mutate_clone()));
     return std::move(result);
 }
 

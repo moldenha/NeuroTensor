@@ -1550,37 +1550,32 @@ TensorGrad TensorGrad::unpad(std::vector<size_value_t> p) const {
     return std::move(result);
 }
 
-TensorGrad TensorGrad::flip(size_value_t dim) const {
+TensorGrad TensorGrad::flip(utils::optional_list list) const {
     handle_null_tensors(*this);
-    TensorGrad result(this->flip(dim));
+    TensorGrad result(this->tensor.flip(list));
     if (!is_tracking_grad(*this)) {
         result.do_track_grad = false;
         return std::move(result);
     }
     result.track_tensors(*this);
-    result.create_backward_function(
-        [dim](const Tensor &grad,
+    if(!list){
+        result.create_backward_function(
+        [](const Tensor &grad,
               std::vector<intrusive_ptr<TensorGrad>> &parents) {
-            parents[0]->grad->tensor += grad.flip(dim);
+            parents[0]->grad->tensor += grad.flip();
         });
+ 
+    }else{
+        result.create_backward_function(
+            [list](const Tensor &grad,
+                  std::vector<intrusive_ptr<TensorGrad>> &parents) {
+                parents[0]->grad->tensor += grad.flip(list);
+            });
+    }
     return std::move(result);
 }
 
-TensorGrad TensorGrad::flip() const {
-    handle_null_tensors(*this);
-    TensorGrad result(this->flip());
-    if (!is_tracking_grad(*this)) {
-        result.do_track_grad = false;
-        return std::move(result);
-    }
-    result.track_tensors(*this);
-    result.create_backward_function(
-        [](const Tensor &grad,
-           std::vector<intrusive_ptr<TensorGrad>> &parents) {
-            parents[0]->grad->tensor += grad.flip();
-        });
-    return std::move(result);
-}
+
 
 TensorGrad TensorGrad::dilate(size_value_t dil) const {
     handle_null_tensors(*this);
@@ -1737,7 +1732,7 @@ TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(split_axis_1)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(div, size_value_t, i)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(real)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(imag)
-TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(flip_)
+TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(flip_view, utils::optional_list, list)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(undilate_, size_value_t, dil)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(repeat_, size_value_t, amt)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(repeat_, size_value_t, dim,

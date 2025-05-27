@@ -3,6 +3,7 @@
 #include "../cpu/compare.h"
 #include <algorithm>
 #include "exceptions.hpp"
+#include "../../mp/Threading.h"
 
 namespace nt{
 namespace functional{
@@ -308,6 +309,77 @@ Tensor where(Tensor t){
 }
 
 
+Tensor all(const Tensor t, int64_t dim){
+    if(t.dtype == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&begin_o, &dim](auto begin, auto end){
+            for(;begin != end; ++begin, ++begin_o){
+                *begin_o = all(*begin, dim);
+            }
+		});
+        return std::move(out);
+    }
+	exception_dtypes(t.dtype, DType::Bool);
+        Tensor a = Tensor::Null();
+    if(dim == (t.dims()-1) || dim == -1){
+        a = t.transpose(-1, -2).contiguous();
+        dim = -2;
+    }else{
+        a = t.contiguous();
+    }
+    Tensor split = a.split_axis(dim);
+    
+    Tensor out({split.numel()}, nt::DType::Bool);
+    bool* begin_o = reinterpret_cast<bool*>(out.data_ptr());
+    Tensor* begin_s = reinterpret_cast<Tensor*>(split.data_ptr());
+    tbb::parallel_for(
+    utils::calculateGrainSize1D(split.numel()),
+    [&](const tbb::blocked_range<int64_t> &range){
+        for(int64_t i = range.begin(); i != range.end(); ++i){
+            begin_o[i] = std::all_of(reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr()), reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr_end()),
+                                     [](const uint_bool_t& v){return v.value == 1;});
+        }
+    });
+    return std::move(out);
+
+}
+
+Tensor any(const Tensor t, int64_t dim){
+    if(t.dtype == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&begin_o, &dim](auto begin, auto end){
+            for(;begin != end; ++begin, ++begin_o){
+                *begin_o = any(*begin, dim);
+            }
+		});
+        return std::move(out);
+    }
+	exception_dtypes(t.dtype, DType::Bool);
+    // Tensor a = t.contiguous();
+    Tensor a = Tensor::Null();
+    if(dim == (t.dims()-1) || dim == -1){
+        a = t.transpose(-1, -2).contiguous();
+        dim = -2;
+    }else{
+        a = t.contiguous();
+    }
+    Tensor split = a.split_axis(dim);
+    Tensor out({split.numel()}, nt::DType::Bool);
+    bool* begin_o = reinterpret_cast<bool*>(out.data_ptr());
+    Tensor* begin_s = reinterpret_cast<Tensor*>(split.data_ptr());
+    threading::preferential_parallel_for(
+    threading::block_ranges<1>(0, split.numel()),
+    [&](threading::blocked_range<1> block) {
+       for(int64_t i = block.begin[0]; i != block.end[0]; ++i){
+            begin_o[i] = std::any_of(reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr()), 
+                                     reinterpret_cast<uint_bool_t*>(begin_s[i].data_ptr_end()),
+                                     [](const uint_bool_t& v){return v.value == 1;});
+        } 
+    });
+    return std::move(out);
+}
 
 }
 }

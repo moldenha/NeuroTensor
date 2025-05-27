@@ -483,9 +483,8 @@ class TensorGrad : public intrusive_ptr_target{
 		TensorGrad& clip_(Scalar, Scalar);
 		TensorGrad pad(std::vector<size_value_t> p, const char* mode = "constant", Scalar value = 0.0) const;
 		TensorGrad unpad(std::vector<size_value_t> p) const;
-		TensorGrad flip(size_value_t) const;
-		TensorGrad flip() const;
-		TensorGrad flip_() const;
+        TensorGrad flip(utils::optional_list list = nullptr) const;
+        TensorGrad flip_view(utils::optional_list list = nullptr) const;
 		TensorGrad dilate(size_value_t) const;
 		TensorGrad undilate(size_value_t) const;
 		TensorGrad undilate_(size_value_t) const;

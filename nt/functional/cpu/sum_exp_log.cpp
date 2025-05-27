@@ -75,7 +75,7 @@ namespace nt {
 namespace functional {
 namespace cpu {
 
-void _exp(ArrayVoid& a, ArrayVoid& out){
+void _exp(const ArrayVoid& a, ArrayVoid& out){
     if(a.dtype == DType::Bool){
         throw std::logic_error("Cannot run exp on bool data type");
     }
@@ -89,14 +89,31 @@ void _log(const ArrayVoid& a, ArrayVoid& out){
     if(a.dtype == DType::Bool){
         throw std::logic_error("Cannot run log on bool data type");
     }
-    if(!out.is_contiguous()){
-        throw std::logic_error("Expected out to be contiguous from log");
-    }
     out = a.clone();
     out.execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
         mp::log(begin, end, begin);
     });
 }
+
+void _exp_(ArrayVoid& a){
+    if(a.dtype == DType::Bool){
+        throw std::logic_error("Cannot run exp on bool data type");
+    }
+    a.execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
+        mp::exp(begin, end, begin);
+    });
+
+}
+void _log_(ArrayVoid& a){
+    if(a.dtype == DType::Bool){
+        throw std::logic_error("Cannot run log on bool data type");
+    }
+    a.execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
+        mp::log(begin, end, begin);
+    });
+ 
+}
+
 
 Scalar _accumulate(const ArrayVoid& a, Scalar initial){
     if(a.dtype == DType::Bool){

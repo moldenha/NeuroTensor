@@ -88,11 +88,7 @@ class Tensor final{
 			a.push_back(i);
 			collectIntegers(a, args...);
 		}
-		inline Tensor& set_stored_strides(const std::vector<size_value_t>& nS){
-			stored_strides = intrusive_ptr<size_value_t[]>(nS.size());
-			for(size_t i = 0; i < nS.size(); ++i){stored_strides[i] = nS[i];}
-			return *this;
-		}
+
 		inline void nullify(){
 			stored_strides.nullify();
 			_size.nullify();
@@ -300,6 +296,11 @@ class Tensor final{
 			}
 			return strides();
 		}
+		inline Tensor& set_stored_strides(const std::vector<size_value_t>& nS){
+			stored_strides = intrusive_ptr<size_value_t[]>(nS.size());
+			for(size_t i = 0; i < nS.size(); ++i){stored_strides[i] = nS[i];}
+			return *this;
+		}
 		Tensor transpose(size_value_t, size_value_t) const;
         //this is a function where you can for example swap rows
         //if you wanted to swap rows 1 & 2 this would be equivalent to t.swap_axis(-2, 1, 2)
@@ -328,10 +329,9 @@ class Tensor final{
 		inline Tensor to(DeviceType dt) const {return to_device(dt);}
 		Tensor Int() const;
 		Tensor Long() const;
-		Tensor& RowColSwap(); //these 2 versions change the stride (and are slower than the contiguous version)
-		const Tensor& RowColSwap() const; //this contiguously in memory changes the rows and collumns
-						  //this differentiates from transpose(-1,-2) because transpose
-						  //changes the bucket view order
+		Tensor& RowColSwap(); //this contiguously in memory changes the rows and collumns
+                              // output will be contiguous
+                              // look at functional::row_col_swap_ for implementation
 		Tensor& RowColSwap_Tensors(); //this is for a tensor that has the dtype tensor obj
 					      //it swaps all the rows and collumns of the sub tensors
 		Tensor real() const;
@@ -359,10 +359,8 @@ class Tensor final{
 		//for example if the tuple is : {1,1}, then pad the last dimension with 1 up and 1 down
 		Tensor pad(std::vector<size_value_t>, const char* mode="constant", Scalar value=0) const;
         Tensor unpad(std::vector<size_value_t>) const;
-		Tensor flip() const;
-		Tensor flip(size_value_t dim) const; //contiguous copies of the original tensor
-		Tensor flip_() const; //strided copy of the original version
-		/* Tensor flip_(size_value_t dim); // this returns a version where the stride was changed, makes it easier for things like a convolution backprop without taking more memory */
+        Tensor flip(utils::optional_list list = nullptr) const;
+        Tensor flip_view(utils::optional_list list = nullptr) const;
 		Tensor undilate_(size_value_t dil) const;
 		Tensor undilate_(size_value_t, size_value_t) const;
 		Tensor undilate_(size_value_t, size_value_t, size_value_t) const;

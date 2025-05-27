@@ -136,6 +136,20 @@ set(FUNCTIONAL_SOURCES
 	nt/functional/tensor_files/stride.cpp
 	nt/functional/tensor_files/index.cpp
 	nt/functional/tensor_files/padding.cpp
+	nt/functional/tensor_files/dropout.cpp
+	nt/functional/tensor_files/activation_functions.cpp
+	nt/functional/tensor_files/trig.cpp
+	nt/functional/tensor_files/split.cpp
+	nt/functional/tensor_files/unique.cpp
+	nt/functional/tensor_files/combinations.cpp
+	nt/functional/tensor_files/print.cpp
+	nt/functional/tensor_files/transpose.cpp
+	nt/functional/tensor_files/complex.cpp
+	nt/functional/tensor_files/flip.cpp
+	nt/functional/tensor_files/dilate.cpp
+	nt/functional/tensor_files/convert.cpp
+	nt/functional/tensor_files/sort.cpp
+
     nt/functional/tensor_files/pooling/avg_pool1d.cpp
     nt/functional/tensor_files/pooling/avg_pool2d.cpp
     nt/functional/tensor_files/pooling/avg_pool3d.cpp
@@ -164,8 +178,16 @@ set(FUNCTIONAL_SOURCES
     nt/functional/cpu/softmax.cpp
     nt/functional/cpu/sum_exp_log.cpp
     nt/functional/cpu/fractional_pooling.cpp
+    nt/functional/cpu/activation_functions.cpp
+    nt/functional/cpu/trig.cpp
+    nt/functional/cpu/sort.cpp
+    nt/functional/cpu/sort_tensor.cpp
+    nt/functional/cpu/unique.cpp
+    nt/functional/cpu/complex.cpp
+    nt/functional/cpu/convert.cpp
+    nt/functional/cpu/fill.cpp
+    nt/functional/cpu/mesh.cpp
 
-	nt/functional/functional.cpp
 )
 
 
@@ -236,11 +258,6 @@ else()
 endif()
 
 
-set(PERMUTE_SOURCES
-    nt/permute/permute_old.cpp
-    nt/permute/permute.cpp
-)
-
 #this also includes autograds and layers
 set(AI_SOURCES
     nt/nn/Layer.cpp
@@ -248,6 +265,7 @@ set(AI_SOURCES
     nt/nn/TensorGrad.cpp
     nt/nn/functional/functional.cpp
     nt/nn/functional/pooling.cpp
+    nt/nn/functional/non_linear.cpp
     nt/nn/Loss.cpp
     nt/nn/Optimizers.cpp
     nt/nn/Module.cpp
@@ -359,7 +377,6 @@ set(SOURCES
     ${FUNCTIONAL_SOURCES}
     ${LINALG_SOURCES}
     ${TYPES_SOURCES}
-    ${PERMUTE_SOURCES}
     ${AI_SOURCES}
     ${MP_SOURCES}
     ${TDA_SOURCES}

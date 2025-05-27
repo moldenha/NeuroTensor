@@ -3,6 +3,8 @@
 #include "../../utils/utils.h"
 #include "fill.h"
 #include "exceptions.hpp"
+#include "../cpu/mesh.h"
+#include "../../dtype/ArrayVoid.hpp"
 
 namespace nt{
 namespace functional{
@@ -29,6 +31,41 @@ Tensor one_hot(Tensor indices, int64_t num_classes){
     }
 
     return out;
+}
+
+Tensor meshgrid(const Tensor& x, const Tensor& y){
+	utils::THROW_EXCEPTION(x.dtype == y.dtype, "Runtime Error: Expected tensors to have same dtype but got $ and $", x.dtype, y.dtype);
+	/* utils::THROW_EXCEPTION(a.numel() == b.numel(), "RuntimeError: Expected tensors to have same number of elements but got $ and $", a.numel(), b.numel()) */
+	Tensor xy({2}, DType::TensorObj);
+	Tensor* xy_p = reinterpret_cast<Tensor*>(xy.data_ptr());
+	*xy_p = Tensor({static_cast<typename SizeRef::value_type>(x.numel()), static_cast<typename SizeRef::value_type>(y.numel())}, x.dtype);
+	*(xy_p + 1) = Tensor({static_cast<typename SizeRef::value_type>(x.numel()), static_cast<typename SizeRef::value_type>(y.numel())}, x.dtype);
+	if(x.dtype == DType::TensorObj){
+        const typename SizeRef::value_type x_n = x.numel();
+        const typename SizeRef::value_type y_n = y.numel();
+        x.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>([xy_p, &x_n, &y_n](auto a_begin, auto a_end, auto b_begin){
+                    Tensor& X = *xy_p;
+                    Tensor& Y = *(xy_p+1);
+                    const typename SizeRef::value_type total_size = x_n * y_n;
+                    using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
+                    value_t* x_begin = reinterpret_cast<value_t*>(X.data_ptr());
+                    value_t* y_begin = reinterpret_cast<value_t*>(Y.data_ptr());
+                    auto b_end = b_begin + y_n;
+                    auto b_cpy = b_begin;
+                    
+                    for(;a_begin != a_end; ++a_begin){
+                        for(;b_begin != b_end; ++b_begin, ++x_begin, ++y_begin){
+                            *x_begin = *a_begin;
+                            *y_begin = *b_begin;
+                        }
+                        b_begin = b_cpy;
+                    }
+
+                }, y.arr_void());
+        return std::move(xy);
+    }
+    cpu::_meshgrid(x.arr_void(), y.arr_void(), xy_p->arr_void(), xy_p[1].arr_void());
+    return std::move(xy);
 }
 
 }

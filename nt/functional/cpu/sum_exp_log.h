@@ -9,8 +9,10 @@ namespace functional{
 namespace cpu{
 
 
-void _exp(ArrayVoid& a, ArrayVoid&);
+void _exp(const ArrayVoid& a, ArrayVoid&);
 void _log(const ArrayVoid& a, ArrayVoid& out);
+void _exp_(ArrayVoid& a);
+void _log_(ArrayVoid& a);
 Scalar _accumulate(const ArrayVoid& a, Scalar initial);
 void _sum_every(const ArrayVoid&, ArrayVoid&, int64_t);
 

@@ -26,81 +26,24 @@
 #include "tensor_files/index.h"
 #include "tensor_files/padding.h"
 #include "tensor_files/pooling.h"
+#include "tensor_files/dropout.h"
+#include "tensor_files/activation_functions.h"
+#include "tensor_files/trig.h"
+#include "tensor_files/split.h"
+#include "tensor_files/sort.h"
+#include "tensor_files/unique.h"
+#include "tensor_files/combinations.h"
+#include "tensor_files/print.h"
+#include "tensor_files/transpose.h"
+#include "tensor_files/complex.h"
+#include "tensor_files/flip.h"
+#include "tensor_files/dilate.h"
+#include "tensor_files/convert.h"
 #include <cstring>
 #include <functional>
 #include <optional>
 #include <vector>
 
-
-namespace nt {
-namespace functional {
-
-Tensor dot(const Tensor &, const Tensor &, utils::optional_list dim = nullptr,
-           bool keepdim = false);
-
-Tensor all(const Tensor, int64_t dim);
-Tensor any(const Tensor, int64_t dim);
-
-
-Tensor dropout(const Tensor &, double);
-Tensor sigmoid(const Tensor &);
-Tensor dsigmoid(const Tensor &, bool apply_sigmoid = true);
-Tensor tan(const Tensor &);
-Tensor tanh(const Tensor &);
-Tensor sin(const Tensor &);
-Tensor sinh(const Tensor &);
-Tensor cos(const Tensor &);
-Tensor cosh(const Tensor &);
-Tensor dtan(const Tensor &);  // derivative of tan
-Tensor dtanh(const Tensor &); // derivative of tanh
-Tensor sqrt(const Tensor &);
-Tensor dsqrt(const Tensor &);
-Tensor invsqrt(const Tensor &);  // 1 / sqrt(x);
-Tensor dinvsqrt(const Tensor &); // derivative of invsqrt
-Tensor var(const Tensor &, utils::optional_list dim = nullptr,
-           int64_t correction = 1,
-           bool keepdim = false); // delta degrees of freedom (0 for population
-                                  // variance, 1 for sample variance).
-Tensor dvar(const Tensor &dx, const Tensor &x,
-            utils::optional_list dim = nullptr,
-            int64_t correction = 1); // derivative of the var function with
-                                     // respect to xi element of the the tensor
-Tensor abs(const Tensor &); // absolute value
-Tensor softplus(const Tensor &x, Scalar beta = 1.0, Scalar threshold = 20.0);
-
-
-
-Tensor index_select(Tensor input, int8_t dim, Tensor index);
-Tensor select(Tensor input, int8_t dim, typename Tensor::size_value_t index);
-Tensor meshgrid(Tensor &&, Tensor &&);
-Tensor split(Tensor input, typename Tensor::size_value_t split_size,
-             int64_t dim = 0); // splits into variable number of split sizes
-                               // along a given dimension
-Tensor
-split(Tensor input, std::vector<typename Tensor::size_value_t> split_sections,
-      int64_t dim = 0); // splits into a specified amount on the given dimension
-Tensor chunk(Tensor input, typename Tensor::size_value_t chunks,
-             int64_t dim = 0); // splits into that many chunks
-Tensor sort(const Tensor &, const Tensor::size_value_t dim = -1,
-            bool descending = false, bool return_sorted = true,
-            bool return_indices = true);
-// returns Tensor(sorted, indices)
-// only returning the indices or the sorted makes things faster
-// this function is meant to sort along for example each row in a matrix or each
-// collumn
-Tensor coordsort(const Tensor &input, Tensor::size_value_t dim = -2,
-                 bool descending = false, bool return_sorted = true,
-                 bool return_indices = true);
-Tensor unique(Tensor, int64_t dim, bool return_unique = true,
-              bool return_indices = true);
-// returns Tensor(unique, indices) (depending on return_unique and
-// return_indices)
-// puts the tensors into a Tensor of dtype TensorObj with sizeof...(Args) + 1
-// number of tensors
-Tensor combinations(Tensor vec, int64_t r, int64_t start = 0);
-
-} // namespace functional
-} // namespace nt
 
 namespace std {
 inline ::nt::Tensor cos(const ::nt::Tensor &t) {

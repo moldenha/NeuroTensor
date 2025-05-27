@@ -7,6 +7,7 @@ namespace nt{
 namespace functional{
 
 Tensor one_hot(Tensor t, int64_t num_classes = -1);
+Tensor meshgrid(const Tensor &, const Tensor &);
 
 }
 }

@@ -19,6 +19,21 @@ Tensor subtract(const Tensor&, const Tensor&);
 Tensor& subtract_(Tensor&, const Tensor&);
 Tensor divide(const Tensor&, const Tensor&);
 Tensor& divide_(Tensor&, const Tensor&);
+Tensor dot(const Tensor&, const Tensor&,  utils::optional_list dim = nullptr, bool keepdim = false);
+
+
+Tensor multiply(const Tensor&, Scalar);
+Tensor& multiply_(Tensor&, Scalar);
+Tensor add(const Tensor&, Scalar);
+Tensor& add_(Tensor&, Scalar);
+Tensor subtract(const Tensor&, Scalar);
+Tensor& subtract_(Tensor&, Scalar);
+Tensor divide(const Tensor&, Scalar);
+Tensor& divide_(Tensor&, Scalar);
+
+Tensor inverse(const Tensor&);
+Tensor& inverse_(Tensor&);
+
 
 
 }

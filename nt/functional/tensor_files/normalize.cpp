@@ -4,6 +4,7 @@
 #include "../../dtype/ArrayVoid.hpp"
 #include <cmath>
 #include "exceptions.hpp"
+#include "activation_functions.h"
 
 namespace nt{
 namespace functional{
@@ -17,6 +18,39 @@ void xavier_uniform_(Tensor& tensor){
     double bound = std::sqrt(6.0 / (double)(fan_in + fan_out));
     cpu::xavier_uniform_(tensor.arr_void(), bound);
 }
+
+
+Tensor var(const Tensor& x, utils::optional_list dim, int64_t correction, bool keepdim){
+	Tensor mean = x.mean(dim, true);
+	Tensor squared_diff = pow((x - mean), 2);
+	int64_t N = 0;
+	if(!dim){
+		N = x.numel();
+	}else{
+		N = 1;
+		for(const auto& ele : dim){
+			N *= x.shape()[ele];
+		}
+	}
+	Tensor variance = squared_diff.sum(dim, keepdim) / (N - correction);
+	return std::move(variance);
+}
+
+Tensor dvar(const Tensor& dx, const Tensor& x, utils::optional_list dim, int64_t correction){
+	//takes both the gradient, and the input given to the variance function
+	Tensor mean = x.mean(dim, true);
+	int64_t N = 0;
+	if(!dim){
+		N = x.numel();
+	}else{
+		N = 1;
+		for(const auto& ele : dim){
+			N *= x.shape()[ele];
+		}
+	}
+	return (2 / (N - correction)) * (x - mean);
+}
+
 
 }
 }

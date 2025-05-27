@@ -20,40 +20,23 @@ Tensor clamp(const Tensor& x, std::optional<Scalar> min, std::optional<Scalar> m
 		out[out > max.value()] = max.value();
 	return std::move(out);
 }
-Tensor relu(const Tensor& x){return clamp(x, 0);}
 
-Tensor silu(const Tensor& x){
-	return x * sigmoid(x);
+Tensor& clamp_(Tensor& x, std::optional<Scalar> min, std::optional<Scalar> max){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
+    utils::THROW_EXCEPTION(x.is_mutable(), "Cannot perform operation clamp_ on an immutable tensor");
+
+	// Tensor out = x.clone();
+	if(min && max){
+        cpu::_clamp(x.arr_void(), min.value(), max.value());
+		return x;
+	}
+	else if(min)
+		x[x < min.value()] = 0;
+	else if(max)
+		x[x > max.value()] = max.value();
+	return x;
 }
 
-Tensor dsilu(const Tensor& x){
-	Tensor sigmoid_x = sigmoid(x);
-	Tensor grad = sigmoid_x * (1 + x * (1 - sigmoid_x));
-	return std::move(grad);
-}
-
-
-
-Tensor gelu(const Tensor& x){
-	Scalar sqrt_2_pi = std::sqrt(2.0 / M_PI);
-	return 0.5 * x * (1.0 + tanh(sqrt_2_pi * (x + 0.044715 * std::pow(x, 3))));
-}
-
-Tensor dgelu(const Tensor& x) {
-    const Scalar sqrt_2_pi(std::sqrt(2.0 / M_PI));
-    const Scalar c(0.044715);
-
-    Tensor z = sqrt_2_pi * (x + c * std::pow(x, 3));
-    // Compute tanh(z) and its derivative
-    z = tanh(z);
-    Tensor tanh_derivative = 1 - (z * z);
-
-    // Gradient of z with respect to x
-    Tensor dz_dx = sqrt_2_pi * (1 + 3 * c.to<double>() * x * x);
-
-    // Final gradient
-    return 0.5 * (1 + z) + 0.5 * x * tanh_derivative * dz_dx;
-}
 
 inline bool is_complex(const std::vector<Scalar>& scalars)noexcept {
     return scalars[0].isComplex();
@@ -302,23 +285,7 @@ result_types::max<Tensor, Tensor> max_(const Tensor &_x) {
     Tensor outp(1, _x.dtype);
     Tensor indices(_x.shape(), DType::Bool);
     indices.fill_(false);
-    outp = _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        [&indices](auto begin, auto end) -> Scalar {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            uint_bool_t *i_begin =
-                reinterpret_cast<uint_bool_t *>(indices.data_ptr());
-            value_t max_element = *begin;
-            uint_bool_t *max_indice = i_begin;
-            ++begin;
-            for (; begin != end; ++begin, ++i_begin) {
-                if (*begin > max_element) {
-                    max_element = *begin;
-                    max_indice = i_begin;
-                }
-            }
-            *max_indice = uint_bool_t(true);
-            return max_element;
-        });
+    outp = cpu::_max_scalar(_x.arr_void(), indices.arr_void());
     return result_types::max<Tensor, Tensor>(std::move(outp),
                                              std::move(indices));
 }
@@ -346,23 +313,7 @@ result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
     Tensor outp(1, _x.dtype);
     Tensor indices(_x.shape(), DType::Bool);
     indices.fill_(false);
-    outp = _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>()(
-        [&indices](auto begin, auto end) -> Scalar {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            uint_bool_t *i_begin =
-                reinterpret_cast<uint_bool_t *>(indices.data_ptr());
-            value_t min_element = *begin;
-            uint_bool_t *min_indice = i_begin;
-            ++begin;
-            for (; begin != end; ++begin, ++i_begin) {
-                if (*begin < min_element) {
-                    min_element = *begin;
-                    min_indice = i_begin;
-                }
-            }
-            *min_indice = uint_bool_t(true);
-            return min_element;
-        });
+    outp = cpu::_min_scalar(_x.arr_void(), indices.arr_void());
     return result_types::max<Tensor, Tensor>(std::move(outp),
                                              std::move(indices));
 }
@@ -464,6 +415,7 @@ result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
 //}
 
 Tensor& max_(const Tensor &_x, Tensor& bools) {
+
     if (_x.dtype == DType::TensorObj) {
         utils::throw_exception(bools.dtype == DType::TensorObj,
                                "Expected indices to be tensor obj for a tensor obj comparison");
@@ -480,23 +432,9 @@ Tensor& max_(const Tensor &_x, Tensor& bools) {
                 });
         return bools;
     }
-    _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        [&bools](auto begin, auto end) {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            bools.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-            [&](auto i_begin, auto i_end){
-            value_t max_element = *begin;
-            auto max_indice = i_begin;
-            ++begin;
-            for (; begin != end; ++begin, ++i_begin) {
-                if (*begin > max_element) {
-                    max_element = *begin;
-                    max_indice = i_begin;
-                }
-            }
-            *max_indice = uint_bool_t(true);
-        });
-        });
+    // only called internally
+    // utils::throw_exception(_x.numel() == bools.numel(), "Cannot get bools of max from tensor with $ elements to bools tensor with $ elements", _x.numel(), bools.numel());
+    Scalar max = cpu::_max_scalar(_x.arr_void(), bools.arr_void());
     return bools;
 }
 
@@ -517,23 +455,7 @@ Tensor& min_(const Tensor &_x, Tensor& bools) {
                 });
         return bools;
     }
-    _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        [&bools](auto begin, auto end) {
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            bools.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-            [&](auto i_begin, auto i_end){
-            value_t min_element = *begin;
-            auto min_indice = i_begin;
-            ++begin;
-            for (; begin != end; ++begin, ++i_begin) {
-                if (*begin < min_element) {
-                    min_element = *begin;
-                    min_indice = i_begin;
-                }
-            }
-            *min_indice = uint_bool_t(true);
-        });
-        });
+    Scalar max = cpu::_min_scalar(_x.arr_void(), bools.arr_void());
     return bools;
 }
 
@@ -559,59 +481,13 @@ Tensor& max_(const Tensor &_x,
     //bools.fill_(false);
     // SizeRef o_shape = _x.shape().delete_index(dim);
     if (dim == _x.dims() - 1) {
-        _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-            [&bools](auto begin, auto end) {
-                using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-                bools.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-                    [&](auto b_begin, auto b_end){
-                    const Tensor::size_value_t &rows = bools.shape()[-1];
-                    while (begin != end) {
-                        auto b_max_ele = b_begin;
-                        value_t max_ele = *begin;
-                        auto current_end = begin + rows;
-                        ++begin;
-                        ++b_begin;
-                        for (; begin != current_end; ++begin, ++b_begin) {
-                            if (*begin > max_ele) {
-                                max_ele = *begin;
-                                b_max_ele = b_begin;
-                            }
-                        }
-                        *b_max_ele = uint_bool_t(true);
-                    }
-                    });
-                });
+        cpu::_max_strided(_x.arr_void(), bools.arr_void(), bools.shape()[-1]);
         return bools;
     }
     Tensor bools_t = bools.transpose(dim, -1);
     Tensor _t = _x.transpose(dim, -1);
     max_(_t, _x.dims()-1, bools_t);
     return bools;
-    // _t.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-        // [&bools_t](auto begin, auto end) {
-        //     using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-        //     // auto b_begin =
-        //     //     bools_t.arr_void().get_bucket().begin<3, uint_bool_t>();
-        //     bools.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-        //         [&](auto b_begin, auto b_end){
-        //     const Tensor::size_value_t &rows = bools_t.shape()[-1];
-        //     while (begin != end) {
-        //         auto b_max_ele = b_begin;
-        //         value_t max_ele = *begin;
-        //         auto current_end = begin + rows;
-        //         ++begin;
-        //         ++b_begin;
-        //         for (; begin != current_end; ++begin, ++b_begin) {
-        //             if (*begin > max_ele) {
-        //                 max_ele = *begin;
-        //                 b_max_ele = b_begin;
-        //             }
-        //         }
-        //         *b_max_ele = uint_bool_t(true);
-        //     }});
-        // });
-
-    // return bools;
 }
 
 
@@ -638,59 +514,13 @@ Tensor& min_(const Tensor &_x,
     //bools.fill_(false);
     // SizeRef o_shape = _x.shape().delete_index(dim);
     if (dim == _x.dims() - 1) {
-        _x.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-            [&bools](auto begin, auto end) {
-                using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-                bools.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-                    [&](auto b_begin, auto b_end){
-                    const Tensor::size_value_t &rows = bools.shape()[-1];
-                    while (begin != end) {
-                        auto b_min_ele = b_begin;
-                        value_t min_ele = *begin;
-                        auto current_end = begin + rows;
-                        ++begin;
-                        ++b_begin;
-                        for (; begin != current_end; ++begin, ++b_begin) {
-                            if (*begin < min_ele) {
-                                min_ele = *begin;
-                                b_min_ele = b_begin;
-                            }
-                        }
-                        *b_min_ele = uint_bool_t(true);
-                    }
-                    });
-                });
+        cpu::_min_strided(_x.arr_void(), bools.arr_void(), bools.shape()[-1]);
         return bools;
     }
     Tensor bools_t = bools.transpose(dim, -1);
     Tensor _t = _x.transpose(dim, -1);
     min_(_t, _x.dims()-1, bools_t);
     return bools;
-    // _t.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-    //     [&bools_t](auto begin, auto end) {
-    //         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-    //         // auto b_begin =
-    //         //     bools_t.arr_void().get_bucket().begin<3, uint_bool_t>();
-    //         bools.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::Bool>>>(
-    //             [&](auto b_begin, auto b_end){
-    //         const Tensor::size_value_t &rows = bools_t.shape()[-1];
-    //         while (begin != end) {
-    //             auto b_max_ele = b_begin;
-    //             value_t max_ele = *begin;
-    //             auto current_end = begin + rows;
-    //             ++begin;
-    //             ++b_begin;
-    //             for (; begin != current_end; ++begin, ++b_begin) {
-    //                 if (*begin > max_ele) {
-    //                     max_ele = *begin;
-    //                     b_max_ele = b_begin;
-    //                 }
-    //             }
-    //             *b_max_ele = uint_bool_t(true);
-    //         }});
-    //     });
-
-    // return bools;
 }
 
 

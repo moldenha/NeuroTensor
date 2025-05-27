@@ -1,6 +1,7 @@
 #ifndef __NT_FUNCTIONAL_TENSOR_FILES_EXCEPTIONS_HPP__
 #define __NT_FUNCTIONAL_TENSOR_FILES_EXCEPTIONS_HPP__
 #include "../../Tensor.h"
+#include "../../utils/name_func_macro.h"
 
 namespace nt{
 namespace functional{
@@ -55,6 +56,10 @@ template<typename... T>
 inline void _NT_FUNCTIONAL_ALWAYS_CHECK_(const Tensor& t, const T&... tensors){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     _NT_FUNCTIONAL_ALWAYS_CHECK_(tensors...);
+}
+
+inline void check_mutability(Tensor& x, const char* func_name = __NT_FUNCTION_NAME__){
+    utils::throw_exception(x.is_mutable(), "Cannot perform function $ on an immutable tensor", func_name);
 }
 
 }

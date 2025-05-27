@@ -14,6 +14,9 @@ Tensor nums(SizeRef, const Scalar, DType dt = DType::Float);
 Tensor nums_like(const Tensor& t, const Scalar);
 Tensor arange(typename Tensor::size_value_t total_size, DType dt = DType::Float, Scalar start = 0);
 Tensor arange(SizeRef, DType dt = DType::Float, Scalar start = 0);
+Tensor& fill_diagonal_(Tensor&, Scalar);
+Tensor& fill_(Tensor&, Scalar);
+Tensor& set_(Tensor&, const Tensor&);
 
 } // namespace functional
 } // namespace nt

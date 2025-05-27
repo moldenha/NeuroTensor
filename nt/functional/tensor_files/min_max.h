@@ -14,11 +14,9 @@ namespace functional {
 
 Tensor clamp(const Tensor &x, std::optional<Scalar> min = std::nullopt,
              std::optional<Scalar> max = std::nullopt);
-Tensor relu(const Tensor &);
-Tensor silu(const Tensor &);
-Tensor dsilu(const Tensor &);
-Tensor gelu(const Tensor &);
-Tensor dgelu(const Tensor &);
+Tensor& clamp_(Tensor &x, std::optional<Scalar> min = std::nullopt,
+             std::optional<Scalar> max = std::nullopt);
+
 Scalar min(std::vector<Scalar>);
 Scalar max(std::vector<Scalar>);
 Tensor min(std::vector<Tensor>);

@@ -1,10 +1,6 @@
 #include <_types/_uint8_t.h>
 #include <memory.h>
-#include <new>
-
-
 #include <utility>
-
 #include "../Tensor.h"
 #include "DType.h"
 #include "DType_enum.h"
@@ -14,57 +10,17 @@
 #include <numeric>
 #include "Scalar.h"
 #include "../utils/utils.h"
-#include "compatible/DType_compatible.h"
 #include "../types/Types.h"
-#include "DType_operators.h"
 #include "../memory/iterator.h"
-//%s/"../convert/Convert.h"/"..\/convert\/Convert.h"
+#include "../functional/cpu/sum_exp_log.h"
+#include "../functional/cpu/activation_functions.h"
+#include "../functional/cpu/operators.h"
+#include "../functional/cpu/fill.h"
+#include "../functional/cpu/compare.h"
+#include "../functional/cpu/convert.h"
 
 
-#include "../mp/simde_ops.h"
-#ifdef USE_PARALLEL
-#include <tbb/parallel_for.h>
-#endif
 
-namespace nt {
-namespace mp {
-
-#define _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(func_name, simde_op,            \
-                                               transform_op)                   \
-    template <typename T, typename U, typename O>                              \
-    inline void func_name(T begin, T end, U begin2, O out) {                   \
-        static_assert(                                                         \
-            std::is_same_v<utils::IteratorBaseType_t<T>,                       \
-                           utils::IteratorBaseType_t<U>> &&                    \
-                std::is_same_v<utils::IteratorBaseType_t<T>,                   \
-                               utils::IteratorBaseType_t<O>>,                  \
-            "Expected to get base types the same for simde optimized routes"); \
-        using base_type = utils::IteratorBaseType_t<T>;                        \
-        if constexpr (simde_supported_v<base_type>) {                          \
-            static constexpr size_t pack_size = pack_size_v<base_type>;        \
-            for (; begin + pack_size <= end;                                   \
-                 begin += pack_size, begin2 += pack_size, out += pack_size) {  \
-                simde_type<base_type> a = it_loadu(begin);                     \
-                simde_type<base_type> b = it_loadu(begin2);                    \
-                simde_type<base_type> c =                                      \
-                    SimdTraits<base_type>::simde_op(a, b);                     \
-                it_storeu(out, c);                                             \
-            }                                                                  \
-            std::transform(begin, end, begin2, out, transform_op<>{});         \
-        } else {                                                               \
-            std::transform(begin, end, begin2, out, transform_op<>{});         \
-        }                                                                      \
-    }
-
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(add, add, std::plus);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(subtract, subtract, std::minus);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(multiply, multiply, std::multiplies);
-_NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_(divide, divide, std::divides);
-
-#undef _NT_SIMDE_OP_TRANSFORM_EQUIVALENT_TWO_
-
-} // namespace mp
-} // namespace nt
 
 namespace nt{
 
@@ -204,25 +160,9 @@ const void* ArrayVoid::data_ptr_end() const {utils::throw_exception(is_contiguou
 
 ArrayVoid& ArrayVoid::operator=(Scalar val){
 	if(dtype != DType::TensorObj){
-		if(is_contiguous()){
-			fill_(val);
-			return *this;
-		}
-		if(val.isZero()){
-			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >([&val](auto begin, auto end){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				mp::fill_zero(begin, end);
-			});
-	
-		}else{
-			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >([&val](auto begin, auto end){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				auto v = val.to<value_t>();
-				mp::fill(begin, end, v);
-			});
-		
-		}
-	}
+        functional::cpu::_fill_scalar_(*this, val);
+        return *this;	
+    }
 	else{
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&val](auto begin, auto end){
 				/* using value_t = IteratorBaseType_t<decltype(begin)>; */
@@ -235,12 +175,10 @@ ArrayVoid& ArrayVoid::operator=(Scalar val){
 
 
 ArrayVoid& ArrayVoid::iota(Scalar s){
+    utils::throw_exception(dtype != DType::Bool, "Cannot get iota or arange from boolean dtype object");
 	if(dtype != DType::TensorObj){
-		this->execute_function<WRAP_DTYPES<NumberTypesL> >([&s](auto begin, auto end){
-			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-			auto v = s.to<value_t>();
-			mp::iota(begin, end, v);
-			});
+        functional::cpu::_iota_(*this, s);
+        return *this;
 	}else{
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&s](auto begin, auto end){
 				/* using value_t = IteratorBaseType_t<decltype(begin)>; */
@@ -248,7 +186,6 @@ ArrayVoid& ArrayVoid::iota(Scalar s){
 				std::for_each(begin, end, [&s](auto& val){val.arr_void().iota(s);});
 				});
 	}
-
 	return *this;
 }
 
@@ -538,102 +475,12 @@ bool _my_sub_copy_(ArrayVoid& Arr, const ArrayVoid& my_arr, unsigned long long i
 
 void ArrayVoid::copy(ArrayVoid& Arr, unsigned long long i) const{
 	utils::throw_exception(Arr.dtype == dtype, "\nRuntime Error: Expected to copy ArrayVoid to same type $ but got $", dtype, Arr.dtype);
-	Arr.execute_function([](auto begin, auto end, const nt::ArrayVoid& arr){
-				using value_type = utils::IteratorBaseType_t<decltype(begin)>;
-				uint32_t type_a = arr.get_bucket().iterator_type();
-				if(type_a == 1){
-					auto m_begin = arr.get_bucket().cbegin_contiguous<value_type>();
-					auto m_end = arr.get_bucket().cend_contiguous<value_type>();
-					std::copy(m_begin, m_end, begin);
-				}
-				else if(type_a == 2){
-					auto m_begin = arr.get_bucket().cbegin_blocked<value_type>();
-					auto m_end = arr.get_bucket().cend_blocked<value_type>();
-					std::copy(m_begin, m_end, begin);
-				}
-				else if(type_a == 3){
-					auto m_begin = arr.get_bucket().cbegin_list<value_type>();
-					auto m_end = arr.get_bucket().cend_list<value_type>();
-					std::copy(m_begin, m_end, begin);
-				}
-
-			}, *this);
-	/* utils::throw_exception(_my_sub_copy_<DType::Integer>(Arr, *this, i), "\nRuntime Error: Was unable to copy ArrayVoid"); */
+    functional::cpu::_set_(Arr, *this);
 }
-
-#include "../convert/Convert.h"
-
-template<DType F, DType T, std::enable_if_t<T != DType::TensorObj && F != DType::TensorObj, bool> = true>
-bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
-	if(F != my_arr.dtype){
-		return _my_sub_turn_dtype_<DTypeFuncs::next_dtype_it<F>, T>(my_arr, out);
-	}
-	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
-	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<F>;
-	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<T>;
-    out_value_t* out_ptr = reinterpret_cast<out_value_t*>(out.data_ptr());
-    const_cast<ArrayVoid&>(my_arr).execute_function<WRAP_DTYPES<DTypeEnum<F> > >([&out_ptr](auto begin, auto end){
-        for(;begin != end; ++begin, ++out_ptr){
-            *out_ptr = ::nt::convert::convert<T, my_value_t>(*begin);
-        }
-    });
-	return true;
-}
-
-template<DType F, DType T, std::enable_if_t<T == DType::TensorObj && F != DType::TensorObj, bool> = true>
-bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
-	if(F != my_arr.dtype){return _my_sub_turn_dtype_<DTypeFuncs::next_dtype_it<F>, T>(my_arr, out);}
-	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
-	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<F>;
-	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<T>;
-    out_value_t* out_ptr = reinterpret_cast<out_value_t*>(out.data_ptr());
-    my_arr.cexecute_function<WRAP_DTYPES<DTypeEnum<F> > >([&out_ptr](auto begin, auto end){
-        for(;begin != end; ++begin, ++out_ptr){
-            Tensor outp({1}, F);
-            outp.fill_(*begin);
-            *out_ptr = std::move(outp);
-        }
-    });
-	return true;
-}
-
-template<DType F, DType T, std::enable_if_t<T == DType::TensorObj && F == DType::TensorObj, bool> = true>
-bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
-	if(F != my_arr.dtype){return _my_sub_turn_dtype_<DTypeFuncs::next_dtype_it<F>, T>(my_arr, out);}
-	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
-	return true;
-}
-
-
-template<DType F, DType T, std::enable_if_t<T != DType::TensorObj && F == DType::TensorObj, bool> = true>
-bool _my_sub_turn_dtype_(const ArrayVoid& my_arr, ArrayVoid& out){
-	if(F != my_arr.dtype){return _my_sub_turn_dtype_<DTypeFuncs::next_dtype_it<F>, T>(my_arr, out);}
-	if(T != out.dtype){return _my_sub_turn_dtype_<F, DTypeFuncs::next_dtype_it<T>>(my_arr, out);}
-	using my_value_t = ::nt::DTypeFuncs::dtype_to_type_t<F>;
-	using out_value_t = ::nt::DTypeFuncs::dtype_to_type_t<T>;
-    out_value_t* out_ptr = reinterpret_cast<out_value_t*>(out.data_ptr());
-    my_arr.cexecute_function<WRAP_DTYPES<DTypeEnum<F> > >([&out_ptr](auto begin, auto end){
-        for(;begin != end; ++begin, ++out_ptr){
-            *out_ptr = *reinterpret_cast<const out_value_t*>(begin->data_ptr());
-        }
-    });
-	return true;
-}
-
 
 ArrayVoid& ArrayVoid::fill_(Scalar c){
 	if(dtype != DType::TensorObj){
-		if(c.isZero()){
-			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >( [&c](auto begin, auto end){
-				mp::fill_zero(begin, end);
-			});	
-		}else{
-			this->execute_function_chunk<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >( [&c](auto begin, auto end){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				auto v = c.to<value_t>();
-				mp::fill(begin, end, v);
-			});
-		}
+        functional::cpu::_fill_scalar_(*this, c);
 	}
 	else{
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&c](auto begin, auto end){
@@ -645,204 +492,58 @@ ArrayVoid& ArrayVoid::fill_(Scalar c){
 	return *this;
 }
 
-ArrayVoid ArrayVoid::uint32() const{
-	if(dtype == DType::Long)
-		return *this;
-	ArrayVoid outp(size, DType::Long);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Long, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::int32() const{
-	if(dtype == DType::int32)
-		return *this;
-	ArrayVoid outp(size, DType::int32);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::int32, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-
-ArrayVoid ArrayVoid::Double() const{
-	if(dtype == DType::Double)
-		return *this;
-	ArrayVoid outp(size, DType::Double);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Double, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::Float() const{
-	if(dtype == DType::Float)
-		return *this;
-	ArrayVoid outp(size, DType::Float);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Float, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::cfloat() const{
-	if(dtype == DType::cfloat)
-		return *this;
-	ArrayVoid outp(size, DType::cfloat);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::cfloat, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::cdouble() const{
-	if(dtype == DType::cdouble)
-		return *this;
-	ArrayVoid outp(size, DType::cdouble);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::cdouble, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);	
-}
-
-ArrayVoid ArrayVoid::tensorobj() const{
-	if(dtype == DType::TensorObj)
-		return *this;
-	ArrayVoid outp(size, DType::TensorObj);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::TensorObj, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::uint8() const{
-	if(dtype == DType::uint8)
-		return *this;
-	ArrayVoid outp(size, DType::uint8);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::uint8, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::int8() const{
-	if(dtype == DType::int8)
-		return *this;
-	ArrayVoid outp(size, DType::int8);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::int8, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::uint16() const{
-	if(dtype == DType::uint16)
-		return *this;
-	ArrayVoid outp(size, DType::uint16);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::uint16, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::int16() const{
-	if(dtype == DType::int16)
-		return *this;
-	ArrayVoid outp(size, DType::int16);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::int16, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::int64() const{
-	if(dtype == DType::int64)
-		return *this;
-	ArrayVoid outp(size, DType::int64);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::int64, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-ArrayVoid ArrayVoid::Bool() const{
-	if(dtype == DType::Bool)
-		return *this;
-	ArrayVoid outp(size, DType::Bool);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Bool, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-
-#ifdef _HALF_FLOAT_SUPPORT_
-ArrayVoid ArrayVoid::Float16() const{
-	if(dtype == DType::Float16)
-		return *this;
-	ArrayVoid outp(size, DType::Float16);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Float16, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-ArrayVoid ArrayVoid::Complex32() const{
-	if(dtype == DType::Complex32)
-		return *this;
-	ArrayVoid outp(size, DType::Complex32);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Complex32, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-
-
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-ArrayVoid ArrayVoid::Float128() const{
-	if(dtype == DType::Float128)
-		return *this;
-	ArrayVoid outp(size, DType::Float128);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::Float128, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-#endif
-#ifdef __SIZEOF_INT128__
-ArrayVoid ArrayVoid::Int128() const{
-	if(dtype == DType::int128)
-		return *this;
-	ArrayVoid outp(size, DType::int128);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::int128, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-ArrayVoid ArrayVoid::UInt128() const{
-	if(dtype == DType::uint128)
-		return *this;
-	ArrayVoid outp(size, DType::uint128);
-	::nt::utils::throw_exception(_my_sub_turn_dtype_<DType::uint128, DType::Integer>(*this, outp), "\nRuntime Error: Unable to convert ArrayVoid of dtype $ to dtype $", dtype, outp.dtype);
-	return std::move(outp);
-}
-#endif
 
 
 
 ArrayVoid ArrayVoid::to(DType _dt) const{
-	switch(_dt){
-		case DType::uint32:
-			return uint32();
-		case DType::int32:
-			return int32();
-		case DType::Double:
-			return Double();
-		case DType::Float:
-			return Float();
-		case DType::cfloat:
-			return cfloat();
-		case DType::cdouble:
-			return cdouble();
-		case DType::TensorObj:
-			return tensorobj();
-		case DType::uint8:
-			return uint8();
-		case DType::int8:
-			return int8();
-		case DType::uint16:
-			return uint16();
-		case DType::int16:
-			return int16();
-		case DType::int64:
-			return int64();
-		case DType::Bool:
-			return Bool();
+    if(_dt == this->dtype) return *this;
+    ArrayVoid out(size, _dt);
+    functional::cpu::_convert(*this, out);
+    return std::move(out);
+}
+ArrayVoid ArrayVoid::uint32() const {return to(DType::Long);}
+
+ArrayVoid ArrayVoid::int32() const {return to(DType::int32);}
+
+
+ArrayVoid ArrayVoid::Double() const {return to(DType::Double);}
+
+ArrayVoid ArrayVoid::Float() const {return to(DType::Float);}
+
+ArrayVoid ArrayVoid::cfloat() const {return to(DType::cfloat);}
+
+ArrayVoid ArrayVoid::cdouble() const {return to(DType::cdouble);}
+
+ArrayVoid ArrayVoid::tensorobj() const {return to(DType::TensorObj);}
+
+ArrayVoid ArrayVoid::uint8() const {return to(DType::uint8);}
+
+ArrayVoid ArrayVoid::int8() const {return to(DType::int8);}
+
+ArrayVoid ArrayVoid::uint16() const {return to(DType::uint16);}
+
+ArrayVoid ArrayVoid::int16() const {return to(DType::int16);}
+
+ArrayVoid ArrayVoid::int64() const {return to(DType::int64);}
+
+ArrayVoid ArrayVoid::Bool() const {return to(DType::Bool);}
+
+
 #ifdef _HALF_FLOAT_SUPPORT_
-		case DType::Float16:
-			return Float16();
-		case DType::Complex32:
-			return Complex32();
+ArrayVoid ArrayVoid::Float16() const {return to(DType::Float16);}
+ArrayVoid ArrayVoid::Complex32() const {return to(DType::Complex32);}
+
+
 #endif
 #ifdef _128_FLOAT_SUPPORT_
-		case DType::Float128:
-			return Float128();
+ArrayVoid ArrayVoid::Float128() const {return to(DType::Float128);}
 #endif
+
+
 #ifdef __SIZEOF_INT128__
-		case DType::int128:
-			return Int128();
-		case DType::uint128:
-			return UInt128();
+ArrayVoid ArrayVoid::Int128() const{return to(DType::int128);}
+ArrayVoid ArrayVoid::UInt128() const{ return to(DType::uint128); }
 #endif
-	}
-}
 
 ArrayVoid ArrayVoid::to(DeviceType dt) const{
 	return ArrayVoid(this->bucket.to_device(dt), size, dtype);
@@ -880,12 +581,8 @@ Tensor ArrayVoid::split(const uint64_t sp, SizeRef s_outp) const{
 ArrayVoid& ArrayVoid::operator*=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "*= operation is invalid for DType::Bool");
 	if(dtype != DType::TensorObj){
-		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
-			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-			auto v = c.to<value_t>();
-			mp::multiply_num(begin, end, begin, v);
-		});
-	}
+        functional::cpu::_operator_mdsa_scalar_(*this, c, 0);
+    }
 	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp *= c;});
 	}
@@ -898,13 +595,9 @@ ArrayVoid& ArrayVoid::operator/=(Scalar c){
     //if floating or complex, a multiplication (times the inverse) is the same thing and faster
     if(DTypeFuncs::is_complex(dtype) || DTypeFuncs::is_floating(dtype))
         return *this *= c.inverse();
-    if(dtype != DType::TensorObj){
-		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
-			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-			auto v = c.to<value_t>();
-			mp::divide_num(begin, end, begin, v);
-		});
-	}
+	if(dtype != DType::TensorObj){
+        functional::cpu::_operator_mdsa_scalar_(*this, c, 1);
+    }
 	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp /= c;});
 	}
@@ -915,12 +608,8 @@ ArrayVoid& ArrayVoid::operator/=(Scalar c){
 ArrayVoid& ArrayVoid::operator-=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "-= operation is invalid for DType::Bool");
 	if(dtype != DType::TensorObj){
-		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
-			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-			auto v = c.to<value_t>();
-			mp::subtract_num(begin, end, begin, v);
-		});
-	}
+        functional::cpu::_operator_mdsa_scalar_(*this, c, 2);
+    }
 	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp -= c;});
 	}
@@ -930,12 +619,8 @@ ArrayVoid& ArrayVoid::operator-=(Scalar c){
 ArrayVoid& ArrayVoid::operator+=(Scalar c){
 	utils::throw_exception(dtype != DType::Bool, "+= operation is invalid for DType::Bool");
 	if(dtype != DType::TensorObj){
-		this->execute_function_chunk<WRAP_DTYPES<NumberTypesL> >( [&c](auto begin, auto end){
-			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-			auto v = c.to<value_t>();
-			mp::add_num(begin, end, begin, v);
-		});
-	}
+        functional::cpu::_operator_mdsa_scalar_(*this, c, 3);
+    }
 	else{
 		this->for_each<DType::TensorObj>([&c](auto& inp){inp += c;});
 	}
@@ -975,13 +660,7 @@ ArrayVoid ArrayVoid::operator*(const ArrayVoid& A) const{
 		A.transform_function<WRAP_DTYPES<NumberTypesL>>([](const auto& t, const auto& o){return t * o;}, *this, out_begin);
 		return std::move(output);
 	}
-	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-		mp::multiply(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
-	}, A, output);
-	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
-	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
-				/* std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::multiplies<value_t>());}, A, output); */
+    functional::cpu::_operator_mdsa(*this, A, output, 0);
 	return std::move(output);
 }
 
@@ -995,13 +674,7 @@ ArrayVoid ArrayVoid::operator/(const ArrayVoid& A) const{
 		A.transform_function<WRAP_DTYPES<NumberTypesL>>([](const auto& t, const auto& o){return t / o;},*this, out_begin);
 		return std::move(output);
 	}
-	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-		mp::divide(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
-	}, A, output);
-	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
-	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
-	/* 			std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::divides<value_t>());}, A, output); */
+    functional::cpu::_operator_mdsa(*this, A, output, 1);
 	return std::move(output);
 }
 
@@ -1015,13 +688,7 @@ ArrayVoid ArrayVoid::operator-(const ArrayVoid& A) const{
 		A.transform_function<WRAP_DTYPES<NumberTypesL>>([](const auto& t, const auto& o){return t - o;},*this, out_begin);
 		return std::move(output);
 	}
-	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-		mp::subtract(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
-	}, A, output);
-	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
-	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
-	/* 			std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::minus<value_t>());}, A, output); */
+    functional::cpu::_operator_mdsa(*this, A, output, 2);
 	return std::move(output);
 }
 
@@ -1035,13 +702,7 @@ ArrayVoid ArrayVoid::operator+(const ArrayVoid& A) const{
 		A.transform_function<WRAP_DTYPES<NumberTypesL>>([](const auto& t, const auto& o){return t + o;},*this, out_begin);
 		return std::move(output);
 	}
-	this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){
-		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-		mp::multiply(begin, end, begin2, output.bucket.begin_contiguous<value_t>());
-	}, A, output);
-	/* this->cexecute_function_nbool([](auto begin, auto end, auto begin2, ArrayVoid& output){ */
-	/* 			using value_t = utils::IteratorBaseType_t<decltype(begin)>; */
-	/* 			std::transform(begin, end, begin2, output.bucket.begin_contiguous<value_t>(), std::plus<value_t>());}, A, output); */
+    functional::cpu::_operator_mdsa(*this, A, output, 3);
 	return std::move(output);
 }
 
@@ -1057,9 +718,7 @@ ArrayVoid& ArrayVoid::operator*=(const ArrayVoid& A){
 		return *this *= A.to(dtype);
 	}
 	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
-	this->execute_function_nbool([](auto begin, auto end, auto begin2){
-		mp::multiply(begin, end, begin2, begin); //this array in, next array in, this array out
-	}, const_cast<ArrayVoid&>(A));
+    functional::cpu::_operator_mdsa_(*this, A, 0);
 	return *this;
 
 }
@@ -1076,9 +735,7 @@ ArrayVoid& ArrayVoid::operator+=(const ArrayVoid& A){
 		return *this += A.to(dtype);
 	}
 	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
-	this->execute_function_nbool([](auto begin, auto end, auto begin2){
-		mp::add(begin, end, begin2, begin); //this array in, next array in, this array out
-	}, const_cast<ArrayVoid&>(A));
+    functional::cpu::_operator_mdsa_(*this, A, 3);
 	return *this;
 
 }
@@ -1096,9 +753,7 @@ ArrayVoid& ArrayVoid::operator-=(const ArrayVoid& A){
 		return *this -= A.to(dtype);
 	}
 	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
-	this->execute_function_nbool([](auto begin, auto end, auto begin2){
-		mp::subtract(begin, end, begin2, begin); //this array in, next array in, this array out
-	}, const_cast<ArrayVoid&>(A));
+    functional::cpu::_operator_mdsa_(*this, A, 2);
 	return *this;
 }
 
@@ -1115,9 +770,7 @@ ArrayVoid& ArrayVoid::operator/=(const ArrayVoid& A){
 		return *this /= A.to(dtype);
 	}
 	utils::throw_exception(size == A.size, "For operators, sizes must be equal, expected size of $ but got $", size, A.size);
-	this->execute_function_nbool([](auto begin, auto end, auto begin2){
-		mp::divide(begin, end, begin2, begin); //this array in, next array in, this array out
-	}, const_cast<ArrayVoid&>(A));
+    functional::cpu::_operator_mdsa_(*this, A, 1);
 	return *this;
 }
 
@@ -1210,26 +863,7 @@ ArrayVoid ArrayVoid::operator==(Scalar c) const{
 		output = uint_bool_t(false);
 		return std::move(output);
 	}
-	uint_bool_t* o_begin = reinterpret_cast<uint_bool_t*>(output.data_ptr());
-	const uint64_t& m_size = size;
-	this->cexecute_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool>>>([&o_begin, &m_size](auto begin, auto end, Scalar& s){
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				value_t i = s.to<value_t>();
-#ifdef USE_PARALLEL
-				tbb::parallel_for(tbb::blocked_range<uint64_t>(0, m_size),
-					[&o_begin, &begin, &i](tbb::blocked_range<uint64_t> r){
-					auto cur_b = begin + r.begin();
-					auto cur_e = begin + r.end();
-					uint_bool_t* cur_o = o_begin + r.begin();
-					for(;cur_b != cur_e; ++cur_b, ++cur_o){
-						*cur_o = uint_bool_t(*cur_b == i);
-					}});
-#else
-				std::transform(begin, end, o_begin, [&i](const auto& val){
-						return uint_bool_t(val == i);});
-#endif
-			}, c);
-	/* utils::throw_exception(_my_sub_equal_operator_<DType::Integer>(*this, reinterpret_cast<uint_bool_t*>(output.data_ptr()), c), "\nRuntime Error: input dtype $ is invalid for == operator", dtype); */
+    functional::cpu::_equal(output, *this, c);
 	return std::move(output);
 }
 
@@ -1250,14 +884,7 @@ ArrayVoid ArrayVoid::operator!=(Scalar c) const{
 		output = uint_bool_t(true);
 		return std::move(output);
 	}
-	this->cexecute_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool>>>([](auto begin, auto end, ArrayVoid& op, Scalar& s){
-				auto o_begin = op.get_bucket().begin_contiguous<uint_bool_t>();
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				value_t i = s.to<value_t>();
-				std::transform(begin, end, o_begin, [&i](const auto& val){
-						return uint_bool_t(!(val == i));});
-			}, output, c);
-	/* utils::throw_exception(_my_sub_equal_operator_<DType::Integer>(*this, reinterpret_cast<uint_bool_t*>(output.data_ptr()), c), "\nRuntime Error: input dtype $ is invalid for == operator", dtype); */
+    functional::cpu::_not_equal(output, *this, c);
 	return std::move(output);
 }
 
@@ -1283,14 +910,7 @@ ArrayVoid ArrayVoid::operator>=(Scalar c) const{
 		output = uint_bool_t(false);
 		return std::move(output);
 	}
-	this->cexecute_function<WRAP_DTYPES<NumberTypesL>>([](auto begin, auto end, ArrayVoid& op, Scalar& s){
-				auto o_begin = op.get_bucket().begin_contiguous<uint_bool_t>();
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				value_t i = s.to<value_t>();
-				std::transform(begin, end, o_begin, [&i](const auto& val){
-						return uint_bool_t(val >= i);});
-			}, output, c);
-	/* utils::throw_exception(_my_sub_equal_operator_<DType::Integer>(*this, reinterpret_cast<uint_bool_t*>(output.data_ptr()), c), "\nRuntime Error: input dtype $ is invalid for == operator", dtype); */
+    functional::cpu::_greater_than_equal(output, *this, c);
 	return std::move(output);
 }
 
@@ -1310,14 +930,7 @@ ArrayVoid ArrayVoid::operator<=(Scalar c) const{
 		output = uint_bool_t(false);
 		return std::move(output);
 	}
-	this->cexecute_function<WRAP_DTYPES<NumberTypesL>>([](auto begin, auto end, ArrayVoid& op, Scalar& s){
-				auto o_begin = op.get_bucket().begin_contiguous<uint_bool_t>();
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				value_t i = s.to<value_t>();
-				std::transform(begin, end, o_begin, [&i](const auto& val){
-						return uint_bool_t(val <= i);});
-			}, output, c);
-	/* utils::throw_exception(_my_sub_equal_operator_<DType::Integer>(*this, reinterpret_cast<uint_bool_t*>(output.data_ptr()), c), "\nRuntime Error: input dtype $ is invalid for == operator", dtype); */
+    functional::cpu::_less_than_equal(output, *this, c);
 	return std::move(output);
 }
 
@@ -1337,14 +950,7 @@ ArrayVoid ArrayVoid::operator>(Scalar c) const{
 		output = uint_bool_t(false);
 		return std::move(output);
 	}
-	this->cexecute_function<WRAP_DTYPES<NumberTypesL>>([](auto begin, auto end, ArrayVoid& op, Scalar& s){
-				auto o_begin = op.get_bucket().begin_contiguous<uint_bool_t>();
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				value_t i = s.to<value_t>();
-				std::transform(begin, end, o_begin, [&i](const auto& val){
-						return uint_bool_t(val > i);});
-			}, output, c);
-	/* utils::throw_exception(_my_sub_equal_operator_<DType::Integer>(*this, reinterpret_cast<uint_bool_t*>(output.data_ptr()), c), "\nRuntime Error: input dtype $ is invalid for == operator", dtype); */
+    functional::cpu::_greater_than(output, *this, c);
 	return std::move(output);
 }
 
@@ -1364,14 +970,7 @@ ArrayVoid ArrayVoid::operator<(Scalar c) const{
 		output = uint_bool_t(false);
 		return std::move(output);
 	}
-	this->cexecute_function<WRAP_DTYPES<NumberTypesL>>([](auto begin, auto end, ArrayVoid& op, Scalar& s){
-				auto o_begin = op.get_bucket().begin_contiguous<uint_bool_t>();
-				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-				value_t i = s.to<value_t>();
-				std::transform(begin, end, o_begin, [&i](const auto& val){
-						return uint_bool_t(val < i);});
-			}, output, c);
-	/* utils::throw_exception(_my_sub_equal_operator_<DType::Integer>(*this, reinterpret_cast<uint_bool_t*>(output.data_ptr()), c), "\nRuntime Error: input dtype $ is invalid for == operator", dtype); */
+    functional::cpu::_less_than(output, *this, c);
 	return std::move(output);
 }
 
@@ -1472,52 +1071,12 @@ ArrayVoid ArrayVoid::operator<(Scalar c) const{
 /* } */
 
 ArrayVoid ArrayVoid::inverse() const{
-	if(dtype == DType::LongLong){
-		ArrayVoid output(size, DType::Double);
-		this->transform_function<DType::LongLong>([](const auto& inp) -> double {return 1.0/((double)inp);}, reinterpret_cast<double*>(output.data_ptr()));
-		return std::move(output);
-	}
-#ifdef __SIZEOF_INT128__
-	if(dtype == DType::int128 || dtype == DType::uint128){
-#ifdef _128_FLOAT_SUPPORT_
-		ArrayVoid output(size, DType::Float128);
-		this->transform_function<DType::uint128, DType::int128>([](const auto& inp) -> float128_t 
-				{return 1.0/(::nt::convert::convert<DType::Float128>(inp));}, reinterpret_cast<float128_t*>(output.data_ptr()));
-#else
-		ArrayVoid output(size, DType::Double);
-		this->transform_function<DType::uint128, DType::int128>([](const auto& inp) -> double
-				{return 1.0/(::nt::convert::convert<DType::Double>(inp));}, reinterpret_cast<double*>(output.data_ptr()));
-#endif
-		DType out_dtype = DType::Float128;
-	}
-#endif
-	if(dtype == DType::Integer || dtype == DType::Long || dtype == DType::uint8 || dtype == DType::int8 || dtype == DType::uint16 || dtype == DType::int16){
-		if(dtype == DType::int64){
-			return this->to(DType::Float64).inverse(); //double is slower with the registers but works
-		}else{
-			return this->to(DType::Float32).inverse();
-		}
-		/* ArrayVoid output(size, DType::Float); */
-		/* this->transform_function */
-		/* 	<DType::Integer,DType::Long,DType::uint8,DType::int8,DType::uint16,DType::int16> */
-		/* 	([](const auto& inp) -> float {return 1.0/((float)inp);}, reinterpret_cast<float*>(output.data_ptr())); */
-		/* return std::move(output); */
-	}
-	if(dtype == DType::TensorObj){
-		ArrayVoid output(size, DType::TensorObj);
+    if(dtype == DType::TensorObj){
+        ArrayVoid output(size, DType::TensorObj);
 		this->transform_function<DType::TensorObj>([](const Tensor& inp) -> Tensor {return inp.inverse();}, reinterpret_cast<Tensor*>(output.data_ptr()));
 		return std::move(output);
-	}
-	ArrayVoid output(size, dtype);
-	//all svml compatible types
-	this->cexecute_function<WRAP_DTYPES<FloatingTypesL,ComplexTypesL> >(
-			[&output](auto begin, auto end){
-		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-		mp::reciprical(begin, end, output.bucket.begin_contiguous<value_t>());
-	});
-
-	/* utils::throw_exception(_my_sub_inverse_<DType::Float>(*this, output), "\nRuntime Error: Could not do inverse() for dtype $", dtype); */
-	return std::move(output);
+    }
+    return functional::cpu::_inverse(*this);
 }
 
 ArrayVoid ArrayVoid::pow(Scalar p) const {
@@ -1526,23 +1085,16 @@ ArrayVoid ArrayVoid::pow(Scalar p) const {
 
 
 ArrayVoid& ArrayVoid::pow_(Scalar p) {
-	if(p.isNegative()){return inverse_().pow_(-p);}
-	if(p.isZero()){return fill_(1);}
 	if(dtype == DType::TensorObj){
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&p](auto a_begin, auto a_end){
 			for(;a_begin != a_end; ++a_begin)
 				a_begin->pow_(p);
 		});
+        return *this;
 		
-	}else{
-		this->execute_function_chunk<WRAP_DTYPES<RealNumberTypesL, ComplexTypesL> >(
-			[&p](auto a_begin, auto a_end){
-				using value_t = utils::IteratorBaseType_t<decltype(a_begin)>;
-                if(p.to<value_t>() == 1) return;
-				mp::pow(a_begin, a_end, a_begin, p.to<value_t>());
-		});
 	}
-	return *this;
+    functional::cpu::_pow_(*this, p);
+    return *this;
 }
 
 /* template<DType dt, std::enable_if_t<DTypeFuncs::is_dtype_floating_v<dt>, bool> = true> */
@@ -1569,15 +1121,11 @@ ArrayVoid& ArrayVoid::pow_(Scalar p) {
 /* } */
 
 ArrayVoid& ArrayVoid::inverse_(){
-	if(dtype != DType::TensorObj && !DTypeFuncs::is_floating(dtype) && !DTypeFuncs::is_complex(dtype))
-		floating_();
 	if(dtype == DType::TensorObj){
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){ std::for_each(begin, end, [](auto& tensor){tensor.inverse_();});});
-	}
-	this->execute_function_chunk<WRAP_DTYPES<FloatingTypesL,ComplexTypesL> >([](auto begin, auto end){
-		mp::reciprical(begin, end, begin);
-	});
-	/* utils::throw_exception(_my_sub_inverse_<DType::Integer>(*this), "\nRuntime Error: Unable to perform inverse on self for DType $", dtype); */
+	    return *this;
+    }
+    functional::cpu::_inverse_(*this);
 	return *this;
 }
 
@@ -1606,9 +1154,8 @@ ArrayVoid ArrayVoid::exp() const{
 
 ArrayVoid& ArrayVoid::exp_(){
 	if(DTypeFuncs::is_complex(dtype) || DTypeFuncs::is_floating(dtype) || DTypeFuncs::is_integer(dtype)){
-		this->execute_function_chunk<WRAP_DTYPES<FloatingTypesL, ComplexTypesL, IntegerTypesL> >([](auto begin, auto end){
-			mp::exp(begin, end, begin);
-		});
+        functional::cpu::_exp_(*this);
+        return *this;
 	}
 	else if(dtype == DType::TensorObj){
 		this->execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
@@ -1622,32 +1169,21 @@ ArrayVoid& ArrayVoid::exp_(){
 
 
 ArrayVoid& ArrayVoid::complex_(){
-	utils::throw_exception(is_contiguous(), "In order to implicitly convert to a type, must be contiguous");
-	DType complex_to = DTypeFuncs::complex_size(DTypeFuncs::size_of_dtype(dtype));
-	utils::throw_exception(DTypeFuncs::is_complex(complex_to), "\nRuntime Error: Unable to implicitly convert $ to complex", dtype);
-	DTypeFuncs::convert_this_dtype_array(data_ptr(), dtype, complex_to, size);
+    functional::cpu::_complex_(*this);
 	return *this;
 }
 
 ArrayVoid& ArrayVoid::floating_(){
-	DType floating_to = DTypeFuncs::floating_size(DTypeFuncs::size_of_dtype(dtype));
-	utils::throw_exception(DTypeFuncs::is_floating(floating_to), "\nRuntime Error: Unable to implicitly convert $ to floating", dtype);
-	DTypeFuncs::convert_this_dtype_array(data_ptr(), dtype, floating_to, size);
+    functional::cpu::_floating_(*this);
 	return *this;
 }
 
 ArrayVoid& ArrayVoid::integer_(){
-	utils::throw_exception(is_contiguous(), "In order to implicitly convert to a type, must be contiguous");
-	DType integer_to = DTypeFuncs::integer_size(DTypeFuncs::size_of_dtype(dtype));
-	utils::throw_exception(DTypeFuncs::is_integer(integer_to), "\nRuntime Error: Unable to implicitly convert $ to integer", dtype);
-	DTypeFuncs::convert_this_dtype_array(data_ptr(), dtype, integer_to, size);
+    functional::cpu::_integer_(*this);
 	return *this;
 }
 ArrayVoid& ArrayVoid::unsigned_(){
-	utils::throw_exception(is_contiguous(), "In order to implicitly convert to a type, must be contiguous");
-	DType unsigned_to = DTypeFuncs::unsigned_size(DTypeFuncs::size_of_dtype(dtype));
-	utils::throw_exception(DTypeFuncs::is_unsigned(unsigned_to), "\nRuntime Error: Unable to implicitly convert $ to unsigned", dtype);
-	DTypeFuncs::convert_this_dtype_array(data_ptr(), dtype, unsigned_to, size);
+    functional::cpu::_unsigned_(*this);
 	return *this;
 }
 
@@ -1682,220 +1218,6 @@ ArrayVoid ArrayVoid::from_shared_memory() const{
 	return ArrayVoid(bucket.to_cpu());
 }
 #endif
-
-/* intrusive_ptr<void> ArrayVoid::MakeContiguousMemory(uint32_t _size, DType _type){ */
-/* 	return intrusive_ptr<void>(_size, DTypeFuncs::size_of_dtype(_type)); */
-/* } */
-
-
-/* intrusive_ptr<void> ArrayVoid::MakeContiguousMemory(uint32_t _size, DType _type, Scalar s){ */
-/* 	intrusive_ptr<void> ptr(_size, DTypeFuncs::size_of_dtype(_type)); */
-/* 	switch(_type){ */
-/* 		case DType::Integer:{ */
-/* 			using value_t = int32_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Float:{ */
-/* 			using value_t = float; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Double:{ */
-/* 			using value_t = double; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Long:{ */
-/* 			using value_t = uint32_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Complex64:{ */
-/* 			using value_t = complex_64; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Complex128:{ */
-/* 			using value_t = complex_128; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::uint8:{ */
-/* 			using value_t = uint8_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::int8:{ */
-/* 			using value_t = int8_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::int16:{ */
-/* 			using value_t = int16_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::uint16:{ */
-/* 			using value_t = uint16_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::LongLong:{ */
-/* 			using value_t = int64_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Bool:{ */
-/* 			using value_t = uint_bool_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::TensorObj:{ */
-/* 			return ptr; */
-/* 		} */
-/* #ifdef _128_FLOAT_SUPPORT_ */
-/* 		case DType::Float128:{ */
-/* 			using value_t = float128_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* #endif */
-/* #ifdef _HALF_FLOAT_SUPPORT_ */
-/* 		case DType::Float16:{ */
-/* 			using value_t = float16_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Complex32:{ */
-/* 			using value_t = complex_32; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* #endif */
-/* #ifdef __SIZEOF_INT128__ */
-/* 		case DType::int128:{ */
-/* 			using value_t = int128_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::uint128:{ */
-/* 			using value_t = uint128_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* #endif */
-/* 	} */
-/* 	return ptr; */
-/* } */
-
-/* #ifdef USE_PARALLEL */
-/* intrusive_ptr<void> ArrayVoid::MakeContiguousMemory(uint32_t _size, DTypeShared _type, Scalar s){ */
-/* 	intrusive_ptr<void> ptr = intrusive_ptr<void>::make_shared(_size, DTypeFuncs::size_of_dtype(DTypeShared_DType(_type))); */
-/* 	switch(DTypeShared_DType(_type)){ */
-/* 		case DType::Integer:{ */
-/* 			using value_t = int32_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Float:{ */
-/* 			using value_t = float; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Double:{ */
-/* 			using value_t = double; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Long:{ */
-/* 			using value_t = uint32_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Complex64:{ */
-/* 			using value_t = complex_64; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Complex128:{ */
-/* 			using value_t = complex_128; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::uint8:{ */
-/* 			using value_t = uint8_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::int8:{ */
-/* 			using value_t = int8_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::int16:{ */
-/* 			using value_t = int16_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::uint16:{ */
-/* 			using value_t = uint16_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::LongLong:{ */
-/* 			using value_t = int64_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Bool:{ */
-/* 			using value_t = uint_bool_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::TensorObj:{ */
-/* 			return ptr; */
-/* 		} */
-/* #ifdef _128_FLOAT_SUPPORT_ */
-/* 		case DType::Float128:{ */
-/* 			using value_t = float128_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* #endif */
-/* #ifdef _HALF_FLOAT_SUPPORT_ */
-/* 		case DType::Float16:{ */
-/* 			using value_t = float16_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::Complex32:{ */
-/* 			using value_t = complex_32; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* #endif */
-/* #ifdef __SIZEOF_INT128__ */
-/* 		case DType::int128:{ */
-/* 			using value_t = int128_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* 		case DType::uint128:{ */
-/* 			using value_t = uint128_t; */
-/* 			std::fill(reinterpret_cast<value_t*>(ptr.get()), reinterpret_cast<value_t*>(ptr.get()) + _size, s.to<value_t>()); */
-/* 			return ptr; */
-/* 		} */
-/* #endif */
-/* 	} */
-/* 	return ptr; */
-/* } */
-
-
-/* intrusive_ptr<void> ArrayVoid::MakeContiguousMemory(uint32_t _size, DTypeShared _type){ */
-/* 	return intrusive_ptr<void>::make_shared(_size, DTypeFuncs::size_of_dtype(DTypeShared_DType(_type))); */
-/* } */
-/* #endif */
 
 
 }

@@ -29,6 +29,7 @@ Tensor log(Tensor x){
     cpu::_log(x.arr_void(), out.arr_void());
     return std::move(out);
 }
+
 //derivative of ln(x) is just 1/x
 Tensor dlog(Tensor x){return x.inverse();}
 Tensor exp(Tensor x){

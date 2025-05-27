@@ -11,6 +11,8 @@ Tensor undilate_(const Tensor&, Tensor::size_value_t);
 Tensor undilate_(const Tensor&, Tensor::size_value_t, Tensor::size_value_t);
 Tensor undilate_(const Tensor&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
 
+Tensor diagonal(const Tensor&, bool keep_dims = false);
+
 Tensor as_strided(const Tensor &input, const SizeRef n_size, SizeRef n_stride,
                   const int64_t storage_offset = 0, bool whole_tensor = false);
 

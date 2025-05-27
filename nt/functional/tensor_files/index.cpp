@@ -342,5 +342,84 @@ Tensor& at_tensor_split(const Tensor& _self, const Tensor& _index, Tensor::size_
 
 }
 
+
+
+inline std::vector<Tensor> get_all(Tensor& t){
+	std::vector<Tensor> output(t.shape()[0]);
+	for(typename SizeRef::value_type i = 0; i < t.shape()[0]; ++i)
+		output[i] = t[i];
+	return std::move(output);
+}
+
+inline std::vector<Tensor> get_all(std::vector<Tensor>& ts){
+	std::vector<Tensor> output(ts[0].shape()[0]*ts.size());
+	typename SizeRef::value_type a_counter = 0;
+	typename SizeRef::value_type b = ts[0].shape()[0];
+	typename SizeRef::value_type a = 0;
+	typename SizeRef::value_type ts_counter = 0;
+	for(typename SizeRef::value_type i = 0; i < output.size(); ++i){
+		output[i] = ts[ts_counter][a_counter];
+		if(++a_counter == b){
+			++ts_counter;
+			a_counter = a;
+		}
+	}
+	return std::move(output);
+}
+
+std::vector<Tensor> get_indices(std::vector<Tensor>& ts, int64_t* begin, int64_t* end){
+	std::ptrdiff_t diff = std::distance(begin, end);
+	std::vector<Tensor> output(diff*ts.size());
+	int64_t* begin_cpy = begin;
+	uint64_t index = 0;
+	for(uint64_t i = 0; i < output.size(); ++i, ++index){
+		for(;begin != end; ++begin, ++i)
+			output[i] = ts[index][*begin];
+		begin = begin_cpy;
+	}
+	return std::move(output);
+
+}
+
+Tensor index_select(Tensor input, int64_t dim, Tensor index){
+	dim = (dim < 0) ? dim + input.dims() : dim;
+	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
+	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
+	utils::THROW_EXCEPTION(index.dims() == 1, "Expected indexing tensor to have a dimensional size of 1 but got $", index.dims());
+	utils::THROW_EXCEPTION(index.dtype == DType::int64, "Expected indexing tensor to be dtype int64 but got $", index.dtype);
+    index = index.contiguous();
+	if(dim == 0){
+		std::vector<Tensor> output(index.numel());
+		int64_t* begin = reinterpret_cast<int64_t*>(index.data_ptr());
+		int64_t* end = reinterpret_cast<int64_t*>(index.data_ptr_end());
+		auto setting = output.begin();
+		for(;begin != end; ++begin, ++setting)
+			*setting = input[*begin];
+		return cat(output);
+	}
+	auto n_shape = input.shape().Vec();
+	n_shape[dim] = index.numel();
+	std::vector<Tensor> output = get_all(input);
+	--dim;
+	while(dim > 0){
+		output = get_all(output);
+		--dim;
+	}
+
+	return cat_unordered(
+        get_indices(output, reinterpret_cast<int64_t*>(index.data_ptr()), 
+                    reinterpret_cast<int64_t*>(index.data_ptr_end()))).view(SizeRef(std::move(n_shape)));
+}
+
+
+Tensor select(Tensor input, int64_t dim, int64_t index){
+	dim = (dim < 0) ? dim + input.dims() : dim;
+	if(dim == 0)
+		return input[index];
+	std::vector<my_range> ranges(dim+1, my_range());
+	ranges.back() = my_range(index);
+	return input[std::move(ranges)];
+}
+
 }
 }

@@ -24,6 +24,8 @@ Tensor greater_than_equal(const Tensor &, Scalar);
 bool all(const Tensor &);
 bool any(const Tensor &);
 bool none(const Tensor &);
+Tensor all(const Tensor, int64_t dim);
+Tensor any(const Tensor, int64_t dim);
 int64_t amount_of(Tensor, Scalar val = 0);
 int64_t count(Tensor);
 

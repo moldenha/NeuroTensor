@@ -259,6 +259,56 @@ inline TensorGrad tanh(const TensorGrad &a) {
 inline TensorGrad tan(const TensorGrad &a) {
     return TensorGrad_Functional_Class::tan(a);
 }
+inline TensorGrad sinh(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::sinh(a);
+}
+inline TensorGrad sin(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::sin(a);
+}
+inline TensorGrad cosh(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::cosh(a);
+}
+inline TensorGrad cos(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::cos(a);
+}
+inline TensorGrad atanh(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::atanh(a);
+}
+inline TensorGrad atan(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::atan(a);
+}
+inline TensorGrad asinh(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::asinh(a);
+}
+inline TensorGrad asin(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::asin(a);
+}
+inline TensorGrad acosh(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::acosh(a);
+}
+inline TensorGrad acos(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::acos(a);
+}
+inline TensorGrad cotanh(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::cotanh(a);
+}
+inline TensorGrad cotan(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::cotan(a);
+}
+inline TensorGrad csch(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::csch(a);
+}
+inline TensorGrad csc(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::csc(a);
+}
+inline TensorGrad sech(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::sech(a);
+}
+inline TensorGrad sec(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::sec(a);
+}
+
+
 inline TensorGrad cat(std::vector<TensorGrad> tgs, int64_t dim = 0) {
     return TensorGrad_Functional_Class::cat(std::move(tgs), dim);
 }

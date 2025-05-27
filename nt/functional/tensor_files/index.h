@@ -15,6 +15,9 @@ Tensor at_tensor_split(const Tensor &, const Tensor &, Tensor::size_value_t);
 Tensor &at_tensor_split(const Tensor &, const Tensor &, Tensor::size_value_t,
                         Tensor &);
 Tensor index_except(const Tensor &, int64_t, Tensor::size_value_t);
+Tensor index_select(Tensor input, int64_t dim, Tensor index);
+Tensor select(Tensor input, Tensor::size_value_t dim, Tensor::size_value_t index);
+
 
 } // namespace functional
 } // namespace nt
