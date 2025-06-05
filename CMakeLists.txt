@@ -43,6 +43,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party/eigen
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib
+    ${CMAKE_SOURCE_DIR}/third_party/multiprecision/include/
 )
 
 

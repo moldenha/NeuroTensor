@@ -13,7 +13,6 @@
 #include <tbb/global_control.h>
 #include <tbb/task_group.h>
 #include <functional>
-#include <unistd.h>
 #include "nt_matmult_macros.h"
 //#include "matmult_simde_fma_avx.hpp" <- old
 #include "nt_matmult_blocks.h"
@@ -147,8 +146,8 @@ void pack_multiply_directly_var_threaded(const T* A, const T* B, T* C, const int
 	const int64_t ir_size = _NT_MATMULT_DETERMINE_SIZE_(a_rows, a_pack_rows);
 
 	//so the point of this is to have the max's there so that divides don't have tp happen later
-	size_t jrMaxs[jr_size];
-	size_t jrTBBs[jr_size];
+	size_t* jrMaxs = new size_t[jr_size * 2];
+    size_t* jrTBBs = jrMaxs + jr_size;
 	for(int i = 0; i < jr_size; ++i){
 		jrMaxs[i] = b_pack_cols;
 		jrTBBs[i] = b_pack_cols / TILE_SIZE;
@@ -165,6 +164,8 @@ void pack_multiply_directly_var_threaded(const T* A, const T* B, T* C, const int
 		}
 	}
 	
+    size_t* irMaxs = new size_t[ir_size * 2];
+    size_t* irTBBs = irMaxs + ir_size;
 	size_t irMaxs[ir_size];
 	size_t irTBBs[ir_size];
 	for(int i = 0; i < ir_size; ++i){
@@ -213,7 +214,8 @@ void pack_multiply_directly_var_threaded(const T* A, const T* B, T* C, const int
 			}
 		}
 	}
-
+	delete[] jrMaxs;
+	delete[] irMaxs;
 }
 
 

@@ -32,3 +32,6 @@
 [submodule "nt/reflection/named_parameters"]
 	path = nt/reflection/named_parameters
 	url = https://github.com/moldenha/named_parameters
+[submodule "third_party/multiprecision"]
+	path = third_party/multiprecision
+	url = https://github.com/boostorg/multiprecision

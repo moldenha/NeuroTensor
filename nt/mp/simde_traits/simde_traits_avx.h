@@ -566,7 +566,7 @@ struct SimdTraits_avx<int8_t> {
 	simde__m128i sum5  = simde_mm_add_epi16(sum3,sum4);
 	simde__m128i sum6  = simde_mm_shufflelo_epi16(sum5,0x01);
 	simde__m128i sum7  = simde_mm_add_epi16(sum5,sum6);
-	int16_t sum8 = _mm_cvtsi128_si32(sum7); //16 bit sum
+	int16_t sum8 = simde_mm_cvtsi128_si32(sum7); //16 bit sum
 	return sum8;
     };
 

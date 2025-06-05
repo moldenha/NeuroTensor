@@ -10,6 +10,9 @@ inline uint64_t get_shared_memory_max() { return 0; }
 #else
 #ifdef __linux__
 #include <unistd.h>
+#include <cstdint>
+#include <fstream>
+#include <string>
 // Function to get the number of threads per core on Linux
 inline unsigned int getThreadsPerCore() {
     std::ifstream cpuinfo("/proc/cpuinfo");
@@ -32,8 +35,14 @@ inline unsigned int getThreadsPerCore() {
     return threadsPerCore;
 }
 
-
-inline uint64_t get_shared_memory_max(){return SHMMAX;}
+inline uint64_t get_shared_memory_max() {
+    std::ifstream shmmax_file("/proc/sys/kernel/shmmax");
+    uint64_t shmmax = 0;
+    if (shmmax_file.is_open()) {
+        shmmax_file >> shmmax;
+    }
+    return shmmax;
+}
 
 
 #elif defined(_WIN32)
