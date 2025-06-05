@@ -31,6 +31,10 @@
 #include <limits>
 
 
+#ifdef _MSC_VER
+//important for cross-platform multiprocessing values
+    using pid_t = DWORD;
+#endif
 
 namespace nt{
 template<class T>struct tag_t{};

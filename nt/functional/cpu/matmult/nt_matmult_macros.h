@@ -6,6 +6,13 @@
 #ifndef _NT_MATMULT_MACROS_H_
 #define _NT_MATMULT_MACROS_H_
 
+//silence depreciation warnings for certain needed headers
+#ifdef _MSC_VER
+#ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#endif
+#endif
+
 #define _NT_MATMULT_MIN_(x, y) x < y ? x : y
 #define _NT_MATMULT_MAX_(x, y) x > y ? x : y
 
@@ -15,7 +22,8 @@
 
 #define _NT_MATMULT_NTHREADS_ 21
 
-
+//on c++17 alignas is cross-platform compatible
+#define NT_ALIGN(x) alignas(x)
 
 //just easier to have in one place so I don't have to modify 16 files in case the matmult function is ever decided to be changed
 #define _NT_DECLARE_MATMULT_TYPE_CPP_(type)\
@@ -24,8 +32,8 @@
 
 //routes for when simd support is there for the type
 #define _NT_MATMULT_DECLARE_STATIC_BLOCK_(type)\
-	static type blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)] __attribute((aligned(64)));\
-	static type blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)] __attribute((aligned(64)));\
+	static NT_ALIGN(64) type blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
+	static NT_ALIGN(64) type blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
 	template<>\
 	type* get_blockA_packed<type>(){\
 		return blockA_packed_##type;\
@@ -403,6 +411,6 @@
  
 #define _NT_MATMULT_SWITCHES_(var_name, case_macro) _NT_MATMULT_TILE_KIF_64_(, var_name, case_macro)
 
-
+#undef NT_ALIGN
 
 #endif //_NT_MATMULT_MACROS_H_

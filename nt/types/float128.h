@@ -33,12 +33,28 @@ namespace nt{
     #define BOOST_MP_STANDALONE
 #endif // BOOST_MP_STANDALONE 
 #include <boost/multiprecision/cpp_bin_float.hpp>
+#include <boost/multiprecision/number.hpp>
+#include <cmath>  // for std::signbit
 namespace nt{
 using float128_t = boost::multiprecision::cpp_bin_float_quad;
 #define _128_FLOAT_SUPPORT_ 
 }
 
 #undef _NO_128_SUPPORT_
+
+namespace std{
+inline ::nt::float128_t round(const ::nt::float128_t& x){
+    ::nt::float128_t int_part = trunc(x);  // integer part (toward zero)
+    ::nt::float128_t frac = x - int_part;  // fractional part
+
+    if (x >= 0) {
+        return frac < 0.5 ? int_part : int_part + 1;
+    } else {
+        return frac > -0.5 ? int_part : int_part - 1;
+    }
+}
+
+}
 #endif // _NO_128_SUPPORT_
 
 

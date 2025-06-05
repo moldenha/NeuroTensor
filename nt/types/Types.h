@@ -2,9 +2,16 @@
 #define _NT_MY_TYPES_H_
 
 //#if defined(_HALF_FLOAT_SUPPORT_) && defined(_128_FLOAT_SUPPORT_) && defined(__SIZEOF_INT128__)
-
+//silence depreciation warnings for certain needed headers
 #ifdef _MSC_VER
+#ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
 #define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#endif
+
+#ifndef _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#endif
+
 #endif
 
 #include <complex.h>

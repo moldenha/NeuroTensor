@@ -27,7 +27,6 @@ using uint128_t = uint128_t;
 namespace nt{
 using int128_t = boost::multiprecision::int128_t; 
 }
-
 #endif //__SIZEOF_INT128__
 
 
