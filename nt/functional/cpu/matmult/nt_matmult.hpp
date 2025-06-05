@@ -166,8 +166,6 @@ void pack_multiply_directly_var_threaded(const T* A, const T* B, T* C, const int
 	
     size_t* irMaxs = new size_t[ir_size * 2];
     size_t* irTBBs = irMaxs + ir_size;
-	size_t irMaxs[ir_size];
-	size_t irTBBs[ir_size];
 	for(int i = 0; i < ir_size; ++i){
 		irMaxs[i] = a_pack_rows;
 		irTBBs[i] = a_pack_rows / TILE_SIZE;

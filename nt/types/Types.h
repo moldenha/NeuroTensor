@@ -12,191 +12,11 @@
 #include <tuple>
 #include <functional> //to make an std::hash path for uint128
 /* #include <bfloat16/bfloat16.h> */
-
-#include <simde/simde-f16.h> //using this to convert between float32 and float16
-#define _HALF_FLOAT_SUPPORT_ //by default is going to have half float support
-#ifdef SIMDE_FLOAT16_IS_SCALAR
-namespace nt{
-    using float16_t = simde_float16;
-	#define _NT_FLOAT16_TO_FLOAT32_(f16) simde_float16_to_float32(f16)
-	#define _NT_FLOAT32_TO_FLOAT16_(f)    simde_float16_from_float32(f)
-	inline std::ostream& operator<<(std::ostream& os, const float16_t& val){
-		return os << _NT_FLOAT16_TO_FLOAT32_(val);
-	}
-}
-#else
-	#include <half/half.hpp>
-namespace nt{
-	using float16_t = half_float::half;
-	#define _NT_FLOAT16_TO_FLOAT32_(f16) float(f16)
-	#define _NT_FLOAT32_TO_FLOAT16_(f) float16_t(f)
-	//by default has a way to print out the half_float::half
-}
-#endif
-
-
+#include "float16.h"
+#include "float128.h"
+#include "bit_128_integer.h"
 
 namespace nt{
-
-//basically an std::bit_convert to an int16, all the bits stay the same, just different type name
-/* #define _NT_FLOAT16_TO_INT16_(fp) *reinterpret_cast<const int16_t*>(&fp); */
-inline int16_t _NT_FLOAT16_TO_INT16_(float16_t fp) noexcept {
-	int16_t out = *reinterpret_cast<int16_t*>(&fp);
-	return out;
-}
-
-
-/* #ifdef __has_keyword */
-
-/* 	#if __has_keyword(_Float16) */
-/* 	#define _HALF_FLOAT_SUPPORT_ */
-/* 		using float16_t = _Float16; */
-/* 	std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-
-/* 	#elif __has_keyword(__fp16) */
-/* 	#define _HALF_FLOAT_SUPPORT_ */
-/* 		using float16_t = __fp16; */
-/* 	std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-/* 	#else */
-/* 		#define _HALF_FLOAT_SUPPORT_ */
-/* } //nt:: */
-/* 		#include <half/half.hpp> */
-/* namespace nt{ */
-/* 		using float16_t = half_float::half; */
-/* 		std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-/* 	/1* #define _NO_HALF_FLOAT_SUPPORT_ *1/ */
-/* 	#endif */
-/* #else */
-/* 	#if defined(__STDC_IEC_559__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) */
-/* 	// C11 standard with IEC 559 (floating-point arithmetic) support */
-/* 	// // You can use _Float16 here */
-/* 	#define _HALF_FLOAT_SUPPORT_ */
-/* 		using float16_t = _Float16; */
-/* 	std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-/* 	#elif defined(__GNUC__) && defined(__FP16__) */
-/* 	// GCC with support for __fp16 */
-/* 	// You can use __fp16 here */
-/* 	#define _HALF_FLOAT_SUPPORT_ */
-/* 		using float16_t = __fp16; */
-/* 	std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-/* 	#elif defined(_MSC_VER) && defined(_M_AMD64) && defined(_MSC_VER) && (_MSC_VER >= 1920) */
-/* 	// Visual Studio 2019 and later with AMD64 architecture */
-/* 	// You can use _Float16 here */
-/* 	#define _HALF_FLOAT_SUPPORT_ */
-/* 		using float16_t = _Float16; */
-/* 	std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-/* 	#else */
-/* 		#define _HALF_FLOAT_SUPPORT_ */
-/* } */
-/* 		#include <half/half.hpp> */
-/* namespace nt{ */
-/* 		using float16_t = half_float::half; */
-/* 		std::ostream& operator<<(std::ostream& os, const float16_t& val); */
-/* 	// Handle the case when _Float16 is not supported */
-/* 	#define _NO_HALF_FLOAT_SUPPORT_ */
-/* 	#endif */
-/* #endif */
-
-
-#if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
-  #define _128_FLOAT_SUPPORT_
-  using float128_t = long double;
-
-#elif defined(__GNUC__) && !defined(__APPLE__) && defined(__SIZEOF_FLOAT128__)
-  // GCC on Linux usually supports __float128
-  #define _128_FLOAT_SUPPORT_
-  using float128_t = __float128;
-  std::ostream& operator<<(std::ostream& os, const float128_t& val);
-
-#elif defined(__GNUC__) && defined(__FP_FAST_F128)
-  // fallback for __fp128 on some platforms (rare)
-  #define _128_FLOAT_SUPPORT_
-  using float128_t = __fp128;
-  std::ostream& operator<<(std::ostream& os, const float128_t& val);
-
-#else
-  #define _NO_128_SUPPORT_
-#endif
-
-#ifdef __SIZEOF_INT128__
-using uint128_t = __uint128_t;
-using int128_t = __int128_t;
-std::ostream& operator<<(std::ostream& os, const __int128_t i);
-std::ostream& operator<<(std::ostream& os, const __uint128_t i);
-
-#else 
-
-}
-
-//currently has library for uint128 support that is cross platform
-//will be adding int128 support that is cross platform soon
-#include "uint128_t.h"
-namespace nt{
-using uint128_t = uint128_t;
-
-}
-
-namespace std{
-template<>
-struct hash<::nt::uint128_t>{
-    std::size_t operator()(const uint128_t& x) const {
-        return std::hash<uint64_t>()(static_cast<uint64_t>(x)) ^
-               std::hash<uint64_t>()(static_cast<uint64_t>(x >> 64));
-    }
-};
-
-
-}
-
-namespace nt{
-
-#endif
-
-}
-
-
-namespace nt{
-
-/*
-
-I am trying to do partial specialization in c++ with a typed class function like I have below:
-
-my_complex.h file:
-
-template<typename T>
-class my_complex{
-	T re, im;
-	public:
-		my_complex(const T&, const T&);
-		template<typename X>
-		my_complex<T>& operator+=(const my_complex<T>&)
-};
-
-my_complex.cpp file:
-template<typename T>
-template<typename X>
-my_complex<T>& my_complex<T>::operator+=(const my_complex<X>& val){
-	re += convert::convert<T>(val.re);
-	im += convert::convert<T>(val.im);
-	return *this;
-}
-
-
-//partial specialization:
-template<typename T>
-template<> my_complex<T>& my_complex<T>::operator+=(const my_complex<float>&);
-template<typename T>
-template my_complex<T>& my_complex<T>::operator+=(const my_complex<double>&);
-
-However, I get the errors:
-cannot specialize (with 'template<>') a member of an unspecialized template
-and:
-expected '<' after 'template'
-
-How can I achieve what I am trying to do with partial specialization?
-
-
- */
 
 template<typename T>
 class my_complex{
@@ -346,9 +166,7 @@ class my_complex{
 
 using complex_64 = my_complex<float>;
 using complex_128 = my_complex<double>;
-#ifdef _HALF_FLOAT_SUPPORT_
 using complex_32 = my_complex<float16_t>;
-#endif
 
 template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
 inline my_complex<T> operator/(my_complex<T> comp, U element) noexcept {
@@ -549,7 +367,7 @@ _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(acos)
 
 
 inline ::nt::float16_t pow(::nt::float16_t a, ::nt::float16_t b){
-	return _NT_FLOAT32_TO_FLOAT16_(std::pow(_NT_FLOAT16_TO_FLOAT32_(a), _NT_FLOAT16_TO_FLOAT32_(b)));
+    return _NT_FLOAT32_TO_FLOAT16_(std::pow(_NT_FLOAT16_TO_FLOAT32_(a), _NT_FLOAT16_TO_FLOAT32_(b)));
 }
 
 template<typename T>
@@ -569,14 +387,5 @@ inline nt::my_complex<T> pow(nt::my_complex<T> __x, U __y){
 
 }
 
-
-#ifdef _NO_128_SUPPORT_
-#include <boost/multiprecision/cpp_bin_float.hpp>
-namespace nt{
-using float128_t = boost::multiprecision::cpp_bin_float_quad;
-}
-
-#undef _NO_128_SUPPORT_
-#endif // _NO_128_SUPPORT_
 
 #endif // _NT_MY_TYPES_H_

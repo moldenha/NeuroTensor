@@ -43,7 +43,12 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party/eigen
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib
+
+    #Boost files
+    #Mainly for 128 bit data types
+    ${CMAKE_SOURCE_DIR}/third_party/boost_config/include/
     ${CMAKE_SOURCE_DIR}/third_party/multiprecision/include/
+
 )
 
 
