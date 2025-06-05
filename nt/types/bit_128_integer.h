@@ -30,15 +30,17 @@ using int128_t = boost::multiprecision::int128_t;
 
 #endif //__SIZEOF_INT128__
 
+
+#ifndef __SIZEOF_INT128__ 
 namespace std{
 template<>
 struct hash<::nt::uint128_t>{
-    std::size_t operator()(const uint128_t& x) const {
+    std::size_t operator()(const ::nt::uint128_t& x) const {
         return std::hash<uint64_t>()(static_cast<uint64_t>(x)) ^
                std::hash<uint64_t>()(static_cast<uint64_t>(x >> 64));
     }
 };
 }
-
+#endif // __SIZEOF_INT128__ 
 
 #endif // _NT_TYPES_BIT_128_INTEGER_ENSURE_H_ 

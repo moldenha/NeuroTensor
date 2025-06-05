@@ -19,7 +19,7 @@ namespace nt{
 namespace nt{
 	using float16_t = half_float::half;
 	#define _NT_FLOAT16_TO_FLOAT32_(f16) float(f16)
-	#define _NT_FLOAT32_TO_FLOAT16_(f) float16_t(f)
+	#define _NT_FLOAT32_TO_FLOAT16_(f) half_float::half(f)
 	//by default has a way to print out the half_float::half
 }
 #endif
