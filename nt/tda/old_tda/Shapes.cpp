@@ -1,9 +1,6 @@
 #include "../../Tensor.h"
 #include "../../utils/utils.h"
-#include <_types/_uint32_t.h>
 #include <array>
-#include <sys/_types/_int64_t.h>
-#include <sys/types.h>
 #include "Points.h"
 #include "Shapes.h"
 #include <cmath>

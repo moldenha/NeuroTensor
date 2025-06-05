@@ -10,6 +10,23 @@
 
 #ifdef USE_PARALLEL
 #include <tbb/mutex.h>
+#if defined(_WIN32)
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>
+  #include <cstdint>
+  #include <io.h>  // for _get_osfhandle
+  // #ifndef pid_t
+  //   using pid_t = DWORD;
+  // #endif
+#elif defined(__APPLE__) || defined(__linux__) || defined(__unix__)
+  #include <sys/types.h>
+  #include <signal.h>
+  #include <errno.h>
+  #include <sys/ioctl.h>
+  #include <unistd.h>
+
+#endif
+
 #endif
 
 
@@ -50,6 +67,123 @@ int64_t meta_memory_allocated = 0;
 }
 
 #ifdef USE_PARALLEL
+
+#if defined(_WIN32)
+
+// On Windows, we'll treat the PID as a DWORD.
+// If you spawn a process with CreateProcess, you get its PID as a DWORD.
+// This inline function returns true if the process is still running.
+bool pid_still_running(DWORD pid) {
+  // Try to open the process with minimal rights (QUERY_INFORMATION is enough
+  // to call GetExitCodeProcess). If OpenProcess fails, assume the process
+  // does not exist (or we have no permission → treat as “not running”).
+  HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+  if (h == nullptr) {
+      // ERROR_INVALID_PARAMETER or ERROR_ACCESS_DENIED both imply "not running"
+      return false;
+  }
+
+  DWORD exitCode = 0;
+  if (!GetExitCodeProcess(h, &exitCode)) {
+      // Unable to query exit code—assume it's not running
+      CloseHandle(h);
+      return false;
+  }
+
+  CloseHandle(h);
+  // STILL_ACTIVE (259) means the process has not exited yet.
+  return (exitCode == STILL_ACTIVE);
+}
+
+ssize_t getPipeReadableBytes(int fd) {
+    HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+    if (h == INVALID_HANDLE_VALUE) {
+        std::cerr << "Invalid file descriptor\n";
+        return -1;
+    }
+
+    DWORD bytesAvailable = 0;
+    BOOL success = PeekNamedPipe(h, nullptr, 0, nullptr, &bytesAvailable, nullptr);
+    if (!success) {
+        std::cerr << "PeekNamedPipe failed\n";
+        return -1;
+    }
+
+    return static_cast<ssize_t>(bytesAvailable);
+}
+
+#elif (defined(__APPLE__) || defined(__linux__) || defined(__unix__)) && !defined(_WIN32)
+
+// On POSIX (Linux/macOS), pid_t is the native process‐ID type.
+// Sending signal 0 does not actually send a signal; it merely performs error
+// checking: if kill(pid, 0) returns 0 (or errno==EPERM), the process exists.
+bool pid_still_running(pid_t pid) {
+  if (pid <= 0) {
+      return false;
+  }
+  // kill(pid, 0) → 
+  //   0: pid exists & we can signal it
+  //  -1 with errno==EPERM: pid exists but we lack permissions
+  //  -1 with errno==ESRCH: pid does not exist
+  int err = kill(pid, 0);
+  if (err == 0) {
+      return true;
+  }
+  if (err == -1 && errno == EPERM) {
+      return true;
+  }
+  return false;
+}
+
+ssize_t getPipeReadableBytes(int fd) {
+     ssize_t bytesAvailable = 0;
+    if (ioctl(fd, FIONREAD, &bytesAvailable) == -1) {
+	    std::cout << "ioctl error"<<std::endl;
+	    return -1; // Return -1 to indicate error
+    }
+    return bytesAvailable;
+}
+#elif defined(_WIN32)
+
+ssize_t getPipeReadableBytes(int fd) {
+    HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+    if (h == INVALID_HANDLE_VALUE) {
+        std::cerr << "Invalid file descriptor\n";
+        return -1;
+    }
+
+    DWORD bytesAvailable = 0;
+    BOOL success = PeekNamedPipe(
+        h,                // handle to the pipe
+        nullptr,          // buffer (not reading actual data)
+        0,                // buffer size
+        nullptr,          // bytes read
+        &bytesAvailable,  // bytes available
+        nullptr           // bytes left this message (not needed)
+    );
+
+    if (!success) {
+        std::cerr << "PeekNamedPipe failed with error code: " << GetLastError() << "\n";
+        return -1;
+    }
+
+    return static_cast<ssize_t>(bytesAvailable);
+}
+
+
+#else
+  #error "Unsupported platform for pid_still_running(...)"
+#endif
+
+
+#ifdef _WIN32
+
+
+bool isPipeReadable(int pipefd){
+    return getPipeReadableBytes(pipefd) > 0; 
+}
+
+#else
 bool isPipeReadable(int pipefd) {
     fd_set rfds;
     FD_ZERO(&rfds);
@@ -74,6 +208,8 @@ bool isPipeReadable(int pipefd) {
     }
 }
 
+#endif
+
 
 void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string add, uint32_t width) {
     float percentage = static_cast<float>(progress) / total;
@@ -92,6 +228,8 @@ void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string ad
     std::cout.flush();
     lock.release();
 }
+
+
 
 #endif
 

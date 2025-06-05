@@ -1,9 +1,7 @@
 #include "../../Tensor.h"
 #include "../../utils/utils.h"
 #include "../../functional/functional.h"
-#include <_types/_uint8_t.h>
 #include <array>
-#include <sys/_types/_int64_t.h>
 #include "Points.h"
 #include "../../dtype/ArrayVoid.hpp"
 #include <map>

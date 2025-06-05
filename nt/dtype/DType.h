@@ -113,7 +113,6 @@ template <DType dt> inline constexpr bool is_in_v<dt, DType::Bool> = false;
 #include <complex>
 #include <memory>
 #include <stdlib.h>
-#include <sys/ipc.h>
 #include <type_traits>
 
 namespace nt {
@@ -177,18 +176,18 @@ void convert_to_dtype_array(void *arr, void *arr2, const DType &from,
 std::shared_ptr<void> make_shared_array(size_t size, const DType &dt);
 std::shared_ptr<void> make_shared_array(size_t size, const DType &dt,
                                         void **original_mem);
-#ifdef USE_PARALLEL
-std::shared_ptr<void> make_shared_memory_shared_array(size_t size,
-                                                      const DType &dt,
-                                                      key_t key = IPC_PRIVATE);
-std::shared_ptr<void> make_shared_memory_shared_array(size_t size,
-                                                      const DType &dt,
-                                                      void **original_mem,
-                                                      key_t key = IPC_PRIVATE);
-std::shared_ptr<void *>
-make_shared_memory_shared_stride_array(size_t size, const DType &dt,
-                                       key_t key = IPC_PRIVATE);
-#endif
+// #ifdef USE_PARALLEL
+// std::shared_ptr<void> make_shared_memory_shared_array(size_t size,
+//                                                       const DType &dt,
+//                                                       key_t key = IPC_PRIVATE);
+// std::shared_ptr<void> make_shared_memory_shared_array(size_t size,
+//                                                       const DType &dt,
+//                                                       void **original_mem,
+//                                                       key_t key = IPC_PRIVATE);
+// std::shared_ptr<void *>
+// make_shared_memory_shared_stride_array(size_t size, const DType &dt,
+//                                        key_t key = IPC_PRIVATE);
+// #endif
 template <DType dt = DType::Integer>
 std::shared_ptr<void> share_part_ptr(const uint32_t &index, const DType &m_dt,
                                      const std::shared_ptr<void> &ptr);

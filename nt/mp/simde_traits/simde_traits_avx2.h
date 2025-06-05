@@ -304,7 +304,7 @@ struct SimdTraits_avx2<double> {
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_pd(a, b, c);
 #else
-		c = simde_mm256_add_pd(simde_mm256_mullo_pd(a,b),c);
+		c = simde_mm256_add_pd(simde_mm256_mul_pd(a,b),c);
 #endif 
 	};
 	//https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
@@ -525,7 +525,7 @@ struct SimdTraits_avx2<int8_t> {
 	simde__m256i mulodd = simde_mm256_mullo_epi16(aodd, bodd);
 		     mulodd = simde_mm256_slli_epi16(mulodd, 8); // put odd numbered elements back in place
 	simde__m256i mask    = simde_mm256_set1_epi32(0x00FF00FF);
-	return _mm256_blendv_epi8(mulodd, muleven, mask);
+	return simde_mm256_blendv_epi8(mulodd, muleven, mask);
     };
     static constexpr auto divide = simde_mm256_div_epi8;
     static constexpr auto subtract = simde_mm256_sub_epi8;
@@ -541,11 +541,11 @@ struct SimdTraits_avx2<int8_t> {
     };
     //https://github.com/lemire/vectorclass/blob/master/vectori256.h#L731 for the following specific function
     inline static constexpr auto sum = [](const Type& a) noexcept -> int32_t {
-	simde__m256i sum1 = simde_mm256_sad_epu8(a,_mm256_setzero_si256());
+	simde__m256i sum1 = simde_mm256_sad_epu8(a,simde_mm256_setzero_si256());
 	simde__m256i sum2 = simde_mm256_shuffle_epi32(sum1,2);
 	simde__m256i sum3 = simde_mm256_add_epi16(sum1,sum2);
 	simde__m128i sum4 = simde_mm256_extracti128_si256(sum3,1);
-	simde__m128i sum5 = _mm_add_epi16(_mm256_castsi256_si128(sum3),sum4);
+	simde__m128i sum5 = simde_mm_add_epi16(simde_mm256_castsi256_si128(sum3),sum4);
 	int8_t  sum6 = (int8_t)_mm_cvtsi128_si32(sum5); //truncate
 	return sum6;
     };
@@ -590,7 +590,7 @@ struct SimdTraits_avx2<uint8_t> {
 	simde__m256i mulodd = simde_mm256_mullo_epi16(aodd, bodd);
 		     mulodd = simde_mm256_slli_epi16(mulodd, 8); // put odd numbered elements back in place
 	simde__m256i mask    = simde_mm256_set1_epi32(0x00FF00FF);
-	return _mm256_blendv_epi8(mulodd, muleven, mask);
+	return simde_mm256_blendv_epi8(mulodd, muleven, mask);
     };
     static constexpr auto divide = simde_mm256_div_epu8;
     static constexpr auto subtract = simde_mm256_sub_epi8;
@@ -815,7 +815,7 @@ using Type = simde__m256;
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_ps(a, b, c);
 #else
-		c = simde_mm256_add_ps(simde_mm256_mullo_ps(a,b),c);
+		c = simde_mm256_add_ps(simde_mm256_mul_ps(a,b),c);
 #endif //defined(__FMA__) || defined(SIMDE_X86_FMA)
 	};
 	inline static constexpr auto sum = [](simde__m256 x) -> complex_64{

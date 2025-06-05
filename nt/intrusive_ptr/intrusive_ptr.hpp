@@ -9,7 +9,6 @@
 // #include <_types/_uint8_t.h>
 #include <atomic>
 #include <cassert>
-#include <cstdlib>
 #include <cstdlib> // For std::aligned_alloc
 #include <functional>
 #include <initializer_list>
@@ -19,6 +18,10 @@
 // #include <sys/ipc.h>
 // #include <sys/shm.h>
 #include <type_traits>
+
+#ifdef _WIN32
+#include <malloc.h>  // for _aligned_malloc and _aligned_free
+#endif
 
 #define _NT_ALIGN_BYTE_SIZE_ 32
 
@@ -109,13 +112,23 @@ change_function_input(const std::function<void(From *)> &func) {
 }
 
 template <typename U, typename T>
-void (*convert_function_input(void (*func_a)(U *)))(T *) {
-    // Define a lambda that performs the cast and calls func_a
-    auto lambda = [func_a](T *ptr) { func_a(static_cast<U *>(ptr)); };
+struct ConvertFunctionWrapper {
+    static void (*stored_func)(U*);
 
-    // Convert the lambda to a function pointer
-    return +[](T *ptr) { lambda(ptr); };
+    static void wrapper(T* ptr) {
+        stored_func(static_cast<U*>(ptr));
+    }
+};
+
+template <typename U, typename T>
+void (*ConvertFunctionWrapper<U, T>::stored_func)(U*) = nullptr;
+
+template <typename U, typename T>
+void (*convert_function_input(void (*func_a)(U*)))(T*) {
+    ConvertFunctionWrapper<U, T>::stored_func = func_a;
+    return &ConvertFunctionWrapper<U, T>::wrapper;
 }
+
 
 template <class TTarget, class ToNullType, class FromNullType>
 inline TTarget *assign_ptr_(TTarget *rhs) {
@@ -173,6 +186,16 @@ template <typename TTarget> inline void defaultIntrusiveDeleter(void *ptr) {
 }
 
 inline void passIntrusiveDeleter(void *ptr) { ; }
+
+inline void* portable_aligned_alloc(std::size_t alignment, std::size_t size) {
+#if defined(_WIN32)
+    return _aligned_malloc(size, alignment);
+#else
+    return std::aligned_alloc(alignment, size);
+#endif
+}
+
+
 } // namespace detail
 
 class intrusive_ptr_target {
@@ -991,7 +1014,7 @@ class intrusive_ptr<T[], detail::intrusive_target_default_null_type<T[]>>
         /* utils::throw_exception((amt * sizeof(T)) % align_byte == 0, "Cannot
          * align $ bytes", amt * sizeof(T)); */
         return intrusive_ptr(
-            static_cast<T *>(std::aligned_alloc(align_byte, size)),
+            static_cast<T *>(detail::portable_aligned_alloc(align_byte, size)),
             new TTarget(), &detail::defaultCStyleDeallocator<T>);
     }
 
@@ -1307,7 +1330,7 @@ class intrusive_parent_ptr_array : public intrusive_ptr_target {
     ~intrusive_parent_ptr_array() { releaseMemory(); }
 
     template <typename From>
-    inline intrusive_parent_ptr_array(
+    intrusive_parent_ptr_array(
         const intrusive_parent_ptr_array<From> &rhs) noexcept
         : ptr(rhs.ptr), original(rhs.original),
           internal_refcount_(rhs.internal_refcount_),
@@ -1315,7 +1338,6 @@ class intrusive_parent_ptr_array : public intrusive_ptr_target {
         static_assert(std::is_convertible<From *, T *>::value,
                       "Move warning, intrusive_ptr got pointer of wrong type");
         retain_();
-        return *this;
     }
 
     template <typename From>
@@ -1332,7 +1354,7 @@ class intrusive_parent_ptr_array : public intrusive_ptr_target {
     }
 
     template <typename From>
-    inline intrusive_parent_ptr_array(
+    intrusive_parent_ptr_array(
         intrusive_parent_ptr_array<From> &&rhs) noexcept
         : ptr(rhs.ptr), original(rhs.original),
           internal_refcount_(rhs.internal_refcount_),
@@ -1340,7 +1362,6 @@ class intrusive_parent_ptr_array : public intrusive_ptr_target {
         static_assert(std::is_convertible<From *, T *>::value,
                       "Move warning, intrusive_ptr got pointer of wrong type");
         rhs.null_self();
-        return *this;
     }
 
     template <typename From>
@@ -1372,13 +1393,13 @@ class intrusive_parent_ptr_array : public intrusive_ptr_target {
     }
 
     inline T *getMemory() { return ptr; }
-    inline const T *getMemory() const { return ptr; }
+    inline T *getMemory() const { return ptr; }
 
     inline T &operator[](const std::ptrdiff_t i) {
         return *reinterpret_cast<T *>(reinterpret_cast<uint8_t *>(ptr) +
                                       (child_bytes * i));
     }
-    inline const T &operator[](const std::ptrdiff_t i) const {
+    inline T &operator[](const std::ptrdiff_t i) const {
         return *reinterpret_cast<const T *>(
             reinterpret_cast<const uint8_t *>(ptr) + (child_bytes * i));
     }

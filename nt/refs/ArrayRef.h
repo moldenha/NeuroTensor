@@ -58,8 +58,8 @@ class ArrayRef{
 		ArrayRef(std::unique_ptr<T[]>&&, size_t);
 		ArrayRef<T>& operator=(const ArrayRef<T>&);
 		ArrayRef<T>& operator=(ArrayRef<T>&&);
-		const bool operator==(const ArrayRef<T>&) const;
-		const bool operator!=(const ArrayRef<T>&) const;
+		bool operator==(const ArrayRef<T>&) const;
+		bool operator!=(const ArrayRef<T>&) const;
 		const T* data() const;
 		size_t size() const;
 		const T& front() const;
@@ -77,7 +77,7 @@ class ArrayRef{
 		const T& operator[](int16_t index) const;
 		T& operator[](int16_t index);
 		const T& at(uint16_t index) const;
-		const T multiply() const;
+		T multiply() const;
 		ArrayRef<T> pop_front() const;
 		std::vector<T> to_vec() const;
 		ArrayRef<T> permute(const std::vector<uint32_t>&) const;

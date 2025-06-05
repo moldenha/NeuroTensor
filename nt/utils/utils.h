@@ -25,11 +25,12 @@
 #include <tbb/blocked_range2d.h>
 #include <tbb/blocked_range3d.h>
 #include <thread>
-#include <sys/ioctl.h>
 #endif
 #include "../memory/DeviceEnum.h"
 #include <cstdint>
 #include <limits>
+
+
 
 namespace nt{
 template<class T>struct tag_t{};
@@ -193,7 +194,12 @@ inline void throw_exception_2(const bool err, std::string_view str, const char* 
 #define THROW_EXCEPTION(err, message, ...) \
     throw_exception_2((err), (message), __FILE__, __LINE__, ##__VA_ARGS__)
 
+}} //nt::utils::
 
+#include "memory_limits.h"
+
+namespace nt{
+namespace utils{
 
 template<typename T, std::size_t N>
 inline std::vector<int64_t> aquire_shape(const typename NestedInitializerLists_type<T, N>::type& v){
@@ -227,17 +233,7 @@ void printProgressBar(uint32_t progress, uint32_t total, std::string add = "", u
 void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string add = "", uint32_t width = 50);
 
 bool isPipeReadable(int pipefd);
-inline bool pid_still_running(pid_t pid){
-	int status;
-        pid_t result = waitpid(pid, &status, WNOHANG);
-	if (result == -1) {
-		return false;
-	}
-	else if (result == 0) {
-		return true;
-	}
-	return false;
-}
+bool pid_still_running(pid_t pid);
 
 inline bool pids_still_running(const std::vector<pid_t>& pids){
 	for(auto begin = pids.cbegin(); begin != pids.cend(); ++begin)
@@ -246,102 +242,16 @@ inline bool pids_still_running(const std::vector<pid_t>& pids){
 }
 
 
-inline ssize_t getPipeReadableBytes(int fd) {
-     ssize_t bytesAvailable = 0;
-    if (ioctl(fd, FIONREAD, &bytesAvailable) == -1) {
-	    std::cout << "ioctl error"<<std::endl;
-	    return -1; // Return -1 to indicate error
-    }
-    return bytesAvailable;
-}
-
-#ifdef __linux__
-#include <unistd.h>
-// Function to get the number of threads per core on Linux
-inline unsigned int getThreadsPerCore() {
-    std::ifstream cpuinfo("/proc/cpuinfo");
-    std::string line;
-    unsigned int threadsPerCore = 0;
-
-    while (std::getline(cpuinfo, line)) {
-        if (line.find("siblings") != std::string::npos) {
-            std::istringstream iss(line);
-            std::string key, value;
-            iss >> key >> value;
-            
-            if (key == "siblings") {
-                threadsPerCore = std::stoi(value);
-                break;
-            }
-        }
-    }
-
-    return threadsPerCore;
-}
-
-
-inline void get_shared_memory_max(){return SHMMAX;}
-
-
-#elif _WIN32
-#include <windows.h>
-// Function to get the number of threads per core on Windows
-inline unsigned int getThreadsPerCore() {
-    SYSTEM_INFO sysInfo;
-    GetSystemInfo(&sysInfo);
-    
-    return sysInfo.dwNumberOfProcessors / sysInfo.dwNumberOfProcessors;
-}
-
-inline uint64_t get_shared_memory_max() {
-    // On Windows, the maximum shared memory size can be retrieved via the `GetSystemInfo` or `GlobalMemoryStatusEx` function.
-    MEMORYSTATUSEX statex;
-    statex.dwLength = sizeof(statex);
-    GlobalMemoryStatusEx(&statex);
-
-    // Return a portion of the available physical memory for shared memory use (e.g., 75% of available memory).
-    // this would be the bottom number * 0.75, but just going to return all of it
-    return static_cast<uint64_t>(statex.ullTotalPhys);
-}
-
-#elif __APPLE__
-// Function to get the number of threads per core on macOS
-#include <sys/sysctl.h>
-
-inline unsigned int getThreadsPerCore() {
-    int threadsPerCore = 0;
-    size_t size = sizeof(threadsPerCore);
-
-    sysctlbyname("hw.physicalcpu", &threadsPerCore, &size, NULL, 0);
-
-    return threadsPerCore;
-}
-
-inline uint32_t get_shared_memory_max(){
-	const char* command = "sysctl -n kern.sysv.shmmax";
-	FILE* pipe = popen(command, "r");
-	throw_exception(pipe, "Error executing command.");
-	uint32_t shmmax;
-	throw_exception(fscanf(pipe, "%u", &shmmax)  == 1, "Error reading command output.");
-	pclose(pipe);
-	return shmmax;
-}
-
-#else
-#error "Unsupported platform"
-#endif
-
-
 inline int getNumCores() {
     int numCores = 0;
 
 #ifdef __linux__
     numCores = sysconf(_SC_NPROCESSORS_ONLN);
-#elif _WIN32
+#elif defined(_WIN32)
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     numCores = sysInfo.dwNumberOfProcessors;
-#elif __APPLE__
+#elif defined(__APPLE__)
     int mib[4];
     size_t len = sizeof(numCores);
     mib[0] = CTL_HW;

@@ -2,8 +2,6 @@
 #include "../Tensor.h"
 #include "../dtype/ArrayVoid.hpp"
 #include "../utils/utils.h"
-#include <_types/_uint32_t.h>
-#include <_types/_uint8_t.h>
 #include <cstring>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -13,6 +11,15 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+
+// #include "../../third_party/matplot/source/3rd_party/cimg/CImg.h"
+
+// #ifdef cimg_use_jpeg
+// #error "CIMG jpeg defined"
+// #else
+// #error "CIMG jpeg not defined"
+// #endif
+
 
 namespace nt{
 namespace images{

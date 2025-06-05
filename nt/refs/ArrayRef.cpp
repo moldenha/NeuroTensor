@@ -130,7 +130,7 @@ ArrayRef<T>& ArrayRef<T>::operator=(ArrayRef<T>&& Arr){
 }
 
 template<typename T>
-const bool ArrayRef<T>::operator==(const ArrayRef<T> &Arr) const {
+bool ArrayRef<T>::operator==(const ArrayRef<T> &Arr) const {
 	if(Arr._vals == nullptr || _vals == nullptr){return false;}
 	if(Arr._total_size != _total_size)
 		return false;
@@ -140,7 +140,7 @@ const bool ArrayRef<T>::operator==(const ArrayRef<T> &Arr) const {
 }
 
 template<typename T>
-const bool ArrayRef<T>::operator!=(const ArrayRef<T> &Arr) const {
+bool ArrayRef<T>::operator!=(const ArrayRef<T> &Arr) const {
 	if(Arr._vals == nullptr || _vals == nullptr){return true;}
 	if(Arr._total_size != _total_size)
 		return true;
@@ -207,7 +207,7 @@ ArrayRef<T> ArrayRef<T>::permute(const std::vector<uint32_t> &Vec) const {
 
 
 template<typename T>
-const T ArrayRef<T>::multiply() const{return std::accumulate(cbegin(), cend(), 1, std::multiplies<T>());}
+T ArrayRef<T>::multiply() const{return std::accumulate(cbegin(), cend(), 1, std::multiplies<T>());}
 
 template<typename T>
 ArrayRef<T> ArrayRef<T>::pop_front() const {

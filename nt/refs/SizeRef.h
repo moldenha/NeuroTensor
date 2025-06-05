@@ -54,10 +54,10 @@ class SizeRef{
 		SizeRef(SizeRef&&);
 		SizeRef& operator=(const SizeRef&);
 		SizeRef& operator=(SizeRef&&);
-		const bool operator==(const SizeRef&) const;
-		const bool operator!=(const SizeRef&) const;
+	    bool operator==(const SizeRef&) const;
+		bool operator!=(const SizeRef&) const;
 		const value_type* data() const;
-		const size_t size() const;
+		size_t size() const;
 		const value_type& front() const;
 		const value_type& back() const;
 		ArrayRefInt::iterator begin() const;

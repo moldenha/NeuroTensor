@@ -94,6 +94,11 @@ inline bool is_nan(T val){
     }else if constexpr(std::is_same_v<T, float16_t>){
         return val != val; //for nan values they are not equal to themselves
     }
+#ifdef __SIZEOF_INT128__
+    else if constexpr (std::is_same_v<T, ::nt::int128_t>){
+        return false;
+    }
+#endif
     else{
         return std::isnan(val);    
     }

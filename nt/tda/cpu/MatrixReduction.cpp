@@ -133,7 +133,7 @@ typename mp::SimdTraits<T>::Type **allocateSIMDeMatrix(const T *input, size_t ro
     for (size_t i = 0; i < rows; ++i) {
         // Allocate aligned memory for the __m256 array
         typename mp::SimdTraits<T>::Type *simd_array =
-            (typename mp::SimdTraits<T>::Type *)std::aligned_alloc(
+            (typename mp::SimdTraits<T>::Type *)detail::portable_aligned_alloc(
                 32, num_vectors * sizeof(simde__m256));
 
         for (size_t j = 0; j < full_blocks; ++j) {
@@ -171,7 +171,7 @@ typename mp::SimdTraits<T>::Type **allocateSIMDeMatrix(size_t rows, size_t cols)
     for (size_t i = 0; i < rows; ++i) {
         // Allocate aligned memory for the SIMD vectors
         typename mp::SimdTraits<T>::Type *simd_array =
-            (typename mp::SimdTraits<T>::Type *)std::aligned_alloc(
+            (typename mp::SimdTraits<T>::Type *)detail::portable_aligned_alloc(
                 32, num_vectors * sizeof(typename mp::SimdTraits<T>::Type));
 
         // Initialize everything to zero

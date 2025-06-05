@@ -3,6 +3,7 @@
 #include "../dtype/DType.h"
 #include "../Tensor.h"
 #include <iostream>
+#include "../intrusive_ptr/intrusive_ptr.hpp"
 
 #include <cstdlib> // For std::aligned_alloc
 
@@ -36,7 +37,7 @@ void* create_cpu_memory(const DType& dt, const int64_t& size){
 	/* if(amt > std::numeric_limits<int64_t>::max()){std::cout << "Potentially going to excede maximum size by allocating "<<amt<<" bytes"<<std::endl;} */
 	const std::size_t align_byte = 64;
 	if (amt % align_byte != 0) amt += align_byte - (amt % align_byte);
-	return std::aligned_alloc(align_byte, amt);
+	return detail::portable_aligned_alloc(align_byte, amt);
 }
 
 

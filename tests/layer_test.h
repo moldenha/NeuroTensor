@@ -109,8 +109,6 @@ inline ::nt::reflect::detail::custom_any_map get_named_module_vars(nt::Module* p
 }
 
 
-//TODO: put all of the register layers inside of a .cpp file
-//will be registered and avoid redundancies
 void test_lnn(){
 	auto critereon = nt::loss::MSE;
 	nt::TensorGrad input(nt::functional::randn({1, 50, 20}, nt::DType::Float32));
@@ -124,7 +122,7 @@ void test_lnn(){
 	for(int64_t i = 0; i < 10; ++i){
 		nt::TensorGrad output = model(input);
         if(i == 0){std::cout << output << std::endl;}
-		nt::TensorGrad loss = critereon(output, wanted);
+		nt::ScalarGrad loss = critereon(output, wanted);
 		std::cout << "loss: "<<loss.item() << std::endl;
 		loss.backward();
         for(const auto& tg : model.parameters()){

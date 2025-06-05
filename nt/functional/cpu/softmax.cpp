@@ -4,6 +4,29 @@
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include <algorithm>
+#include "../../convert/Convert.h"
+#include "../../types/Types.h"
+
+namespace std{
+//making of specific types
+
+
+// #ifdef _128_FLOAT_SUPPORT_
+// #define NT_MAKE_STD_FUNCTION_ROUTE(type, to) inline type exp(type t){return ::nt::convert::convert<type, long double>(expl(::nt::convert::convert<to, type>(t)));}
+// #else
+#define NT_MAKE_STD_FUNCTION_ROUTE(type, to)\
+inline type exp(type t){return static_cast<type>(expl(static_cast<to>(t)));}
+// #endif
+
+
+#ifdef __SIZEOF_INT128__
+NT_MAKE_STD_FUNCTION_ROUTE(::nt::int128_t, int64_t)
+#endif
+NT_MAKE_STD_FUNCTION_ROUTE(::nt::uint128_t, uint64_t)
+
+
+#undef NT_MAKE_STD_FUNCTION_ROUTE 
+}
 
 namespace nt {
 namespace mp {

@@ -1,5 +1,6 @@
 #include "../functional/functional.h"
 #include "Loss.h"
+#include "ScalarGrad.h"
 
 namespace nt{
 namespace loss{
@@ -39,29 +40,18 @@ namespace loss{
 /* 	dx = std::pow(output.tensor - target, 2) / target.numel(); */
 /* } */
 
-TensorGrad raw_error(const TensorGrad& output, const Tensor& target){
+ScalarGrad raw_error(const TensorGrad& output, const Tensor& target){
 	Tensor dx = output.tensor - target;
 	Scalar item = dx.sum().toScalar();
-	TensorGrad loss(item);
-    loss.grad = nt::make_intrusive<tensor_holder>(dx);
-	TensorGrad::redefine_tracking(loss, output, [](const Tensor& grad, intrusive_ptr<TensorGrad>& parent){
-		parent->grad->tensor = grad;
-	});
-	return std::move(loss);
+    return ScalarGrad(item, dx, output);
 }
 
-TensorGrad MSE(const TensorGrad& output, const Tensor& target){
+ScalarGrad MSE(const TensorGrad& output, const Tensor& target){
     Tensor diff = output.tensor - target;
     Tensor loss_tensor = std::pow(diff, 2).sum() / target.numel();
 	Scalar item = loss_tensor.sum().toScalar();
-	TensorGrad loss(item);
-    
     Tensor dx = (2.0 * diff) / target.numel();
-	loss.grad = nt::make_intrusive<tensor_holder>(dx);
-	TensorGrad::redefine_tracking(loss, output, [](const Tensor& grad, intrusive_ptr<TensorGrad>& parent){
-		parent->grad->tensor = grad;
-	});
-	return std::move(loss);
+    return ScalarGrad(item, dx, output);
 }
 
 

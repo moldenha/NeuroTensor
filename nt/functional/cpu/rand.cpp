@@ -4,6 +4,7 @@
 #include "../../dtype/DType.h"
 #include "../../refs/SizeRef.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
+#include "../../convert/Convert.h"
 #include <random>
 
 namespace nt{
@@ -18,31 +19,49 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 		output.execute_function<WRAP_DTYPES<IntegerTypesL>>(
 			[&upper, &lower, &gen](auto begin, auto end){
 				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-#ifdef __SIZEOF_INT128__
-				if constexpr(std::is_same_v<value_t, uint128_t>){
-					uint64_t low = lower.to<int64_t>();
-					uint64_t up = upper.to<int64_t>();
+                if constexpr (std::is_same_v<value_t, ::nt::uint128_t>){
+                    uint64_t low = lower.to<int64_t>();
+                    uint64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<uint64_t> dis(low, up);
 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-				}
-				else if(std::is_same_v<value_t, int128_t>){
-					int64_t low = lower.to<int64_t>();
-					int64_t up = upper.to<int64_t>();
+                }
+                else if constexpr (sizeof(value_t) >= sizeof(int64_t) && !std::is_same_v<int64_t, value_t> && !std::is_same_v<uint64_t, value_t>){
+                    int64_t low = lower.to<int64_t>();
+                    int64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<int64_t> dis(low, up);
 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-				}
-				else{
-					value_t low = lower.to<value_t>();
-					value_t up = upper.to<value_t>();
-					std::uniform_int_distribution<value_t> dis(low, up);
-					std::generate(begin, end, [&]() { return dis(gen); });
-				}
-#else
-				value_t low = lower.to<value_t>();
-				value_t up = upper.to<value_t>();
-				std::uniform_int_distribution<value_t> dis(low, up);
-				std::generate(begin, end, [&]() { return dis(gen); });
-#endif
+                }
+                else{
+                    value_t low = lower.to<value_t>();
+                    value_t up = upper.to<value_t>();
+                    std::uniform_int_distribution<value_t> dis(low, up);
+                    std::generate(begin, end, [&]() { return dis(gen); });
+                }
+// #ifdef __SIZEOF_INT128__
+// 				if constexpr(std::is_same_v<value_t, uint128_t>){
+// 					uint64_t low = lower.to<int64_t>();
+// 					uint64_t up = upper.to<int64_t>();
+// 					std::uniform_int_distribution<uint64_t> dis(low, up);
+// 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
+// 				}
+// 				else if(std::is_same_v<value_t, int128_t>){
+// 					int64_t low = lower.to<int64_t>();
+// 					int64_t up = upper.to<int64_t>();
+// 					std::uniform_int_distribution<int64_t> dis(low, up);
+// 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
+// 				}
+// 				else{
+// 					value_t low = lower.to<value_t>();
+// 					value_t up = upper.to<value_t>();
+// 					std::uniform_int_distribution<value_t> dis(low, up);
+// 					std::generate(begin, end, [&]() { return dis(gen); });
+// 				}
+// #else
+// 				value_t low = lower.to<value_t>();
+// 				value_t up = upper.to<value_t>();
+// 				std::uniform_int_distribution<value_t> dis(low, up);
+// 				std::generate(begin, end, [&]() { return dis(gen); });
+// #endif
 			});
 	}
 	else if(DTypeFuncs::is_complex(dt)){
@@ -104,35 +123,28 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
     std::random_device rd;
 	std::minstd_rand gen(rd()); //minimal version
 	DType dt = output.dtype;
-if(DTypeFuncs::is_unsigned(dt) || DTypeFuncs::is_integer(dt)){
+    if(DTypeFuncs::is_unsigned(dt) || DTypeFuncs::is_integer(dt)){
 		output.execute_function<WRAP_DTYPES<IntegerTypesL>>(
 			[&upper, &lower, &gen](auto begin, auto end){
 				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-#ifdef __SIZEOF_INT128__
-				if constexpr(std::is_same_v<value_t, uint128_t>){
+                if constexpr (std::is_same_v<value_t, ::nt::uint128_t>){
 					uint64_t low = lower.to<int64_t>();
 					uint64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<uint64_t> dis(low, up);
 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-				}
-				else if(std::is_same_v<value_t, int128_t>){
+                }else if constexpr(sizeof(value_t) >= sizeof(int64_t) && !std::is_same_v<int64_t, value_t> && !std::is_same_v<uint64_t, value_t>){
+                    //int128_t
 					int64_t low = lower.to<int64_t>();
 					int64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<int64_t> dis(low, up);
 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-				}
+                }
 				else{
 					value_t low = lower.to<value_t>();
 					value_t up = upper.to<value_t>();
 					std::uniform_int_distribution<value_t> dis(low, up);
 					std::generate(begin, end, [&]() { return dis(gen); });
 				}
-#else
-				value_t low = lower.to<value_t>();
-				value_t up = upper.to<value_t>();
-				std::uniform_int_distribution<value_t> dis(low, up);
-				std::generate(begin, end, [&]() { return dis(gen); });
-#endif
 			});
 	}
 	else if(DTypeFuncs::is_complex(dt)){

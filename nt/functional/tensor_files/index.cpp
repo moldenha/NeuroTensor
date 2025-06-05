@@ -87,9 +87,8 @@ Tensor at(const Tensor& self, const Tensor &t) {
 
         // making the strides for indexing:
         const std::vector<size_value_t> s = self.strides();
-        std::vector<const size_value_t> ns;
-        for (size_value_t i = 0; i < s.size(); ++i)
-            ns.emplace_back(s[i]);
+        std::vector<size_value_t> ns(s.size());
+        std::copy(s.begin(), s.end(), ns.begin());
 
         // keeping track of each int64_t pointer for the indexing
         const size_value_t *ptrs[self.dims()];

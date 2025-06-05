@@ -2,6 +2,7 @@
 #include "device.h"
 #include "../utils/utils.h"
 #include "../dtype/DType.h"
+#include "../intrusive_ptr/intrusive_ptr.hpp"
 
 namespace nt{
 
@@ -17,7 +18,7 @@ DeviceSharedCPU::~DeviceSharedCPU() {
 	release_memory();
 }
 
-void DeviceSharedCPU::allocate_memory(const DType dt, const uint64_t size) {
+void DeviceSharedCPU::allocate_memory(const DType dt, const int64_t size) {
 	utils::throw_exception(size >= 0, "Cannot allocate negative bytes of memory, tried to allocate $ bytes", size);
 	release_memory();
 #ifndef USE_PARALLEL

@@ -33,13 +33,13 @@ class BucketIterator_list; // this is when the strides are not in blocks
 /* 			++(*this); */
 /* 			return tmp; */
 /* 		} */
-/* 		inline const bool operator!=(const BucketIterator_contiguous& b) const {return m_ptr != b.m_ptr;} */
-/* 		inline const bool operator==(const BucketIterator_contiguous& b) const {return m_ptr == b.m_ptr;} */
-/* 		inline const bool operator!=(const BucketIterator_list<T>& b) const {return m_ptr != *b.m_ptr;} */
-/* 		inline const bool operator==(const BucketIterator_list<T>& b) const {return m_ptr == *b.m_ptr;} */
-/* 		inline const bool operator!=(const BucketIterator_blocked<T>& b) const {return m_ptr != b.current_ptr;} */
-/* 		inline const bool operator==(const BucketIterator_blocked<T>& b) const {return m_ptr == b.current_ptr;} */
-/* 		inline const bool operator<(const BucketIterator_contiguous<T>& b) const {return m_ptr < b.m_ptr;} */
+/* 		inline bool operator!=(const BucketIterator_contiguous& b) const {return m_ptr != b.m_ptr;} */
+/* 		inline bool operator==(const BucketIterator_contiguous& b) const {return m_ptr == b.m_ptr;} */
+/* 		inline bool operator!=(const BucketIterator_list<T>& b) const {return m_ptr != *b.m_ptr;} */
+/* 		inline bool operator==(const BucketIterator_list<T>& b) const {return m_ptr == *b.m_ptr;} */
+/* 		inline bool operator!=(const BucketIterator_blocked<T>& b) const {return m_ptr != b.current_ptr;} */
+/* 		inline bool operator==(const BucketIterator_blocked<T>& b) const {return m_ptr == b.current_ptr;} */
+/* 		inline bool operator<(const BucketIterator_contiguous<T>& b) const {return m_ptr < b.m_ptr;} */
 /* 		inline std::ptrdiff_t operator-(const BucketIterator_contiguous<T>& b) const {return m_ptr - b.m_ptr;} */
 /* 		inline reference operator*() {return *m_ptr;} */
 /* 		inline pointer operator->() const {return m_ptr;} */
@@ -73,14 +73,14 @@ class BucketIterator_list{
 			++(*this);
 			return tmp;
 		}
-		inline const bool operator!=(const BucketIterator_list& b) const noexcept {return m_ptr != b.m_ptr;}
-		inline const bool operator==(const BucketIterator_list& b) const noexcept {return m_ptr == b.m_ptr;}
-		inline const bool operator!=(const T*& b) const noexcept {return *m_ptr != b;}
-		inline const bool operator==(const T*& b) const noexcept {return *m_ptr == b;}
-		inline const bool operator!=(const BucketIterator_blocked<T>& b) const noexcept {return *m_ptr != b.current_ptr;}
-		inline const bool operator==(const BucketIterator_blocked<T>& b) const noexcept {return *m_ptr == b.current_ptr;}
-		inline const bool operator<(const BucketIterator_list& b) const noexcept {return m_ptr < b.m_ptr;}
-		inline const bool operator<=(const BucketIterator_list& b) const noexcept {return m_ptr <= b.m_ptr;}
+		inline bool operator!=(const BucketIterator_list& b) const noexcept {return m_ptr != b.m_ptr;}
+		inline bool operator==(const BucketIterator_list& b) const noexcept {return m_ptr == b.m_ptr;}
+		inline bool operator!=(const T*& b) const noexcept {return *m_ptr != b;}
+		inline bool operator==(const T*& b) const noexcept {return *m_ptr == b;}
+		inline bool operator!=(const BucketIterator_blocked<T>& b) const noexcept {return *m_ptr != b.current_ptr;}
+		inline bool operator==(const BucketIterator_blocked<T>& b) const noexcept {return *m_ptr == b.current_ptr;}
+		inline bool operator<(const BucketIterator_list& b) const noexcept {return m_ptr < b.m_ptr;}
+		inline bool operator<=(const BucketIterator_list& b) const noexcept {return m_ptr <= b.m_ptr;}
 		inline std::ptrdiff_t operator-(const BucketIterator_list& b) const noexcept {return m_ptr - b.m_ptr;}
 		inline reference operator*() noexcept {return **m_ptr;}
 		inline pointer operator->() const noexcept {return *m_ptr;}
@@ -153,14 +153,14 @@ class BucketIterator_blocked{
 			++(*this);
 			return tmp;
 		}
-		inline const bool operator!=(const BucketIterator_blocked& b) const noexcept {return current_stride != b.current_stride || current_ptr != b.current_ptr;}
-		inline const bool operator==(const BucketIterator_blocked& b) const noexcept {return current_stride == b.current_stride && current_ptr == b.current_ptr;}
-		inline const bool operator!=(const T*& b) const noexcept {return current_ptr != b;}
-		inline const bool operator==(const T*& b) const noexcept {return current_ptr == b;}
-		inline const bool operator!=(const BucketIterator_list<T>& b) const noexcept {return current_ptr != *b.m_ptr;}
-		inline const bool operator==(const BucketIterator_list<T>& b) const noexcept {return current_ptr == *b.m_ptr;}
-		inline const bool operator<(const BucketIterator_blocked& b) const noexcept {return current_stride < b.current_stride || current_ptr < b.current_ptr;}
-		inline const bool operator<=(const BucketIterator_blocked& b) const noexcept {return current_stride < b.current_stride || current_ptr <= b.current_ptr;}
+		inline bool operator!=(const BucketIterator_blocked& b) const noexcept {return current_stride != b.current_stride || current_ptr != b.current_ptr;}
+		inline bool operator==(const BucketIterator_blocked& b) const noexcept {return current_stride == b.current_stride && current_ptr == b.current_ptr;}
+		inline bool operator!=(const T*& b) const noexcept {return current_ptr != b;}
+		inline bool operator==(const T*& b) const noexcept {return current_ptr == b;}
+		inline bool operator!=(const BucketIterator_list<T>& b) const noexcept {return current_ptr != *b.m_ptr;}
+		inline bool operator==(const BucketIterator_list<T>& b) const noexcept {return current_ptr == *b.m_ptr;}
+		inline bool operator<(const BucketIterator_blocked& b) const noexcept {return current_stride < b.current_stride || current_ptr < b.current_ptr;}
+		inline bool operator<=(const BucketIterator_blocked& b) const noexcept {return current_stride < b.current_stride || current_ptr <= b.current_ptr;}
 		//if they are at equal strides it is just pointer arithmatic
 		//if this stride is less than b's, just multiply the result again
 		//otherwise, get b's current block size, iterate it to the next block, and then add that to this repeated process
@@ -192,7 +192,7 @@ class BucketIterator_blocked{
 			const bool is_end_of_block = (store >= m_ptr[1] && current_stride < stride_num);
 			return (is_end_of_block) ? this->get_next_block() + (i - (m_ptr[1] - current_ptr)) : BucketIterator_blocked(m_ptr, store, stride_num, current_stride);
 		}
-		inline friend const bool same_block(const BucketIterator_blocked& b, const BucketIterator_blocked& a) noexcept {
+		inline friend bool same_block(const BucketIterator_blocked& b, const BucketIterator_blocked& a) noexcept {
 			//to see if they are in the same block of contiguous memory
 			if(b.current_stride == a.current_stride)
 				return true;

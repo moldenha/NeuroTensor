@@ -4,7 +4,6 @@
 #include "compatible/DType_compatible.h"
 
 
-#include <_types/_uint32_t.h>
 #include <complex>
 #include <cstddef>
 #include <functional>
@@ -14,9 +13,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <sys/shm.h>
-#include <sys/ipc.h>
-
+#include <cstdint>
 
 namespace nt{
 
@@ -615,62 +612,62 @@ std::shared_ptr<void> make_shared_array(size_t size, const DType& dt){
 
 }
 
-#ifdef USE_PARALLEL
-std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
-	const uint32_t n_size = size * size_of_dtype(dt);
-	utils::throw_exception(utils::get_shared_memory_max() >= n_size, "Expected to allocate at most $ bytes of shared memory, but was asked to allocate $ bytes of shared memory", utils::get_shared_memory_max(), n_size);
-	int shmid = shmget(key, size_of_dtype(dt) * size, IPC_CREAT | 0666);
-	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
-	void* sharedArray = shmat(shmid, nullptr, 0);
-	utils::throw_exception(sharedArray != (void*)-1, "Making shared memory failed (shmat)");
-	std::cout << "successfully created shared memory"<<std::endl;
-	return std::shared_ptr<void>(sharedArray, [shmid](void* ptr){
-				shmdt(ptr);
-				shmctl(shmid, IPC_RMID, nullptr);
-			});
-}
+// #ifdef USE_PARALLEL
+// std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
+// 	const uint32_t n_size = size * size_of_dtype(dt);
+// 	utils::throw_exception(utils::get_shared_memory_max() >= n_size, "Expected to allocate at most $ bytes of shared memory, but was asked to allocate $ bytes of shared memory", utils::get_shared_memory_max(), n_size);
+// 	int shmid = shmget(key, size_of_dtype(dt) * size, IPC_CREAT | 0666);
+// 	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
+// 	void* sharedArray = shmat(shmid, nullptr, 0);
+// 	utils::throw_exception(sharedArray != (void*)-1, "Making shared memory failed (shmat)");
+// 	std::cout << "successfully created shared memory"<<std::endl;
+// 	return std::shared_ptr<void>(sharedArray, [shmid](void* ptr){
+// 				shmdt(ptr);
+// 				shmctl(shmid, IPC_RMID, nullptr);
+// 			});
+// }
 
-template<DType dt>
-void copy_strides_to_memory(size_t size, const DType& m_dt, void** original_mem, void* sharedMem){
-	if(dt != m_dt){return copy_strides_to_memory<DTypeFuncs::next_dtype_it<dt>>(size, m_dt, original_mem, sharedMem);}
-	using value_t = dtype_to_type_t<dt>;
-	value_t* shMem = reinterpret_cast<value_t*>(sharedMem);
-	value_t** strideMem = reinterpret_cast<value_t**>(original_mem);
-	for(uint32_t i = 0; i < size; ++i, ++shMem, ++strideMem)
-		*shMem = *(*strideMem);
-	return;
-}
+// template<DType dt>
+// void copy_strides_to_memory(size_t size, const DType& m_dt, void** original_mem, void* sharedMem){
+// 	if(dt != m_dt){return copy_strides_to_memory<DTypeFuncs::next_dtype_it<dt>>(size, m_dt, original_mem, sharedMem);}
+// 	using value_t = dtype_to_type_t<dt>;
+// 	value_t* shMem = reinterpret_cast<value_t*>(sharedMem);
+// 	value_t** strideMem = reinterpret_cast<value_t**>(original_mem);
+// 	for(uint32_t i = 0; i < size; ++i, ++shMem, ++strideMem)
+// 		*shMem = *(*strideMem);
+// 	return;
+// }
 
 
-std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, void** original_mem, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
-	int shmid = shmget(key, size_of_dtype(dt) * size, IPC_CREAT | 0666);
-	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
-	void* sharedArray = shmat(shmid, nullptr, 0);
-	utils::throw_exception(sharedArray != (void*)-1, "Making shared memory failed (shmat)");
-	copy_strides_to_memory<DType::Float>(size, dt, original_mem, sharedArray);
-	return std::shared_ptr<void>(sharedArray, [shmid](void* ptr){
-				shmdt(ptr);
-				shmctl(shmid, IPC_RMID, nullptr);
-			});
-}
+// std::shared_ptr<void> make_shared_memory_shared_array(size_t size, const DType& dt, void** original_mem, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
+// 	int shmid = shmget(key, size_of_dtype(dt) * size, IPC_CREAT | 0666);
+// 	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
+// 	void* sharedArray = shmat(shmid, nullptr, 0);
+// 	utils::throw_exception(sharedArray != (void*)-1, "Making shared memory failed (shmat)");
+// 	copy_strides_to_memory<DType::Float>(size, dt, original_mem, sharedArray);
+// 	return std::shared_ptr<void>(sharedArray, [shmid](void* ptr){
+// 				shmdt(ptr);
+// 				shmctl(shmid, IPC_RMID, nullptr);
+// 			});
+// }
 
-std::shared_ptr<void*> make_shared_memory_shared_stride_array(size_t size, const DType& dt, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
-	int shmid = shmget(key, size_of_dtype_p<DType::Float>(dt) * size, IPC_CREAT | 0666);
-	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
-	void** sharedArray = static_cast<void**>(shmat(shmid, nullptr, 0));
-	utils::throw_exception(sharedArray != reinterpret_cast<void**>(-1), "Making shared memory failed (shmat)");
-	return std::shared_ptr<void*>(sharedArray, [shmid](void** ptr){
-				shmdt(ptr);
-				shmctl(shmid, IPC_RMID, nullptr);
-			});
-}
+// std::shared_ptr<void*> make_shared_memory_shared_stride_array(size_t size, const DType& dt, key_t key){ // the key IPC_PRIVATE would work to generate a new private key for this unique shared piece of memory
+// 	int shmid = shmget(key, size_of_dtype_p<DType::Float>(dt) * size, IPC_CREAT | 0666);
+// 	utils::throw_exception(shmid != -1, "Making segment ID failed for shared memory (shmget)");
+// 	void** sharedArray = static_cast<void**>(shmat(shmid, nullptr, 0));
+// 	utils::throw_exception(sharedArray != reinterpret_cast<void**>(-1), "Making shared memory failed (shmat)");
+// 	return std::shared_ptr<void*>(sharedArray, [shmid](void** ptr){
+// 				shmdt(ptr);
+// 				shmctl(shmid, IPC_RMID, nullptr);
+// 			});
+// }
 
-std::shared_ptr<void> make_shared_array(size_t size, const DType& dt, void** original_mem){
-	std::shared_ptr<void> outp = make_shared_array(size, dt);
-	copy_strides_to_memory<DType::Float>(size, dt, original_mem, outp.get());
-	return std::move(outp);
-}
-#endif
+// std::shared_ptr<void> make_shared_array(size_t size, const DType& dt, void** original_mem){
+// 	std::shared_ptr<void> outp = make_shared_array(size, dt);
+// 	copy_strides_to_memory<DType::Float>(size, dt, original_mem, outp.get());
+// 	return std::move(outp);
+// }
+// #endif
 
 
 template<DType dt>

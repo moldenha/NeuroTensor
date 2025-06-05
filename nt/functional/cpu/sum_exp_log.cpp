@@ -5,6 +5,43 @@
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include <algorithm>
 
+#include "../../convert/Convert.h"
+#include "../../types/Types.h"
+
+namespace std{
+//making of specific types
+
+
+#ifdef _128_FLOAT_SUPPORT_
+#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val) ::nt::convert::convert<type, long double>(val)
+#else
+#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val) static_cast<type>(val)
+#endif
+
+
+#define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, func_name)\
+inline type func_name(type t){return NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, func_name##l(static_cast<to>(t)));}
+
+#define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, log)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, exp)
+
+#ifdef __SIZEOF_INT128__
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t, int64_t)
+#endif
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t, uint64_t)
+
+
+// #undef NT_MAKE_STD_FUNCTION_ROUTE_LOG
+// #undef NT_MAKE_STD_FUNCTION_ROUTE_EXP
+#undef NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE 
+#undef __NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
+#undef NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
+
+}
+
+
+
 namespace nt {
 namespace mp {
 

@@ -480,7 +480,8 @@ Tensor return_split_tensor(const Tensor& t, bool& transpose){
 	return t.split_axis(-3);
 }
 
-void return_split_tensor(const Tensor& t, std::__bit_reference<std::vector<bool>> transpose, Tensor& out_t){
+template<typename BoolIterator> //std::vector<bool> iterator
+void return_split_tensor(const Tensor& t, BoolIterator transpose, Tensor& out_t){
 	/* uint32_t iterator_type_a = a.arr_void().get_bucket().iterator_type(); // 3 = strided_view, 2 = bucketed, 1 = is_contiguous */
 	uint32_t iterator_type = t.arr_void().get_bucket().iterator_type();
 	if(iterator_type == 3){ //strided

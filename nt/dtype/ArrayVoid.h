@@ -101,9 +101,9 @@ class ArrayVoid{
 		void** stride_begin() const {return bucket.stride_begin();}
 		/* void** strides_cend() const; */
 		void** stride_end() const {return bucket.stride_end();}
-		inline const bool is_shared() const {return bucket.is_shared();}
-		inline const bool is_empty() const {return size == 0;}
-		inline const bool is_null() const {return bucket.is_null();}
+		inline bool is_shared() const {return bucket.is_shared();}
+		inline bool is_empty() const {return size == 0;}
+		inline bool is_null() const {return bucket.is_null();}
 		ArrayVoid& operator=(Scalar);
 		ArrayVoid& fill_(Scalar);
 		/* std::shared_ptr<void> share_part(uint32_t) const; */ //not used anymore
@@ -205,7 +205,7 @@ class ArrayVoid{
 		/* dtype_list end(); */
 		/* const_dtype_list cbegin() const; */
 		/* const_dtype_list cend() const; */
-		inline const int64_t use_count() const {return bucket.use_count();}
+		inline int64_t use_count() const {return bucket.use_count();}
 		ArrayVoid& iota(Scalar);
 		void copy(ArrayVoid&, unsigned long long i=0) const;
 		ArrayVoid uint32() const;

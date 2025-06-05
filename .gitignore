@@ -21,6 +21,7 @@ objcs/
 
 #build files
 build/
+build-mingw/
 
 #tda old files
 nt/tda/old_tda/old_N

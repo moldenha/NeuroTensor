@@ -10,13 +10,11 @@ class Points;
 
 #include "../../Tensor.h"
 #include "../../utils/utils.h"
-#include <_types/_uint32_t.h>
 #include <array>
-#include <sys/_types/_int64_t.h>
-#include <sys/types.h>
 #include <unordered_set>
 #include <utility>
 #include <algorithm>
+#include <cstdint>
 #include "../../images/image.h"
 #include "../../intrusive_ptr/intrusive_ptr.hpp"
 #include "../../refs/intrusive_list.h"

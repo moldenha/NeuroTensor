@@ -4,6 +4,52 @@
 #include "../../utils/numargs_macro.h"
 #include <algorithm>
 
+#include <cmath>
+#include <math.h>
+#include "../../convert/Convert.h"
+#include "../../types/Types.h"
+
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+namespace std{
+//making of specific types
+
+
+#ifdef _128_FLOAT_SUPPORT_
+#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val) ::nt::convert::convert<type, long double>(val)
+#else
+#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val) static_cast<type>(val)
+#endif
+
+
+#define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, func_name)\
+inline type func_name(type t){return NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, func_name##l(static_cast<to>(t)));}
+
+#define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, log)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, exp)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sqrt)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, tanh)\
+
+#ifdef __SIZEOF_INT128__
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t, int64_t)
+inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){return static_cast<::nt::int128_t>(std::pow(static_cast<long double>(a), static_cast<long double>(b)));}
+#endif
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t, uint64_t)
+inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){return static_cast<::nt::uint128_t>(std::pow(static_cast<long double>(a), static_cast<long double>(b)));}
+
+
+// #undef NT_MAKE_STD_FUNCTION_ROUTE_LOG
+// #undef NT_MAKE_STD_FUNCTION_ROUTE_EXP
+#undef NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE 
+#undef __NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
+#undef NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
+
+}
+
 namespace nt {
 namespace mp {
 
@@ -47,7 +93,7 @@ inline void sigmoid(T begin, T end, U out){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(1.0);
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
 					      current = SimdTraits<base_type>::negative(current);
@@ -76,7 +122,7 @@ inline void dsigmoid(T begin, T end, U out, bool apply_sigmoid){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(1.0);
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
 			simde_type<base_type> current_m = SimdTraits<base_type>::subtract(ones, current);
@@ -99,7 +145,7 @@ inline void silu(T begin, T end, U out){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(1.0);
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
                           current = SimdTraits<base_type>::multiply(current, 
@@ -124,7 +170,7 @@ inline void dsilu(T begin, T end, U out){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(1.0);
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
             simde_type<base_type> current = it_loadu(begin);
             simde_type<base_type> sigmoid_x = SimdTraits<base_type>::reciprical(
@@ -160,10 +206,10 @@ inline void gelu(T begin, T end, U out){
 
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> three = SimdTraits<base_type>::set1(3.0);
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(1.0);
-		simde_type<base_type> half = SimdTraits<base_type>::set1(0.5);
-		simde_type<base_type> weird_num = SimdTraits<base_type>::set1(0.044715);
+		simde_type<base_type> three = SimdTraits<base_type>::set1(base_type(3.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> half = SimdTraits<base_type>::set1(base_type(0.5));
+		simde_type<base_type> weird_num = SimdTraits<base_type>::set1(base_type(0.044715));
 		simde_type<base_type> pi_num = SimdTraits<base_type>::set1(sqrt_2_pi);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
@@ -207,9 +253,9 @@ inline void dgelu(T begin, T end, U out){
 
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> three = SimdTraits<base_type>::set1(3.0);
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(1.0);
-		simde_type<base_type> half = SimdTraits<base_type>::set1(0.5);
+		simde_type<base_type> three = SimdTraits<base_type>::set1(base_type(3.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> half = SimdTraits<base_type>::set1(base_type(0.5));
 		simde_type<base_type> weird_num = SimdTraits<base_type>::set1(c);
 		simde_type<base_type> weird_num_M = SimdTraits<base_type>::set1(cm);
 		simde_type<base_type> pi_num = SimdTraits<base_type>::set1(sqrt_2_pi);
@@ -263,7 +309,7 @@ inline void dsqrt(T begin, T end, U out){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> to_mult = SimdTraits<base_type>::set1(0.5);
+		simde_type<base_type> to_mult = SimdTraits<base_type>::set1(base_type(0.5));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
 					      current = SimdTraits<base_type>::invsqrt(current);
@@ -285,8 +331,8 @@ inline void dinvsqrt(T begin, T end, U out){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> to_pow = SimdTraits<base_type>::set1(3.0);
-		simde_type<base_type> to_mult = SimdTraits<base_type>::set1(-0.5);
+		simde_type<base_type> to_pow = SimdTraits<base_type>::set1(base_type(3.0));
+		simde_type<base_type> to_mult = SimdTraits<base_type>::set1(base_type(-0.5));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
 					      current = SimdTraits<base_type>::pow(current, to_pow);

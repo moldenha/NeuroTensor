@@ -1,29 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
-project(NeuroTensor)
+project(NeuroTensor LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -fsanitize=address -g -DUSE_PARALLEL -O3")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -fsanitize=address")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+include(${CMAKE_SOURCE_DIR}/cmake/flags.cmake)
 set(CMAKE_VERBOSE_MAKEFILE OFF) 
 
-# Find TBB
-# find_package(TBB REQUIRED)
-find_package(TBB QUIET)
-
-if (TBB_FOUND)
-    # If TBB is found, link it
-    message(STATUS "Found system-installed TBB")
-    include_directories(${TBB_INCLUDE_DIRS})
-    set(TBB_LIB TBB::tbb)
-else()
-    # If TBB is not found, build it from the third-party directory
-    message(STATUS "System-installed TBB not found, building from source")
-    add_subdirectory(third_party/tbb)
-    set(TBB_LIB TBB::tbb)  # Use the built TBB target
-    include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
-    link_directories(${CMAKE_BINARY_DIR}/third_party/tbb/build/nt)
-
-endif()
+message(STATUS "Root path is " ${CMAKE_FIND_ROOT_PATH})
+include(${CMAKE_SOURCE_DIR}/cmake/tbb_config.cmake)
 
 
 find_package(Matplot++ QUIET)
@@ -41,21 +26,6 @@ endif()
 
 
 
-
-
-#add_subdirectory(third_party/xnetwork)
-
-# set_target_properties(tbb PROPERTIES COMPILE_FLAGS "-fno-sanitize=address" LINK_FLAGS "-fno-sanitize=address")
-
-#MKL_FLAGS := -I/opt/intel/oneapi/mkl/latest/include -L/opt/intel/oneapi/mkl/latest/lib -Wl,-rpath,/opt/intel/oneapi/mkl/latest/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
-# Find MKL
-# set(MKLROOT "/opt/intel/oneapi/mkl/latest")
-# find_package(MKL REQUIRED)
-# set(MKL_INCLUDE_DIR "${MKLROOT}/include")
-
-
-#Find Boost
-# find_package(Boost REQUIRED COMPONENTS system filesystem iostreams)
 
 
 
@@ -263,6 +233,7 @@ set(AI_SOURCES
     nt/nn/Layer.cpp
     nt/nn/LNN.cpp
     nt/nn/TensorGrad.cpp
+    nt/nn/ScalarGrad.cpp
     nt/nn/functional/functional.cpp
     nt/nn/functional/pooling.cpp
     nt/nn/functional/non_linear.cpp
@@ -386,18 +357,15 @@ set(SOURCES
     ${MEMORY_SOURCES}
 )
 
-# Add executable
-add_executable(main.out main.cpp ${SOURCES})
+# Add NeuroTensor library
+add_library(neurotensor STATIC ${SOURCES})
+target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
 
-
-
-
+# Optional: shared instead of static
+# add_library(neurotensor SHARED ${SOURCES})
 
 # Link libraries
-target_link_libraries(main.out
-    # -L${MKL_LIB_PATH}
-    # ${MKL_LIBS}
-    # ${Boost_LIBRARIES}
+target_link_libraries(neurotensor
     ${TBB_LIB}
     ${MATPLOT_LIB}
     pthread
@@ -405,16 +373,35 @@ target_link_libraries(main.out
     znz
 )
 
-# Set RPATH for runtime
-set_target_properties(main.out PROPERTIES
-	INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-    
-include_directories(
-    # automatically have base directory included
-    ${CMAKE_SOURCE_DIR}
+# Install the library and headers
+install(TARGETS neurotensor
+    EXPORT neurotensorTargets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
-# Install target (optional)
-install(TARGETS main.out DESTINATION bin)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt DESTINATION include)
+
+# Set RPATH for runtime
+# MKL Usage depreciated, so this is no longer needed
+# set_target_properties(main.out PROPERTIES
+# 	INSTALL_RPATH_USE_LINK_PATH TRUE
+# )
+
+# Option to build main
+option(BUILD_MAIN "Build main executable (main.cpp)" ON)
+
+if(BUILD_MAIN)
+    add_executable(main.out main.cpp)
+    target_link_libraries(main.out PRIVATE neurotensor)
+
+    # Optional RPATH
+    # set_target_properties(main.out PROPERTIES
+    #     INSTALL_RPATH_USE_LINK_PATH TRUE
+    # )
+
+    install(TARGETS main.out DESTINATION bin)
+endif()
+
 

@@ -20,7 +20,7 @@ class TensorGrad; // Forward declaration
 #include <atomic>
 #include "functional_class.h"
 #include "../utils/name_func_macro.h"
-
+#include "ScalarGrad.h"
 
 
 namespace nt{
@@ -205,6 +205,7 @@ class intrusive_back_func : public intrusive_ptr_target{
 
 
 class TensorGrad : public intrusive_ptr_target{
+    friend class ScalarGrad;
 	public:
 		using size_value_t = Tensor::size_value_t;
         

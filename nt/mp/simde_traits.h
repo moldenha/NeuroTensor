@@ -17,14 +17,11 @@
 #include "../types/Types.h"
 #include <simde/simde-common.h>
 #ifndef SIMDE_ARCH_X86_AVX
-#error "Error defining avx instructions"
-#endif
-
-#ifdef SIMDE_ARCH_X86_AVX
-#include "simde_traits/simde_traits_avx.h"
-#endif
-#ifdef SIMDE_ARCH_X86_AVX2
+#include "simde_traits/simde_traits_avx.h" //by default include 2
+#elif defined(SIMDE_ARCH_X86_AVX2)
 #include "simde_traits/simde_traits_avx2.h"
+#else
+#include "simde_traits/simde_traits_avx.h"
 #endif
 
 //#if defined(SIMDE_ARCH_X86_AVX2) || defined(SIMDE_ARCH_X86_AVX)  
@@ -93,6 +90,36 @@ inline constexpr auto generate_mask(size_t N) noexcept {
 template<typename T>
 inline constexpr size_t pack_size_v = pack_size_avx_v<T>;
 
+#else
+//avx instructions
+template<typename T>
+using SimdTraits = SimdTraits_avx<T>;
+
+template<typename T>
+using simde_supported = simde_supported_avx<T>;
+
+template<typename T>
+using simde_svml_supported = simde_svml_supported_avx<T>;
+
+using mask_type = mask_type_avx;
+
+template<typename T>
+using simde_type = simde_type_avx<T>;
+
+
+
+template<typename T, size_t N>
+inline constexpr auto Kgenerate_mask() noexcept {
+    return Kgenerate_mask_avx<T, N>();
+}
+
+template<typename T>
+inline constexpr auto generate_mask(size_t N) noexcept {
+	return generate_mask_avx<T>(N);
+}
+
+template<typename T>
+inline constexpr size_t pack_size_v = pack_size_avx_v<T>;
 #endif
 
 template<typename T>

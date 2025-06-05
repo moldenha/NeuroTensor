@@ -13,7 +13,6 @@
 #include <memory>
 #include <numeric>
 #include <ratio>
-#include <sys/wait.h>
 
 #include <cassert>
 #include "dtype/ArrayVoid.hpp"

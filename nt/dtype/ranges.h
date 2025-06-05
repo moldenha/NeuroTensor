@@ -1,9 +1,10 @@
-#ifndef _RANGES_H_
-#define _RANGES_H_
+#ifndef NT_RANGES_H_
+#define NT_RANGES_H_
 
 #include <iostream>
 #include <functional>
 #include <numeric>
+#include <cstdint>
 
 namespace nt{
 

@@ -1,4 +1,3 @@
-#include <_types/_uint8_t.h>
 #include <memory.h>
 #include <utility>
 #include "../Tensor.h"
@@ -18,7 +17,7 @@
 #include "../functional/cpu/fill.h"
 #include "../functional/cpu/compare.h"
 #include "../functional/cpu/convert.h"
-
+#include <cstdint>
 
 
 
