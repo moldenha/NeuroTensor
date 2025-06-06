@@ -91,7 +91,7 @@ Tensor at(const Tensor& self, const Tensor &t) {
         std::copy(s.begin(), s.end(), ns.begin());
 
         // keeping track of each int64_t pointer for the indexing
-        const size_value_t** ptrs = new const size_value_t*[self.dims()];
+        NT_VLA(const size_value_t*, ptrs, self.dims());
         // const size_value_t *ptrs[self.dims()];
         size_value_t i = 0;
         for (; begin != end; ++begin, ++i) {
@@ -112,7 +112,7 @@ Tensor at(const Tensor& self, const Tensor &t) {
             index += ptrs[t.numel() - 1][i];
             *out_begin = my_begin[index];
         }
-        delete[] ptrs;
+        NT_VLA_DEALC(ptrs);
         Tensor output(new_vals, {static_cast<size_value_t>(n_size)});
         return output.set_mutability(self.is_mutable()); 
     }

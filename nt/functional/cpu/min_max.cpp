@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include "../../utils/macros.h"
 
 namespace nt{
 namespace functional{
@@ -36,7 +37,8 @@ void _min(ArrayVoid& out, std::vector<ArrayVoid>& arrvds){
     out.execute_function<WRAP_DTYPES<NumberTypesL> >([&arrvds](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
         size_t numel = arrvds.size();
-        value_t* iterators[numel];
+        NT_VLA(value_t, iterators, numel);
+        // value_t* iterators[numel];
         size_t i;
         for(i = 0; i < numel; ++i){
             iterators[i] = reinterpret_cast<value_t*>(arrvds[i].data_ptr());
@@ -47,6 +49,7 @@ void _min(ArrayVoid& out, std::vector<ArrayVoid>& arrvds){
                 ++iterators[i];
             }
         }
+        NT_VLA_DEALC(iterators);
     });
 }
 
@@ -59,7 +62,8 @@ void _max(ArrayVoid& out, std::vector<ArrayVoid>& arrvds){
     out.execute_function<WRAP_DTYPES<NumberTypesL> >([&arrvds](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
         size_t numel = arrvds.size();
-        value_t* iterators[numel];
+        NT_VLA(value_t, iterators, numel);
+        // value_t* iterators[numel];
         size_t i;
         for(i = 0; i < numel; ++i){
             iterators[i] = reinterpret_cast<value_t*>(arrvds[i].data_ptr());
@@ -70,6 +74,7 @@ void _max(ArrayVoid& out, std::vector<ArrayVoid>& arrvds){
                 ++iterators[i];
             }
         }
+        NT_VLA_DEALC(iterators);
     });
 }
 

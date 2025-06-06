@@ -284,6 +284,17 @@ inline constexpr void second_loop_direct_1(mp::simde_type<T>& aVec, const T* A, 
 	(fused_product_1(aVec, A + colIndices, C0, rowBs[colIndices]), ...);
 }
 
+#ifdef __GNUC__
+#define NT_GCC_IGNORE_IGNORED_ATTRIBUTES_PUSH \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wignored-attributes\"")
+#define NT_GCC_IGNORE_IGNORED_ATTRIBUTES_POP \
+    _Pragma("GCC diagnostic pop")
+#else
+#define NT_GCC_IGNORE_IGNORED_ATTRIBUTES_PUSH
+#define NT_GCC_IGNORE_IGNORED_ATTRIBUTES_POP
+#endif
+
 //addition is the number of collumns in B packed
 //takes the amount of rows in a to process
 //and the amount of collumns in b to process
@@ -315,8 +326,10 @@ void matmult_simdeT_directly_threaded(const T* A, const T* B, T* C, const size_t
 	//c elements now loaded, now to load B into an array of packed vectors
 	//same except that b cols are guarenteed to be tile_size (not pack_size)
 	//therefore there is nothing to skip per row
-	const std::array<mp::simde_type<T>, total_row_elements> rowBs = load_threaded_row_elements_skip<T, ADDITION, 0>(
+NT_GCC_IGNORE_IGNORED_ATTRIBUTES_PUSH	
+    const std::array<mp::simde_type<T>, total_row_elements> rowBs = load_threaded_row_elements_skip<T, ADDITION, 0>(
 								B, std::make_index_sequence<total_row_elements>{});
+NT_GCC_IGNORE_IGNORED_ATTRIBUTES_POP
 	//the loading of the rows stays generally the same
 	mp::simde_type<T> aVector;
 	//and running the loops directly is a little different
@@ -335,6 +348,8 @@ void matmult_simdeT_directly_threaded(const T* A, const T* B, T* C, const size_t
 	}	
 }
 
+#undef NT_GCC_IGNORE_IGNORED_ATTRIBUTES_PUSH
+#undef NT_GCC_IGNORE_IGNORED_ATTRIBUTES_POP 
 
 
 }}} //nt::functional::cpu::

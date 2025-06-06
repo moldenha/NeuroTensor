@@ -16,7 +16,7 @@ namespace nt{
 
 /* #endif */
 
-#ifdef _128_FLOAT_SUPPORT_
+#ifndef BOOST_MP_STANDALONE
 std::ostream& operator<<(std::ostream& os, const float128_t& val){
 	os << convert::convert<double>(val);
 	return os;
@@ -233,15 +233,6 @@ template<typename T>
 my_complex<T> my_complex<T>::operator/(T val) const{
 	return my_complex<T>(re / val, im);
 }
-
-#define NT_MAKE_OTHER_COMPLEX_OPERATOR(operation)\
-template<typename T>\
-my_complex<T> my_complex<T>::operator##operation(const my_complex<float>& val) const {\
-    if constexpr (std::is_same_v<T, float16_t>){\
-        
-    }
-}
-
 
 #define NT_MAKE_OTHER_COMPLEX_OPERATOR(operation)\
 template<typename T>\

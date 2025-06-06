@@ -16,6 +16,17 @@
 #define _NT_MATMULT_MIN_(x, y) x < y ? x : y
 #define _NT_MATMULT_MAX_(x, y) x > y ? x : y
 
+#if defined(__GNUC__) && !defined(__clang__) || defined(__clang__)
+    #define NT_MATMULT_VLA(type, name, size) type name[size]
+#else
+    #define NT_MATMULT_VLA(type, name, size) type* name = new type[size]
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__) || defined(__clang__)
+    #define NT_MATMULT_VLA_DEALC(name)
+#else
+    #define NT_MATMULT_VLA_DEALC(name) delete[] name
+#endif
 
 #define _NT_MATMULT_ENSURE_ALIGNMENT_(type, align_byte, amt) (((amt * sizeof(type)) % align_byte != 0) ? (amt * sizeof(type)) + align_byte - ((amt * sizeof(type)) % align_byte) : amt * sizeof(type))
 

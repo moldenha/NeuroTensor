@@ -206,11 +206,9 @@ class intrusive_ptr_target {
     template <class TTargetCK, class NullTypeCK> friend class intrusive_ptr;
     template <class TTargetCK, class NullTypeCK> friend class weak_intrusive_ptr;
 
-    friend inline void
-    detail::intrusive_ptr::incref(intrusive_ptr_target *self);
+    friend void detail::intrusive_ptr::incref(intrusive_ptr_target *self);
 
-    friend inline void
-    detail::weak_intrusive_ptr::incref(intrusive_ptr_target *self);
+    friend void detail::weak_intrusive_ptr::incref(intrusive_ptr_target *self);
 
     virtual void release_resources() {}
 
@@ -268,9 +266,8 @@ template <typename T> class intrusive_ptr_target_array {
                                detail::intrusive_target_default_null_type<T[]>>;
     mutable std::atomic<int64_t> refcount_;
     // mutable std::atomic<int64_t> weakcount_;
-    friend inline void
-    detail::intrusive_ptr::incref<>(intrusive_ptr_target_array<T> *self);
-    // friend inline void
+    friend void detail::intrusive_ptr::incref<>(intrusive_ptr_target_array<T> *self);
+    // friend void
     // detail::weak_intrusive_ptr::incref(intrusive_ptr_target_array<T> *self);
 
     virtual void release_resources() {}
