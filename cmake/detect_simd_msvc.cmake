@@ -11,12 +11,12 @@ if(MSVC)
         __cpuid(info, 0);
         if (info[0] >= 7) {
             __cpuidex(info, 7, 0);
-            if (info[1] & (1 << 16)) { std::cout << \"AVX512\"; return 0; }
-            if (info[1] & (1 << 5)) { std::cout << \"AVX2\"; return 0; }
+            if (info[1] & (1 << 16)) { std::cout << \"AVX512\" << std::endl; return 0; }
+            if (info[1] & (1 << 5)) { std::cout << \"AVX2\" << std::endl; return 0; }
         }
         __cpuid(info, 1);
-        if (info[2] & (1 << 28)) { std::cout << \"AVX\"; return 0; }
-        std::cout << \"NONE\";
+        if (info[2] & (1 << 28)) { std::cout << \"AVX\" << std::endl; return 0; }
+        std::cout << \"NONE\" << std::endl;
         return 0;
     }")
 

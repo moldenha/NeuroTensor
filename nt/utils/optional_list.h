@@ -168,7 +168,7 @@ class optional_list{
 			return list->size() == 1;
 		}
 
-		inline cconst int64_t& get_scalar() const& noexcept {
+		inline const int64_t& get_scalar() const& noexcept {
 			return (*this)[0];
 		}
 	

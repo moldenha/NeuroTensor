@@ -200,10 +200,10 @@ class Tensor final{
 			return this->item<T>(s);
         }
 
-		inline const bool is_contiguous() const {return _vals.is_contiguous();}
-		inline const bool is_empty() const {return _vals.is_empty() && _total_size == 0;}
-		inline const bool is_null() const {return _vals.is_null();}
-		inline const uint32_t contig_count() const {return _vals.use_count();}
+		inline bool is_contiguous() const {return _vals.is_contiguous();}
+		inline bool is_empty() const {return _vals.is_empty() && _total_size == 0;}
+		inline bool is_null() const {return _vals.is_null();}
+		inline int64_t contig_count() const {return _vals.use_count();}
 		const size_t dims() const;
 		const SizeRef& shape() const;
 		Tensor operator[](size_value_t);

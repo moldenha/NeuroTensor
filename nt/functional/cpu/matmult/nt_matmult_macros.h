@@ -38,8 +38,8 @@
 // #else
 
 #define _NT_MATMULT_DECLARE_STATIC_BLOCK_(type)\
-	static alignas(64) type blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];
-	static alignas(64) type blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
+	alignas(64) static type blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];
+	alignas(64) static type blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
 	template<>\
 	type* get_blockA_packed<type>(){\
 		return blockA_packed_##type;\

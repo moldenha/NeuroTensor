@@ -1,5 +1,5 @@
-#ifndef _SCALAR_H_
-#define _SCALAR_H_
+#ifndef NT_SCALAR_H__
+#define NT_SCALAR_H__
 namespace nt{
 class Scalar;
 class ScalarRef;
@@ -71,11 +71,15 @@ static constexpr bool valid = (std::is_same_v<T, int32_t> ||
 
 class Scalar{
 	union v_t{
-#ifdef _128_FLOAT_SUPPORT_
-		float128_t d{};
+//boosts float128 does not have a trivial copy constructor
+//which automatically deletes the copy constructor from this union
+#ifdef BOOST_MP_STANDALONE
+        double d{};
 #else
-		double d{};
+        float128_t d{};
 #endif
+
+
 #ifdef __SIZEOF_INT128__
 		int128_t i;
 #else
