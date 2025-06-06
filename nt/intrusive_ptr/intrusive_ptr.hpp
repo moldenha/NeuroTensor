@@ -216,11 +216,15 @@ class intrusive_ptr_target {
 
   protected:
     virtual ~intrusive_ptr_target() {
-        /* utils::throw_exception(refcount_.load() == 0 || refcount_.load() >=
-         * detail::kImpracticallyHugeReferenceCount, */
-        /* 		"needed refcount to be too high or at 0 in order to release
-         * resources"); */
-        /* release_resources(); */
+         // utils::throw_exception(refcount_.load() == 0 || refcount_.load() >=
+         // detail::kImpracticallyHugeReferenceCount,
+         // 		"needed refcount to be too high or at 0 in order to release
+         // resources");
+         // utils::throw_exception(weakcount_.load() == 0 || weakcount_.load() == 1 ||
+         //                       weakcount_.load() == detail::kImpracticallyHugeReferenceCount - 1 ||
+         //                       weakcount_.load() == detail::kImpracticallyHugeReferenceCount,
+         //        "Tried to destruct intrusive_ptr that has weak_intrusive_ptr");
+        release_resources();
     }
 
     constexpr intrusive_ptr_target() : refcount_(0), weakcount_(0) {}
@@ -265,7 +269,7 @@ template <typename T> class intrusive_ptr_target_array {
     mutable std::atomic<int64_t> refcount_;
     // mutable std::atomic<int64_t> weakcount_;
     friend inline void
-    detail::intrusive_ptr::incref(intrusive_ptr_target_array<T> *self);
+    detail::intrusive_ptr::incref<>(intrusive_ptr_target_array<T> *self);
     // friend inline void
     // detail::weak_intrusive_ptr::incref(intrusive_ptr_target_array<T> *self);
 
@@ -1028,7 +1032,8 @@ class weak_intrusive_ptr final{
 
   private:
     template <class TTarget2, class NullType2> friend class intrusive_ptr;
-    friend class weak_intrusive_ptr<TTarget, NullType>;
+
+    template <class TTarget2, class NullType2> friend class weak_intrusive_ptr;
 
 #ifndef _WIN32
     static_assert(NullType::singleton() == NullType::singleton(),

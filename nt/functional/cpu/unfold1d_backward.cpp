@@ -35,7 +35,7 @@ inline static constexpr auto im2col_cpu_1d_backward = [](auto data_im_ptr, auto 
 			int64_t w_offset = c % k_w;
 			int64_t c_im = c / k_w;
 			// Calculate the valid range for w_pad
-			int64_t w_pad_start = std::max(0LL, (p_w - w_offset * d_w + s_w - 1) / s_w);
+			int64_t w_pad_start = std::max(int64_t(0), (p_w - w_offset * d_w + s_w - 1) / s_w);
 			int64_t w_pad_end = std::min(width_col, (width + p_w - w_offset * d_w + s_w - 1) / s_w);
 
 			for (int64_t w = w_pad_start; w < w_pad_end; ++w) {
@@ -56,7 +56,7 @@ inline static constexpr auto im2col_cpu_1d_backward = [](auto data_im_ptr, auto 
 		int64_t c_im = c / k_w;
 
                 // Calculate the valid range for w_pad
-                int64_t w_pad_start = std::max(0LL, (p_w - w_offset * d_w + s_w - 1) / s_w);
+                int64_t w_pad_start = std::max(int64_t(0), (p_w - w_offset * d_w + s_w - 1) / s_w);
                 int64_t w_pad_end = std::min(width_col, (width + p_w - w_offset * d_w + s_w - 1) / s_w);
 		
 		//this is a really good check that negates a lot of edge case errors, and skips doing a lot of loops

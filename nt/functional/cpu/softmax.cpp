@@ -14,7 +14,7 @@
 //this means that for float128_t boost's 128 bit floating point is used
 #ifdef BOOST_MP_STANDALONE
 namespace std{
-inline ::nt::float128_t exp(const ::nt::float128_t& x){ return boost::multiprecision::expq(x);}
+inline ::nt::float128_t exp(const ::nt::float128_t& x){ return exp(x);}
 }
 #endif //BOOST_MP_STANDALONE
 

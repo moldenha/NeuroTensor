@@ -58,21 +58,21 @@ inline static constexpr auto im2col_cpu_3d_backward = [](auto data_im_ptr,
                         int64_t c_im = c / k_d / k_r / k_c;
                         // Calculate the valid range for h_pad
                         int64_t h_pad_start = std::max(
-                            0LL, (p_r - h_offset * d_r + s_r - 1) / s_r);
+                            int64_t(0), (p_r - h_offset * d_r + s_r - 1) / s_r);
                         int64_t h_pad_end = std::min(
                             height_col,
                             (height + p_r - h_offset * d_r + s_r - 1) / s_r);
 
                         // Calculate the valid range for w_pad
                         int64_t w_pad_start = std::max(
-                            0LL, (p_c - w_offset * d_c + s_c - 1) / s_c);
+                            int64_t(0), (p_c - w_offset * d_c + s_c - 1) / s_c);
                         int64_t w_pad_end = std::min(
                             width_col,
                             (width + p_c - w_offset * d_c + s_c - 1) / s_c);
 
                         // Calculate the valid range for d_pad
                         int64_t d_pad_start = std::max(
-                            0LL, (p_d - d_offset * d_d + s_d - 1) / s_d);
+                            int64_t(0), (p_d - d_offset * d_d + s_d - 1) / s_d);
                         int64_t d_pad_end = std::min(
                             depth_col,
                             (depth + p_d - d_offset * d_d + s_d - 1) / s_d);
@@ -114,21 +114,21 @@ inline static constexpr auto im2col_cpu_3d_backward = [](auto data_im_ptr,
                     int64_t c_im = c / k_d / k_r / k_c;
                     // Calculate the valid range for h_pad
                     int64_t h_pad_start =
-                        std::max(0LL, (p_r - h_offset * d_r + s_r - 1) / s_r);
+                        std::max(int64_t(0), (p_r - h_offset * d_r + s_r - 1) / s_r);
                     int64_t h_pad_end = std::min(
                         height_col,
                         (height + p_r - h_offset * d_r + s_r - 1) / s_r);
 
                     // Calculate the valid range for w_pad
                     int64_t w_pad_start =
-                        std::max(0LL, (p_c - w_offset * d_c + s_c - 1) / s_c);
+                        std::max(int64_t(0), (p_c - w_offset * d_c + s_c - 1) / s_c);
                     int64_t w_pad_end = std::min(
                         width_col,
                         (width + p_c - w_offset * d_c + s_c - 1) / s_c);
 
                     // Calculate the valid range for d_pad
                     int64_t d_pad_start =
-                        std::max(0LL, (p_d - d_offset * d_d + s_d - 1) / s_d);
+                        std::max(int64_t(0), (p_d - d_offset * d_d + s_d - 1) / s_d);
                     int64_t d_pad_end = std::min(
                         depth_col,
                         (depth + p_d - d_offset * d_d + s_d - 1) / s_d);
