@@ -9,7 +9,7 @@ class ConstScalarRef;
 #include "DType_enum.h"
 #include "DType.h"
 #include "compatible/DType_compatible.h"
-
+#include "../types/float16.h"
 
 
 #include <functional>
@@ -107,6 +107,11 @@ class Scalar{
 
 		template<typename T, std::enable_if_t<std::is_same_v<T, uint_bool_t>, bool> = true>
 		Scalar(T vv);
+            
+#ifndef SIMDE_FLOAT16_IS_SCALAR
+        Scalar(half_float::detail::expr val)
+        :dtype(DType::Float16)
+        {v.d = static_cast<decltype(v.d)>(double(val));} 
         
         Scalar(std::string);
 

@@ -27,10 +27,11 @@ Tensor eye(int64_t n, int64_t b, DType dtype){
 		Tensor out = functional::zeros({b, n, n}, dtype);
 		out.arr_void().execute_function<WRAP_DTYPES<NumberTypesL>>([&b, &n](auto begin, auto end){
 			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+            value_t one = static_cast<value_t>(1);
 			for(int64_t k = 0; k < b; ++k){
 				for(int64_t i = 0; i < n; ++i){
                     begin += i;
-                    *begin = value_t(1);
+                    *begin = one;
                     begin += (n-i);
 				}	
 			}
@@ -42,9 +43,10 @@ Tensor eye(int64_t n, int64_t b, DType dtype){
 	Tensor out = functional::zeros({n, n}, dtype);
 	out.arr_void().execute_function<WRAP_DTYPES<NumberTypesL>>([&n](auto begin, auto end){
 		using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+        value_t one = static_cast<value_t>(1);
 		for(int64_t i = 0; i < n; ++i){
             begin += i;
-            *begin = value_t(1);
+            *begin = one;
             begin += (n-i);
 		}	
 

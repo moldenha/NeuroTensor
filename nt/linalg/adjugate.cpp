@@ -5,6 +5,7 @@
 #include <limits>
 #include <tuple>
 #include "../dtype/ArrayVoid.hpp"
+#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
 
 #ifdef USE_PARALLEL
 	#include <tbb/parallel_for_each.h>
@@ -83,8 +84,8 @@ inline value_t cofactor(iterator mat, int64_t n, int64_t r, int64_t c){
     
     value_t minor_det = _nt_sub_ptr_determinant_<value_t, value_t*>(minor_mat, n-1);
     delete[] minor_mat;
-    return ((r + c) % 2 == 0 ? 1 : -1) * minor_det;
-
+    minor_det *= ((r + c) % 2 == 0 ? 1 : -1);
+    return minor_det;
 }
 
 

@@ -252,7 +252,7 @@ void transpose8x8_int64_intrinsics(const int64_t* in, int64_t* out, const int64_
 
 #define _NT_TRANSPOSE_NTHREADS_ 21
 
-static int64_t block_packed[64 * _NT_TRANSPOSE_NTHREADS_] __attribute__((aligned(64)));
+alignas(64) static int64_t block_packed[64 * _NT_TRANSPOSE_NTHREADS_];
 
 void transpose_last_intrinsics(const int64_t* in, int64_t* out, const int64_t in_rows, const int64_t in_cols, const int64_t batches){
     tbb::global_control control(tbb::global_control::max_allowed_parallelism, _NT_TRANSPOSE_NTHREADS_);
@@ -458,11 +458,18 @@ void transpose_any_manual(void** _in, void** _out,
     axis1 = axis1 < 0 ? axis1 + ndim : axis1;
     if(axis0 > axis1) std::swap(axis0, axis1);
     
+
+    
+#ifdef _MSC_VER
+    using ptr_type = std::uintptr_t;
+    const std::uintptr_t* __in = reinterpret_cast<std::uintptr_t*>(_in);
+    std::uintptr_t* __out = reinterpret_cast<std::uintptr_t*>(_out);
+#else
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
-    
-    const ptr_type* __in = reinterpret_cast<ptr_type*>(_in);
+    const ptr_type* __in = reinterpret_cast<const ptr_type*>(_in);
     ptr_type* __out = reinterpret_cast<ptr_type*>(_out);
+#endif
 
     //ensure axis0 < axis1
     int64_t total_size = 1;
@@ -541,11 +548,17 @@ void permute(void** _in, void** _out,
                             std::vector<int64_t> shape){
     using size_value_t = int64_t;
     int64_t ndim = shape.size();
+
+#ifdef _MSC_VER
+    using ptr_type = std::uintptr_t;
+    const std::uintptr_t* __in = reinterpret_cast<std::uintptr_t*>(_in);
+    std::uintptr_t* __out = reinterpret_cast<std::uintptr_t*>(_out);
+#else
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
-
-    const ptr_type* __in = reinterpret_cast<int64_t*>(_in);
-    ptr_type* __out = reinterpret_cast<int64_t*>(_out);
+    const ptr_type* __in = reinterpret_cast<const ptr_type*>(_in);
+    ptr_type* __out = reinterpret_cast<ptr_type*>(_out);
+#endif
 
     
     if(Perm.size() > shape.size()){

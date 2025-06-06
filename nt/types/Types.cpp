@@ -236,37 +236,37 @@ my_complex<T> my_complex<T>::operator/(T val) const{
 
 #define NT_MAKE_OTHER_COMPLEX_OPERATOR(operation)\
 template<typename T>\
-my_complex<T> my_complex<T>::operator##operation(const my_complex<float>& val) const {\
+my_complex<T> my_complex<T>::operator operation (const my_complex<float>& val) const {\
     if constexpr (std::is_same_v<T, float16_t>){\
-        return my_complex<float16_t>(re + _NT_FLOAT32_TO_FLOAT16_(val.real()), im + _NT_FLOAT32_TO_FLOAT16_(val.imag()));\
+        return my_complex<float16_t>(re operation _NT_FLOAT32_TO_FLOAT16_(val.real()), im operation _NT_FLOAT32_TO_FLOAT16_(val.imag()));\
     }\
     else if constexpr(std::is_same_v<T, float>){\
-        return my_complex<float>(re + val.real(), im + val.imag());\
+        return my_complex<float>(re operation val.real(), im operation val.imag());\
     }\
     else{\
-        return my_complex<T>(re + static_cast<T>(val.real()), im + static_cast<T>(val.imag()));\
+        return my_complex<T>(re operation static_cast<T>(val.real()), im operation static_cast<T>(val.imag()));\
     }\
 }\
 \
 template<typename T>\
-my_complex<T> my_complex<T>::operator##operation(const my_complex<double>& val) const {\
+my_complex<T> my_complex<T>::operator operation (const my_complex<double>& val) const {\
     if constexpr (std::is_same_v<T, float16_t>){\
-        return my_complex<float16_t>(re + _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(val.real())), im + _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(val.real())));\
+        return my_complex<float16_t>(re operation _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(val.real())), im operation _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(val.real())));\
     }\
     else if constexpr(std::is_same_v<T, double>){\
-        return my_complex<double>(re + val.real(), im + val.imag());\
+        return my_complex<double>(re operation val.real(), im operation val.imag());\
     }\
     else{\
-        return my_complex<T>(re + static_cast<T>(val.real()), im + static_cast<T>(val.imag()));\
+        return my_complex<T>(re operation static_cast<T>(val.real()), im operation static_cast<T>(val.imag()));\
     }\
 }\
 \
 template<typename T>\
-my_complex<T> my_complex<T>::operator##operation(const my_complex<float16_t>& val) const {\
+my_complex<T> my_complex<T>::operator operation (const my_complex<float16_t>& val) const {\
     if constexpr (std::is_same_v<T, float16_t>){\
-        return my_complex<float16_t>(re + val.real()), im + val.real());\
+        return my_complex<float16_t>(re operation val.real()), im operation val.real());\
     }else{\
-        return my_complex<T>(re + static_cast<T>(val.real()), im + static_cast<T>(val.imag()));\
+        return my_complex<T>(re operation static_cast<T>(val.real()), im operation static_cast<T>(val.imag()));\
     }\
 }\
 

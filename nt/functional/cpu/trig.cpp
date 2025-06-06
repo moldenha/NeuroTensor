@@ -34,11 +34,12 @@ NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(acos);
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(tan);
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sin);
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(cos);
+NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sqrt);
 
 #undef NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE
 
 inline ::nt::float128_t pow(const ::nt::float128_t& a, const ::nt::float128_t& b){
-    return boost::multiprecision::powq(a, b);
+    return pow(a, b);
 }
 
 }
