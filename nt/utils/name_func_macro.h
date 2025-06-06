@@ -4,7 +4,9 @@
 
 
 #ifndef __NT_FUNCTION_NAME__
-    #if defined(_WIN32) || defined(_WIN64)  // Windows
+    #if defined(_MSC_VER) //microsoft visual studios
+        #define __NT_FUNCTION_NAME__ __func__
+    #elif defined(_WIN32) || defined(_WIN64)  // Windows
         #define __NT_FUNCTION_NAME__   __FUNCTION__
     #elif defined(__GNUC__) || defined(__clang__)  // GCC or Clang (Linux/macOS)
         #define __NT_FUNCTION_NAME__   __builtin_FUNCTION()

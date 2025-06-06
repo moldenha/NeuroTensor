@@ -3,6 +3,7 @@
 #include "compare.h"
 #include "../../mp/Threading.h"
 #include "exceptions.hpp"
+#include "../../utils/macros.h"
 
 namespace nt{
 namespace functional{
