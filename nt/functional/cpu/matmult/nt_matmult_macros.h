@@ -17,13 +17,13 @@
 #define _NT_MATMULT_MAX_(x, y) x > y ? x : y
 
 
-#if defined(__clang__)
+#if defined(__clang__) && !defined(__APPLE__)
     #define NT_MATMULT_VLA(type, name, size) \
         _Pragma("clang diagnostic push") \
         _Pragma("clang diagnostic ignored \"-Wvla-cxx-extension\"") \
         type name[size]; \
         _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || (defined(__clang__) && defined(__APPLE__))
     #define NT_MATMULT_VLA(type, name, size) type name[size]
 #else
     #define NT_MATMULT_VLA(type, name, size) type* name = new type[size]

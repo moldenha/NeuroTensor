@@ -208,7 +208,7 @@ void pack_multiply_directly_var_threaded(const T* A, const T* B, T* C, const int
 					for(size_t jr = range.cols().begin(); jr < range.cols().end(); ++jr){
 						const size_t nb_cols = _NT_MATMULT_MIN_(TILE_SIZE, jrMax - (jr * TILE_SIZE));
 						matmult_simdeT_directly_threaded<T, b_pack_cols>
-							(&blockA_packed[(ir * TILE_SIZE) * a_pack_cols], &blockB_packed[jr * TILE_SIZE], C + ((i + (ir * TILE_SIZE)) * b_cols) + (j+(jr * TILE_SIZE)), b_cols,
+							(&blockA_packed[(ir * TILE_SIZE) * a_pack_cols], &blockB_packed[jr * TILE_SIZE], &C[((i + (ir * TILE_SIZE)) * b_cols) + (j+(jr * TILE_SIZE))], b_cols,
 							 nb_cols, na_rows);
 					}
 				}
