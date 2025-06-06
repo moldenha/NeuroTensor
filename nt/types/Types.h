@@ -12,6 +12,10 @@
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #endif
 
+#ifndef _SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING
+#define _SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING
+#endif
+
 #endif
 
 #include <complex.h>
@@ -22,6 +26,8 @@
 #include "float16.h"
 #include "float128.h"
 #include "bit_128_integer.h"
+
+
 
 namespace nt{
 
@@ -36,6 +42,9 @@ class my_complex{
 
 		template <std::size_t Index, typename U>
 		friend inline constexpr U&& get_complex(my_complex<U>&& obj) noexcept;
+    
+        template<typename U>
+        friend class my_complex<U>;
 
 	public:
 		my_complex(T ele)

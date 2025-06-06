@@ -35,6 +35,9 @@ elseif(ENABLE_ASAN)
   message(WARNING "AddressSanitizer is not supported when cross-compiling to Windows; disabling it")
 endif()
 
+#these files will automatically detect and add the correct simd instruction set
+include(detect_simd.cmake)
+
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_PARALLEL -march=native")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PARALLEL -march=native")

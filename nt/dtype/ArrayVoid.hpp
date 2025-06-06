@@ -18,6 +18,20 @@
 	#include <tbb/parallel_for_each.h>
 #endif
 
+
+
+//silence depreciation warnings for certain needed headers
+#ifdef _MSC_VER
+#ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#endif
+
+#ifndef _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#endif
+
+#endif
+
 namespace nt{
 
 //this is to make it so it is not ambiguous with calling execute_function(func, args..);

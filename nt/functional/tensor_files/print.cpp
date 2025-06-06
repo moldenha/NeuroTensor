@@ -1,6 +1,18 @@
 #include "print.h"
 #include "../../dtype/ArrayVoid.hpp"
 
+//silence depreciation warnings for certain needed headers
+#ifdef _MSC_VER
+#ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#endif
+
+#ifndef _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#endif
+
+#endif
+
 namespace nt{
 namespace functional{
 

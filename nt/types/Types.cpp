@@ -18,7 +18,7 @@ namespace nt{
 
 #ifdef _128_FLOAT_SUPPORT_
 std::ostream& operator<<(std::ostream& os, const float128_t& val){
-	os << convert::convert<float>(val);
+	os << convert::convert<double>(val);
 	return os;
 }
 
@@ -234,77 +234,55 @@ my_complex<T> my_complex<T>::operator/(T val) const{
 	return my_complex<T>(re / val, im);
 }
 
-
-
-template <typename T>
-my_complex<T> my_complex<T>::operator+(const my_complex<float>& val) const {
-    return my_complex<T>(re + convert::convert<T>(val.real()), im + static_cast<T>(val.imag()));
+#define NT_MAKE_OTHER_COMPLEX_OPERATOR(operation)\
+template<typename T>\
+my_complex<T> my_complex<T>::operator##operation(const my_complex<float>& val) const {\
+    if constexpr (std::is_same_v<T, float16_t>){\
+        
+    }
 }
 
-template <typename T>
-my_complex<T> my_complex<T>::operator+(const my_complex<double>& val) const {
-    return my_complex<T>(re + convert::convert<T>(val.real()), im + static_cast<T>(val.imag()));
-}
 
-#ifdef _HALF_FLOAT_SUPPORT_
-template <typename T>
-my_complex<T> my_complex<T>::operator+(const my_complex<float16_t>& val) const {
-    return my_complex<T>(re + convert::convert<T>(val.real()), im + static_cast<T>(val.imag()));
-}
-#endif
+#define NT_MAKE_OTHER_COMPLEX_OPERATOR(operation)\
+template<typename T>\
+my_complex<T> my_complex<T>::operator##operation(const my_complex<float>& val) const {\
+    if constexpr (std::is_same_v<T, float16_t>){\
+        return my_complex<float16_t>(re + _NT_FLOAT32_TO_FLOAT16_(val.real()), im + _NT_FLOAT32_TO_FLOAT16_(val.imag()));\
+    }\
+    else if constexpr(std::is_same_v<T, float>){\
+        return my_complex<float>(re + val.real(), im + val.imag());\
+    }\
+    else{\
+        return my_complex<T>(re + static_cast<T>(val.real()), im + static_cast<T>(val.imag()));\
+    }\
+}\
+\
+template<typename T>\
+my_complex<T> my_complex<T>::operator##operation(const my_complex<double>& val) const {\
+    if constexpr (std::is_same_v<T, float16_t>){\
+        return my_complex<float16_t>(re + _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(val.real())), im + _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(val.real())));\
+    }\
+    else if constexpr(std::is_same_v<T, double>){\
+        return my_complex<double>(re + val.real(), im + val.imag());\
+    }\
+    else{\
+        return my_complex<T>(re + static_cast<T>(val.real()), im + static_cast<T>(val.imag()));\
+    }\
+}\
+\
+template<typename T>\
+my_complex<T> my_complex<T>::operator##operation(const my_complex<float16_t>& val) const {\
+    if constexpr (std::is_same_v<T, float16_t>){\
+        return my_complex<float16_t>(re + val.real()), im + val.real());\
+    }else{\
+        return my_complex<T>(re + static_cast<T>(val.real()), im + static_cast<T>(val.imag()));\
+    }\
+}\
 
-template <typename T>
-my_complex<T> my_complex<T>::operator*(const my_complex<float>& val) const {
-    return my_complex<T>(re * convert::convert<T>(val.real()), im * static_cast<T>(val.imag()));
-}
-
-template <typename T>
-my_complex<T> my_complex<T>::operator*(const my_complex<double>& val) const {
-    return my_complex<T>(re * convert::convert<T>(val.real()), im * static_cast<T>(val.imag()));
-}
-
-#ifdef _HALF_FLOAT_SUPPORT_
-template <typename T>
-my_complex<T> my_complex<T>::operator*(const my_complex<float16_t>& val) const {
-    return my_complex<T>(re * convert::convert<T>(val.real()), im * static_cast<T>(val.imag()));
-}
-#endif
-
-template <typename T>
-my_complex<T> my_complex<T>::operator-(const my_complex<float>& val) const {
-    return my_complex<T>(re - convert::convert<T>(val.real()), im - static_cast<T>(val.imag()));
-}
-
-template <typename T>
-my_complex<T> my_complex<T>::operator-(const my_complex<double>& val) const {
-    return my_complex<T>(re - convert::convert<T>(val.real()), im - static_cast<T>(val.imag()));
-}
-
-#ifdef _HALF_FLOAT_SUPPORT_
-template <typename T>
-my_complex<T> my_complex<T>::operator-(const my_complex<float16_t>& val) const {
-    return my_complex<T>(re - convert::convert<T>(val.real()), im - static_cast<T>(val.imag()));
-}
-#endif
-
-
-
-template <typename T>
-my_complex<T> my_complex<T>::operator/(const my_complex<float>& val) const {
-    return my_complex<T>(re / convert::convert<T>(val.real()), im / static_cast<T>(val.imag()));
-}
-
-template <typename T>
-my_complex<T> my_complex<T>::operator/(const my_complex<double>& val) const {
-    return my_complex<T>(re / convert::convert<T>(val.real()), im / static_cast<T>(val.imag()));
-}
-
-#ifdef _HALF_FLOAT_SUPPORT_
-template <typename T>
-my_complex<T> my_complex<T>::operator/(const my_complex<float16_t>& val) const {
-    return my_complex<T>(re / convert::convert<T>(val.real()), im / static_cast<T>(val.imag()));
-}
-#endif
+NT_MAKE_OTHER_COMPLEX_OPERATOR(+);
+NT_MAKE_OTHER_COMPLEX_OPERATOR(*);
+NT_MAKE_OTHER_COMPLEX_OPERATOR(-);
+NT_MAKE_OTHER_COMPLEX_OPERATOR(/);
 
 
 template<typename T>
@@ -356,13 +334,17 @@ my_complex<T>& my_complex<T>::operator=(const my_complex<T>& val){
 
 template<typename T>
 my_complex<T> my_complex<T>::inverse() const{
-	return my_complex<T>(1.0/re, 1.0/im);
+    if constexpr (std::is_floating_point_v<T> || std::is_same_v<T, float16_t> || std::is_same_v<T, float128_t>){
+	    return my_complex<T>(T(1.0)/re, T(1.0)/im);
+    }
 }
 
 template<typename T>
 my_complex<T>& my_complex<T>::inverse_(){
-	re = 1.0/re;
-	im = 1.0/im;
+    if constexpr (std::is_floating_point_v<T> || std::is_same_v<T, float16_t> || std::is_same_v<T, float128_t>){
+	re = T(1.0)/re;
+	im = T(1.0)/im;
+    }
 	return *this;
 }
 
@@ -373,13 +355,11 @@ my_complex<T>::operator my_complex<X>() const {return my_complex<X>(convert::con
 
 template my_complex<float>::operator my_complex<double>() const;
 template my_complex<double>::operator my_complex<float>() const;
-#ifdef _HALF_FLOAT_SUPPORT_
 template my_complex<float>::operator my_complex<float16_t>() const;
 template my_complex<double>::operator my_complex<float16_t>() const;
 template my_complex<float16_t>::operator my_complex<float>() const;
 template my_complex<float16_t>::operator my_complex<double>() const;
 
-#endif
 
 
 /* template<> my_complex<float>::operator<double> my_complex<double>() const {return my_complex<double>(convert::convert<double>(re), convert::convert<double>(im));} */
@@ -401,12 +381,10 @@ my_complex<T>& my_complex<T>::operator=(const my_complex<X>& c){
 
 template my_complex<float>& my_complex<float>::operator=(const my_complex<double>& c);
 template my_complex<double>& my_complex<double>::operator=(const my_complex<float>& c);
-#ifdef _HALF_FLOAT_SUPPORT_
 template my_complex<float>& my_complex<float>::operator=(const my_complex<float16_t>& c);
 template my_complex<double>& my_complex<double>::operator=(const my_complex<float16_t>& c);
 template my_complex<float16_t>& my_complex<float16_t>::operator=(const my_complex<float>& c);
 template my_complex<float16_t>& my_complex<float16_t>::operator=(const my_complex<double>& c);
-#endif
 
 /* template<> my_complex<float>& my_complex<float>::operator=<double>(const my_complex<double>& c){ */
 /* 	re = convert::convert<float>(c.real()); */
@@ -470,8 +448,6 @@ bool my_complex<T>::operator<=(const my_complex<T>& c) const{
 
 template class my_complex<float>;
 template class my_complex<double>;
-#ifdef _HALF_FLOAT_SUPPORT_
 template class my_complex<float16_t>;
-#endif
 
 }
