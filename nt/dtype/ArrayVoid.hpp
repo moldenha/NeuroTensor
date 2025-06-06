@@ -81,14 +81,14 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction&&, DTypeFuncs::dtype_to_type_t<m_dtype>*, DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
-		if constexpr(std::is_same_v<val_type, void>)
+		if constexpr(std::is_same_v<val_type, void>){
 			return;
-		else{
+        }else{
 			val_type outp;
 			return outp;
 		}
 	}
-	if(m_dtype != dtype){
+    else if(m_dtype != dtype){
 		return execute_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...);
 	}
 	bool check = false;
