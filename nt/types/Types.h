@@ -43,8 +43,7 @@ class my_complex{
 		template <std::size_t Index, typename U>
 		friend inline constexpr U&& get_complex(my_complex<U>&& obj) noexcept;
     
-        template<typename U>
-        friend class my_complex<U>;
+        template<typename> friend class my_complex;
 
 	public:
 		my_complex(T ele)
@@ -52,6 +51,12 @@ class my_complex{
 		my_complex(const T&, const T&);
 		my_complex(const std::complex<T>&);
 		my_complex();
+
+#ifndef SIMDE_FLOAT16_IS_SCALAR
+        // Enable only when T == nt::float16_t
+        template<typename U = T, std::enable_if_t<std::is_same<U, nt::float16_t>::value, int> = 0>
+        my_complex(half_float::half real, half_float::half imag) : re(real), im(imag) {}
+#endif
 		using value_type = T;
 
 		my_complex<T>& operator+=(T);
@@ -64,10 +69,8 @@ class my_complex{
 		// Overload for double
 		my_complex<T>& operator+=(const my_complex<double>& val);
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T>& operator+=(const my_complex<float16_t>& val);
-#endif		
 
 		// Overload for float
 		my_complex<T>& operator*=(const my_complex<float>& val);
@@ -75,20 +78,16 @@ class my_complex{
 		// Overload for double
 		my_complex<T>& operator*=(const my_complex<double>& val);
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T>& operator*=(const my_complex<float16_t>& val);
-#endif
 		// Overload for float
 		my_complex<T>& operator-=(const my_complex<float>& val);
 
 		// Overload for double
 		my_complex<T>& operator-=(const my_complex<double>& val);
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T>& operator-=(const my_complex<float16_t>& val);
-#endif
 
 		// Overload for float
 		my_complex<T>& operator/=(const my_complex<float>& val);
@@ -96,10 +95,8 @@ class my_complex{
 		// Overload for double
 		my_complex<T>& operator/=(const my_complex<double>& val);
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T>& operator/=(const my_complex<float16_t>& val);
-#endif
 
 		my_complex<T> operator+(T) const;
 		my_complex<T> operator*(T) const;
@@ -112,20 +109,16 @@ class my_complex{
 		// Overload for double
 		my_complex<T> operator+(const my_complex<double>& val) const;
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T> operator+(const my_complex<float16_t>& val) const;
-#endif
 		// Overload for float
 		my_complex<T> operator*(const my_complex<float>& val) const;
 
 		// Overload for double
 		my_complex<T> operator*(const my_complex<double>& val) const;
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T> operator*(const my_complex<float16_t>& val) const;
-#endif		
 
 		// Overload for float
 		my_complex<T> operator-(const my_complex<float>& val) const;
@@ -133,10 +126,8 @@ class my_complex{
 		// Overload for double
 		my_complex<T> operator-(const my_complex<double>& val) const;
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T> operator-(const my_complex<float16_t>& val) const;	
-#endif
 
 		// Overload for float
 		my_complex<T> operator/(const my_complex<float>& val) const;
@@ -144,10 +135,8 @@ class my_complex{
 		// Overload for double
 		my_complex<T> operator/(const my_complex<double>& val) const;
 
-#ifdef _HALF_FLOAT_SUPPORT_
 		// Overload for float16_t (conditionally included)
 		my_complex<T> operator/(const my_complex<float16_t>& val) const;
-#endif
 
 		T& real();
 		const T& real() const;
@@ -183,6 +172,12 @@ class my_complex{
 using complex_64 = my_complex<float>;
 using complex_128 = my_complex<double>;
 using complex_32 = my_complex<float16_t>;
+
+#ifndef SIMDE_FLOAT16_IS_SCALAR
+static_assert(std::is_constructible<my_complex<nt::float16_t>, half_float::half, half_float::half>::value,
+              "my_complex<nt::float16_t> is not constructible from two halfs");
+#endif
+
 
 template<typename T, typename U, std::enable_if_t<(std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same_v<bool, U>, bool> = true>
 inline my_complex<T> operator/(my_complex<T> comp, U element) noexcept {

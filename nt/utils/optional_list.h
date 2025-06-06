@@ -46,20 +46,20 @@ class optional_list{
 			return *this = {static_cast<int64_t>(element)};
 		}
 		
-		inline constexpr bool has_value() const noexcept {return bool(list);}
-		inline constexpr explicit operator bool() const noexcept {return has_value();}
-		inline constexpr const intrusive_list<int64_t>* operator->() const noexcept{
+		inline bool has_value() const noexcept {return bool(list);}
+		inline explicit operator bool() const noexcept {return has_value();}
+		inline const intrusive_list<int64_t>* operator->() const noexcept{
 			if(!has_value()){return nullptr;}
 			return list.get();
 		}
-		inline constexpr intrusive_list<int64_t>* operator->() noexcept{
+		inline intrusive_list<int64_t>* operator->() noexcept{
 			if(!has_value()){return nullptr;}
 			return list.get();
 		}
-		inline constexpr const intrusive_list<int64_t>& operator*() const& noexcept{
+		inline const intrusive_list<int64_t>& operator*() const& noexcept{
 			return *list;
 		}
-		inline constexpr intrusive_list<int64_t>& operator*() & noexcept{
+		inline intrusive_list<int64_t>& operator*() & noexcept{
 			return *list;
 		}
 
@@ -71,11 +71,11 @@ class optional_list{
 			return (*list)[i];
 		}
 
-		inline constexpr const intrusive_list<int64_t>& value() const&{
+		inline const intrusive_list<int64_t>& value() const&{
 			if(!has_value()){throw bad_optional_access();}
 			return *list;
 		}
-		inline constexpr intrusive_list<int64_t>& value() &{
+		inline intrusive_list<int64_t>& value() &{
 			if(!has_value()){throw bad_optional_access();}
 			return *list;
 		}
@@ -101,7 +101,7 @@ class optional_list{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) &{
+		inline auto and_then(F&& f) &{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
@@ -109,7 +109,7 @@ class optional_list{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) const&{
+		inline auto and_then(F&& f) const&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
@@ -117,7 +117,7 @@ class optional_list{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) &&{
+		inline auto and_then(F&& f) &&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
@@ -125,7 +125,7 @@ class optional_list{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) const&&{
+		inline auto and_then(F&& f) const&&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
@@ -142,33 +142,33 @@ class optional_list{
 			this->list = make_intrusive<intrusive_list<int64_t> >(std::forward<Args&&>(args)...);
 			return *this->list;
 		}
-		inline constexpr int64_t* begin() & noexcept {
+		inline int64_t* begin() & noexcept {
 			return list->begin();
 		}
-		inline constexpr const int64_t* begin() const& noexcept {
+		inline const int64_t* begin() const& noexcept {
 			return list->begin();
 		}
-		inline constexpr const int64_t* cbegin() const& noexcept {
+		inline const int64_t* cbegin() const& noexcept {
 			return list->cbegin();
 		}
 
-		inline constexpr int64_t* end() & noexcept {
+		inline int64_t* end() & noexcept {
 			return list->end();
 		}
 		
-		inline constexpr const int64_t* end() const& noexcept {
+		inline const int64_t* end() const& noexcept {
 			return list->end();
 		}
 
-		inline constexpr const int64_t* cend() const& noexcept{
+		inline const int64_t* cend() const& noexcept{
 			return list->cend();
 		}
 
-		inline constexpr bool is_scalar() const& noexcept{
+		inline bool is_scalar() const& noexcept{
 			return list->size() == 1;
 		}
 
-		inline constexpr const int64_t& get_scalar() const& noexcept {
+		inline cconst int64_t& get_scalar() const& noexcept {
 			return (*this)[0];
 		}
 	
@@ -178,7 +178,7 @@ class optional_list{
 }} //nt::utils::
 
 namespace std{
-inline void swap(nt::utils::optional_list& a, nt::utils::optional_list& b) noexcept {a.swap(b);}
+inline void swap(::nt::utils::optional_list& a, ::nt::utils::optional_list& b) noexcept {a.swap(b);}
 } //std::
 
 #endif
