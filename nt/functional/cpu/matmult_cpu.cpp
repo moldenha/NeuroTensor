@@ -576,10 +576,12 @@ Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_
 	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
 	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
 	
-
-	const T* A_array[a.numel()];
-	const T* B_array[a.numel()];
-	outT* C_array[a.numel()];
+    const T** A_array = new const T*[a.numel()];
+    const T** B_array = new const T*[a.numel()];
+    outT** C_array = new T*[a.numel()];
+	// const T* A_array[a.numel()];
+	// const T* B_array[a.numel()];
+	// outT* C_array[a.numel()];
 
 
 	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
@@ -649,7 +651,10 @@ Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_
 	
 	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, a_shape[-2], a_shape[-1], b_shape[-2], b_shape[-1], transpose_a, transpose_b);
 	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
-
+    
+    delete[] A_array;
+    delete[] B_array;
+    delete[] C_array;
 	/* delete[] group_size; */
 	return std::move(tensor_C);
 
@@ -668,9 +673,12 @@ Tensor& handle_tensors_of_tensors_std(Tensor& a, Tensor& b, Tensor& c, const boo
 	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
 	
 
-	const T* A_array[a.numel()];
-	const T* B_array[a.numel()];
-	outT* C_array[a.numel()];
+    const T** A_array = new const T*[a.numel()];
+    const T** B_array = new const T*[a.numel()];
+    outT** C_array = new T*[a.numel()];
+	// const T* A_array[a.numel()];
+	// const T* B_array[a.numel()];
+	// outT* C_array[a.numel()];
 
 
 	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
@@ -751,7 +759,10 @@ Tensor& handle_tensors_of_tensors_std(Tensor& a, Tensor& b, Tensor& c, const boo
 	
 	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, a_shape[-2], a_shape[-1], b_shape[-2], b_shape[-1], transpose_a, transpose_b);
 	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
-
+    
+    delete[] A_array;
+    delete[] B_array;
+    delete[] C_array;
 	/* delete[] group_size; */
 	return c;
 
@@ -917,9 +928,13 @@ Tensor handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, const bool trans
 	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
 	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
 
-	const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
-	const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
-	outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
+    const T** A_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+    const T** B_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+    outT** C_array = new T*[a.numel() * a[0].item<Tensor>().numel()];
+
+	// const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
+	// const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
+	// outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
 
 
 	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
@@ -996,7 +1011,10 @@ Tensor handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, const bool trans
 
 
 	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
-
+    
+    delete[] A_array;
+    delete[] B_array;
+    delete[] C_array;
 	/* delete[] group_size; */
 	return std::move(tensor_C);
 
@@ -1013,9 +1031,13 @@ Tensor& handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, Tensor& c, cons
 	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
 	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
 
-	const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
-	const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
-	outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
+    const T** A_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+    const T** B_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+    outT** C_array = new T*[a.numel() * a[0].item<Tensor>().numel()];
+
+	// const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
+	// const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
+	// outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
 
 
 	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
@@ -1105,6 +1127,10 @@ Tensor& handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, Tensor& c, cons
 	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
 
 	/* delete[] group_size; */
+    delete[] A_array;
+    delete[] B_array;
+    delete[] C_array;
+
 	return c;
 }
 

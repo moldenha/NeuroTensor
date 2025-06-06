@@ -91,11 +91,11 @@ Tensor at(const Tensor& self, const Tensor &t) {
         std::copy(s.begin(), s.end(), ns.begin());
 
         // keeping track of each int64_t pointer for the indexing
-        void** ptrs = new void*[self.dims()];
+        const size_value_t** ptrs = new const size_value_t*[self.dims()];
         // const size_value_t *ptrs[self.dims()];
         size_value_t i = 0;
         for (; begin != end; ++begin, ++i) {
-            ptrs[i] = reinterpret_cast<const int64_t *>(begin->data_ptr());
+            ptrs[i] = reinterpret_cast<const size_value_t *>(begin->data_ptr());
         }
         // making a new ArrayVoid to keep track of all the indices
         const size_value_t &n_size = begin_cpy->numel();
@@ -109,7 +109,7 @@ Tensor at(const Tensor& self, const Tensor &t) {
             for (size_value_t j = 0; j < t.numel() - 1; ++j) {
                 index += ptrs[j][i] * ns[j + 1];
             }
-            index += reinterpret_cast<const int64_t*>(ptrs[t.numel() - 1][i]);
+            index += ptrs[t.numel() - 1][i];
             *out_begin = my_begin[index];
         }
         delete[] ptrs;
@@ -226,7 +226,6 @@ Tensor at(const Tensor& self, std::vector<Tensor::size_value_t> xs){
     Tensor output(self.arr_void().share_array(cur_mult * mult, mult), std::move(n_size));
     return output.set_mutability(self.is_mutable()); 
 }
-
 Tensor index_except(const Tensor& self, int64_t dim, Tensor::size_value_t excluding_index) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(self);
     using size_value_t = Tensor::size_value_t;
