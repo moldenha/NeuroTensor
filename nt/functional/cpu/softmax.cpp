@@ -7,6 +7,17 @@
 #include "../../convert/Convert.h"
 #include "../../types/Types.h"
 
+
+#include "../../types/float128.h"
+
+//if this is defined
+//this means that for float128_t boost's 128 bit floating point is used
+#ifdef BOOST_MP_STANDALONE
+namespace std{
+inline ::nt::float128_t exp(const ::nt::float128_t& x){ return boost::multiprecision::expq(x);}
+}
+#endif //BOOST_MP_STANDALONE
+
 namespace std{
 //making of specific types
 

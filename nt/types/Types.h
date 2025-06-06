@@ -59,7 +59,7 @@ class my_complex{
         
         template<typename U, std::enable_if_t<std::is_convertible_v<U, T> && 
                                              !std::is_same_v<T, U> && 
-                                             !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>, int> = 0>
+                                             !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>), int> = 0>
         my_complex(const U& real, const U& imag) : re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
 #else
         template<typename U, std::enable_if_t<std::is_convertible_v<U, T> && 

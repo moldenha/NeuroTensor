@@ -7,6 +7,27 @@
 #include "../../convert/Convert.h"
 #include <random>
 
+#include "../../types/float128.h"
+
+//if this is defined
+//this means that for float128_t boost's 128 bit floating point is used
+#ifdef BOOST_MP_STANDALONE
+namespace std{
+inline ::nt::float128_t round(const ::nt::float128_t& x){
+    ::nt::float128_t int_part = trunc(x);  // integer part (toward zero)
+    ::nt::float128_t frac = x - int_part;  // fractional part
+
+    if (x >= 0) {
+        return frac < 0.5 ? int_part : int_part + 1;
+    } else {
+        return frac > -0.5 ? int_part : int_part - 1;
+    }
+}
+
+}
+
+#endif //BOOST_MP_STANDALONE
+
 namespace nt{
 namespace functional{
 namespace cpu{

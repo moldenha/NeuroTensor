@@ -8,19 +8,37 @@
 #include "../../convert/Convert.h"
 #include "../../types/Types.h"
 
+//if this is defined
+//this means that for float128_t boost's 128 bit floating point is used
+#ifdef BOOST_MP_STANDALONE
+namespace std{
+
+#define NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(func)\
+inline ::nt::float128_t func(const ::nt::float128_t& x){return boost::multiprecition::func##q(x);}
+
+NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(exp);
+NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(log);
+
+#undef NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE
+
+}
+#endif //BOOST_MP_STANDALONE
+
+
 namespace std{
 //making of specific types
 
 
-#ifdef _128_FLOAT_SUPPORT_
-#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val) ::nt::convert::convert<type, long double>(val)
-#else
-#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val) static_cast<type>(val)
-#endif
+#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val)\
+if constexpr (std::is_same_v<::nt::float128_t, long double>){\
+    return ::nt::convert::convert<type, ::nt::float128_t>(val);\
+}else{\
+    return static_cast<type>(val);\
+}\
 
 
 #define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, func_name)\
-inline type func_name(type t){return NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, func_name##l(static_cast<to>(t)));}
+inline type func_name(type t){NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, func_name##l(static_cast<to>(t)));}
 
 #define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, log)\

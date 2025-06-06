@@ -91,7 +91,8 @@ Tensor at(const Tensor& self, const Tensor &t) {
         std::copy(s.begin(), s.end(), ns.begin());
 
         // keeping track of each int64_t pointer for the indexing
-        const size_value_t *ptrs[self.dims()];
+        void** ptrs = new void*[self.dims()];
+        // const size_value_t *ptrs[self.dims()];
         size_value_t i = 0;
         for (; begin != end; ++begin, ++i) {
             ptrs[i] = reinterpret_cast<const int64_t *>(begin->data_ptr());
@@ -108,9 +109,10 @@ Tensor at(const Tensor& self, const Tensor &t) {
             for (size_value_t j = 0; j < t.numel() - 1; ++j) {
                 index += ptrs[j][i] * ns[j + 1];
             }
-            index += ptrs[t.numel() - 1][i];
+            index += reinterpret_cast<const int64_t*>(ptrs[t.numel() - 1][i]);
             *out_begin = my_begin[index];
         }
+        delete[] ptrs;
         Tensor output(new_vals, {static_cast<size_value_t>(n_size)});
         return output.set_mutability(self.is_mutable()); 
     }

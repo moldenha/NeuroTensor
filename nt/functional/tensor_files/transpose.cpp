@@ -359,83 +359,83 @@ void transpose_last_manual(const std::uintptr_t* _in, std::uintptr_t* _out, cons
 //      - so you can load lower dimensions from void** to void*** and reinterpret_cast to int64_t*
 //      - then flatten that out to lower dimensions
 // Function to transpose an 8x8 matrix of int64_t using AVX-512 intrinsics
-void transpose8x8_int64_strided_intrinsics(const int64_t* in, int64_t* out, const int64_t& in_stride, const int64_t& out_stride, const int64_t& stride) {
-    simde__m512i index = NT_MAKE_LOAD_STRIDE_IDX_(stride); 
-    // Load 8 rows into 8 simde__m512i registers
-    simde__m512i row0 = simde_mm512_i64gather_epi64(index, in + 0 * in_stride, 8); 
-    simde__m512i row1 = simde_mm512_i64gather_epi64(index, in + 1 * in_stride, 8);
-    simde__m512i row2 = simde_mm512_i64gather_epi64(index, in + 2 * in_stride, 8);
-    simde__m512i row3 = simde_mm512_i64gather_epi64(index, in + 3 * in_stride, 8);
-    simde__m512i row4 = simde_mm512_i64gather_epi64(index, in + 4 * in_stride, 8);
-    simde__m512i row5 = simde_mm512_i64gather_epi64(index, in + 5 * in_stride, 8);
-    simde__m512i row6 = simde_mm512_i64gather_epi64(index, in + 6 * in_stride, 8);
-    simde__m512i row7 = simde_mm512_i64gather_epi64(index, in + 7 * in_stride, 8);
+// void transpose8x8_int64_strided_intrinsics(const int64_t* in, int64_t* out, const int64_t& in_stride, const int64_t& out_stride, const int64_t& stride) {
+//     simde__m512i index = NT_MAKE_LOAD_STRIDE_IDX_(stride); 
+//     // Load 8 rows into 8 simde__m512i registers
+//     simde__m512i row0 = simde_mm512_i64gather_epi64(index, in + 0 * in_stride, 8); 
+//     simde__m512i row1 = simde_mm512_i64gather_epi64(index, in + 1 * in_stride, 8);
+//     simde__m512i row2 = simde_mm512_i64gather_epi64(index, in + 2 * in_stride, 8);
+//     simde__m512i row3 = simde_mm512_i64gather_epi64(index, in + 3 * in_stride, 8);
+//     simde__m512i row4 = simde_mm512_i64gather_epi64(index, in + 4 * in_stride, 8);
+//     simde__m512i row5 = simde_mm512_i64gather_epi64(index, in + 5 * in_stride, 8);
+//     simde__m512i row6 = simde_mm512_i64gather_epi64(index, in + 6 * in_stride, 8);
+//     simde__m512i row7 = simde_mm512_i64gather_epi64(index, in + 7 * in_stride, 8);
     
 
-    // std::cout << in[0] << std::endl;
-    // std::cout << in[1] << std::endl;
-    // std::cout << in[stride] << std::endl;
+//     // std::cout << in[0] << std::endl;
+//     // std::cout << in[1] << std::endl;
+//     // std::cout << in[stride] << std::endl;
 
-    // --- Step 1: Transpose 2x2 blocks of int64_t elements ---
-    // (treating each simde__m512i as 4 pairs of 2 int64_t elements)
-    // We use unpacklo/hi to interleave the elements from adjacent rows.
-    simde__m512i t0 = simde_mm512_unpacklo_epi64(row0, row1); // {row0[0], row1[0], row0[1], row1[1], ...}
-    simde__m512i t1 = simde_mm512_unpackhi_epi64(row0, row1); // {row0[4], row1[4], row0[5], row1[5], ...}
-    simde__m512i t2 = simde_mm512_unpacklo_epi64(row2, row3);
-    simde__m512i t3 = simde_mm512_unpackhi_epi64(row2, row3);
-    simde__m512i t4 = simde_mm512_unpacklo_epi64(row4, row5);
-    simde__m512i t5 = simde_mm512_unpackhi_epi64(row4, row5);
-    simde__m512i t6 = simde_mm512_unpacklo_epi64(row6, row7);
-    simde__m512i t7 = simde_mm512_unpackhi_epi64(row6, row7);
+//     // --- Step 1: Transpose 2x2 blocks of int64_t elements ---
+//     // (treating each simde__m512i as 4 pairs of 2 int64_t elements)
+//     // We use unpacklo/hi to interleave the elements from adjacent rows.
+//     simde__m512i t0 = simde_mm512_unpacklo_epi64(row0, row1); // {row0[0], row1[0], row0[1], row1[1], ...}
+//     simde__m512i t1 = simde_mm512_unpackhi_epi64(row0, row1); // {row0[4], row1[4], row0[5], row1[5], ...}
+//     simde__m512i t2 = simde_mm512_unpacklo_epi64(row2, row3);
+//     simde__m512i t3 = simde_mm512_unpackhi_epi64(row2, row3);
+//     simde__m512i t4 = simde_mm512_unpacklo_epi64(row4, row5);
+//     simde__m512i t5 = simde_mm512_unpackhi_epi64(row4, row5);
+//     simde__m512i t6 = simde_mm512_unpacklo_epi64(row6, row7);
+//     simde__m512i t7 = simde_mm512_unpackhi_epi64(row6, row7);
 
-    static simde__m512i perm_idx = simde_mm512_set_epi64(13, 12, 5, 4, 9, 8, 1, 0);
-    static simde__m512i perm_idxB = simde_mm512_set_epi64(15, 14, 7, 6, 11, 10, 3, 2);
+//     static simde__m512i perm_idx = simde_mm512_set_epi64(13, 12, 5, 4, 9, 8, 1, 0);
+//     static simde__m512i perm_idxB = simde_mm512_set_epi64(15, 14, 7, 6, 11, 10, 3, 2);
 
-    simde__m512i u0 = simde_mm512_permutex2var_epi64(t0, perm_idx , t2);
-    simde__m512i u1 = simde_mm512_permutex2var_epi64(t0, perm_idxB, t2); 
-    simde__m512i u2 = simde_mm512_permutex2var_epi64(t1, perm_idx , t3);
-    simde__m512i u3 = simde_mm512_permutex2var_epi64(t1, perm_idxB, t3);
-    simde__m512i u4 = simde_mm512_permutex2var_epi64(t4, perm_idx , t6);
-    simde__m512i u5 = simde_mm512_permutex2var_epi64(t4, perm_idxB, t6);
-    simde__m512i u6 = simde_mm512_permutex2var_epi64(t5, perm_idx , t7);
-    simde__m512i u7 = simde_mm512_permutex2var_epi64(t5, perm_idxB, t7);
+//     simde__m512i u0 = simde_mm512_permutex2var_epi64(t0, perm_idx , t2);
+//     simde__m512i u1 = simde_mm512_permutex2var_epi64(t0, perm_idxB, t2); 
+//     simde__m512i u2 = simde_mm512_permutex2var_epi64(t1, perm_idx , t3);
+//     simde__m512i u3 = simde_mm512_permutex2var_epi64(t1, perm_idxB, t3);
+//     simde__m512i u4 = simde_mm512_permutex2var_epi64(t4, perm_idx , t6);
+//     simde__m512i u5 = simde_mm512_permutex2var_epi64(t4, perm_idxB, t6);
+//     simde__m512i u6 = simde_mm512_permutex2var_epi64(t5, perm_idx , t7);
+//     simde__m512i u7 = simde_mm512_permutex2var_epi64(t5, perm_idxB, t7);
 
-    simde__m256i u0_lo = simde_mm512_extracti64x4_epi64(u0, 0); // lower 256-bit of u0
-    simde__m256i u0_hi = simde_mm512_extracti64x4_epi64(u0, 1); // upper 256-bit of u0
-    simde__m256i u1_lo = simde_mm512_extracti64x4_epi64(u1, 0);
-    simde__m256i u1_hi = simde_mm512_extracti64x4_epi64(u1, 1);
-    simde__m256i u2_lo = simde_mm512_extracti64x4_epi64(u2, 0);
-    simde__m256i u2_hi = simde_mm512_extracti64x4_epi64(u2, 1);
-    simde__m256i u3_lo = simde_mm512_extracti64x4_epi64(u3, 0);
-    simde__m256i u3_hi = simde_mm512_extracti64x4_epi64(u3, 1);
-    simde__m256i u4_lo = simde_mm512_extracti64x4_epi64(u4, 0);
-    simde__m256i u4_hi = simde_mm512_extracti64x4_epi64(u4, 1);
-    simde__m256i u5_lo = simde_mm512_extracti64x4_epi64(u5, 0);
-    simde__m256i u5_hi = simde_mm512_extracti64x4_epi64(u5, 1);
-    simde__m256i u6_lo = simde_mm512_extracti64x4_epi64(u6, 0);
-    simde__m256i u6_hi = simde_mm512_extracti64x4_epi64(u6, 1);
-    simde__m256i u7_lo = simde_mm512_extracti64x4_epi64(u7, 0);
-    simde__m256i u7_hi = simde_mm512_extracti64x4_epi64(u7, 1);
+//     simde__m256i u0_lo = simde_mm512_extracti64x4_epi64(u0, 0); // lower 256-bit of u0
+//     simde__m256i u0_hi = simde_mm512_extracti64x4_epi64(u0, 1); // upper 256-bit of u0
+//     simde__m256i u1_lo = simde_mm512_extracti64x4_epi64(u1, 0);
+//     simde__m256i u1_hi = simde_mm512_extracti64x4_epi64(u1, 1);
+//     simde__m256i u2_lo = simde_mm512_extracti64x4_epi64(u2, 0);
+//     simde__m256i u2_hi = simde_mm512_extracti64x4_epi64(u2, 1);
+//     simde__m256i u3_lo = simde_mm512_extracti64x4_epi64(u3, 0);
+//     simde__m256i u3_hi = simde_mm512_extracti64x4_epi64(u3, 1);
+//     simde__m256i u4_lo = simde_mm512_extracti64x4_epi64(u4, 0);
+//     simde__m256i u4_hi = simde_mm512_extracti64x4_epi64(u4, 1);
+//     simde__m256i u5_lo = simde_mm512_extracti64x4_epi64(u5, 0);
+//     simde__m256i u5_hi = simde_mm512_extracti64x4_epi64(u5, 1);
+//     simde__m256i u6_lo = simde_mm512_extracti64x4_epi64(u6, 0);
+//     simde__m256i u6_hi = simde_mm512_extracti64x4_epi64(u6, 1);
+//     simde__m256i u7_lo = simde_mm512_extracti64x4_epi64(u7, 0);
+//     simde__m256i u7_hi = simde_mm512_extracti64x4_epi64(u7, 1);
 
-    simde__m512i final0 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u0_lo), u4_lo, 1);
-    simde__m512i final1 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u2_lo), u6_lo, 1);
-    simde__m512i final2 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u1_lo), u5_lo, 1);
-    simde__m512i final3 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u3_lo), u7_lo, 1);
-    simde__m512i final4 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u0_hi), u4_hi, 1);
-    simde__m512i final5 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u2_hi), u6_hi, 1);
-    simde__m512i final6 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u1_hi), u5_hi, 1);
-    simde__m512i final7 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u3_hi), u7_hi, 1);
+//     simde__m512i final0 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u0_lo), u4_lo, 1);
+//     simde__m512i final1 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u2_lo), u6_lo, 1);
+//     simde__m512i final2 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u1_lo), u5_lo, 1);
+//     simde__m512i final3 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u3_lo), u7_lo, 1);
+//     simde__m512i final4 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u0_hi), u4_hi, 1);
+//     simde__m512i final5 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u2_hi), u6_hi, 1);
+//     simde__m512i final6 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u1_hi), u5_hi, 1);
+//     simde__m512i final7 = simde_mm512_inserti64x4(simde_mm512_castsi256_si512(u3_hi), u7_hi, 1);
 
-    // Store the transposed rows
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 0 * out_stride), final0);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 1 * out_stride), final1);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 2 * out_stride), final2);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 3 * out_stride), final3);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 4 * out_stride), final4);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 5 * out_stride), final5);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 6 * out_stride), final6);
-    simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 7 * out_stride), final7);
-}
+//     // Store the transposed rows
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 0 * out_stride), final0);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 1 * out_stride), final1);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 2 * out_stride), final2);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 3 * out_stride), final3);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 4 * out_stride), final4);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 5 * out_stride), final5);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 6 * out_stride), final6);
+//     simde_mm512_store_si512(reinterpret_cast<simde__m512i*>(out + 7 * out_stride), final7);
+// }
 
 
 #undef NT_MAKE_LOAD_STRIDE_IDX_

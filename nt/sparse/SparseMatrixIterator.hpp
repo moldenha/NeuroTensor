@@ -4,7 +4,6 @@
 #include "SparseDataMatrix.h"
 #include <iterator>
 #include <type_traits>
-#include <unistd.h>
 #include <vector>
 
 namespace nt{
