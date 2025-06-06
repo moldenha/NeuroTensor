@@ -33,7 +33,7 @@ namespace nt{
     #define BOOST_MP_STANDALONE
 #endif // BOOST_MP_STANDALONE 
 #include <boost/multiprecision/cpp_bin_float.hpp>
-#include <boost/multiprecision/float128,hpp>
+#include <boost/multiprecision/float128.hpp>
 #include <boost/multiprecision/number.hpp>
 #include <cmath>  // for std::signbit
 namespace nt{
