@@ -36,8 +36,8 @@ void _min(ArrayVoid& out, std::vector<ArrayVoid>& arrvds){
 
     out.execute_function<WRAP_DTYPES<NumberTypesL> >([&arrvds](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-        size_t numel = arrvds.size();
-        NT_VLA(value_t, iterators, numel);
+        const size_t numel = arrvds.size();
+        NT_VLA(value_t*, iterators, numel);
         // value_t* iterators[numel];
         size_t i;
         for(i = 0; i < numel; ++i){
@@ -61,8 +61,8 @@ void _max(ArrayVoid& out, std::vector<ArrayVoid>& arrvds){
 
     out.execute_function<WRAP_DTYPES<NumberTypesL> >([&arrvds](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-        size_t numel = arrvds.size();
-        NT_VLA(value_t, iterators, numel);
+        const size_t numel = arrvds.size();
+        NT_VLA(value_t*, iterators, numel);
         // value_t* iterators[numel];
         size_t i;
         for(i = 0; i < numel; ++i){

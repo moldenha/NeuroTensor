@@ -5,7 +5,10 @@
 
 #ifndef __NT_FUNCTION_NAME__
     #if defined(_MSC_VER) //microsoft visual studios
-        #define __NT_FUNCTION_NAME__ __func__
+        // on MSVC this is not allowed outside of the function body
+        // But, the function name is not relied on by anything critical other than printing
+        // So it is fine for now
+        #define __NT_FUNCTION_NAME__ "MSVCUnknown"
     #elif defined(_WIN32) || defined(_WIN64)  // Windows
         #define __NT_FUNCTION_NAME__   __FUNCTION__
     #elif defined(__GNUC__) || defined(__clang__)  // GCC or Clang (Linux/macOS)
