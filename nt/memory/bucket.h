@@ -31,8 +31,8 @@ class Bucket;
 //          or it will clone that specific memory
 
 class Bucket{
-	nt::intrusive_ptr<DeviceHolder> buckets_; //buckets of contiguous memory
-	nt::intrusive_ptr<void*[]> strides_; //void* to store beggining and end
+	intrusive_ptr<DeviceHolder> buckets_; //buckets of contiguous memory
+	intrusive_ptr<void*[]> strides_; //void* to store beggining and end
 					   //or to store in terms of just pointing to specific pointers
 					   // (more memory efficient for more random indexing)
 	const int64_t stride_size; // holds the size of the strides_
@@ -61,11 +61,11 @@ class Bucket{
 	uint64_t getBucketSize(const uint64_t bucket_index) const;
 
 	template<typename Buck>
-	static void processCatData(const Buck& b, std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_ptr<void*[]> nStrides, uint64_t& stride_index);
+	static void processCatData(const Buck& b, std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_ptr<void*[]> nStrides, uint64_t& stride_index);
 	template<typename First>
-	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_ptr<void*[]>& nStrides,  uint64_t& stride_index, const First& first);
+	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_ptr<void*[]>& nStrides,  uint64_t& stride_index, const First& first);
 	template<typename First, typename... Rest>
-	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_ptr<void*[]>& nStrides, uint64_t& stride_index, const First& first, const Rest&... rest);
+	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_ptr<void*[]>& nStrides, uint64_t& stride_index, const First& first, const Rest&... rest);
 
 	static Bucket catV(const std::vector<Bucket>& buckets);
 	static Bucket catV(const std::vector<std::reference_wrapper<const Bucket> >& buckets);
@@ -141,17 +141,17 @@ class Bucket{
 		}
 		template<typename T>
 		inline T* begin_contiguous(){
-			nt::utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
+			utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
 			return reinterpret_cast<T*>(data_ptr());
 		}
 		template<typename T>
 		inline T* end_contiguous(){
-			nt::utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
+			utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
 			return reinterpret_cast<T*>(data_ptr_end());
 		}
 		template<typename T>
 		inline BucketIterator_blocked<T> begin_blocked(){
-			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
+			utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
 			return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_begin()), 
 					                 reinterpret_cast<T*>(data_ptr()), 
 							 stride_size/2-1, 0); 
@@ -159,7 +159,7 @@ class Bucket{
 		}
 		template<typename T>
 		inline BucketIterator_blocked<T> end_blocked(){
-			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
+			utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
 			if(stride_size == 0){
 				return BucketIterator_blocked<T>(reinterpret_cast<T**>(stride_end()),
 					reinterpret_cast<T*>(data_ptr_end()), 
@@ -172,35 +172,35 @@ class Bucket{
 		}
 		template<typename T>
 		inline BucketIterator_list<T> begin_list(){
-			nt::utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
+			utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
 			return BucketIterator_list<T>(reinterpret_cast<T**>(stride_begin()));
 		}
 		template<typename T>
 		inline BucketIterator_list<T> end_list(){
-			nt::utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
+			utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
 			return BucketIterator_list<T>(reinterpret_cast<T**>(stride_end()));
 		}
 
 		template<typename T>
 		inline const T* cbegin_contiguous() const{
-			nt::utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
+			utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
 			return reinterpret_cast<const T*>(data_ptr());
 		}
 		template<typename T>
 		inline const T* cend_contiguous() const{
-			nt::utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
+			utils::throw_exception(iterator_type() == 1, "Expected data to be contiguous to use contiguous iterator");
 			return reinterpret_cast<const T*>(data_ptr_end());
 		}
 		template<typename T>
 		inline BucketIterator_blocked<const T> cbegin_blocked() const{
-			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
+			utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
 			return BucketIterator_blocked<const T>(reinterpret_cast<T**>(stride_begin()), 
 					                 reinterpret_cast<const T*>(data_ptr()), 
 							stride_size/2-1, 0); // bs is just stride_size / 2  
 		}
 		template<typename T>
 		inline BucketIterator_blocked<const T> cend_blocked() const{
-			nt::utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
+			utils::throw_exception(iterator_type() == 2, "Expected data to be blocked to use blocked iterator");
 			if(stride_size == 0){return BucketIterator_blocked<const T>(
 					reinterpret_cast<T**>(stride_end()),
 					 reinterpret_cast<const T*>(data_ptr_end()), 
@@ -211,12 +211,12 @@ class Bucket{
 		}
 		template<typename T>
 		inline BucketIterator_list<const T> cbegin_list() const {
-			nt::utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
+			utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
 			return BucketIterator_list<const T>(reinterpret_cast<T**>(stride_begin()));
 		}
 		template<typename T>
 		inline BucketIterator_list<const T> cend_list() const {
-			nt::utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
+			utils::throw_exception(iterator_type() == 3, "Expected data to be entirely bucketed to use list iterator");
 			return BucketIterator_list<const T>(reinterpret_cast<T**>(stride_end()));
 		}
 		template<size_t i, typename T, typename = std::enable_if_t<i == 1> >
@@ -356,7 +356,7 @@ class Bucket{
 		//strides are not initialized, and is inteaded to be filled in by the user
 		//it is now going to be assumed that it is no longer blocked
 		inline Bucket new_stride_size(int64_t n_stride_size, bool is_blocked=false) const {
-			return Bucket(buckets_, nt::intrusive_ptr<void*[]>(n_stride_size), n_stride_size, bs, is_blocked, dtype);
+			return Bucket(buckets_, intrusive_ptr<void*[]>(n_stride_size), n_stride_size, bs, is_blocked, dtype);
 		}
 		Bucket copy_strides() const;
 };

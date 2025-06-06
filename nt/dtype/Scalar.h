@@ -112,7 +112,7 @@ class Scalar{
         Scalar(half_float::detail::expr val)
         :dtype(DType::Float16)
         {v.d = static_cast<decltype(v.d)>(double(val));} 
-        
+#endif 
         Scalar(std::string);
 
 		bool isComplex() const;
