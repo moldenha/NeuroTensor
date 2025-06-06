@@ -37,22 +37,22 @@ class optional_tensor{
 			if(!has_value()){return nullptr;}
 			return &tensor->tensor;
 		}
-		inline constexpr Tensor* operator->() noexcept{
+		inline Tensor* operator->() noexcept{
 			if(!has_value()){return nullptr;}
 			return &tensor->tensor;
 		}
-		inline constexpr const Tensor& operator*() const& noexcept{
+		inline const Tensor& operator*() const& noexcept{
 			return tensor->tensor;
 		}
-		inline constexpr Tensor& operator*() & noexcept{
+		inline Tensor& operator*() & noexcept{
 			return tensor->tensor;
 		}
 
-		inline constexpr const Tensor& value() const&{
+		inline const Tensor& value() const&{
 			if(!has_value()){throw bad_optional_access();}
 			return tensor->tensor;
 		}
-		inline constexpr Tensor& value() &{
+		inline Tensor& value() &{
 			if(!has_value()){throw bad_optional_access();}
 			return tensor->tensor;
 		}
@@ -67,7 +67,7 @@ class optional_tensor{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) &{
+		inline auto and_then(F&& f) &{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
@@ -75,7 +75,7 @@ class optional_tensor{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) const&{
+		inline auto and_then(F&& f) const&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
@@ -83,7 +83,7 @@ class optional_tensor{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) &&{
+		inline auto and_then(F&& f) &&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else

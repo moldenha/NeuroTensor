@@ -47,22 +47,22 @@ class optional_string{
 			if(!has_value()){return nullptr;}
 			return &str->value;
 		}
-		inline constexpr std::string* operator->() noexcept{
+		inline std::string* operator->() noexcept{
 			if(!has_value()){return nullptr;}
 			return &str->value;
 		}
-		inline constexpr const std::string& operator*() const& noexcept{
+		inline const std::string& operator*() const& noexcept{
 			return str->value;
 		}
-		inline constexpr std::string& operator*() & noexcept{
+		inline std::string& operator*() & noexcept{
 			return str->value;
 		}
 
-		inline constexpr const std::string& value() const&{
+		inline const std::string& value() const&{
 			if(!has_value()){throw bad_optional_access();}
 			return str->value;
 		}
-		inline constexpr std::string& value() &{
+		inline std::string& value() &{
 			if(!has_value()){throw bad_optional_access();}
 			return str->value;
 		}
@@ -77,7 +77,7 @@ class optional_string{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) &{
+		inline auto and_then(F&& f) &{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
@@ -85,7 +85,7 @@ class optional_string{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) const&{
+		inline auto and_then(F&& f) const&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
@@ -93,7 +93,7 @@ class optional_string{
 		}
 
 		template<class F>
-		inline constexpr auto and_then(F&& f) &&{
+		inline auto and_then(F&& f) &&{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
