@@ -37,15 +37,17 @@ class my_complex;
 namespace nt{
 
 namespace details{
+// Base template: default is false
 template<typename T>
-struct is_sub_my_complex : std::false_type;
+struct is_sub_my_complex : std::false_type {};
 
+// Specialization for my_complex<U>
 template<typename U>
-struct is_sub_my_complex<my_complex<U>> : std::true_type;
+struct is_sub_my_complex<my_complex<U>> : std::true_type {};
 
+// Specialization for std::complex<U>
 template<typename U>
-struct is_sub_my_complex<std::complex<U>> : std::true_type;
-
+struct is_sub_my_complex<std::complex<U>> : std::true_type {};
 }
 template<typename T>
 class my_complex{
@@ -81,14 +83,14 @@ class my_complex{
         template<typename U, std::enable_if_t<std::is_convertible_v<U, T> && 
                                              !std::is_same_v<T, U> && 
                                              !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>)
-                                             && !details::is_sub_my_complex<U>, int> = 0>
+                                             && !details::is_sub_my_complex<U>::value, int> = 0>
         my_complex(const U& ele) : re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
 
 #else
         template<typename U, std::enable_if_t<!std::is_same_v<T, U>, int> = 0>
         my_complex(const U& real, const U& imag) : re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
         
-        template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !details::is_sub_my_complex<U>, int> = 0>
+        template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !details::is_sub_my_complex<U>::value, int> = 0>
         my_complex(const U& ele) : re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
 
 #endif
