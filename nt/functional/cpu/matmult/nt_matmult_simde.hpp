@@ -301,6 +301,10 @@ inline constexpr void second_loop_direct_1(mp::simde_type<T>& aVec, const T* A, 
 //this is the version for when b_cols > mp::pack_size_v<T>;
 template<typename T, size_t ADDITION>
 void matmult_simdeT_directly_threaded(const T* A, const T* B, T* C, const size_t& src_c_cols, const size_t& b_cols, const size_t& a_rows){
+    static_assert(sizeof(T) > 0, "Unsupported type matmult_simdeT_directly_threaded [1]")
+    static_assert(mp::pack_size_v<T> >= 1, "Unsupported type matmult_simdeT_directly_threaded [2]"); 
+    static_assert(tile_size_v<T> >= 1, "Unsupported type matmult_simdeT_directly_threaded [3]"); 
+    static_assert(mp::simde_supported_v<T>, "Unsupported type matmult_simdeT_directly_threaded [4]"); 
 	//going to load all the row elements from B into vectors and store them in an array
 	constexpr size_t tile_size = tile_size_v<T>; //this is going to be the rows and collumns of both A and B
 	constexpr size_t pack_size = mp::pack_size_v<T>;

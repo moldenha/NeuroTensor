@@ -133,7 +133,7 @@ SizeRef::SizeRef(std::nullptr_t)
 bool SizeRef::operator==(const SizeRef &Arr) const {return _sizes == Arr._sizes;}
 bool SizeRef::operator!=(const SizeRef &Arr) const {return _sizes != Arr._sizes;}
 const typename SizeRef::value_type* SizeRef::data() const {return _sizes.data();}
-size_t SizeRef::size() const {return _sizes.size();}
+typename SizeRef::value_type SizeRef::size() const {return static_cast<typename SizeRef::value_type>(_sizes.size());}
 const typename SizeRef::value_type& SizeRef::front() const {return _sizes.front();}
 const typename SizeRef::value_type& SizeRef::back() const {return _sizes.back();}
 typename SizeRef::ArrayRefInt::iterator SizeRef::begin() const {return _sizes.begin();}

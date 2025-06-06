@@ -57,7 +57,7 @@ class SizeRef{
 	    bool operator==(const SizeRef&) const;
 		bool operator!=(const SizeRef&) const;
 		const value_type* data() const;
-		size_t size() const;
+		value_type size() const;
 		const value_type& front() const;
 		const value_type& back() const;
 		ArrayRefInt::iterator begin() const;

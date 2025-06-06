@@ -1,5 +1,9 @@
 #ifndef _NT_MATMULT_HPP_
 #define _NT_MATMULT_HPP_
+#ifdef _MSC_VER
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#endif
+
 #include <iostream>
 #include <string.h>
 #include <random>

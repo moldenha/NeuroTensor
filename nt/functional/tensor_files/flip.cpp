@@ -22,7 +22,7 @@ void reverse_manual(const std::uintptr_t* input, std::uintptr_t* output, int64_t
 #if defined(SIMDE_X86_AVX512F_NATIVE) || defined(__arm64__)
 void reverse_intrinsics(const int64_t* input, int64_t* output, int64_t size) {
     int64_t i = 0;
-    constexpr size_t simd_width = 8;
+    constexpr int64_t simd_width = 8;
     static simde__m512i idx = simde_mm512_setr_epi64(7, 6, 5, 4, 3, 2, 1, 0);
     // Reverse in chunks of 4
     for (; i + simd_width <= size; i += simd_width) {
@@ -40,7 +40,7 @@ void reverse_intrinsics(const int64_t* input, int64_t* output, int64_t size) {
 #else 
 void reverse_intrinsics(const int64_t* input, int64_t* output, int64_t size) {
     int64_t i = 0;
-    constexpr size_t simd_width = 4;
+    constexpr int64_t simd_width = 4;
     static simde__m256i idx = simde_mm256_setr_epi64x(3, 2, 1, 0);
     // Reverse in chunks of 4
     for (; i + simd_width <= size; i += simd_width) {

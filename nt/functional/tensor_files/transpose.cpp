@@ -494,8 +494,8 @@ void transpose_any_manual(void** _in, void** _out,
     int64_t total_inner = total_size / batches;
     tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
     [&](const tbb::blocked_range2d<int64_t>& range){
-    const ptr_type* in = __in + (range.rows().begin() * total_inner);
-    ptr_type* out = __out + (range.rows().begin() * total_inner);
+    const ptr_type* in = &__in[(range.rows().begin() * total_inner)];
+    ptr_type* out = &__out[(range.rows().begin() * total_inner)];
     for(int64_t b = range.rows().begin(); b < range.rows().end(); ++b){
         for(int64_t i = range.cols().begin(); i < range.cols().end(); ++i){
             int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
@@ -606,8 +606,8 @@ void permute(void** _in, void** _out,
     int64_t total_inner = total_size / batches;
     tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
     [&](const tbb::blocked_range2d<int64_t>& range){
-    const ptr_type* in = __in + (total_inner * range.rows().begin());
-    ptr_type* out = __out + (total_inner * range.rows().begin());
+    const ptr_type* in = &__in[(total_inner * range.rows().begin())];
+    ptr_type* out = &__out[(total_inner * range.rows().begin())];
     for(int64_t b = range.rows().begin(); b != range.rows().end(); ++b){
         for(int64_t i = range.cols().begin(); i !=  range.cols().end(); ++i){
             int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
