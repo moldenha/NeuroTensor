@@ -24,14 +24,22 @@
 
 
 //just easier to have in one place so I don't have to modify 16 files in case the matmult function is ever decided to be changed
+
 #define _NT_DECLARE_MATMULT_TYPE_CPP_(type)\
 	template void nt_matmult<type>(const type* A, const type* B, type* C, int64_t a_rows, int64_t a_cols, int64_t b_rows, int64_t b_cols, bool transpose_a, bool transpose_b);\
 	template void nt_matmult_batch<type>(const type** A, const type** B, type** C, int64_t batches, int64_t a_rows, int64_t a_cols, int64_t b_rows, int64_t b_cols, bool transpose_a, bool transpose_b);
 
 //routes for when simd support is there for the type
+
+// #if defined(_MSC_VER) && defined(_WIN32)
+//     #define NT_MATMULT_DECLARE_STATIC_BLOCK__(type)\
+//         static alignas(64) type blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
+//         static alignas(64) type blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
+// #else
+
 #define _NT_MATMULT_DECLARE_STATIC_BLOCK_(type)\
-	static type alignas(64) blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
-	static type alignas(64) blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
+	static alignas(64) type blockA_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];
+	static alignas(64) type blockB_packed_##type[_NT_MATMULT_ENSURE_ALIGNMENT_(type, 64, tile_size_v<type> * _NT_MATMULT_NTHREADS_ * tile_size_v<type> * _NT_MATMULT_NTHREADS_)];\
 	template<>\
 	type* get_blockA_packed<type>(){\
 		return blockA_packed_##type;\
