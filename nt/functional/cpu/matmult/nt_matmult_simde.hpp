@@ -299,22 +299,20 @@ inline constexpr void second_loop_direct_1(mp::simde_type<T>& aVec, const T* A, 
 //takes the amount of rows in a to process
 //and the amount of collumns in b to process
 //this is the version for when b_cols > mp::pack_size_v<T>;
-template<typename T, size_t ADDITION>
+template<typename T, typename simde_type, size_t ADDITION, size_t tile_size, size_t pack_size>
 void matmult_simdeT_directly_threaded(const T* A, const T* B, T* C, const size_t& src_c_cols, const size_t& b_cols, const size_t& a_rows){
-    static_assert(sizeof(T) > 0, "Unsupported type matmult_simdeT_directly_threaded [1]");
-    static_assert(mp::pack_size_v<T> >= 1, "Unsupported type matmult_simdeT_directly_threaded [2]"); 
-    static_assert(tile_size_v<T> >= 1, "Unsupported type matmult_simdeT_directly_threaded [3]"); 
-    static_assert(mp::simde_supported_v<T>, "Unsupported type matmult_simdeT_directly_threaded [4]"); 
+    // static_assert(sizeof(T) > 0, "Unsupported type matmult_simdeT_directly_threaded [1]");
+    // static_assert(pack_size >= 1, "Unsupported type matmult_simdeT_directly_threaded [2]"); 
+    // static_assert(tile_size >= 1, "Unsupported type matmult_simdeT_directly_threaded [3]"); 
 	//going to load all the row elements from B into vectors and store them in an array
-	constexpr size_t tile_size = tile_size_v<T>; //this is going to be the rows and collumns of both A and B
-	constexpr size_t pack_size = mp::pack_size_v<T>;
-	constexpr size_t rowB_size = tile_size / mp::pack_size_v<T>;
+	//constexpr size_t tile_size = tile_size_v<T>; //this is going to be the rows and collumns of both A and B
+	constexpr size_t rowB_size = tile_size / pack_size;
 	constexpr size_t total_row_elements = tile_size * rowB_size;
 	/* std::cout << "src c cols: "<<src_c_cols << " b_cols: "<<b_cols<< " a_rows: "<<a_rows<<std::endl; */
 
 	//instead total_c_row_elements is going to be 2 * tile_size (2 is per row, and tile_size is a_rows, 
 	//there is just going to be a switch statement to see exactly how many are loaded)
-	mp::simde_type<T> rowCs[tile_size * 2];
+    simde_type rowCs[tile_size * 2];
 	mp::mask_type mask;
 	if(b_cols != tile_size){
 		if(b_cols < pack_size){
@@ -331,11 +329,11 @@ void matmult_simdeT_directly_threaded(const T* A, const T* B, T* C, const size_t
 	//same except that b cols are guarenteed to be tile_size (not pack_size)
 	//therefore there is nothing to skip per row
 NT_GCC_IGNORE_IGNORED_ATTRIBUTES_PUSH	
-    const std::array<mp::simde_type<T>, total_row_elements> rowBs = load_threaded_row_elements_skip<T, ADDITION, 0>(
+    const std::array<simde_type, total_row_elements> rowBs = load_threaded_row_elements_skip<T, ADDITION, 0>(
 								B, std::make_index_sequence<total_row_elements>{});
 NT_GCC_IGNORE_IGNORED_ATTRIBUTES_POP
 	//the loading of the rows stays generally the same
-	mp::simde_type<T> aVector;
+	simde_type aVector;
 	//and running the loops directly is a little different
 	//this is where the dot products happen
 	for(size_t i = 0; i < a_rows; ++i){

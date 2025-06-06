@@ -1,6 +1,11 @@
 #ifndef _NT_MY_TYPES_H_
 #define _NT_MY_TYPES_H_
 
+namespace nt{
+template<typename T>
+class my_complex;
+}
+
 //#if defined(_HALF_FLOAT_SUPPORT_) && defined(_128_FLOAT_SUPPORT_) && defined(__SIZEOF_INT128__)
 //silence depreciation warnings for certain needed headers
 #ifdef _MSC_VER
@@ -31,6 +36,17 @@
 
 namespace nt{
 
+namespace details{
+template<typename T>
+struct is_sub_my_complex : std::false_type;
+
+template<typename U>
+struct is_sub_my_complex<my_complex<U>> : std::true_type;
+
+template<typename U>
+struct is_sub_my_complex<std::complex<U>> : std::true_type;
+
+}
 template<typename T>
 class my_complex{
 		T re, im;
@@ -64,14 +80,15 @@ class my_complex{
 
         template<typename U, std::enable_if_t<std::is_convertible_v<U, T> && 
                                              !std::is_same_v<T, U> && 
-                                             !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>), int> = 0>
+                                             !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>)
+                                             && !details::is_sub_my_complex<U>, int> = 0>
         my_complex(const U& ele) : re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
 
 #else
         template<typename U, std::enable_if_t<!std::is_same_v<T, U>, int> = 0>
         my_complex(const U& real, const U& imag) : re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
         
-        template<typename U, std::enable_if_t<!std::is_same_v<T, U>, int> = 0>
+        template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !details::is_sub_my_complex<U>, int> = 0>
         my_complex(const U& ele) : re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
 
 #endif
