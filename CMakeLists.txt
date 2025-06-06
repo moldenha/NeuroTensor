@@ -53,13 +53,13 @@ include_directories(
 
 
 # Include NIfTI macros
-include(third_party/nifti_clib/cmake/nifti_macros.cmake)
+include(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/cmake/nifti_macros.cmake)
 
 # Add znzlib for compressed NIfTI support
-add_subdirectory(third_party/nifti_clib/znzlib)
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib)
 
 # Add NIfTI core library (creates niftiio target)
-add_subdirectory(third_party/nifti_clib/niftilib)
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib)
 
 set(CORE_SOURCES
     nt/refs/ArrayRef.cpp

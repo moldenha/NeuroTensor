@@ -36,7 +36,7 @@ elseif(ENABLE_ASAN)
 endif()
 
 #these files will automatically detect and add the correct simd instruction set
-include(detect_simd.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/detect_simd.cmake)
 
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_PARALLEL -march=native")
