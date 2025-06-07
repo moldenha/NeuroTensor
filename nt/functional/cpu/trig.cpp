@@ -146,7 +146,7 @@ inline void func_name(T begin, T end, O out){\
 
 #define _NT_MAKE_INV_INLINE_FUNC_(operation, name)\
 template<typename T>\
-inline T _nt_##name(T element) noexcept {return 1.0/operation(element);}
+inline T _nt_##name(T element) noexcept {return T(1)/operation(element);}
 
 
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tanh, tanh, std::tanh);
@@ -252,9 +252,10 @@ template<typename T, typename U>
 inline void dasin(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
+    base_type base__one(1);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base__one);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
@@ -264,10 +265,10 @@ inline void dasin(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = 1.0 / std::sqrt(1.0 - (*begin * *begin));
+			*out = base__one / std::sqrt(base__one - (*begin * *begin));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / std::sqrt(1.0 - (*begin * *begin));
+			*out = base__one / std::sqrt(base__one - (*begin * *begin));
         }
 	}
 }
@@ -277,9 +278,11 @@ template<typename T, typename U>
 inline void dacos(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
+    base_type base__one(1);
+    base_type base__NGone(-1);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base__one);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
@@ -290,10 +293,10 @@ inline void dacos(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = -1.0 / std::sqrt(1.0 - (*begin * *begin));
+			*out = base__NGone / std::sqrt(base__one - (*begin * *begin));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = -1.0 / std::sqrt(1.0 - (*begin * *begin));
+			*out = base__NGone / std::sqrt(base__one - (*begin * *begin));
         }
 	}
 }
@@ -302,9 +305,10 @@ template<typename T, typename U>
 inline void datan(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
+    base_type base__one(1);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base__one);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
@@ -314,10 +318,10 @@ inline void datan(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = 1.0 / (1.0 + (*begin * *begin));
+			*out = base__one / (base__one + (*begin * *begin));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / (1.0 + (*begin * *begin));
+			*out = base__one / (base__one + (*begin * *begin));
         }
 	}
 }
@@ -326,9 +330,10 @@ template<typename T, typename U>
 inline void dasinh(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
+    base_type base__one(1);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(base_type(1.0)));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base__one);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
@@ -338,10 +343,10 @@ inline void dasinh(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = 1.0 / std::sqrt((*begin * *begin) + 1.0);
+			*out = base__one / std::sqrt((*begin * *begin) + base__one);
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / std::sqrt((*begin * *begin) + 1.0);
+			*out = base__one / std::sqrt((*begin * *begin) + base__one);
         }
 	}
 }
@@ -351,9 +356,10 @@ template<typename T, typename U>
 inline void dacosh(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
+    base_type base__one(1)
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base__one);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
@@ -363,10 +369,10 @@ inline void dacosh(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = 1.0 / std::sqrt((*begin * *begin) - 1.0);
+			*out = base__one / std::sqrt((*begin * *begin) - base__one);
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / std::sqrt((*begin * *begin) - 1.0);
+			*out = base__one / std::sqrt((*begin * *begin) - base__one);
         }
 	}
 }
@@ -376,9 +382,10 @@ template<typename T, typename U>
 inline void datanh(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
+    base_type base__one(1);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base__one);
 
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
@@ -388,10 +395,10 @@ inline void datanh(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = 1.0 / (1.0 - (*begin * *begin));
+			*out = base__one / (base__one - (*begin * *begin));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / (1.0 - (*begin * *begin));
+			*out = base__one / (base__one - (*begin * *begin));
         }
 	}
 }

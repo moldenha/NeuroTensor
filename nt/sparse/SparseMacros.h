@@ -2,6 +2,25 @@
 #define __NT_SPARSE_MACROS_H__
 #include "../utils/numargs_macro.h"
 
+#if defined(__GNUC__)
+  #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wvariadic-macros\"")
+
+  #define NT_SUPPRESS_VA_ARGS_WARNING_POP \
+    _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER) && defined(_WIN32)
+    #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH\
+        __pragma(warning(push))\
+        __pragma(warning(disable:C5100))
+  #define NT_SUPPRESS_VA_ARGS_WARNING_POP \
+        __pragma(warning(pop))
+#else
+  #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH
+  #define NT_SUPPRESS_VA_ARGS_WARNING_POP
+#endif
+
+NT_SUPPRESS_VA_ARGS_WARNING_PUSH
 
 #define _NT_SPARSE_RUN_SINGLE_FUNCTION_EMPTY_1(func, begin, end, __VA_ARGS__) func(begin, end)
 #define _NT_SPARSE_RUN_SINGLE_FUNCTION_EMPTY_0(func, begin, end, ...) func(begin, end, __VA_ARGS__)
@@ -174,5 +193,9 @@
     }
 
 
+NT_SUPPRESS_VA_ARGS_WARNING_POP
+
+#undef NT_SUPPRESS_VA_ARGS_WARNING_PUSH
+#undef NT_SUPPRESS_VA_ARGS_WARNING_POP
 
 #endif

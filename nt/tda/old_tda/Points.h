@@ -166,7 +166,8 @@ inline bool operator<(const Point& p1, const Point& p2){
 
 inline std::ostream& operator<<(std::ostream& os, const Point& p){
 	os << '(';
-	for(size_t i = 0; i < p.size()-1; ++i)
+    size_t p_size_max = static_cast<size_t>(p.size()-1);
+	for(size_t i = 0; i < p_size_max; ++i)
 		os << p[i]<<',';
 	return os << p.back() << ')';
 }
@@ -177,7 +178,7 @@ inline std::ostream& operator<<(std::ostream& os, const Point& p){
 inline double point_distance(const Point& p1, const Point& p2) {
 	utils::throw_exception(p1.size() == p2.size(), "Expected to get points of same dimension but got $d and $d", p1.size(), p2.size());
 	int64_t sum = 0;
-	for(size_t i = 0; i < p1.size(); ++i)
+	for(int64_t i = 0; i < p1.size(); ++i)
 		sum += ((p1[i] - p2[i]) * (p1[i] - p2[i]));
 	return std::sqrt(static_cast<double>(sum));
 }

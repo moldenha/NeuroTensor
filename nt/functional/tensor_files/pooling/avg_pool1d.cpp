@@ -106,7 +106,8 @@ Tensor backward_avg_pool1d_ceil(SizeRef in_shape, Tensor output_grad, int64_t ke
     strided += dl_dp.expand_as(strided);
     if(padding > 0){
         std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
-        for(int64_t i = 0; i < ranges.size()-1; ++i){
+        int64_t r_size = static_cast<int64_t>(ranges.size()-1);
+        for(int64_t i = 0; i < r_size; ++i){
             ranges[i].end = in_shape[i];
         }
         ranges.back() = my_range(padding, in_shape[-1]-(padding+mod));
@@ -114,7 +115,8 @@ Tensor backward_avg_pool1d_ceil(SizeRef in_shape, Tensor output_grad, int64_t ke
 
     }
     std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
-    for(int64_t i = 0; i < ranges.size()-1; ++i){
+    int64_t r_size = static_cast<int64_t>(ranges.size()-1);
+    for(int64_t i = 0; i < r_size; ++i){
         ranges[i].end = in_shape[i];
     }
     ranges.back() = my_range(0, in_shape[-1]-mod);
@@ -150,7 +152,8 @@ Tensor backward_avg_pool1d(SizeRef in_shape, Tensor output_grad, int64_t kernel_
         strided += (output_grad / kernel_size).expand_as(strided);
         if(padding == 0) return std::move(grad);
         std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
-        for(int64_t i = 0; i < ranges.size()-1; ++i){
+        int64_t r_size = static_cast<int64_t>(ranges.size()-1);
+        for(int64_t i = 0; i < r_size; ++i){
             ranges[i].end = in_shape[i];
         }
         ranges.back() = my_range(padding, in_shape[-1]-padding);
@@ -173,7 +176,8 @@ Tensor backward_avg_pool1d(SizeRef in_shape, Tensor output_grad, int64_t kernel_
     strided += dl_dp.expand_as(strided);
     if(padding > 0){
         std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
-        for(int64_t i = 0; i < ranges.size()-1; ++i){
+        int64_t r_size = static_cast<int64_t>(ranges.size()-1);
+        for(int64_t i = 0; i < r_size; ++i){
             ranges[i].end = in_shape[i];
         }
         ranges.back() = my_range(padding, in_shape[-1]-(padding));

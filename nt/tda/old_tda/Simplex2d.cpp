@@ -98,7 +98,7 @@ simplexes_2d::simplexes_2d(const points_2d& points, int64_t radius){
 	int64_t checked = 0;
 	std::vector<std::vector<Point2d > > all_radi(all_points.size());
 	for(;cbegin != cend; ++cbegin, ++checked){
-		utils::printProgressBar(checked, all_points.size());
+		utils::printProgressBar(static_cast<uint32_t>(checked), static_cast<uint32_t>(all_points.size()));
 		/* std::cout << checked<<"/"<<all_points.size()<<std::endl; */
 		all_radi[checked] = points.in_radius_vec(*cbegin, radius);
 		
@@ -209,7 +209,7 @@ simplexes_2d::simplexes_2d(const points_2d& points, int64_t radius_high, int64_t
 	all_radi.reserve(all_points.size());
 
 	for(;cbegin != cend; ++cbegin, ++checked){
-		utils::printProgressBar(checked, all_points.size());
+		utils::printProgressBar(static_cast<uint32_t>(checked), static_cast<uint32_t>(all_points.size()));
 		/* std::cout << checked<<"/"<<all_points.size()<<std::endl; */
 		all_radi.push_back(points.in_radius_vec(*cbegin, radius_high, radius_low));
 	}
@@ -230,7 +230,7 @@ simplexes_2d::simplexes_2d(const points_2d& points, int64_t radius_high, int64_t
 	tbb::parallel_for(b,
 			[&](const tbb::blocked_range<size_t>& range) {
 			check.fetch_add(range.end()-range.begin(), std::memory_order_relaxed);
-			utils::printThreadingProgressBar(check.load(), all_points.size());
+			utils::printThreadingProgressBar(static_cast<uint32_t>(check.load()), static_cast<uint32_t>(all_points.size()));
 			/* std::cout << "doing "<<range.begin()<<" to "<<range.end()<<" "<<range.grainsize()<<std::endl; */
 			auto m_begin = all_radi.cbegin() + range.begin();
 			auto m_end = all_radi.cbegin() + range.end();
@@ -371,7 +371,7 @@ simplexes_2d::simplexes_2d(const points_2d& points, int64_t radius_high, int64_t
 	all_radi.reserve(all_points.size());
 
 	for(;cbegin != cend; ++cbegin, ++checked){
-		utils::printProgressBar(checked, all_points.size());
+		utils::printProgressBar(static_cast<uint32_t>(checked), static_cast<uint32_t>(all_points.size()));
 		/* std::cout << checked<<"/"<<all_points.size()<<std::endl; */
 		all_radi.push_back(points.in_radius_filtered(*cbegin, radius_high, radius_low));
 	}
@@ -428,7 +428,7 @@ simplexes_2d::simplexes_2d(const points_2d& points, int64_t radius_high, int64_t
 	tbb::parallel_for(b,
 			[&](const tbb::blocked_range<size_t>& range) {
 			check.fetch_add(range.end()-range.begin(), std::memory_order_relaxed);
-			utils::printThreadingProgressBar(check.load(), all_points.size());
+			utils::printThreadingProgressBar(static_cast<uint32_t>(check.load()), static_cast<uint32_t>(all_points.size()));
 			/* std::cout << "doing "<<range.begin()<<" to "<<range.end()<<" "<<range.grainsize()<<std::endl; */
 			auto m_begin = all_radi.cbegin() + range.begin();
 			auto m_end = all_radi.cbegin() + range.end();
@@ -476,7 +476,7 @@ simplexes_2d::simplexes_2d(const points_2d& points, int64_t radius_high, int64_t
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, this->simplex_map.size()),
 			[&](const auto& range) {
 			check.fetch_add(range.end()-range.begin(), std::memory_order_relaxed);
-			utils::printThreadingProgressBar(check.load(), this->simplex_map.size());
+			utils::printThreadingProgressBar(static_cast<uint32_t>(check.load()), static_cast<uint32_t>(this->simplex_map.size()));
 			auto it = begin;
 			std::advance(it, range.begin());
 			auto end = begin;

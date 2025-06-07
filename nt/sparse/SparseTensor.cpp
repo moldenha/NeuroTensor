@@ -3,6 +3,7 @@
 #include "../dtype/ArrayVoid.hpp"
 #include "SparseTensor.h"
 #include "../utils/utils.h"
+#include "../utils/macros.h"
 #include <vector>
 #include <cstdlib>
 
@@ -59,7 +60,8 @@ const void* SparseTensor::_get(std::vector<size_value_t> xs) const {
             "When getting indices from a sparse tensor, must get a single scalar",
             dims(), xs.size());
 
-    for (size_value_t i = 0; i < xs.size(); ++i) {
+    size_value_t xs_size = static_cast<size_value_t>(xs.size());
+    for (size_value_t i = 0; i < xs_size; ++i) {
         xs[i] = xs[i] < 0 ? xs[i] + dims() : xs[i];
     }
 
@@ -84,7 +86,8 @@ void* SparseTensor::_set(std::vector<size_value_t> xs) {
             "When getting indices from a sparse tensor, must get a single scalar",
             dims(), xs.size());
 
-    for (size_value_t i = 0; i < xs.size(); ++i) {
+    size_value_t xs_size = static_cast<size_value_t>(xs.size());
+    for (size_value_t i = 0; i < xs_size; ++i) {
         xs[i] = xs[i] < 0 ? xs[i] + dims() : xs[i];
     }
 
@@ -174,7 +177,8 @@ SparseTensor::SparseTensor(Tensor indices, Tensor values, SizeRef sh, DType dt, 
     std::copy(s.begin(), s.end(), ns.begin());
 
     // keeping track of each int64_t pointer for the indexing
-    const size_value_t *ptrs[dims()];
+    NT_VLA(const size_value_t*, ptrs, dims());
+    // const size_value_t *ptrs[dims()];
     size_value_t i = 0;
     for (; begin != end; ++begin, ++i) {
         ptrs[i] = reinterpret_cast<const int64_t *>(begin->data_ptr());
@@ -201,6 +205,7 @@ SparseTensor::SparseTensor(Tensor indices, Tensor values, SizeRef sh, DType dt, 
         }
 
     });
+    NT_VLA_DEALC(ptrs);
     
 }
 
@@ -266,7 +271,8 @@ SparseTensor& SparseTensor::set(Tensor indices, Tensor values){
     std::copy(s.begin(), s.end(), ns.begin());
 
     // keeping track of each int64_t pointer for the indexing
-    const size_value_t *ptrs[dims()];
+    NT_VLA(const size_value_t*, ptrs, dims());
+    // const size_value_t *ptrs[dims()];
     size_value_t i = 0;
     for (; begin != end; ++begin, ++i) {
         ptrs[i] = reinterpret_cast<const int64_t *>(begin->data_ptr());
@@ -293,6 +299,7 @@ SparseTensor& SparseTensor::set(Tensor indices, Tensor values){
         }
 
     });
+    NT_VLA_DEALC(ptrs);
     return *this;
 }
 //this needs to be updated to work like t[indices] = values;

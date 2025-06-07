@@ -87,9 +87,10 @@ Simplexes::Simplexes(const BasisOverlapping& balls, int64_t on_dim)
         }
         return;
     }
+    size_t on_dim_comp = static_cast<size_t>(on_dim);
     for(const auto& point : balls.points){
         std::vector<Basis> connected = balls.getConnected(point);
-        if(connected.size() < on_dim)
+        if(connected.size() < on_dim_comp)
             continue;
         // std::cout << "connected size is "<<connected.size()<<std::endl;
         // std::cout << "simplex dim is "<<simplex_dim<<std::endl;

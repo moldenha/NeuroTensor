@@ -579,4 +579,8 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 
 
 NT_SUPPRESS_VA_ARGS_WARNING_POP
+#undef NT_SUPPRESS_VA_ARGS_WARNING_PUSH
+#undef NT_SUPPRESS_VA_ARGS_WARNING_POP
+
+
 #endif

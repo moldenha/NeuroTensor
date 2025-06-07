@@ -201,7 +201,7 @@ inline void Dsoftmax(T softmax_output, T softmax_output_end,
         "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	V end_out = out + (softmax_output - softmax_output_end);
-    base_type dot(0.0);
+    base_type dot(0);
     dot = inner_product(softmax_output, softmax_output_end,  dL_dY_begin, dot);
     subtract_num(dL_dY_begin, dL_dY_end, out, dot);
     multiply(softmax_output,softmax_output_end, out, out); 
