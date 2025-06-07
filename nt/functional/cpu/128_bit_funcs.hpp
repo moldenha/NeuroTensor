@@ -92,7 +92,7 @@ inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){
     return ::nt::convert::convert<::nt::int128_t>(__r);
 }
 
-NT_MAKE_LARGE_STD_FUNCTION_ROUTE(uint128_t)
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t)
 inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){
     long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
     long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));

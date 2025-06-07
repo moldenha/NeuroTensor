@@ -545,7 +545,8 @@ void transpose_row_col(void** _in, void** _out, std::vector<int64_t> shape){
     const int64_t in_rows = shape[shape.size()-2];
     const int64_t in_cols = shape[shape.size()-1];
     int64_t batches = 1;
-    for(int64_t b = 0; b < shape.size()-2; ++b){
+    int64_t shape_size_two = static_cast<int64_t>(shape.size()-2);
+    for(int64_t b = 0; b < shape_size_two; ++b){
         batches *= shape[b];
     }
 #ifndef _MSC_VER
@@ -670,7 +671,7 @@ void permute(void** _in, void** _out,
 
 SizeRef squeeze_and_adjust_transpose(std::vector<Tensor::size_value_t> size_vec, Tensor::size_value_t& a, Tensor::size_value_t& b){
     //a < b
-    for(int i = size_vec.size()-1; i >= 0; --i){
+    for(int32_t i = static_cast<int32_t>(size_vec.size()-1); i >= 0; --i){
         if(size_vec[i] != 1) continue;
         if(i > b) continue;
         b = (b == 0) ? 0 : b-1;
@@ -739,7 +740,8 @@ Tensor permute(const Tensor& _this, std::vector<Tensor::size_value_t> Perm){
     int64_t ndim = _this.dims();
     for(size_t i = 0; i < Perm.size(); ++i)
         Perm[i] = (Perm[i] < 0 ? Perm[i] + ndim : Perm[i]);
-    while(Perm.size() < ndim){
+    size_t n_dim_sizet = static_cast<size_t>(ndim);
+    while(Perm.size() < n_dim_sizet){
         Perm.push_back(Perm.size()-1);
     }
     for(size_t i = 0; i < Perm.size(); ++i){

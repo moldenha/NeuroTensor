@@ -32,7 +32,8 @@ void reverse_intrinsics(const int64_t* input, int64_t* output, int64_t size) {
     }
 
     // Handle the tail (if size not divisible by 8)
-    for (size_t j = 0; j < size % simd_width; ++j) {
+    int64_t max_j_var = size % simd_width;
+    for (int64_t j = 0; j < max_j_var; ++j) {
         output[j] = input[size - 1 - j];
     }
 }
