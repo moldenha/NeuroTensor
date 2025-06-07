@@ -13,7 +13,7 @@
 
 namespace std{
 
-
+#ifdef SIMDE_FLOAT16_IS_SCALAR
 #define NT_MAKE_FUNCTION_COMPATIBILITY(func_name)\
 inline ::nt::my_complex<float> func_name(::nt::my_complex<float> num) noexcept {\
     return ::nt::my_complex<float>(func_name(num.real()), func_name(num.imag()));\
@@ -30,9 +30,33 @@ inline ::nt::my_complex<::nt::float16_t> func_name(::nt::my_complex<::nt::float1
 }\
 \
 
+
+#else
+
+//ADL error because of the half_float::detail function names
+//look at <nt/types/float16.h> for how this was properly handled with std::pow
+//and after there were no ambiguity errors
+#define NT_MAKE_FUNCTION_COMPATIBILITY(func_name)\
+inline ::nt::my_complex<float> func_name(::nt::my_complex<float> num) noexcept {\
+    return ::nt::my_complex<float>(func_name(num.real()), func_name(num.imag()));\
+}\
+inline ::nt::my_complex<double> func_name(::nt::my_complex<double> num) noexcept {\
+    return ::nt::my_complex<double>(func_name(num.real()), func_name(num.imag()));\
+}\
+inline ::nt::float16_t func_name(half_float::half num){\
+    return half_float::half(half_float::detail::func_name(num));\
+}\
+inline ::nt::my_complex<::nt::float16_t> func_name(::nt::my_complex<::nt::float16_t> num) noexcept {\
+    return ::nt::my_complex<::nt::float16_t>(half_float::half(half_float::detail::func_name(num.real())), half_float::half(half_float::detail::func_name(num.imag())));\
+}\
+\
+
+#endif
 NT_MAKE_FUNCTION_COMPATIBILITY(asinh);
 NT_MAKE_FUNCTION_COMPATIBILITY(acosh);
 NT_MAKE_FUNCTION_COMPATIBILITY(atanh);
+
+#undef NT_MAKE_FUNCTION_COMPATIBILITY 
 
 }
 
