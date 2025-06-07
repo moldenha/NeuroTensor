@@ -269,7 +269,8 @@ class Tensor final{
 				s[neg_index] = _total_size / n;
 			}
 			std::vector<size_value_t> n_shape(s.size());
-			for(size_value_t i = 0; i < s.size(); ++i)
+            size_value_t n_shape_size = static_cast<size_value_t>(s.size());
+			for(size_value_t i = 0; i < n_shape_size; ++i)
 				n_shape[i] = s[i];
 			return view(SizeRef(std::move(n_shape)));
 		}

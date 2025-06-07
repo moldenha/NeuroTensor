@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#endif
+
 #include "utils.h"
 
 #include <cstddef>
@@ -53,18 +57,18 @@ int64_t meta_memory_allocated = 0;
 
 void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string add, uint32_t width) {
     float percentage = static_cast<float>(progress) / total;
-    int numChars = static_cast<int>(percentage * width);
+    uint32_t numChars = static_cast<uint32_t>(percentage * width);
 
     static tbb::mutex printMutex;
     tbb::mutex::scoped_lock lock(printMutex);
     std::cout << "\r[";
-    for (int i = 0; i < numChars; ++i) {
+    for (uint32_t i = 0; i < numChars; ++i) {
         std::cout << "=";
     }
-    for (int i = numChars; i < width; ++i) {
+    for (uint32_t i = numChars; i < width; ++i) {
         std::cout << " ";
     }
-    std::cout << "] " << static_cast<int>(percentage * 100.0) << "% "<<progress<<'/'<<total << add;
+    std::cout << "] " << static_cast<uint32_t>(percentage * 100.0) << "% "<<progress<<'/'<<total << add;
     std::cout.flush();
     lock.release();
 }
@@ -76,26 +80,26 @@ void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string ad
 
 void printProgressBar(uint32_t progress, uint32_t total, std::string add, uint32_t width) {
     float percentage = static_cast<float>(progress) / total;
-    int numChars = static_cast<int>(percentage * width);
+    uint32_t numChars = static_cast<uint32_t>(percentage * width);
 
     std::cout << "\r[";
-    for (int i = 0; i < numChars; ++i) {
+    for (uint32_t i = 0; i < numChars; ++i) {
         std::cout << "=";
     }
-    for (int i = numChars; i < width; ++i) {
+    for (uint32_t i = numChars; i < width; ++i) {
         std::cout << " ";
     }
-    std::cout << "] " << static_cast<int>(percentage * 100.0) << "% "<<progress<<'/'<<total << add;
+    std::cout << "] " << static_cast<uint32_t>(percentage * 100.0) << "% "<<progress<<'/'<<total << add;
     std::cout.flush();
 }
 
 void beginDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width){
 	std::cout << "[";
-	for(int i = 0; i < width; ++i)
+	for(uint32_t i = 0; i < width; ++i)
 		std::cout << ' ';
 	std::cout << "] 0% 0/"<<total_a << "\n";
 	std::cout << "[";
-	for(int i = 0; i < width; ++i)
+	for(uint32_t i = 0; i < width; ++i)
 		std::cout << ' ';
 	std::cout << "] 0% 0/"<<total_b;
 	std::cout.flush();

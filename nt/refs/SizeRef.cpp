@@ -1,3 +1,6 @@
+#ifdef _MSC_VER
+#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#endif
 #include "SizeRef.h"
 #include "ArrayRef.h"
 
@@ -180,7 +183,8 @@ typename SizeRef::value_type SizeRef::unsigned_multiply(value_type i) const {
 
 SizeRef SizeRef::permute(const std::vector<value_type> &Vec) const {
 	auto outp = this->Vec();
-	for(value_type i = 0; i < _sizes.size(); ++i){
+    value_type max_size = static_cast<value_type>(_sizes.size());
+	for(value_type i = 0; i < max_size; ++i){
 		outp[i] = _sizes[Vec[i]];
 	}
 	return SizeRef(std::move(outp));
@@ -291,7 +295,7 @@ SizeRef SizeRef::flatten(value_type _a, value_type _b) const{
 	value_type n_dims = size() - (end - begin) + 1;
 	ArrayRefInt n_vals = ArrayRefInt::zeros(n_dims); 
 	std::copy(cbegin(), cbegin() + begin, n_vals.d_data());
-	n_vals[begin] = std::accumulate<typename SizeRef::ArrayRefInt::const_iterator, value_type>(cbegin() + begin, cbegin() + end, 1.0, std::multiplies<value_t>());
+	n_vals[begin] = static_cast<vlaue_t>(std::accumulate<typename SizeRef::ArrayRefInt::const_iterator, value_type>(cbegin() + begin, cbegin() + end, 1.0, std::multiplies<value_t>()));
 	std::copy(cbegin() + end, cend(), n_vals.d_data() + begin + 1);
 	return SizeRef(std::move(n_vals));
 }
@@ -324,7 +328,8 @@ std::vector<typename SizeRef::value_type> SizeRef::Vec() const{
 
 std::ostream& operator<< (std::ostream &out, const SizeRef& obj) {
 	out << '{';
-	for(SizeRef::value_type i = 0; i < obj._sizes.size() - 1; ++i)
+     SizeRef::value_type max_size = static_cast<SizeRef::value_type>(obj._sizes.size()) - 1;
+	for(SizeRef::value_type i = 0; i < max_size; ++i)
 		out << obj._sizes[i] << ',';
 	out << obj.back() << '}';
 	return out;

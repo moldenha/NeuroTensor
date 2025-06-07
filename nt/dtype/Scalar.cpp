@@ -138,11 +138,11 @@ void Scalar::init_from(const T& vv){
     }else if constexpr(std::is_same_v<T, uint_bool_t>){
         dtype = DType::Bool;
         v.i = (vv == true) ? 1 : 0;
-    }else if constexpr(is_dtype_floating<type_to_dtype<T>>){
+    }else if constexpr(is_dtype_floating_v<type_to_dtype<T>>){
         v.d = convert::convert<decltype(v.d)>(vv);
-    }else if constexpr(is_dtype_integer<type_to_dtype<T>>){
+    }else if constexpr(is_dtype_integer_v<type_to_dtype<T>>){
         v.i = convert::convert<decltype(v.i)>(vv);
-    }else if constexpr(is_dtype_complex<type_to_dtype<T>>){
+    }else if constexpr(is_dtype_complex_v<type_to_dtype<T>>){
         v.c = convert::convert<decltype(v.c)>(vv);
     }
 }
@@ -283,7 +283,7 @@ Scalar::Scalar(std::string _str)
         }
         catch (const std::invalid_argument& e) {
             // If conversion fails, throw an exception
-            utils::throw_exception(false, "Unsupported string to scalar: $", _str);
+            utils::throw_exception(false, "Unsupported string to scalar: $ (reason: $)", _str, e.what());
         }
     }
 }
