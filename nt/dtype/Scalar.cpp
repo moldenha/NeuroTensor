@@ -130,6 +130,7 @@ Scalar& Scalar::operator=(const Scalar &s){
 
 template<typename T>
 void Scalar::init_from(const T& vv){
+    using DTypeFuncs;
     this->dtype = type_to_dtype<T>; 
     if constexpr (std::is_same_v<T, bool>){
         dtype = DType::Bool;
@@ -137,11 +138,11 @@ void Scalar::init_from(const T& vv){
     }else if constexpr(std::is_same_v<T, uint_bool_t>){
         dtype = DType::Bool;
         v.i = (vv == true) ? 1 : 0;
-    }else if constexpr(DTypeFuncs::is_dtype_floating<type_to_dtype<T>>){
+    }else if constexpr(is_dtype_floating<type_to_dtype<T>>){
         v.d = convert::convert<decltype(v.d)>(vv);
-    }else if constexpr(DTypeFuncs::is_dtype_integer<type_to_dtype<T>>){
+    }else if constexpr(is_dtype_integer<type_to_dtype<T>>){
         v.i = convert::convert<decltype(v.i)>(vv);
-    }else if constexpr(DTypeFuncs::is_dtype_complex<type_to_dtype<T>>){
+    }else if constexpr(is_dtype_complex<type_to_dtype<T>>){
         v.c = convert::convert<decltype(v.c)>(vv);
     }
 }
