@@ -1,0 +1,73 @@
+name: Build and Package NeuroTensor (Release)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            ext: tar.gz
+          - os: windows-latest
+            arch: x86_64
+            ext: zip
+          - os: macos-latest
+            arch: x86_64
+            ext: tar.gz
+          - os: macos-latest
+            arch: arm64
+            ext: tar.gz
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+      - name: Configure CMake (macOS)
+        if: matrix.os == 'macos-latest'
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=install
+          -DBUILD_MAIN=OFF
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+
+      - name: Configure CMake (others)
+        if: matrix.os != 'macos-latest'
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=install
+          -DBUILD_MAIN=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Install
+        run: cmake --install build --prefix package-out
+
+      - name: Package artifacts
+        run: |
+          cd package-out
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            7z a ../neurotensor-${{ matrix.os }}-${{ matrix.arch }}.zip *
+          else
+            tar -czvf ../neurotensor-${{ matrix.os }}-${{ matrix.arch }}.tar.gz *
+          fi
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            neurotensor-${{ matrix.system }}-${{ matrix.arch }}-${{ github.ref_name }}.${{ matrix.ext }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

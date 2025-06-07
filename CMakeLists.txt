@@ -387,7 +387,9 @@ install(TARGETS neurotensor
     RUNTIME DESTINATION bin
 )
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt DESTINATION include)
+file(GLOB_RECURSE NT_HEADERS ${CMAKE_SOURCE_DIR}/nt/*.h ${CMAKE_SOURCE_DIR}/nt/*.hpp)
+install(FILES ${NT_HEADERS} DESTINATION include/nt)
+# install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt DESTINATION include)
 
 # Set RPATH for runtime
 # MKL Usage depreciated, so this is no longer needed

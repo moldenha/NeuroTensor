@@ -75,7 +75,8 @@ __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, asin)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, acos)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, tan)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sin)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, cos)
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, cos)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sqrt)
 
 #ifdef __SIZEOF_INT128__
 NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t, int64_t)
@@ -268,7 +269,7 @@ inline void dasin(T begin, T end, U out){
 			*out = base_type(1) / std::sqrt(base_type(1) - (*begin * *begin));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = base_type(1) / std::sqrt(base_type(1) - (*begin * *begin));
+			*out = 1.0 / std::sqrt(1.0 - (*begin * *begin));
         }
 	}
 }
@@ -279,7 +280,6 @@ inline void dacos(T begin, T end, U out){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
-    base_type base__NGone(-1);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
 		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1));
@@ -293,10 +293,10 @@ inline void dacos(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = base__NGone / std::sqrt(base_type(1) - (*begin * *begin));
+			*out = base_type(-1) / std::sqrt(base_type(1) - (*begin * *begin));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = base__NGone / std::sqrt(base_type(1) - (*begin * *begin));
+			*out = -1.0 / std::sqrt(1.0 - (*begin * *begin));
         }
 	}
 }
@@ -346,7 +346,7 @@ inline void dasinh(T begin, T end, U out){
 			*out = base_type(1) / std::sqrt((*begin * *begin) + base_type(1));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = base_type(1) / std::sqrt((*begin * *begin) + base_type(1));
+			*out = 1.0 / std::sqrt((*begin * *begin) + 1.0);
         }
 	}
 }
@@ -372,7 +372,7 @@ inline void dacosh(T begin, T end, U out){
 			*out = base_type(1) / std::sqrt((*begin * *begin) - base_type(1));
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = base_type(1) / std::sqrt((*begin * *begin) - base_type(1));
+			*out = 1.0 / std::sqrt((*begin * *begin) - 1.0);
         }
 	}
 }

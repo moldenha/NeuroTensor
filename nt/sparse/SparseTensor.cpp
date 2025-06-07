@@ -338,7 +338,8 @@ SparseTensor& SparseTensor::set(Tensor indices, Scalar value){
     std::copy(s.begin(), s.end(), ns.begin());
 
     // keeping track of each int64_t pointer for the indexing
-    const size_value_t *ptrs[dims()];
+    NT_VLA(const size_value_t*, ptrs, dims());
+    // const size_value_t *ptrs[dims()];
     size_value_t i = 0;
     for (; begin != end; ++begin, ++i) {
         ptrs[i] = reinterpret_cast<const int64_t *>(begin->data_ptr());
@@ -366,6 +367,7 @@ SparseTensor& SparseTensor::set(Tensor indices, Scalar value){
         }
 
     });
+    NT_VLA_DEALC(ptrs);
     return *this;
 }
 
