@@ -211,7 +211,7 @@ template<> int128_t convert<DType::int128>(const uint8_t& v){return static_cast<
 template<> int128_t convert<DType::int128>(const Tensor& v){return v.toScalar().to<int128_t>();}
 template<> int128_t convert<DType::int128>(const uint_bool_t& v){return static_cast<int128_t>(v.value);}
 template<> int128_t convert<DType::int128>(const bool &v){return int128_t(0 ? v : 1);}
-#else
+// #else
 // int128_t float32_to_int128(float value) {
 //     // Handle special cases
 //     if (std::isnan(value)) {
@@ -308,55 +308,55 @@ template<> uint128_t convert<DType::uint128>(const uint8_t& v){return static_cas
 template<> uint128_t convert<DType::uint128>(const Tensor& v){return v.toScalar().to<uint128_t>();}
 template<> uint128_t convert<DType::uint128>(const uint_bool_t& v){return static_cast<uint128_t>(v.value);}
 template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ? v : 1);}
-#else
+// #else
 
-uint128_t float32_to_uint128(float value) {
-    // Handle special cases
-    if (std::isnan(value)) {
-        throw std::invalid_argument("Cannot convert NaN to uint128");
-    }
-    if (std::isinf(value)) {
-        throw std::overflow_error("Cannot convert infinity to uint128");
-    }
-    if (value > static_cast<float>(std::numeric_limits<uint128_t>::max())) {
-        throw std::overflow_error("Float value is too large for uint128");
-    }
-    if (value < static_cast<float>(std::numeric_limits<uint128_t>::min())) {
-        throw std::overflow_error("Float value is too small for uint128");
-    }
+// uint128_t float32_to_uint128(float value) {
+//     // Handle special cases
+//     if (std::isnan(value)) {
+//         throw std::invalid_argument("Cannot convert NaN to uint128");
+//     }
+//     if (std::isinf(value)) {
+//         throw std::overflow_error("Cannot convert infinity to uint128");
+//     }
+//     if (value > static_cast<float>(std::numeric_limits<uint128_t>::max())) {
+//         throw std::overflow_error("Float value is too large for uint128");
+//     }
+//     if (value < static_cast<float>(std::numeric_limits<uint128_t>::min())) {
+//         throw std::overflow_error("Float value is too small for uint128");
+//     }
 
-    // Convert the float to int128
-    return uint128_t(value);
-}
-template<> uint128_t convert<DType::uint128>(const float& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const double& v){return uint128_t(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
-template<> uint128_t convert<DType::uint128>(const float16_t& v){
-	return float32_to_uint128(convert<DType::Float32>(v));
-}
-template<> uint128_t convert<DType::uint128>(const complex_32& v){
-	return float32_to_uint128(convert<DType::Float32>(v));
-}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> uint128_t convert<DType::uint128>(const float128_t& v){return uint128_t(v);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> uint128_t convert<DType::uint128>(const int128_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const uint128_t& v){return v;}
-#endif
-template<> uint128_t convert<DType::uint128>(const complex_64& v){return uint128_t(v.real());}
-template<> uint128_t convert<DType::uint128>(const complex_128& v){return uint128_t(v.real());}
-template<> uint128_t convert<DType::uint128>(const int64_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const int32_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const uint32_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const int16_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const uint16_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const int8_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const uint8_t& v){return uint128_t(v);}
-template<> uint128_t convert<DType::uint128>(const Tensor& v){return v.toScalar().to<uint128_t>();}
-template<> uint128_t convert<DType::uint128>(const uint_bool_t& v){return uint128_t(v.value);}
-template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ? v : 1);}
+//     // Convert the float to int128
+//     return uint128_t(value);
+// }
+// template<> uint128_t convert<DType::uint128>(const float& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const double& v){return uint128_t(v);}
+// #ifdef _HALF_FLOAT_SUPPORT_
+// template<> uint128_t convert<DType::uint128>(const float16_t& v){
+// 	return float32_to_uint128(convert<DType::Float32>(v));
+// }
+// template<> uint128_t convert<DType::uint128>(const complex_32& v){
+// 	return float32_to_uint128(convert<DType::Float32>(v));
+// }
+// #endif
+// #ifdef _128_FLOAT_SUPPORT_
+// template<> uint128_t convert<DType::uint128>(const float128_t& v){return uint128_t(v);}
+// #endif
+// #ifdef __SIZEOF_INT128__
+// template<> uint128_t convert<DType::uint128>(const int128_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const uint128_t& v){return v;}
+// #endif
+// template<> uint128_t convert<DType::uint128>(const complex_64& v){return uint128_t(v.real());}
+// template<> uint128_t convert<DType::uint128>(const complex_128& v){return uint128_t(v.real());}
+// template<> uint128_t convert<DType::uint128>(const int64_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const int32_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const uint32_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const int16_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const uint16_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const int8_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const uint8_t& v){return uint128_t(v);}
+// template<> uint128_t convert<DType::uint128>(const Tensor& v){return v.toScalar().to<uint128_t>();}
+// template<> uint128_t convert<DType::uint128>(const uint_bool_t& v){return uint128_t(v.value);}
+// template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ? v : 1);}
 #endif
 
 template<> complex_32 convert<DType::Complex32>(const float& v){return complex_32(convert<DType::Float16>(v), 0);}
@@ -1017,7 +1017,7 @@ template int128_t convert<int128_t,uint32_t>(const uint32_t&);
 template int128_t convert<int128_t,int64_t>(const int64_t&);
 template int128_t convert<int128_t,uint_bool_t>(const uint_bool_t&);
 template int128_t convert<int128_t,Tensor>(const Tensor&);
-#endif
+
 template uint128_t convert<uint128_t,int128_t>(const int128_t&);
 template uint128_t convert<uint128_t,uint128_t>(const uint128_t&);
 template uint128_t convert<uint128_t,float>(const float&);
@@ -1039,6 +1039,8 @@ template int128_t convert<int128_t,float16_t>(const float16_t&);
 template int128_t convert<int128_t,complex_32>(const complex_32&);
 template uint128_t convert<uint128_t,float16_t>(const float16_t&);
 template uint128_t convert<uint128_t,complex_32>(const complex_32&);
+#endif
+
 
 }
 }
