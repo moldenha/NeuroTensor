@@ -418,10 +418,10 @@ template<> complex_128 convert<DType::Complex128>(const float128_t& v){return co
 #ifdef __SIZEOF_INT128__
 template<> complex_128 convert<DType::Complex128>(const int128_t& v){return complex_128(convert<DType::Double>(v), 0);}
 template<> complex_128 convert<DType::Complex128>(const uint128_t& v){return complex_128(convert<DType::Double>(v), 0);}
-#endif
+#else
 template<> complex_128 convert<DType::Complex128>(const int128_t& v){return complex_128(convert<DType::Double>(int64_t(v)), 0);}
 template<> complex_128 convert<DType::Complex128>(const uint128_t& v){return complex_128(convert<DType::Double>(v), 0);}
-#else
+#endif
 template<> complex_128 convert<DType::Complex128>(const complex_64& v){return complex_128(v);}
 template<> complex_128 convert<DType::Complex128>(const complex_128& v){return v;}
 template<> complex_128 convert<DType::Complex128>(const int64_t& v){return complex_128(static_cast<double>(v), 0);}
@@ -596,7 +596,7 @@ template<> uint_bool_t convert<DType::Bool>(const float16_t& v){return uint_bool
 template<> uint_bool_t convert<DType::Bool>(const complex_32& v){return uint_bool_t(_NT_FLOAT16_TO_FLOAT32_(v.real()) == 1);}
 template<> uint_bool_t convert<DType::Bool>(const float128_t& v){return uint_bool_t(v == float128_t(1));}
 template<> uint_bool_t convert<DType::Bool>(const int128_t& v){return uint_bool_t(v == int128_t(1));}
-template<> uint_bool_t convert<DType::Bool>(const uint128_t& v){return uint_bool_t(v == uint128_t(1_);}
+template<> uint_bool_t convert<DType::Bool>(const uint128_t& v){return uint_bool_t(v == uint128_t(1));}
 template<> uint_bool_t convert<DType::Bool>(const complex_64& v){return uint_bool_t(v.real() == 1);}
 template<> uint_bool_t convert<DType::Bool>(const complex_128& v){return uint_bool_t(v.real() == 1);}
 template<> uint_bool_t convert<DType::Bool>(const int32_t& v){return uint_bool_t(v == 1);}
@@ -945,8 +945,10 @@ template Tensor convert<Tensor,Tensor>(const Tensor&);
 template Tensor convert<Tensor, complex_32>(const complex_32&);
 template Tensor convert<Tensor, float16_t>(const float16_t&);
 template Tensor convert<Tensor, float128_t>(const float128_t&);
+#ifdef __SIZEOF_INT128__
 template Tensor convert<Tensor, int128_t>(const int128_t&);
 template Tensor convert<Tensor, uint128_t>(const uint128_t&);
+#endif
 template float16_t convert<float16_t,float16_t>(const float16_t&);
 template float16_t convert<float16_t,complex_32>(const complex_32&);
 template float16_t convert<float16_t,float>(const float&);
