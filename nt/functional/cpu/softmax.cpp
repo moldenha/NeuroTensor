@@ -238,8 +238,12 @@ void _dsoftmax(const ArrayVoid& softmax_output, const ArrayVoid& dL_dY, ArrayVoi
     if(!out.is_contiguous()){
         softmax_output.cexecute_function<WRAP_DTYPES<NumberTypesL> >([&out](auto begin, auto end, auto begin2){
             using base_type = utils::IteratorBaseType_t<decltype(begin)>;
+#ifdef _MSC_VER
+            out.execute_function<WRAP_DTYPES<DTypeEnum<NumberTypesL> > >([&](auto out_b, auto out_e){
+#else
             constexpr DType dt = DTypeFuncs::type_to_dtype<base_type>;
             out.execute_function<WRAP_DTYPES<DTypeEnum<dt> > >([&](auto out_b, auto out_e){
+#endif
                 mp::Dsoftmax(begin, end, begin2, begin2 + (end-begin), out_b);
             });
             
