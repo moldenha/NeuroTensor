@@ -320,7 +320,7 @@ inline void dinvsqrt(T begin, T end, U out){
 		for(;begin < end; ++begin, ++out){
 		    base_type p = std::pow(*begin, base__Three);
             p = std::sqrt(p);
-            p *= base_Two;
+            p *= base__Two;
             *out = base_type(base__NegOne / p);
         }
 	}else{
