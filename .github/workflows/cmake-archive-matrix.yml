@@ -30,7 +30,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Configure CMake
       - name: Configure CMake (macOS)
         if: matrix.os == 'macos-latest'
         run: >
@@ -54,20 +53,22 @@ jobs:
       - name: Install
         run: cmake --install build --prefix package-out
 
-      - name: Package artifacts
+      - name: Package artifacts (Unix)
+        if: runner.os != 'Windows'
         run: |
           cd package-out
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            7z a ../neurotensor-${{ matrix.os }}-${{ matrix.arch }}.zip *
-          else
-            tar -czvf ../neurotensor-${{ matrix.os }}-${{ matrix.arch }}.tar.gz *
-          fi
+          tar -czvf ../neurotensor-${{ matrix.system }}-${{ matrix.arch }}-${{ github.ref_name }}.tar.gz *
+
+      - name: Package artifacts (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          powershell -Command "Compress-Archive -Path package-out\* -DestinationPath neurotensor-${{ matrix.system }}-${{ matrix.arch }}-${{ github.ref_name }}.zip"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            neurotensor-${{ matrix.system }}-${{ matrix.arch }}-${{ github.ref_name }}.${{ matrix.ext }}
+          files: neurotensor-${{ matrix.system }}-${{ matrix.arch }}-${{ github.ref_name }}.${{ matrix.ext }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 

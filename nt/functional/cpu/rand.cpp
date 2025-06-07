@@ -41,16 +41,16 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 			[&upper, &lower, &gen](auto begin, auto end){
 				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
                 if constexpr (std::is_same_v<value_t, ::nt::uint128_t>){
-                    uint64_t low = lower.to<int64_t>();
-                    uint64_t up = upper.to<int64_t>();
-					std::uniform_int_distribution<uint64_t> dis(low, up);
-					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-                }
-                else if constexpr (sizeof(value_t) >= sizeof(int64_t) && !std::is_same_v<int64_t, value_t> && !std::is_same_v<uint64_t, value_t>){
                     int64_t low = lower.to<int64_t>();
                     int64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<int64_t> dis(low, up);
-					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
+					std::generate(begin, end, [&]() { return convert::convert<::nt::uint128_t>(std::abs(dis(gen))); });
+                }
+                else if constexpr (std::is_same_v<int64_t, ::nt::int128_t>){
+                    int64_t low = lower.to<int64_t>();
+                    int64_t up = upper.to<int64_t>();
+					std::uniform_int_distribution<int64_t> dis(low, up);
+					std::generate(begin, end, [&]() { return convert::convert<::nt::int128_t>(static_cast<int64_t>(dis(gen))); });
                 }
                 else{
                     value_t low = lower.to<value_t>();
@@ -58,31 +58,6 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
                     std::uniform_int_distribution<value_t> dis(low, up);
                     std::generate(begin, end, [&]() { return dis(gen); });
                 }
-// #ifdef __SIZEOF_INT128__
-// 				if constexpr(std::is_same_v<value_t, uint128_t>){
-// 					uint64_t low = lower.to<int64_t>();
-// 					uint64_t up = upper.to<int64_t>();
-// 					std::uniform_int_distribution<uint64_t> dis(low, up);
-// 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-// 				}
-// 				else if(std::is_same_v<value_t, int128_t>){
-// 					int64_t low = lower.to<int64_t>();
-// 					int64_t up = upper.to<int64_t>();
-// 					std::uniform_int_distribution<int64_t> dis(low, up);
-// 					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-// 				}
-// 				else{
-// 					value_t low = lower.to<value_t>();
-// 					value_t up = upper.to<value_t>();
-// 					std::uniform_int_distribution<value_t> dis(low, up);
-// 					std::generate(begin, end, [&]() { return dis(gen); });
-// 				}
-// #else
-// 				value_t low = lower.to<value_t>();
-// 				value_t up = upper.to<value_t>();
-// 				std::uniform_int_distribution<value_t> dis(low, up);
-// 				std::generate(begin, end, [&]() { return dis(gen); });
-// #endif
 			});
 	}
 	else if(DTypeFuncs::is_complex(dt)){
@@ -90,12 +65,11 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 		[&upper, &lower, &gen](auto begin, auto end){
 			using complex_t = utils::IteratorBaseType_t<decltype(begin)>;
 			using value_t = typename complex_t::value_type;
-#ifdef _HALF_FLOAT_SUPPORT_
 			if constexpr (std::is_same_v<value_t, float16_t>){
 				float low = lower.to<float>();
 				float up = upper.to<float>();
 				std::uniform_real_distribution<float> dis(low, up);
-				std::generate(begin, end, [&]() {return complex_t(static_cast<value_t>(std::round(dis(gen))), static_cast<value_t>(std::round(dis(gen))));});
+				std::generate(begin, end, [&]() {return complex_t(_NT_FLOAT32_TO_FLOAT16_(std::round(dis(gen))), _NT_FLOAT32_TO_FLOAT16_(std::round(dis(gen))));});
 			}
 			else{
 				value_t low = lower.to<value_t>();
@@ -103,12 +77,6 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 				std::uniform_real_distribution<value_t> dis(low, up);
 				std::generate(begin, end, [&]() {return complex_t(std::round(dis(gen)), std::round(dis(gen)));}); 
 			}
-#else
-			value_t low = lower.to<value_t>();
-			value_t up = upper.to<value_t>();
-			std::uniform_real_distribution<value_t> dis(low, up);
-			std::generate(begin, end, [&]() {return complex_t(std::round(dis(gen)), std::round(dis(gen)));});
-#endif
 
 		});
 	}
@@ -116,25 +84,24 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 		output.execute_function<WRAP_DTYPES<FloatingTypesL> >(
 		[&upper, &lower, &gen](auto begin, auto end){
 			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-#ifdef _HALF_FLOAT_SUPPORT_
 			if constexpr (std::is_same_v<value_t, float16_t>){
 				float low = lower.to<float>();
 				float up = upper.to<float>();
 				std::uniform_real_distribution<float> dis(low, up);
-				std::generate(begin, end, [&]() {return static_cast<value_t>(std::round(dis(gen)));});
+				std::generate(begin, end, [&]() {return _NT_FLOAT32_TO_FLOAT16_(std::round(dis(gen)));});
 			}
+            else if constexpr(std::is_same_v<value_t, float128_t>){
+				double low = lower.to<double>();
+				double up = upper.to<double>();
+				std::uniform_real_distribution<double> dis(low, up);
+				std::generate(begin, end, [&]() {return convert::convert<float128_t>(std::round(dis(gen)));});
+            }
 			else{
 				value_t low = lower.to<value_t>();
 				value_t up = upper.to<value_t>();
 				std::uniform_real_distribution<value_t> dis(low, up);
 				std::generate(begin, end, [&]() {return std::round(dis(gen));}); 
 			}
-#else
-			value_t low = lower.to<value_t>();
-			value_t up = upper.to<value_t>();
-			std::uniform_real_distribution<value_t> dis(low, up);
-			std::generate(begin, end, [&]() {return std::round(dis(gen));});
-#endif
 		});
 	}
 
@@ -149,23 +116,23 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
 			[&upper, &lower, &gen](auto begin, auto end){
 				using value_t = utils::IteratorBaseType_t<decltype(begin)>;
                 if constexpr (std::is_same_v<value_t, ::nt::uint128_t>){
-					uint64_t low = lower.to<int64_t>();
-					uint64_t up = upper.to<int64_t>();
-					std::uniform_int_distribution<uint64_t> dis(low, up);
-					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
-                }else if constexpr(sizeof(value_t) >= sizeof(int64_t) && !std::is_same_v<int64_t, value_t> && !std::is_same_v<uint64_t, value_t>){
-                    //int128_t
-					int64_t low = lower.to<int64_t>();
-					int64_t up = upper.to<int64_t>();
+                    int64_t low = lower.to<int64_t>();
+                    int64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<int64_t> dis(low, up);
-					std::generate(begin, end, [&]() { return static_cast<value_t>(dis(gen)); });
+					std::generate(begin, end, [&]() { return convert::convert<::nt::uint128_t>(std::abs(dis(gen))); });
                 }
-				else{
-					value_t low = lower.to<value_t>();
-					value_t up = upper.to<value_t>();
-					std::uniform_int_distribution<value_t> dis(low, up);
-					std::generate(begin, end, [&]() { return dis(gen); });
-				}
+                else if constexpr (std::is_same_v<int64_t, ::nt::int128_t>){
+                    int64_t low = lower.to<int64_t>();
+                    int64_t up = upper.to<int64_t>();
+					std::uniform_int_distribution<int64_t> dis(low, up);
+					std::generate(begin, end, [&]() { return convert::convert<::nt::int128_t>(static_cast<int64_t>(dis(gen))); });
+                }
+                else{
+                    value_t low = lower.to<value_t>();
+                    value_t up = upper.to<value_t>();
+                    std::uniform_int_distribution<value_t> dis(low, up);
+                    std::generate(begin, end, [&]() { return dis(gen); });
+                }
 			});
 	}
 	else if(DTypeFuncs::is_complex(dt)){
@@ -173,12 +140,11 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
 		[&upper, &lower, &gen](auto begin, auto end){
 			using complex_t = utils::IteratorBaseType_t<decltype(begin)>;
 			using value_t = typename complex_t::value_type;
-#ifdef _HALF_FLOAT_SUPPORT_
 			if constexpr (std::is_same_v<value_t, float16_t>){
 				float low = lower.to<float>();
 				float up = upper.to<float>();
 				std::uniform_real_distribution<float> dis(low, up);
-				std::generate(begin, end, [&]() {return complex_t(static_cast<value_t>(dis(gen)), static_cast<value_t>(dis(gen)));});
+				std::generate(begin, end, [&]() {return complex_t(_NT_FLOAT32_TO_FLOAT16_(dis(gen)), _NT_FLOAT32_TO_FLOAT16_(dis(gen)));});
 			}
 			else{
 				value_t low = lower.to<value_t>();
@@ -186,12 +152,6 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
 				std::uniform_real_distribution<value_t> dis(low, up);
 				std::generate(begin, end, [&]() {return complex_t(dis(gen), dis(gen));}); 
 			}
-#else
-			value_t low = lower.to<value_t>();
-			value_t up = upper.to<value_t>();
-			std::uniform_real_distribution<value_t> dis(low, up);
-			std::generate(begin, end, [&]() {return complex_t(dis(gen), dis(gen));});
-#endif
 
 		});
 	}
@@ -199,25 +159,24 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
 		output.execute_function<WRAP_DTYPES<FloatingTypesL> >(
 		[&upper, &lower, &gen](auto begin, auto end){
 			using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-#ifdef _HALF_FLOAT_SUPPORT_
 			if constexpr (std::is_same_v<value_t, float16_t>){
 				float low = lower.to<float>();
 				float up = upper.to<float>();
 				std::uniform_real_distribution<float> dis(low, up);
-				std::generate(begin, end, [&]() {return static_cast<value_t>(dis(gen));});
+				std::generate(begin, end, [&]() {return _NT_FLOAT32_TO_FLOAT16_(dis(gen));});
 			}
+            else if constexpr(std::is_same_v<value_t, float128_t>){
+				double low = lower.to<double>();
+				double up = upper.to<double>();
+				std::uniform_real_distribution<double> dis(low, up);
+				std::generate(begin, end, [&]() {return convert::convert<float128_t>(dis(gen));});
+            }
 			else{
 				value_t low = lower.to<value_t>();
 				value_t up = upper.to<value_t>();
 				std::uniform_real_distribution<value_t> dis(low, up);
 				std::generate(begin, end, [&]() {return dis(gen);}); 
 			}
-#else
-			value_t low = lower.to<value_t>();
-			value_t up = upper.to<value_t>();
-			std::uniform_real_distribution<value_t> dis(low, up);
-			std::generate(begin, end, [&]() {return dis(gen);});
-#endif
 		});
 	}
 }
