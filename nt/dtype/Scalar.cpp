@@ -130,7 +130,7 @@ Scalar& Scalar::operator=(const Scalar &s){
 
 template<typename T>
 void Scalar::init_from(const T& vv){
-    using DTypeFuncs;
+    using namespace DTypeFuncs;
     this->dtype = type_to_dtype<T>; 
     if constexpr (std::is_same_v<T, bool>){
         dtype = DType::Bool;
