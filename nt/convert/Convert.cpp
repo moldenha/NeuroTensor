@@ -23,6 +23,9 @@ template<> float16_t convert<DType::Float16>(const float128_t& v){return _NT_FLO
 #ifdef __SIZEOF_INT128__
 template<> float16_t convert<DType::Float16>(const int128_t& v){return _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(v));}
 template<> float16_t convert<DType::Float16>(const uint128_t& v){return _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(v));}
+#else
+template<> float16_t convert<DType::Float16>(const int128_t& v){return _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(int64_t(v)));}
+template<> float16_t convert<DType::Float16>(const uint128_t& v){return _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(uint64_t(v)));}
 #endif
 template<> float16_t convert<DType::Float16>(const complex_64& v){return _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(v.real()));}
 template<> float16_t convert<DType::Float16>(const complex_128& v){return _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(v.real()));}
@@ -51,6 +54,9 @@ template<> float convert<DType::Float32>(const float128_t& v){return static_cast
 #ifdef __SIZEOF_INT128__
 template<> float convert<DType::Float32>(const int128_t& v){return static_cast<float>(v);}
 template<> float convert<DType::Float32>(const uint128_t& v){return static_cast<float>(v);}
+#else
+template<> float convert<DType::Float32>(const int128_t& v){return static_cast<float>(int64_t(v));}
+template<> float convert<DType::Float32>(const uint128_t& v){return static_cast<float>(uint64_t(v));}
 #endif
 template<> float convert<DType::Float32>(const complex_64& v){return v.real();}
 template<> float convert<DType::Float32>(const complex_128& v){return static_cast<float>(v.real());}
@@ -78,6 +84,9 @@ template<> double convert<DType::Float64>(const float128_t& v){return static_cas
 #ifdef __SIZEOF_INT128__
 template<> double convert<DType::Float64>(const int128_t& v){return static_cast<double>(v);}
 template<> double convert<DType::Float64>(const uint128_t& v){return static_cast<double>(v);}
+#else
+template<> double convert<DType::Float64>(const int128_t& v){return static_cast<double>(int64_t(v));}
+template<> double convert<DType::Float64>(const uint128_t& v){return static_cast<double>(uint64_t(v));}
 #endif
 template<> double convert<DType::Float64>(const complex_64& v){return static_cast<double>(v.real());}
 template<> double convert<DType::Float64>(const complex_128& v){return v.real();}
@@ -92,7 +101,8 @@ template<> double convert<DType::Float64>(const Tensor& v){return v.toScalar().t
 template<> double convert<DType::Float64>(const uint_bool_t& v){return static_cast<double>(v.value);}
 template<> double convert<DType::Float64>(const bool &v){return double(0 ? v : 1);}
 
-#ifdef _128_FLOAT_SUPPORT_
+
+#ifndef BOOST_MP_STANDALONE
 template<> float128_t convert<DType::Float128>(const float& v){return static_cast<float128_t>(v);}
 template<> float128_t convert<DType::Float128>(const double& v){return static_cast<float128_t>(v);}
 #ifdef _HALF_FLOAT_SUPPORT_
@@ -105,6 +115,10 @@ template<> float128_t convert<DType::Float128>(const float128_t& v){return v;}
 #ifdef __SIZEOF_INT128__
 template<> float128_t convert<DType::Float128>(const int128_t& v){return static_cast<float128_t>(v);}
 template<> float128_t convert<DType::Float128>(const uint128_t& v){return static_cast<float128_t>(v);}
+#else
+template<> float128_t convert<DType::Float128>(const int128_t& v){return static_cast<float128_t>(int64_t(v));}
+template<> float128_t convert<DType::Float128>(const uint128_t& v){return static_cast<float128_t>(uint64_t(v));}
+
 #endif
 template<> float128_t convert<DType::Float128>(const complex_64& v){return static_cast<float128_t>(v.real());}
 template<> float128_t convert<DType::Float128>(const complex_128& v){return static_cast<float128_t>(v.real());}
@@ -117,6 +131,37 @@ template<> float128_t convert<DType::Float128>(const int8_t& v){return static_ca
 template<> float128_t convert<DType::Float128>(const uint8_t& v){return static_cast<float128_t>(v);}
 template<> float128_t convert<DType::Float128>(const Tensor& v){return v.toScalar().to<float128_t>();}
 template<> float128_t convert<DType::Float128>(const uint_bool_t& v){return static_cast<float128_t>(v.value);}
+template<> float128_t convert<DType::Float128>(const bool &v){return float128_t(0 ? v : 1);}
+#else
+
+template<> float128_t convert<DType::Float128>(const float& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const double& v){return float128_t(v);}
+#ifdef _HALF_FLOAT_SUPPORT_
+template<> float128_t convert<DType::Float128>(const float16_t& v){return float128_t(_NT_FLOAT16_TO_FLOAT32_(v));}
+template<> float128_t convert<DType::Float128>(const complex_32& v){return float128_t(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+#endif
+#ifdef _128_FLOAT_SUPPORT_
+template<> float128_t convert<DType::Float128>(const float128_t& v){return v;}
+#endif
+#ifdef __SIZEOF_INT128__
+template<> float128_t convert<DType::Float128>(const int128_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const uint128_t& v){return float128_t(v);}
+#else
+template<> float128_t convert<DType::Float128>(const int128_t& v){return float128_t(int64_t(v));}
+template<> float128_t convert<DType::Float128>(const uint128_t& v){return float128_t(uint64_t(v));}
+
+#endif
+template<> float128_t convert<DType::Float128>(const complex_64& v){return float128_t(v.real());}
+template<> float128_t convert<DType::Float128>(const complex_128& v){return float128_t(v.real());}
+template<> float128_t convert<DType::Float128>(const int64_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const int32_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const uint32_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const int16_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const uint16_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const int8_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const uint8_t& v){return float128_t(v);}
+template<> float128_t convert<DType::Float128>(const Tensor& v){return v.toScalar().to<float128_t>();}
+template<> float128_t convert<DType::Float128>(const uint_bool_t& v){return float128_t(v.value);}
 template<> float128_t convert<DType::Float128>(const bool &v){return float128_t(0 ? v : 1);}
 #endif
 
@@ -166,6 +211,53 @@ template<> int128_t convert<DType::int128>(const uint8_t& v){return static_cast<
 template<> int128_t convert<DType::int128>(const Tensor& v){return v.toScalar().to<int128_t>();}
 template<> int128_t convert<DType::int128>(const uint_bool_t& v){return static_cast<int128_t>(v.value);}
 template<> int128_t convert<DType::int128>(const bool &v){return int128_t(0 ? v : 1);}
+#else
+// int128_t float32_to_int128(float value) {
+//     // Handle special cases
+//     if (std::isnan(value)) {
+//         throw std::invalid_argument("Cannot convert NaN to int128");
+//     }
+//     if (std::isinf(value)) {
+//         throw std::overflow_error("Cannot convert infinity to int128");
+//     }
+//     if (value > static_cast<float>(std::numeric_limits<int128_t>::max())) {
+//         throw std::overflow_error("Float value is too large for int128");
+//     }
+//     if (value < static_cast<float>(std::numeric_limits<int128_t>::min())) {
+//         throw std::overflow_error("Float value is too small for int128");
+//     }
+
+//     // Convert the float to int128
+//     return int128_t(value);
+// }
+// template<> int128_t convert<DType::int128>(const float& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const double& v){return int128_t(v);}
+// #ifdef _HALF_FLOAT_SUPPORT_
+// template<> int128_t convert<DType::int128>(const float16_t& v){
+// 	return float32_to_int128(convert<DType::Float32>(v));
+// }
+// template<> int128_t convert<DType::int128>(const complex_32& v){
+// 	return float32_to_int128(convert<DType::Float32>(v));
+// }
+// #endif //half float support
+// #ifdef _128_FLOAT_SUPPORT_
+// template<> int128_t convert<DType::int128>(const float128_t& v){return int128_t(v);}
+// #endif //128 bit float support
+// template<> int128_t convert<DType::int128>(const int128_t& v){return v;}
+// template<> int128_t convert<DType::int128>(const uint128_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const complex_64& v){return int128_t(v.real());}
+// template<> int128_t convert<DType::int128>(const complex_128& v){return int128_t(v.real());}
+// template<> int128_t convert<DType::int128>(const int64_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const int32_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const uint32_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const int16_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const uint16_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const int8_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const uint8_t& v){return int128_t(v);}
+// template<> int128_t convert<DType::int128>(const Tensor& v){return int128_t(v.toScalar().to<int64_t>());}
+// template<> int128_t convert<DType::int128>(const uint_bool_t& v){return int128_t(v.value);}
+// template<> int128_t convert<DType::int128>(const bool &v){return int128_t(0 ? v : 1);}
+
 #endif
 
 #ifdef __SIZEOF_INT128__
@@ -216,22 +308,68 @@ template<> uint128_t convert<DType::uint128>(const uint8_t& v){return static_cas
 template<> uint128_t convert<DType::uint128>(const Tensor& v){return v.toScalar().to<uint128_t>();}
 template<> uint128_t convert<DType::uint128>(const uint_bool_t& v){return static_cast<uint128_t>(v.value);}
 template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ? v : 1);}
-#endif
+#else
 
+uint128_t float32_to_uint128(float value) {
+    // Handle special cases
+    if (std::isnan(value)) {
+        throw std::invalid_argument("Cannot convert NaN to uint128");
+    }
+    if (std::isinf(value)) {
+        throw std::overflow_error("Cannot convert infinity to uint128");
+    }
+    if (value > static_cast<float>(std::numeric_limits<uint128_t>::max())) {
+        throw std::overflow_error("Float value is too large for uint128");
+    }
+    if (value < static_cast<float>(std::numeric_limits<uint128_t>::min())) {
+        throw std::overflow_error("Float value is too small for uint128");
+    }
+
+    // Convert the float to int128
+    return uint128_t(value);
+}
+template<> uint128_t convert<DType::uint128>(const float& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const double& v){return uint128_t(v);}
 #ifdef _HALF_FLOAT_SUPPORT_
-template<> complex_32 convert<DType::Complex32>(const float& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const double& v){return complex_32(convert<DType::Float16>(v), 0);}
-#ifdef _HALF_FLOAT_SUPPORT_
-template<> complex_32 convert<DType::Complex32>(const float16_t& v){return complex_32(v, 0);}
-template<> complex_32 convert<DType::Complex32>(const complex_32& v){return v;}
+template<> uint128_t convert<DType::uint128>(const float16_t& v){
+	return float32_to_uint128(convert<DType::Float32>(v));
+}
+template<> uint128_t convert<DType::uint128>(const complex_32& v){
+	return float32_to_uint128(convert<DType::Float32>(v));
+}
 #endif
 #ifdef _128_FLOAT_SUPPORT_
-template<> complex_32 convert<DType::Complex32>(const float128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> uint128_t convert<DType::uint128>(const float128_t& v){return uint128_t(v);}
 #endif
 #ifdef __SIZEOF_INT128__
-template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(float(v)), 0);}
-template<> complex_32 convert<DType::Complex32>(const uint128_t& v){return complex_32(convert<DType::Float16>(float(v)), 0);}
+template<> uint128_t convert<DType::uint128>(const int128_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const uint128_t& v){return v;}
 #endif
+template<> uint128_t convert<DType::uint128>(const complex_64& v){return uint128_t(v.real());}
+template<> uint128_t convert<DType::uint128>(const complex_128& v){return uint128_t(v.real());}
+template<> uint128_t convert<DType::uint128>(const int64_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const int32_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const uint32_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const int16_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const uint16_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const int8_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const uint8_t& v){return uint128_t(v);}
+template<> uint128_t convert<DType::uint128>(const Tensor& v){return v.toScalar().to<uint128_t>();}
+template<> uint128_t convert<DType::uint128>(const uint_bool_t& v){return uint128_t(v.value);}
+template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ? v : 1);}
+#endif
+
+template<> complex_32 convert<DType::Complex32>(const float& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> complex_32 convert<DType::Complex32>(const double& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> complex_32 convert<DType::Complex32>(const float16_t& v){return complex_32(v, 0);}
+template<> complex_32 convert<DType::Complex32>(const complex_32& v){return v;}
+template<> complex_32 convert<DType::Complex32>(const float128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+#ifdef __SIZEOF_INT128__
+template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+#else
+template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(int64_t(v)), 0);}
+#endif
+template<> complex_32 convert<DType::Complex32>(const uint128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
 template<> complex_32 convert<DType::Complex32>(const complex_64& v){return complex_32(v);}
 template<> complex_32 convert<DType::Complex32>(const complex_128& v){return complex_32(v);}
 template<> complex_32 convert<DType::Complex32>(const int64_t& v){return complex_32(convert<DType::Float16>(v), 0);}
@@ -244,20 +382,20 @@ template<> complex_32 convert<DType::Complex32>(const uint8_t& v){return complex
 template<> complex_32 convert<DType::Complex32>(const Tensor& v){return v.toScalar().to<complex_32>();}
 template<> complex_32 convert<DType::Complex32>(const uint_bool_t& v){return complex_32(convert<DType::Float16>(v.value), 0);}
 template<> complex_32 convert<DType::Complex32>(const bool &v){return complex_32(_NT_FLOAT32_TO_FLOAT16_(v ? 0.0f : 1.0f), 0);}
-#endif
+
 
 template<> complex_64 convert<DType::Complex64>(const float& v){return complex_64(v, 0);}
 template<> complex_64 convert<DType::Complex64>(const double& v){return complex_64(static_cast<float>(v), 0);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> complex_64 convert<DType::Complex64>(const float16_t& v){return complex_64(_NT_FLOAT16_TO_FLOAT32_(v), 0);}
 template<> complex_64 convert<DType::Complex64>(const complex_32& v){return complex_64(v);}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template<> complex_64 convert<DType::Complex64>(const float128_t& v){return complex_64(static_cast<float>(v), 0);}
-#endif
 #ifdef __SIZEOF_INT128__
 template<> complex_64 convert<DType::Complex64>(const int128_t& v){return complex_64(static_cast<float>(v), 0);}
 template<> complex_64 convert<DType::Complex64>(const uint128_t& v){return complex_64(static_cast<float>(v), 0);}
+#else
+template<> complex_64 convert<DType::Complex64>(const int128_t& v){return complex_64(static_cast<float>(int64_t(v)), 0);}
+template<> complex_64 convert<DType::Complex64>(const uint128_t& v){return complex_64(static_cast<float>(uint64_t(v)), 0);}
+
 #endif
 template<> complex_64 convert<DType::Complex64>(const complex_64& v){return v;}
 template<> complex_64 convert<DType::Complex64>(const complex_128& v){return complex_64(v);}
@@ -274,17 +412,16 @@ template<> complex_64 convert<DType::Complex64>(const bool &v){return complex_64
 
 template<> complex_128 convert<DType::Complex128>(const float& v){return complex_128(static_cast<double>(v), 0);}
 template<> complex_128 convert<DType::Complex128>(const double& v){return complex_128(v, 0);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> complex_128 convert<DType::Complex128>(const float16_t& v){return complex_128(static_cast<double>(_NT_FLOAT16_TO_FLOAT32_(v)), 0);}
 template<> complex_128 convert<DType::Complex128>(const complex_32& v){return complex_128(v);}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> complex_128 convert<DType::Complex128>(const float128_t& v){return complex_128(static_cast<double>(v), 0);}
-#endif
+template<> complex_128 convert<DType::Complex128>(const float128_t& v){return complex_128(convert<DType::Double>(v), 0);}
 #ifdef __SIZEOF_INT128__
-template<> complex_128 convert<DType::Complex128>(const int128_t& v){return complex_128(static_cast<double>(v), 0);}
-template<> complex_128 convert<DType::Complex128>(const uint128_t& v){return complex_128(static_cast<double>(v), 0);}
+template<> complex_128 convert<DType::Complex128>(const int128_t& v){return complex_128(convert<DType::Double>(v), 0);}
+template<> complex_128 convert<DType::Complex128>(const uint128_t& v){return complex_128(convert<DType::Double>(v), 0);}
 #endif
+template<> complex_128 convert<DType::Complex128>(const int128_t& v){return complex_128(convert<DType::Double>(int64_t(v)), 0);}
+template<> complex_128 convert<DType::Complex128>(const uint128_t& v){return complex_128(convert<DType::Double>(v), 0);}
+#else
 template<> complex_128 convert<DType::Complex128>(const complex_64& v){return complex_128(v);}
 template<> complex_128 convert<DType::Complex128>(const complex_128& v){return v;}
 template<> complex_128 convert<DType::Complex128>(const int64_t& v){return complex_128(static_cast<double>(v), 0);}
@@ -301,16 +438,15 @@ template<> complex_128 convert<DType::Complex128>(const bool &v){return complex_
 
 template<> uint8_t convert<DType::uint8>(const float& v){return static_cast<uint8_t>(v);}
 template<> uint8_t convert<DType::uint8>(const double& v){return static_cast<uint8_t>(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> uint8_t convert<DType::uint8>(const float16_t& v){return static_cast<uint8_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> uint8_t convert<DType::uint8>(const complex_32& v){return static_cast<uint8_t>(v.real());}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> uint8_t convert<DType::uint8>(const float128_t& v){return static_cast<uint8_t>(v);}
-#endif
+template<> uint8_t convert<DType::uint8>(const complex_32& v){return static_cast<uint8_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+template<> uint8_t convert<DType::uint8>(const float128_t& v){return uint8_t(v);}
 #ifdef __SIZEOF_INT128__
 template<> uint8_t convert<DType::uint8>(const int128_t& v){return static_cast<uint8_t>(v);}
 template<> uint8_t convert<DType::uint8>(const uint128_t& v){return static_cast<uint8_t>(v);}
+#else
+template<> uint8_t convert<DType::uint8>(const int128_t& v){return uint8_t(v);}
+template<> uint8_t convert<DType::uint8>(const uint128_t& v){return uint8_t(v);}
 #endif
 template<> uint8_t convert<DType::uint8>(const complex_64& v){return static_cast<uint8_t>(v.real());}
 template<> uint8_t convert<DType::uint8>(const complex_128& v){return static_cast<uint8_t>(v.real());}
@@ -329,14 +465,15 @@ template<> int8_t convert<DType::int8>(const float& v){return static_cast<int8_t
 template<> int8_t convert<DType::int8>(const double& v){return static_cast<int8_t>(v);}
 #ifdef _HALF_FLOAT_SUPPORT_
 template<> int8_t convert<DType::int8>(const float16_t& v){return static_cast<int8_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> int8_t convert<DType::int8>(const complex_32& v){return static_cast<int8_t>(v.real());}
+template<> int8_t convert<DType::int8>(const complex_32& v){return static_cast<int8_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
 #endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> int8_t convert<DType::int8>(const float128_t& v){return static_cast<int8_t>(v);}
-#endif
+template<> int8_t convert<DType::int8>(const float128_t& v){return int8_t(v);}
 #ifdef __SIZEOF_INT128__
 template<> int8_t convert<DType::int8>(const int128_t& v){return static_cast<int8_t>(v);}
 template<> int8_t convert<DType::int8>(const uint128_t& v){return static_cast<int8_t>(v);}
+#else
+template<> int8_t convert<DType::int8>(const int128_t& v){return int8_t(v);}
+template<> int8_t convert<DType::int8>(const uint128_t& v){return int8_t(v);}
 #endif
 template<> int8_t convert<DType::int8>(const complex_64& v){return static_cast<int8_t>(v.real());}
 template<> int8_t convert<DType::int8>(const complex_128& v){return static_cast<int8_t>(v.real());}
@@ -354,17 +491,11 @@ template<> int8_t convert<DType::int8>(const bool &v){return int8_t(0 ? v : 1);}
 
 template<> int16_t convert<DType::int16>(const float& v){return static_cast<int16_t>(v);}
 template<> int16_t convert<DType::int16>(const double& v){return static_cast<int16_t>(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> int16_t convert<DType::int16>(const float16_t& v){return static_cast<int16_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> int16_t convert<DType::int16>(const complex_32& v){return static_cast<int16_t>(v.real());}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> int16_t convert<DType::int16>(const float128_t& v){return static_cast<int16_t>(v);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> int16_t convert<DType::int16>(const int128_t& v){return static_cast<int16_t>(v);}
-template<> int16_t convert<DType::int16>(const uint128_t& v){return static_cast<int16_t>(v);}
-#endif
+template<> int16_t convert<DType::int16>(const complex_32& v){return static_cast<int16_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+template<> int16_t convert<DType::int16>(const float128_t& v){return int16_t(v);}
+template<> int16_t convert<DType::int16>(const int128_t& v){return int16_t(v);}
+template<> int16_t convert<DType::int16>(const uint128_t& v){return int16_t(v);}
 template<> int16_t convert<DType::int16>(const complex_64& v){return static_cast<int16_t>(v.real());}
 template<> int16_t convert<DType::int16>(const complex_128& v){return static_cast<int16_t>(v.real());}
 template<> int16_t convert<DType::int16>(const int64_t& v){return static_cast<int16_t>(v);}
@@ -380,17 +511,11 @@ template<> int16_t convert<DType::int16>(const bool &v){return int16_t(0 ? v : 1
 
 template<> uint16_t convert<DType::uint16>(const float& v){return static_cast<uint16_t>(v);}
 template<> uint16_t convert<DType::uint16>(const double& v){return static_cast<uint16_t>(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> uint16_t convert<DType::uint16>(const float16_t& v){return static_cast<uint16_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> uint16_t convert<DType::uint16>(const complex_32& v){return static_cast<uint16_t>(v.real());}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> uint16_t convert<DType::uint16>(const float128_t& v){return static_cast<uint16_t>(v);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> uint16_t convert<DType::uint16>(const int128_t& v){return static_cast<uint16_t>(v);}
-template<> uint16_t convert<DType::uint16>(const uint128_t& v){return static_cast<uint16_t>(v);}
-#endif
+template<> uint16_t convert<DType::uint16>(const complex_32& v){return static_cast<uint16_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+template<> uint16_t convert<DType::uint16>(const float128_t& v){return uint16_t(v);}
+template<> uint16_t convert<DType::uint16>(const int128_t& v){return uint16_t(v);}
+template<> uint16_t convert<DType::uint16>(const uint128_t& v){return uint16_t(v);}
 template<> uint16_t convert<DType::uint16>(const complex_64& v){return static_cast<uint16_t>(v.real());}
 template<> uint16_t convert<DType::uint16>(const complex_128& v){return static_cast<uint16_t>(v.real());}
 template<> uint16_t convert<DType::uint16>(const int64_t& v){return static_cast<uint16_t>(v);}
@@ -406,17 +531,11 @@ template<> uint16_t convert<DType::uint16>(const bool &v){return uint16_t(0 ? v 
 
 template<> int32_t convert<DType::int32>(const float& v){return static_cast<int32_t>(v);}
 template<> int32_t convert<DType::int32>(const double& v){return static_cast<int32_t>(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> int32_t convert<DType::int32>(const float16_t& v){return static_cast<int32_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> int32_t convert<DType::int32>(const complex_32& v){return static_cast<int32_t>(v.real());}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> int32_t convert<DType::int32>(const float128_t& v){return static_cast<int32_t>(v);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> int32_t convert<DType::int32>(const int128_t& v){return static_cast<int32_t>(v);}
-template<> int32_t convert<DType::int32>(const uint128_t& v){return static_cast<int32_t>(v);}
-#endif
+template<> int32_t convert<DType::int32>(const complex_32& v){return static_cast<int32_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+template<> int32_t convert<DType::int32>(const float128_t& v){return int32_t(v);}
+template<> int32_t convert<DType::int32>(const int128_t& v){return int32_t(v);}
+template<> int32_t convert<DType::int32>(const uint128_t& v){return int32_t(v);}
 template<> int32_t convert<DType::int32>(const complex_64& v){return static_cast<int32_t>(v.real());}
 template<> int32_t convert<DType::int32>(const complex_128& v){return static_cast<int32_t>(v.real());}
 template<> int32_t convert<DType::int32>(const int64_t& v){return static_cast<int32_t>(v);}
@@ -432,17 +551,11 @@ template<> int32_t convert<DType::int32>(const bool &v){return int32_t(0 ? v : 1
 
 template<> uint32_t convert<DType::uint32>(const float& v){return static_cast<uint32_t>(v);}
 template<> uint32_t convert<DType::uint32>(const double& v){return static_cast<uint32_t>(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> uint32_t convert<DType::uint32>(const float16_t& v){return static_cast<uint32_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> uint32_t convert<DType::uint32>(const complex_32& v){return static_cast<uint32_t>(v.real());}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> uint32_t convert<DType::uint32>(const float128_t& v){return static_cast<uint32_t>(v);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> uint32_t convert<DType::uint32>(const int128_t& v){return static_cast<uint32_t>(v);}
-template<> uint32_t convert<DType::uint32>(const uint128_t& v){return static_cast<uint32_t>(v);}
-#endif
+template<> uint32_t convert<DType::uint32>(const complex_32& v){return static_cast<uint32_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+template<> uint32_t convert<DType::uint32>(const float128_t& v){return uint32_t(v);}
+template<> uint32_t convert<DType::uint32>(const int128_t& v){return uint32_t(v);}
+template<> uint32_t convert<DType::uint32>(const uint128_t& v){return uint32_t(v);}
 template<> uint32_t convert<DType::uint32>(const complex_64& v){return static_cast<uint32_t>(v.real());}
 template<> uint32_t convert<DType::uint32>(const complex_128& v){return static_cast<uint32_t>(v.real());}
 template<> uint32_t convert<DType::uint32>(const int64_t& v){return static_cast<uint32_t>(v);}
@@ -459,17 +572,11 @@ template<> uint32_t convert<DType::uint32>(const bool &v){return uint32_t(0 ? v 
 
 template<> int64_t convert<DType::int64>(const float& v){return static_cast<int64_t>(v);}
 template<> int64_t convert<DType::int64>(const double& v){return static_cast<int64_t>(v);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> int64_t convert<DType::int64>(const float16_t& v){return static_cast<int64_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> int64_t convert<DType::int64>(const complex_32& v){return static_cast<int64_t>(v.real());}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> int64_t convert<DType::int64>(const float128_t& v){return static_cast<int64_t>(v);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> int64_t convert<DType::int64>(const int128_t& v){return static_cast<int64_t>(v);}
-template<> int64_t convert<DType::int64>(const uint128_t& v){return static_cast<int64_t>(v);}
-#endif
+template<> int64_t convert<DType::int64>(const complex_32& v){return static_cast<int64_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
+template<> int64_t convert<DType::int64>(const float128_t& v){return int64_t(v);}
+template<> int64_t convert<DType::int64>(const int128_t& v){return int64_t(v);}
+template<> int64_t convert<DType::int64>(const uint128_t& v){return int64_t(v);}
 template<> int64_t convert<DType::int64>(const complex_64& v){return static_cast<int64_t>(v.real());}
 template<> int64_t convert<DType::int64>(const complex_128& v){return static_cast<int64_t>(v.real());}
 template<> int64_t convert<DType::int64>(const int32_t& v){return static_cast<int64_t>(v);}
@@ -485,17 +592,11 @@ template<> int64_t convert<DType::int64>(const bool &v){return int64_t(0 ? v : 1
 
 template<> uint_bool_t convert<DType::Bool>(const float& v){return uint_bool_t(v == 1);}
 template<> uint_bool_t convert<DType::Bool>(const double& v){return uint_bool_t(v == 1);}
-#ifdef _HALF_FLOAT_SUPPORT_
 template<> uint_bool_t convert<DType::Bool>(const float16_t& v){return uint_bool_t(_NT_FLOAT16_TO_FLOAT32_(v) == 1);}
-template<> uint_bool_t convert<DType::Bool>(const complex_32& v){return uint_bool_t(v.real() == 1);}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template<> uint_bool_t convert<DType::Bool>(const float128_t& v){return uint_bool_t(v == 1);}
-#endif
-#ifdef __SIZEOF_INT128__
-template<> uint_bool_t convert<DType::Bool>(const int128_t& v){return uint_bool_t(v == 1);}
-template<> uint_bool_t convert<DType::Bool>(const uint128_t& v){return uint_bool_t(v == 1);}
-#endif
+template<> uint_bool_t convert<DType::Bool>(const complex_32& v){return uint_bool_t(_NT_FLOAT16_TO_FLOAT32_(v.real()) == 1);}
+template<> uint_bool_t convert<DType::Bool>(const float128_t& v){return uint_bool_t(v == float128_t(1));}
+template<> uint_bool_t convert<DType::Bool>(const int128_t& v){return uint_bool_t(v == int128_t(1));}
+template<> uint_bool_t convert<DType::Bool>(const uint128_t& v){return uint_bool_t(v == uint128_t(1_);}
 template<> uint_bool_t convert<DType::Bool>(const complex_64& v){return uint_bool_t(v.real() == 1);}
 template<> uint_bool_t convert<DType::Bool>(const complex_128& v){return uint_bool_t(v.real() == 1);}
 template<> uint_bool_t convert<DType::Bool>(const int32_t& v){return uint_bool_t(v == 1);}
@@ -625,17 +726,11 @@ template float convert<float,uint32_t>(const uint32_t&);
 template float convert<float,int64_t>(const int64_t&);
 template float convert<float,uint_bool_t>(const uint_bool_t&);
 template float convert<float,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template float convert<float, complex_32>(const complex_32&);
 template float convert<float, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template float convert<float, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template float convert<float, int128_t>(const int128_t&);
 template float convert<float, uint128_t>(const uint128_t&);
-#endif
 template double convert<double,float>(const float&);
 template double convert<double,double>(const double&);
 template double convert<double,complex_64>(const complex_64&);
@@ -649,17 +744,11 @@ template double convert<double,uint32_t>(const uint32_t&);
 template double convert<double,int64_t>(const int64_t&);
 template double convert<double,uint_bool_t>(const uint_bool_t&);
 template double convert<double,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template double convert<double, complex_32>(const complex_32&);
 template double convert<double, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template double convert<double, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template double convert<double, int128_t>(const int128_t&);
 template double convert<double, uint128_t>(const uint128_t&);
-#endif
 template complex_64 convert<complex_64,float>(const float&);
 template complex_64 convert<complex_64,double>(const double&);
 template complex_64 convert<complex_64,complex_64>(const complex_64&);
@@ -673,17 +762,11 @@ template complex_64 convert<complex_64,uint32_t>(const uint32_t&);
 template complex_64 convert<complex_64,int64_t>(const int64_t&);
 template complex_64 convert<complex_64,uint_bool_t>(const uint_bool_t&);
 template complex_64 convert<complex_64,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template complex_64 convert<complex_64, complex_32>(const complex_32&);
 template complex_64 convert<complex_64, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template complex_64 convert<complex_64, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template complex_64 convert<complex_64, int128_t>(const int128_t&);
 template complex_64 convert<complex_64, uint128_t>(const uint128_t&);
-#endif
 template complex_128 convert<complex_128,float>(const float&);
 template complex_128 convert<complex_128,double>(const double&);
 template complex_128 convert<complex_128,complex_64>(const complex_64&);
@@ -697,17 +780,11 @@ template complex_128 convert<complex_128,uint32_t>(const uint32_t&);
 template complex_128 convert<complex_128,int64_t>(const int64_t&);
 template complex_128 convert<complex_128,uint_bool_t>(const uint_bool_t&);
 template complex_128 convert<complex_128,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template complex_128 convert<complex_128, complex_32>(const complex_32&);
 template complex_128 convert<complex_128, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template complex_128 convert<complex_128, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template complex_128 convert<complex_128, int128_t>(const int128_t&);
 template complex_128 convert<complex_128, uint128_t>(const uint128_t&);
-#endif
 template uint8_t convert<uint8_t,float>(const float&);
 template uint8_t convert<uint8_t,double>(const double&);
 template uint8_t convert<uint8_t,complex_64>(const complex_64&);
@@ -721,17 +798,11 @@ template uint8_t convert<uint8_t,uint32_t>(const uint32_t&);
 template uint8_t convert<uint8_t,int64_t>(const int64_t&);
 template uint8_t convert<uint8_t,uint_bool_t>(const uint_bool_t&);
 template uint8_t convert<uint8_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template uint8_t convert<uint8_t, complex_32>(const complex_32&);
 template uint8_t convert<uint8_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template uint8_t convert<uint8_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template uint8_t convert<uint8_t, int128_t>(const int128_t&);
 template uint8_t convert<uint8_t, uint128_t>(const uint128_t&);
-#endif
 template int8_t convert<int8_t,float>(const float&);
 template int8_t convert<int8_t,double>(const double&);
 template int8_t convert<int8_t,complex_64>(const complex_64&);
@@ -745,17 +816,11 @@ template int8_t convert<int8_t,uint32_t>(const uint32_t&);
 template int8_t convert<int8_t,int64_t>(const int64_t&);
 template int8_t convert<int8_t,uint_bool_t>(const uint_bool_t&);
 template int8_t convert<int8_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template int8_t convert<int8_t, complex_32>(const complex_32&);
 template int8_t convert<int8_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template int8_t convert<int8_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template int8_t convert<int8_t, int128_t>(const int128_t&);
 template int8_t convert<int8_t, uint128_t>(const uint128_t&);
-#endif
 template int16_t convert<int16_t,float>(const float&);
 template int16_t convert<int16_t,double>(const double&);
 template int16_t convert<int16_t,complex_64>(const complex_64&);
@@ -769,17 +834,11 @@ template int16_t convert<int16_t,uint32_t>(const uint32_t&);
 template int16_t convert<int16_t,int64_t>(const int64_t&);
 template int16_t convert<int16_t,uint_bool_t>(const uint_bool_t&);
 template int16_t convert<int16_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template int16_t convert<int16_t, complex_32>(const complex_32&);
 template int16_t convert<int16_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template int16_t convert<int16_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template int16_t convert<int16_t, int128_t>(const int128_t&);
 template int16_t convert<int16_t, uint128_t>(const uint128_t&);
-#endif
 template uint16_t convert<uint16_t,float>(const float&);
 template uint16_t convert<uint16_t,double>(const double&);
 template uint16_t convert<uint16_t,complex_64>(const complex_64&);
@@ -793,17 +852,11 @@ template uint16_t convert<uint16_t,uint32_t>(const uint32_t&);
 template uint16_t convert<uint16_t,int64_t>(const int64_t&);
 template uint16_t convert<uint16_t,uint_bool_t>(const uint_bool_t&);
 template uint16_t convert<uint16_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template uint16_t convert<uint16_t, complex_32>(const complex_32&);
 template uint16_t convert<uint16_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template uint16_t convert<uint16_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template uint16_t convert<uint16_t, int128_t>(const int128_t&);
 template uint16_t convert<uint16_t, uint128_t>(const uint128_t&);
-#endif
 template int32_t convert<int32_t,float>(const float&);
 template int32_t convert<int32_t,double>(const double&);
 template int32_t convert<int32_t,complex_64>(const complex_64&);
@@ -817,17 +870,11 @@ template int32_t convert<int32_t,uint32_t>(const uint32_t&);
 template int32_t convert<int32_t,int64_t>(const int64_t&);
 template int32_t convert<int32_t,uint_bool_t>(const uint_bool_t&);
 template int32_t convert<int32_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template int32_t convert<int32_t, complex_32>(const complex_32&);
 template int32_t convert<int32_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template int32_t convert<int32_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template int32_t convert<int32_t, int128_t>(const int128_t&);
 template int32_t convert<int32_t, uint128_t>(const uint128_t&);
-#endif
 template uint32_t convert<uint32_t,float>(const float&);
 template uint32_t convert<uint32_t,double>(const double&);
 template uint32_t convert<uint32_t,complex_64>(const complex_64&);
@@ -841,17 +888,11 @@ template uint32_t convert<uint32_t,uint32_t>(const uint32_t&);
 template uint32_t convert<uint32_t,int64_t>(const int64_t&);
 template uint32_t convert<uint32_t,uint_bool_t>(const uint_bool_t&);
 template uint32_t convert<uint32_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template uint32_t convert<uint32_t, complex_32>(const complex_32&);
 template uint32_t convert<uint32_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template uint32_t convert<uint32_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template uint32_t convert<uint32_t, int128_t>(const int128_t&);
 template uint32_t convert<uint32_t, uint128_t>(const uint128_t&);
-#endif
 template int64_t convert<int64_t,float>(const float&);
 template int64_t convert<int64_t,double>(const double&);
 template int64_t convert<int64_t,complex_64>(const complex_64&);
@@ -865,17 +906,11 @@ template int64_t convert<int64_t,uint32_t>(const uint32_t&);
 template int64_t convert<int64_t,int64_t>(const int64_t&);
 template int64_t convert<int64_t,uint_bool_t>(const uint_bool_t&);
 template int64_t convert<int64_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template int64_t convert<int64_t, complex_32>(const complex_32&);
 template int64_t convert<int64_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template int64_t convert<int64_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template int64_t convert<int64_t, int128_t>(const int128_t&);
 template int64_t convert<int64_t, uint128_t>(const uint128_t&);
-#endif
 template uint_bool_t convert<uint_bool_t,float>(const float&);
 template uint_bool_t convert<uint_bool_t,double>(const double&);
 template uint_bool_t convert<uint_bool_t,complex_64>(const complex_64&);
@@ -889,17 +924,11 @@ template uint_bool_t convert<uint_bool_t,uint32_t>(const uint32_t&);
 template uint_bool_t convert<uint_bool_t,int64_t>(const int64_t&);
 template uint_bool_t convert<uint_bool_t,uint_bool_t>(const uint_bool_t&);
 template uint_bool_t convert<uint_bool_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template uint_bool_t convert<uint_bool_t, complex_32>(const complex_32&);
 template uint_bool_t convert<uint_bool_t, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template uint_bool_t convert<uint_bool_t, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template uint_bool_t convert<uint_bool_t, int128_t>(const int128_t&);
 template uint_bool_t convert<uint_bool_t, uint128_t>(const uint128_t&);
-#endif
 template Tensor convert<Tensor,float>(const float&);
 template Tensor convert<Tensor,double>(const double&);
 template Tensor convert<Tensor,complex_64>(const complex_64&);
@@ -913,18 +942,11 @@ template Tensor convert<Tensor,uint32_t>(const uint32_t&);
 template Tensor convert<Tensor,int64_t>(const int64_t&);
 template Tensor convert<Tensor,uint_bool_t>(const uint_bool_t&);
 template Tensor convert<Tensor,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template Tensor convert<Tensor, complex_32>(const complex_32&);
 template Tensor convert<Tensor, float16_t>(const float16_t&);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template Tensor convert<Tensor, float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template Tensor convert<Tensor, int128_t>(const int128_t&);
 template Tensor convert<Tensor, uint128_t>(const uint128_t&);
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
 template float16_t convert<float16_t,float16_t>(const float16_t&);
 template float16_t convert<float16_t,complex_32>(const complex_32&);
 template float16_t convert<float16_t,float>(const float&);
@@ -955,18 +977,12 @@ template complex_32 convert<complex_32,uint32_t>(const uint32_t&);
 template complex_32 convert<complex_32,int64_t>(const int64_t&);
 template complex_32 convert<complex_32,uint_bool_t>(const uint_bool_t&);
 template complex_32 convert<complex_32,Tensor>(const Tensor&);
-#ifdef _128_FLOAT_SUPPORT_
 template float16_t convert<float16_t,float128_t>(const float128_t&);
 template complex_32 convert<complex_32,float128_t>(const float128_t&);
-#endif
-#ifdef __SIZEOF_INT128__
 template float16_t convert<float16_t,int128_t>(const int128_t&);
 template float16_t convert<float16_t,uint128_t>(const uint128_t&);
 template complex_32 convert<complex_32,int128_t>(const int128_t&);
 template complex_32 convert<complex_32,uint128_t>(const uint128_t&);
-#endif
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 template float128_t convert<float128_t,float128_t>(const float128_t&);
 template float128_t convert<float128_t,float>(const float&);
 template float128_t convert<float128_t,double>(const double&);
@@ -981,15 +997,10 @@ template float128_t convert<float128_t,uint32_t>(const uint32_t&);
 template float128_t convert<float128_t,int64_t>(const int64_t&);
 template float128_t convert<float128_t,uint_bool_t>(const uint_bool_t&);
 template float128_t convert<float128_t,Tensor>(const Tensor&);
-#ifdef _HALF_FLOAT_SUPPORT_
 template float128_t convert<float128_t,float16_t>(const float16_t&);
 template float128_t convert<float128_t,complex_32>(const complex_32&);
-#endif
-#ifdef __SIZEOF_INT128__
 template float128_t convert<float128_t,int128_t>(const int128_t&);
 template float128_t convert<float128_t,uint128_t>(const uint128_t&);
-#endif
-#endif
 #ifdef __SIZEOF_INT128__
 template int128_t convert<int128_t,int128_t>(const int128_t&);
 template int128_t convert<int128_t,uint128_t>(const uint128_t&);
@@ -1006,6 +1017,7 @@ template int128_t convert<int128_t,uint32_t>(const uint32_t&);
 template int128_t convert<int128_t,int64_t>(const int64_t&);
 template int128_t convert<int128_t,uint_bool_t>(const uint_bool_t&);
 template int128_t convert<int128_t,Tensor>(const Tensor&);
+#endif
 template uint128_t convert<uint128_t,int128_t>(const int128_t&);
 template uint128_t convert<uint128_t,uint128_t>(const uint128_t&);
 template uint128_t convert<uint128_t,float>(const float&);
@@ -1021,17 +1033,12 @@ template uint128_t convert<uint128_t,uint32_t>(const uint32_t&);
 template uint128_t convert<uint128_t,int64_t>(const int64_t&);
 template uint128_t convert<uint128_t,uint_bool_t>(const uint_bool_t&);
 template uint128_t convert<uint128_t,Tensor>(const Tensor&);
-#ifdef _128_FLOAT_SUPPORT_
 template int128_t convert<int128_t,float128_t>(const float128_t&);
 template uint128_t convert<uint128_t,float128_t>(const float128_t&);
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
 template int128_t convert<int128_t,float16_t>(const float16_t&);
 template int128_t convert<int128_t,complex_32>(const complex_32&);
 template uint128_t convert<uint128_t,float16_t>(const float16_t&);
 template uint128_t convert<uint128_t,complex_32>(const complex_32&);
-#endif
-#endif
 
 }
 }

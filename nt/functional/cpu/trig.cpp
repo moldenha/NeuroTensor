@@ -3,113 +3,12 @@
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include "../../utils/numargs_macro.h"
 #include <algorithm>
-#include <cmath>
-#include <math.h>
-#include "../../convert/Convert.h"
-#include "../../types/Types.h"
-
+#include "128_bit_funcs.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-
-//if this is defined
-//this means that for float128_t boost's 128 bit floating point is used
-#ifdef BOOST_MP_STANDALONE
-namespace std{
-
-#define NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(func)\
-inline ::nt::float128_t func(const ::nt::float128_t& x){\
-    double _x = ::nt::convert::convert<double>(x);\
-    double _r = ::std::func(_x);
-    return ::nt::convert::convert<::nt::float128_t>(_r);\
-}\
-
-
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(tanh);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(cosh);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sinh);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(asinh);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(acosh);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(atanh);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(atan);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(asin);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(acos);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(tan);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sin);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(cos);
-NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sqrt);
-
-#undef NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE
-
-inline ::nt::float128_t pow(const ::nt::float128_t& a, const ::nt::float128_t& b){
-    double _a = ::nt::convert::convert<double>(a);
-    double _b = ::nt::convert::convert<double>(b);
-    double _r = ::std::pow(_a, _b);
-    return ::nt::convert::convert<::nt::float128_t>(_r);
-}
-
-}
-#endif //BOOST_MP_STANDALONE
-
-
-
-namespace std{
-//making of specific types
-
-
-
-#define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, func_name)\
-inline type func_name(type t){\
-    ::nt::float128_t _t = ::nt::convert::convert<::nt::float128_t>(t);\
-    ::nt::float128_t _r = ::std::func_name(_t);\
-    return ::nt::convert::convert<type>(_r);\
-}
-
-
-#define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, tanh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, cosh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sinh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, asinh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, acosh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, atanh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, atan)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, asin)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, acos)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, tan)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sin)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, cos)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sqrt)
-
-
-#ifdef __SIZEOF_INT128__
-NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t)
-inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){
-    long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
-    long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));
-    long double _r = std::pow(_a, _b);
-    int64_t __r(_r);
-    return ::nt::convert::convert<::nt::int128_t>(__r);
-}
-#endif
-NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t)
-inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){
-    long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
-    long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));
-    long double _r = std::pow(_a, _b);
-    int64_t __r(_r);
-    return ::nt::convert::convert<::nt::uint128_t>(__r);
-}
-
-
-// #undef NT_MAKE_STD_FUNCTION_ROUTE_LOG
-// #undef NT_MAKE_STD_FUNCTION_ROUTE_EXP
-#undef __NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
-#undef NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
-
-}
 
 
 namespace std{

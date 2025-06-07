@@ -4,50 +4,9 @@
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include <algorithm>
-#include "../../convert/Convert.h"
-#include "../../types/Types.h"
 
+#include "128_bit_funcs.hpp"
 
-#include "../../types/float128.h"
-
-//if this is defined
-//this means that for float128_t boost's 128 bit floating point is used
-#ifdef BOOST_MP_STANDALONE
-namespace std{
-inline ::nt::float128_t exp(const ::nt::float128_t& x){
-    double _x = ::nt::convert::convert<double>(x);
-    double _r = ::std::exp(_x);
-    return ::nt::convert::convert<::nt::float128_t>(_r);
-}
-
-}
-#endif //BOOST_MP_STANDALONE
-
-namespace std{
-//making of specific types
-
-
-
-#define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, func_name)\
-inline type func_name(type t){\
-    ::nt::float128_t _t = ::nt::convert::convert<::nt::float128_t>(t);\
-    ::nt::float128_t _r = ::std::func_name(_t);\
-    return ::nt::convert::convert<type>(_r);\
-}
-
-#define NT_MAKE_STD_FUNCTION_ROUTE(type)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, exp)
-
-
-#ifdef __SIZEOF_INT128__
-NT_MAKE_STD_FUNCTION_ROUTE(::nt::int128_t)
-#endif
-NT_MAKE_STD_FUNCTION_ROUTE(::nt::uint128_t)
-
-
-#undef NT_MAKE_STD_FUNCTION_ROUTE 
-#undef __NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
-}
 
 namespace nt {
 namespace mp {

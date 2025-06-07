@@ -15,15 +15,11 @@ using my_convert_dtype_to_type_t = std::conditional_t<dt == DType::Float, float,
 					std::conditional_t<dt == DType::Double, double,
 #ifdef __SIZEOF_INT128__
 					std::conditional_t<dt == DType::int128, int128_t,
-					std::conditional_t<dt == DType::uint128, uint128_t,
 #endif
-#ifdef _HALF_FLOAT_SUPPORT_
+					std::conditional_t<dt == DType::uint128, uint128_t,
 					std::conditional_t<dt == DType::Float16, float16_t,
 					std::conditional_t<dt == DType::Complex32, complex_32,
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 					std::conditional_t<dt == DType::Float128, float128_t,
-#endif
 					std::conditional_t<dt == DType::int64, int64_t,
 					std::conditional_t<dt == DType::uint32, uint32_t,
 					std::conditional_t<dt == DType::int32, int32_t,
@@ -33,16 +29,11 @@ using my_convert_dtype_to_type_t = std::conditional_t<dt == DType::Float, float,
 					std::conditional_t<dt == DType::int8, int8_t,
 					std::conditional_t<dt == DType::Complex64, complex_64,
 					std::conditional_t<dt == DType::Complex128, complex_128,
-					std::conditional_t<dt == DType::Bool, uint_bool_t, float> > > > > > > > > >
-#ifdef _128_FLOAT_SUPPORT_
+					std::conditional_t<dt == DType::Bool, uint_bool_t, float> > > > > > > > > > > > >
+#ifdef __SIZEOF_INT128__
 						>
 #endif
-#ifdef _HALF_FLOAT_SUPPORT_
-						> >
-#endif
-#ifdef __SIZEOF_INT128__
-						> >
-#endif
+                        >
 						> >;
 
 
