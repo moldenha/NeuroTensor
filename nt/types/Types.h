@@ -76,7 +76,7 @@ class my_complex{
         :re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
         
         template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
-        my_complex(const U& real, const U& imag)
+        explicit my_complex(const U& real, const U& imag)
         :re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
 
         template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
@@ -84,7 +84,7 @@ class my_complex{
         :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))) {}
         
         template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
-        my_complex(const U& real, const U& imag)
+        explicit my_complex(const U& real, const U& imag)
         :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(real))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(imag))) {}
         
         //floating types
@@ -93,7 +93,7 @@ class my_complex{
         :re(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(ele))), im(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(ele))) {}
 
         template<typename U, std::enable_if_t<!std::is_same_v<T, float16_t> && std::is_same_v<U, float16_t>, int> = 0>
-        my_complex(const U& real, const U& imag)
+        explicit my_complex(const U& real, const U& imag)
         :re(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(real))), im(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(imag))) {}
         
         template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
@@ -101,12 +101,12 @@ class my_complex{
         :re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
         
         template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
-        my_complex(const U& real, const U& imag)
+        explicit my_complex(const U& real, const U& imag)
         :re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
 
 
         template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
-        my_complex(const U& ele)
+        explicit my_complex(const U& ele)
         :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))) {}
         
         template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
@@ -120,7 +120,7 @@ class my_complex{
         my_complex(const half_float::half& real, const half_float::half& imag) : re(real), im(imag) {}
 
         template<typename U = T, std::enable_if_t<std::is_same_v<U, nt::float16_t>, int> = 0>
-        my_complex(const half_float::half& ele) : re(ele), im(ele) {}
+        explicit my_complex(const half_float::half& ele) : re(ele), im(ele) {}
 #endif
         
 

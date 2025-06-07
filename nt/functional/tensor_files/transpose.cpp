@@ -479,10 +479,7 @@ void transpose_any_manual(void** _in, void** _out,
     if(axis0 > axis1) std::swap(axis0, axis1);
     
     
-#ifdef _MSC_VER    
-    void** __in = _in;
-    void** __out = _out;
-#else
+#ifndef _MSC_VER    
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
     const ptr_type* __in = reinterpret_cast<const ptr_type*>(_in);
@@ -526,8 +523,8 @@ void transpose_any_manual(void** _in, void** _out,
 #else
     tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
     [&](const tbb::blocked_range2d<int64_t>& range){
-    void** in = &__in[(range.rows().begin() * total_inner)];
-    void** out = &__out[(range.rows().begin() * total_inner)];
+    void** in = &_in[(range.rows().begin() * total_inner)];
+    void** out = &_out[(range.rows().begin() * total_inner)];
     for(int64_t b = range.rows().begin(); b < range.rows().end(); ++b){
         for(int64_t i = range.cols().begin(); i < range.cols().end(); ++i){
             int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
@@ -588,10 +585,8 @@ void permute(void** _in, void** _out,
     using size_value_t = int64_t;
     int64_t ndim = shape.size();
 
-#ifdef _MSC_VER
-    void** __in = _in;
-    void** __out = _out;
-#else
+#ifndef _MSC_VER
+
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
     const ptr_type* __in = reinterpret_cast<const ptr_type*>(_in);
@@ -659,8 +654,8 @@ void permute(void** _in, void** _out,
 #else
     tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
     [&](const tbb::blocked_range2d<int64_t>& range){
-    void** in = &__in[(total_inner * range.rows().begin())];
-    void** out = &__out[(total_inner * range.rows().begin())];
+    void** in = &_in[(total_inner * range.rows().begin())];
+    void** out = &_out[(total_inner * range.rows().begin())];
     for(int64_t b = range.rows().begin(); b != range.rows().end(); ++b){
         for(int64_t i = range.cols().begin(); i !=  range.cols().end(); ++i){
             int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);

@@ -604,7 +604,7 @@ std::shared_ptr<void> make_shared_array(size_t size, const DType& dt){
 		case DType::Bool:
 			return std::make_unique<uint_bool_t[]>(size);
         default:
-            utils::THROW_EXCEPTION("unknown dtype $", dt);
+            utils::THROW_EXCEPTION(false, "unknown dtype $", dt);
             return std::make_unique<uint_bool_t[]>(size);
 	}
 	/* if(dt == DType::TensorObj){ */
@@ -754,7 +754,7 @@ std::size_t size_of_dtype(const DType& dt){
 		case DType::Bool:
 			return sizeof(uint_bool_t);
         default:
-            utils::THROW_EXCEPTION("unknown dtype $", dt);
+            utils::THROW_EXCEPTION(false, "unknown dtype $", dt);
             return 0;
 	}
 }
@@ -805,7 +805,7 @@ uint8_t dtype_int_code(const DType& dt){
 		case DType::Bool:
 			return 17;
         default:
-            utils::THROW_EXCEPTION("unknown dtype $", dt);
+            utils::THROW_EXCEPTION(false, "unknown dtype $", dt);
             return 18;
 	}
 }
