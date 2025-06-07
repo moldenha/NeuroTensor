@@ -20,7 +20,12 @@
 namespace std{
 
 #define NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(func)\
-inline ::nt::float128_t func(const ::nt::float128_t& x){return ::boost::multiprecision::func(x);}
+inline ::nt::float128_t func(const ::nt::float128_t& x){\
+    double _x = ::nt::convert::convert<double>(x);\
+    double _r = ::std::func(_x);
+    return ::nt::convert::convert<::nt::float128_t>(_r);\
+}\
+
 
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(tanh);
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(cosh);
@@ -39,7 +44,10 @@ NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sqrt);
 #undef NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE
 
 inline ::nt::float128_t pow(const ::nt::float128_t& a, const ::nt::float128_t& b){
-    return ::boost::multiprecision::pow(a, b);
+    double _a = ::nt::convert::convert<double>(a);
+    double _b = ::nt::convert::convert<double>(b);
+    double _r = ::std::pow(_a, _b);
+    return ::nt::convert::convert<::nt::float128_t>(_r);
 }
 
 }
@@ -51,36 +59,33 @@ namespace std{
 //making of specific types
 
 
-#define NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, val)\
-if constexpr (std::is_same_v<::nt::float128_t, long double>){\
-    return ::nt::convert::convert<type, ::nt::float128_t>(val);\
-}else{\
-    return static_cast<type>(val);\
-}\
+
+#define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, func_name)\
+inline type func_name(type t){\
+    ::nt::float128_t _t = ::nt::convert::convert<::nt::float128_t>(t);\
+    ::nt::float128_t _r = ::std::func_name(_t);\
+    return ::nt::convert::convert<type>(_r);\
+}
 
 
-
-#define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, func_name)\
-inline type func_name(type t){NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE(type, func_name##l(static_cast<to>(t)));}
-
-#define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, tanh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, cosh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sinh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, asinh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, acosh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, atanh)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, atan)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, asin)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, acos)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, tan)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sin)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, cos)\
-__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sqrt)
+#define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, tanh)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, cosh)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sinh)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, asinh)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, acosh)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, atanh)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, atan)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, asin)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, acos)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, tan)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sin)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, cos)\
+__NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sqrt)
 
 
 #ifdef __SIZEOF_INT128__
-NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t, int64_t)
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t)
 inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){
     long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
     long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));
@@ -89,7 +94,7 @@ inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){
     return ::nt::convert::convert<::nt::int128_t>(__r);
 }
 #endif
-NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t, uint64_t)
+NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t)
 inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){
     long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
     long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));
@@ -101,7 +106,6 @@ inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){
 
 // #undef NT_MAKE_STD_FUNCTION_ROUTE_LOG
 // #undef NT_MAKE_STD_FUNCTION_ROUTE_EXP
-#undef NT_STD_FUNCTIONAL_OUT_CONVERSION_LARGE 
 #undef __NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
 #undef NT_MAKE_LARGE_STD_FUNCTION_ROUTE 
 
