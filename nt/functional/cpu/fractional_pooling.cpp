@@ -23,7 +23,7 @@ void _extract_sliding_windows_max_2d(const ArrayVoid& _input, ArrayVoid& output,
 
     bool* o_begin = reinterpret_cast<bool*>(output.data_ptr());
     input.cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-    [&rows, &cols, o_begin, &batches, &in_shape](auto begin, auto end){
+    [&rows, &cols, o_begin, &batches, &in_shape, &rows_size, &cols_size](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
         int64_t _row = rows.size();
         int64_t _col = cols.size();
@@ -68,9 +68,13 @@ void _extract_sliding_windows_max_3d(const ArrayVoid& _input, ArrayVoid& output,
     }
 
 
+    int64_t rows_size = static_cast<int64_t>(rows.size());
+    int64_t cols_size = static_cast<int64_t>(cols.size());
+    int64_t channels_size = static_cast<int64_t>(channels.size());
+    
     bool* o_begin = reinterpret_cast<bool*>(output.data_ptr());
     input.cexecute_function<WRAP_DTYPES<NumberTypesL>>(
-    [&channels, &rows, &cols, o_begin, &batches, &in_shape](auto begin, auto end){
+    [&channels, &rows, &cols, o_begin, &batches, &in_shape, &rows_size, &cols_size, &channels_size](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
         int64_t _chan = channels.size();
         int64_t _row = rows.size();
@@ -84,11 +88,11 @@ void _extract_sliding_windows_max_3d(const ArrayVoid& _input, ArrayVoid& output,
         int64_t b_add = (batch_add * block.begin[0]);
         for(int64_t b = block.begin[0]; b < block.end[1]; ++b, b_add += batch_add){
             int64_t cur_chan = 0;
-            for(int64_t d = 0; d < channels.size(); ++d){
+            for(int64_t d = 0; d < channels_size; ++d){
                 int64_t cur_row = 0;
-                for(int64_t r = 0; r < rows.size(); ++r){
+                for(int64_t r = 0; r < rows_size; ++r){
                     int64_t cur_col = 0;
-                    for(int64_t c = 0; c < cols.size(); ++c){
+                    for(int64_t c = 0; c < cols_size; ++c){
                         value_t val = begin[(b_add) + cur_chan * in_matrix + cur_row * in_cols + cur_col];
                         bool* b_val = &o_begin[(b_add) + cur_chan * in_matrix + cur_row * in_cols + cur_col];
                         for(int64_t _d = channels[d]-1; _d >= 0; --_d){
