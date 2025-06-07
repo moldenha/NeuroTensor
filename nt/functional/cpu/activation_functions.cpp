@@ -246,11 +246,13 @@ inline void dgelu(T begin, T end, U out){
                     );
       		it_storeu(out, current);
 		}
+        base_type base_Three = convert::convert<base_type>(float(3));
+        base_type base_One = convert::convert<base_type>(float(1));
 		for(;begin < end; ++begin, ++out){
-            base_type z = sqrt_2_pi * (*begin + c * std::pow(*begin, 3));
+            base_type z = sqrt_2_pi * (*begin + c * std::pow(*begin, base_Three));
             z = std::tanh(z);
-            base_type tanh_derivative = 1 - (z * z);
-            base_type dz_dx = sqrt_2_pi * (1 + cm * *begin * *begin);
+            base_type tanh_derivative = base_One - (z * z);
+            base_type dz_dx = sqrt_2_pi * (base_One + cm * *begin * *begin);
             z += 1;
             *out = base_type(0.5) * z + base_type(0.5) * *begin * tanh_derivative * dz_dx;
         }
