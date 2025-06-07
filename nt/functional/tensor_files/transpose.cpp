@@ -460,6 +460,7 @@ void transpose_any_manual(void** _in, void** _out,
     
     
 #ifdef _MSC_VER
+    std::uintptr_t in_zero = reinterpret_cast<std::uintptr_t>(_in[0]);
     using ptr_type = std::uintptr_t;
     const std::uintptr_t* __in = (const std::uintptr_t*)_in;
     std::uintptr_t* __out = (std::uintptr_t*)_out;

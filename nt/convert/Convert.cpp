@@ -97,7 +97,7 @@ template<> float128_t convert<DType::Float128>(const float& v){return static_cas
 template<> float128_t convert<DType::Float128>(const double& v){return static_cast<float128_t>(v);}
 #ifdef _HALF_FLOAT_SUPPORT_
 template<> float128_t convert<DType::Float128>(const float16_t& v){return static_cast<float128_t>(_NT_FLOAT16_TO_FLOAT32_(v));}
-template<> float128_t convert<DType::Float128>(const complex_32& v){return static_cast<float128_t>(v.real());}
+template<> float128_t convert<DType::Float128>(const complex_32& v){return static_cast<float128_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
 #endif
 #ifdef _128_FLOAT_SUPPORT_
 template<> float128_t convert<DType::Float128>(const float128_t& v){return v;}
