@@ -53,10 +53,14 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 					std::generate(begin, end, [&]() { return convert::convert<::nt::int128_t>(static_cast<int64_t>(dis(gen))); });
                 }
                 else{
-                    value_t low = lower.to<value_t>();
-                    value_t up = upper.to<value_t>();
-                    std::uniform_int_distribution<value_t> dis(low, up);
-                    std::generate(begin, end, [&]() { return dis(gen); });
+                    using n_value_t = std::conditional_t<std::is_signed_v<value_t>, int64_t, uint64_t>;
+                    n_value_t low = lower.to<n_value_t>();
+                    n_value_t up  = upper.to<n_value_t>();
+
+                    std::uniform_int_distribution<n_value_t> dis(low, up);
+                    std::generate(begin, end, [&]() {
+                        return static_cast<value_t>(dis(gen));
+                    });
                 }
 			});
 	}
@@ -128,10 +132,14 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
 					std::generate(begin, end, [&]() { return convert::convert<::nt::int128_t>(static_cast<int64_t>(dis(gen))); });
                 }
                 else{
-                    value_t low = lower.to<value_t>();
-                    value_t up = upper.to<value_t>();
-                    std::uniform_int_distribution<value_t> dis(low, up);
-                    std::generate(begin, end, [&]() { return dis(gen); });
+                    using n_value_t = std::conditional_t<std::is_signed_v<value_t>, int64_t, uint64_t>;
+                    n_value_t low = lower.to<n_value_t>();
+                    n_value_t up  = upper.to<n_value_t>();
+
+                    std::uniform_int_distribution<n_value_t> dis(low, up);
+                    std::generate(begin, end, [&]() {
+                        return static_cast<value_t>(dis(gen));
+                    });
                 }
 			});
 	}
