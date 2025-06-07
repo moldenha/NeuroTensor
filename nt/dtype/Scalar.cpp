@@ -130,86 +130,100 @@ Scalar& Scalar::operator=(const Scalar &s){
 
 
 template<>
-Scalar::Scalar(int32_t vv)
-	:dtype(DType::Integer)
-{v.i = convert::convert<decltype(v.i)>(vv);} 
+void Scalar::init_from<int32_t>(const int32_t& vv){
+    dtype = DType::Integer; 
+    v.i = convert::convert<decltype(v.i)>(vv);
+} 
 
 #ifdef __SIZEOF_INT128__
 template<>
-Scalar::Scalar(int128_t vv)
-	:dtype(DType::int128)
-{v.i = convert::convert<decltype(v.i)>(vv);} 
+void Scalar::init_from<int128_t>(const int128_t& vv){
+	dtype = DType::int128;
+    v.i = convert::convert<decltype(v.i)>(vv);
+} 
 
 template<>
-Scalar::Scalar(uint128_t vv)
-	:dtype(DType::uint128)
-{v.i = convert::convert<decltype(v.i)>(vv);} 
+void Scalar::init_from<uint128_t>(uint128_t vv){
+    dtype = DType::uint128;
+    v.i = convert::convert<decltype(v.i)>(vv);
+} 
 #endif
-#ifdef _HALF_FLOAT_SUPPORT_
 template <>
-Scalar::Scalar(float16_t vv)
-	:dtype(DType::Float16)
-{v.d = convert::convert<decltype(v.d)>(vv);}
+void Scalar::init_from<float16_t>(float16_t vv){
+    dtype = DType::Float16;
+    v.d = convert::convert<decltype(v.d)>(vv);
+}
 
 template <>
-Scalar::Scalar(complex_32 vv)
-	:dtype(DType::Complex32)
-{v.c = convert::convert<decltype(v.c)>(vv);}
-#endif
-#ifdef _128_FLOAT_SUPPORT_
+void Scalar::init_from<complex_32>(complex_32 vv){
+    dtype = DType::Complex32;
+    v.c = convert::convert<decltype(v.c)>(vv);
+}
 template <>
-Scalar::Scalar(float128_t vv)
-	:dtype(DType::Float128)
-{v.d = convert::convert<decltype(v.d)>(vv);}
-#endif
+void Scalar::init_from<float128_t>(float128_t vv){
+    dtype = DType::Float128;
+    v.d = convert::convert<decltype(v.d)>(vv);
+}
 template <>
-Scalar::Scalar(double vv)
-	:dtype(DType::Double)
-{v.d = convert::convert<decltype(v.d)>(vv);}
+void Scalar::init_from<double>(double vv){
+    dtype = DType::Double;
+    v.d = convert::convert<decltype(v.d)>(vv);
+}
 template <>
-Scalar::Scalar(float vv)
-	:dtype(DType::Float)
-{v.d = convert::convert<decltype(v.d)>(vv);}
+void Scalar::init_from<float>(float vv){
+    dtype = DType::Float;
+    v.d = convert::convert<decltype(v.d)>(vv);
+}
 template <>
-Scalar::Scalar(uint32_t vv)
-	:dtype(DType::uint32)
-{v.i = convert::convert<decltype(v.i)>(vv);}
+void Scalar::init_from<uint32_t>(uint32_t vv){
+    dtype = DType::uint32;
+    v.i = convert::convert<decltype(v.i)>(vv);
+}
 template <>
-Scalar::Scalar(complex_64 vv)
-	:dtype(DType::Complex64)
-{v.c = convert::convert<decltype(v.c)>(vv);}
+void Scalar::init_from<complex_64>(complex_64 vv){
+    dtype = DType::Complex64;
+    v.c = convert::convert<decltype(v.c)>(vv);
+}
 template <>
-Scalar::Scalar(complex_128 vv)
-	:dtype(DType::Complex128)
-{v.c = convert::convert<decltype(v.c)>(vv);}
+void Scalar::init_from<complex_128>(complex_128 vv){
+    dtype = DType::Complex128;
+    v.c = convert::convert<decltype(v.c)>(vv);
+}
 template <>
-Scalar::Scalar(uint8_t vv)
-	:dtype(DType::uint8)
-{v.i = convert::convert<decltype(v.i)>(vv);}
+void Scalar::init_from<uint8_t>(uint8_t vv){
+    dtype = DType::uint8;
+    v.i = convert::convert<decltype(v.i)>(vv);
+}
 template <>
-Scalar::Scalar(int8_t vv)
-	:dtype(DType::int8)
-{v.i = convert::convert<decltype(v.i)>(vv);}
+void Scalar::init_from<int8_t>(int8_t vv){
+    dtype = DType::int8;
+    v.i = convert::convert<decltype(v.i)>(vv);
+}
 template <>
-Scalar::Scalar(int16_t vv)
-	:dtype(DType::int16)
-{v.i = convert::convert<decltype(v.i)>(vv);}
+void Scalar::init_from<int16_t>(int16_t vv){
+    dtype = DType::int16;
+    v.i = convert::convert<decltype(v.i)>(vv);
+}
 template <>
-Scalar::Scalar(uint16_t vv)
-	:dtype(DType::uint16)
-{v.i = convert::convert<decltype(v.i)>(vv);}
+void Scalar::init_from<uint16_t>(uint16_t vv){
+    dtype = DType::uint16;
+    v.i = convert::convert<decltype(v.i)>(vv);
+}
 template <>
-Scalar::Scalar(int64_t vv)
-	:dtype(DType::int64)
-{v.i = convert::convert<decltype(v.i)>(vv);} 
+void Scalar::init_from<int64_t>(int64_t vv){
+    dtype = DType::int64;
+    v.i = convert::convert<decltype(v.i)>(vv);
+} 
 template <>
-Scalar::Scalar(uint_bool_t vv)
-	:dtype(DType::Bool)
-{v.i = (vv == true) ? 1 : 0;}
+void Scalar::init_from<uint_bool_t>(uint_bool_t vv){
+    dtype = DType::Bool;
+    v.i = (vv == true) ? 1 : 0;
+}
 template <>
-Scalar::Scalar(bool vv)
-	:dtype(DType::Bool)
-{v.i = vv ? 1 : 0;}
+void Scalar::init_from<bool>(bool vv){
+    dtype = DType::Bool;
+    v.i = vv ? 1 : 0;
+}
 
 Scalar::Scalar(std::string _str)
     :dtype(DType::Float64)

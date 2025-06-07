@@ -247,7 +247,7 @@ std::pair<Tensor, Tensor> compute_point_grad_radii(const Tensor& index_simplicie
     const int64_t &B = index_simplicies.shape()[0];  // Batches
     const int64_t Np1 = index_simplicies.shape()[1]; // N+1 verticies
 
-    NT_VLA(const double*, radi, distances.shape()[0]);
+    NT_VLA(const float*, radi, distances.shape()[0]);
     // const float *radi[distances.shape()[0]];
     const float *begin =
         reinterpret_cast<const float *>(distances.data_ptr());

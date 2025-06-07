@@ -49,6 +49,31 @@ struct is_sub_my_complex<my_complex<U>> : std::true_type {};
 template<typename U>
 struct is_sub_my_complex<std::complex<U>> : std::true_type {};
 }
+
+#define NT_MY_COMPLEX_SELF_SINGLE_OPERATOR_OP(OP)\
+template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !std::is_same_v<U, float16_t> && !std::is_same_v<T, float16_t>\
+                        && (std::is_integral_v<U> || std::is_floating_point_v<U>), int> = 0>\
+inline my_complex<T>& operator OP (const U& ele){return *this OP static_cast<T>(ele);}\
+template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !std::is_same_v<U, float16_t> && std::is_same_v<T, float16_t>\
+                        && (std::is_integral_v<U> || std::is_floating_point_v<U>), int> = 0>\
+inline my_complex<T>& operator OP (const U& ele){return *this OP _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele));}\
+template<typename U, std::enable_if_t<!std::is_same_v<T, U> && std::is_same_v<U, float16_t> && !std::is_same_v<T, float16_t>\
+                        && (std::is_integral_v<U> || std::is_floating_point_v<U>), int> = 0>\
+inline my_complex<T>& operator OP (const U& ele){return *this OP static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(ele));}\
+
+
+#define NT_MY_COMPLEX_NON_SELF_SINGLE_OPERATOR_OP(OP)\
+template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !std::is_same_v<U, float16_t> && !std::is_same_v<T, float16_t>\
+                        && (std::is_integral_v<U> || std::is_floating_point_v<U>), int> = 0>\
+inline my_complex<T> operator OP (const U& ele) const {return *this OP static_cast<T>(ele);}\
+template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !std::is_same_v<U, float16_t> && std::is_same_v<T, float16_t>\
+                        && (std::is_integral_v<U> || std::is_floating_point_v<U>), int> = 0>\
+inline my_complex<T> operator OP (const U& ele) const {return *this OP _NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele));}\
+template<typename U, std::enable_if_t<!std::is_same_v<T, U> && std::is_same_v<U, float16_t> && !std::is_same_v<T, float16_t>\
+                        && (std::is_integral_v<U> || std::is_floating_point_v<U>), int> = 0>\
+inline my_complex<T> operator OP (const U& ele) const {return *this OP static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(ele));}\
+
+
 template<typename T>
 class my_complex{
 		T re, im;
@@ -134,6 +159,12 @@ class my_complex{
 		my_complex<T>& operator*=(T);
 		my_complex<T>& operator-=(T);
 		my_complex<T>& operator/=(T);
+        NT_MY_COMPLEX_SELF_SINGLE_OPERATOR_OP(+=);
+        NT_MY_COMPLEX_SELF_SINGLE_OPERATOR_OP(*=);
+        NT_MY_COMPLEX_SELF_SINGLE_OPERATOR_OP(-=);
+        NT_MY_COMPLEX_SELF_SINGLE_OPERATOR_OP(/=);
+
+
 		// Overload for float
 		my_complex<T>& operator+=(const my_complex<float>& val);
 
@@ -173,6 +204,10 @@ class my_complex{
 		my_complex<T> operator*(T) const;
 		my_complex<T> operator-(T) const;
 		my_complex<T> operator/(T) const;
+        NT_MY_COMPLEX_NON_SELF_SINGLE_OPERATOR_OP(+);
+        NT_MY_COMPLEX_NON_SELF_SINGLE_OPERATOR_OP(*);
+        NT_MY_COMPLEX_NON_SELF_SINGLE_OPERATOR_OP(-);
+        NT_MY_COMPLEX_NON_SELF_SINGLE_OPERATOR_OP(/);
 
 		// Overload for float
 		my_complex<T> operator+(const my_complex<float>& val) const;
@@ -239,6 +274,8 @@ class my_complex{
 
 };
 
+#undef NT_MY_COMPLEX_NON_SELF_SINGLE_OPERATOR_OP
+#undef     NT_MY_COMPLEX_SELF_SINGLE_OPERATOR_OP 
 
 using complex_64 = my_complex<float>;
 using complex_128 = my_complex<double>;

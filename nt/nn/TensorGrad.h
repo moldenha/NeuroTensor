@@ -436,10 +436,10 @@ class TensorGrad : public intrusive_ptr_target{
 				return this->tensor.item<T>();
 			}
 		}
-		inline const bool is_contiguous() const                    {return this->tensor.is_contiguous();}
-		inline const bool is_empty() const                         {return this->tensor.is_empty();}
-		inline const bool is_null() const                          {return this->tensor.is_null();}
-		inline const uint32_t contig_count() const                 {return this->tensor.contig_count();}
+		inline bool is_contiguous() const                    {return this->tensor.is_contiguous();}
+		inline bool is_empty() const                         {return this->tensor.is_empty();}
+		inline bool is_null() const                          {return this->tensor.is_null();}
+		inline int64_t contig_count() const                 {return this->tensor.contig_count();}
 		inline std::vector<size_value_t> strides() const           {return this->tensor.strides();}
 		inline std::vector<size_value_t> getChangedStrides() const {return this->tensor.getChangedStrides();}
 		

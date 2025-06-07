@@ -37,8 +37,8 @@ Tensor simultaneousReduce(SparseTensor &d_k, SparseTensor &d_kplus1) {
                            "Expected nummels to be same but got $ and $",
                            A_split.numel(), B_split.numel());
 
-    NT_VLA(const float *, a_access, A_split.numel())
-    NT_VLA(const float *, b_access, A_split.numel())
+    NT_VLA(const float *, a_access, A_split.numel());
+    NT_VLA(const float *, b_access, A_split.numel());
     // const float *a_access[A_split.numel()];
     // const float *b_access[A_split.numel()];
     for (int64_t i = 0; i < A_split.numel(); ++i) {
@@ -106,8 +106,8 @@ Tensor simultaneousReduce(SparseTensor &d_k, SparseTensor &d_kplus1) {
         ++j;
     }
     
-    NT_VLA_DEALC(a_access)
-    NT_VLA_DEALC(b_access)
+    NT_VLA_DEALC(a_access);
+    NT_VLA_DEALC(b_access);
 
     return functional::list(functional::cat_unordered(A_split).view(A.shape()),
                             functional::cat_unordered(B_split).view(B.shape()));
@@ -118,7 +118,7 @@ Tensor &finishRowReducing(Tensor &B) {
     int64_t numCols = B.shape()[1];
     Tensor B_split = B.split_axis(-2);
     Tensor *B_begin = reinterpret_cast<Tensor *>(B_split.data_ptr());
-    NT_VLA(const float *, b_access, B_split.numel())
+    NT_VLA(const float *, b_access, B_split.numel());
     // const float *b_access[B_split.numel()];
     for (int64_t i = 0; i < B_split.numel(); ++i) {
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
@@ -160,7 +160,7 @@ Tensor &finishRowReducing(Tensor &B) {
         ++i;
         ++j;
     }
-    NT_VLA_DEALC(b_access)
+    NT_VLA_DEALC(b_access);
     Tensor catted = nt::functional::cat_unordered(B_split).view(B.shape());
     std::swap(B, catted);
     return B;

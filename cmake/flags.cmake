@@ -39,5 +39,11 @@ endif()
 include(${CMAKE_SOURCE_DIR}/cmake/detect_simd.cmake)
 
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_PARALLEL -march=native")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PARALLEL -march=native")
+#this makes all the macros in NeuroTensor a lot more likely to work and a lot easier to use for reflection purposes
+if (MSVC)
+    add_compile_options(/Zc:preprocessor)
+endif()
+
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_PARALLEL")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PARALLEL")

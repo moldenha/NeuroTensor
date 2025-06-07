@@ -48,13 +48,9 @@ static constexpr bool valid = (std::is_same_v<T, int32_t> ||
 			std::is_same_v<T, int128_t> ||
 			std::is_same_v<T, uint128_t> ||
 #endif
-#ifdef _HALF_FLOAT_SUPPORT_
 			std::is_same_v<T, complex_32 > ||
 			std::is_same_v<T, float16_t> ||
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 			std::is_same_v<T, float128_t> ||
-#endif
 			std::is_same_v<T, double> ||
 			std::is_same_v<T, float> ||
 			std::is_same_v<T, uint32_t> ||
@@ -65,7 +61,7 @@ static constexpr bool valid = (std::is_same_v<T, int32_t> ||
 			std::is_same_v<T, int16_t> ||
 			std::is_same_v<T, int64_t> ||
 			std::is_same_v<T, uint16_t> ||
-			std::is_same_v<T, Tensor> ||
+			std::is_same_v<T, uint_bool_t> ||
 			std::is_same_v<T, bool>);	
 }
 
@@ -89,24 +85,17 @@ class Scalar{
 		v_t() {}
 	} v;
 	DType dtype;
+
+    template<typename T>
+    void init_from(const T& vv);
 	public:
 		Scalar();
 		Scalar(const Scalar&);
+        
+        //have to change the specialization because of MSVC
+        template<typename T, std::enable_if_t<dtype_valid_checker_scalar::valid<T>, bool > = true>
+        Scalar(T vv){init_from<T>(vv);}
 
-		template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_integer_v<DTypeFuncs::type_to_dtype<T>>, bool> = true>
-		Scalar(T vv);
-
-		template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_complex_v<DTypeFuncs::type_to_dtype<T>>, bool> = true>
-		Scalar(T vv);
-
-		template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_floating_v<DTypeFuncs::type_to_dtype<T>>, bool> = true>
-		Scalar(T vv);
-
-		template<typename T, std::enable_if_t<std::is_same_v<T, bool>, bool> = true>
-		Scalar(T vv);
-
-		template<typename T, std::enable_if_t<std::is_same_v<T, uint_bool_t>, bool> = true>
-		Scalar(T vv);
             
 #ifndef SIMDE_FLOAT16_IS_SCALAR
         Scalar(half_float::detail::expr val)
