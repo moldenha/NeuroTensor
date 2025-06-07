@@ -74,10 +74,10 @@ void kzero_memory(T* array) {
 template<typename T, size_t COLS>
 inline void kpack_rowA_threaded(const T* src_matrix, T* block_matrix, int64_t src_cols) noexcept {
 	int64_t max = _NT_MATMULT_MIN_(COLS, src_cols);
-	for(int i = 0; i < max; ++i)
+	for(int64_t i = 0; i < max; ++i)
 		*block_matrix++ = src_matrix[i];
-	for(int i = max; i < COLS; ++i)
-		*block_matrix++ = 0;
+	for(size_t i = max; i < COLS; ++i)
+		*block_matrix++ = T(0);
 }
 
 //pack_threaded<T, a_pack_rows, a_pack_cols>(A, blockA_packed, i, k, a_rows, a_cols);
@@ -115,7 +115,7 @@ inline void pack_transpose_threaded(const T* src_matrix_pre, T* block_matrix, co
 	kzero_memory<T, ROWS * COLS>(block_matrix);
 	tbb::parallel_for(tbb::blocked_range<int64_t>(0, max),
 			[&](const tbb::blocked_range<int64_t>& r){
-	for(int i = r.begin(); i < r.end(); ++i){
+	for(int64_t i = r.begin(); i < r.end(); ++i){
 		kpack_rowB_threaded<T, ROWS, COLS>(src_matrix + (i * src_cols) + start_col, block_matrix, max, col_amt, i);
 	}
 	});

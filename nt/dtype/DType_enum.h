@@ -1,5 +1,5 @@
-#ifndef _DTYPE_ENUM_H
-#define _DTYPE_ENUM_H
+#ifndef NT_DTYPE_ENUM_H
+#define NT_DTYPE_ENUM_H
 #include "../types/Types.h"
 
 namespace nt{
@@ -125,6 +125,8 @@ inline DType DTypeShared_DType(const DTypeShared& dt){
 			return DType::TensorObj;
 		case DTypeShared::Bool:
 			return DType::Bool;
+        default:
+            return DType::Bool;
 	}
 }
 
@@ -173,6 +175,8 @@ inline DTypeShared DType_DTypeShared(const DType& dt){
 			return DTypeShared::TensorObj;
 		case DType::Bool:
 			return DTypeShared::Bool;
+        default:
+            return DTypeShared::Bool;
 	}
 
 }

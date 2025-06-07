@@ -458,12 +458,11 @@ void transpose_any_manual(void** _in, void** _out,
     axis1 = axis1 < 0 ? axis1 + ndim : axis1;
     if(axis0 > axis1) std::swap(axis0, axis1);
     
-
     
 #ifdef _MSC_VER
     using ptr_type = std::uintptr_t;
-    const std::uintptr_t* __in = reinterpret_cast<std::uintptr_t*>(_in);
-    std::uintptr_t* __out = reinterpret_cast<std::uintptr_t*>(_out);
+    const std::uintptr_t* __in = (const std::uintptr_t*)_in;
+    std::uintptr_t* __out = (std::uintptr_t*)_out;
 #else
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;

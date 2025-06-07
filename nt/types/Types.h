@@ -53,13 +53,13 @@ template<typename T>
 class my_complex{
 		T re, im;
 		template <std::size_t Index, typename U>
-		friend inline constexpr U get_complex(const my_complex<U>& obj) noexcept;
+		friend constexpr U get_complex(const my_complex<U>& obj) noexcept;
 
 		template <std::size_t Index, typename U>
-		friend inline constexpr U& get_complex(my_complex<U>& obj) noexcept;
+		friend constexpr U& get_complex(my_complex<U>& obj) noexcept;
 
 		template <std::size_t Index, typename U>
-		friend inline constexpr U&& get_complex(my_complex<U>&& obj) noexcept;
+		friend constexpr U&& get_complex(my_complex<U>&& obj) noexcept;
     
         template<typename> friend class my_complex;
 
@@ -70,30 +70,62 @@ class my_complex{
 		my_complex(const std::complex<T>&);
 		my_complex();
 
+        //integral types
+        template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& ele)
+        :re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
+        
+        template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& real, const U& imag)
+        :re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
+
+        template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& ele)
+        :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))) {}
+        
+        template<typename U, std::enable_if_t<std::is_integral_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& real, const U& imag)
+        :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(real))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(imag))) {}
+        
+        //floating types
+        template<typename U=T, std::enable_if_t<!std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const float16_t& ele)
+        :re(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(ele))), im(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(ele))) {}
+
+        template<typename U=T, std::enable_if_t<!std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const float16_t& real, const float16_t& imag)
+        :re(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(real))), im(static_cast<T>(_NT_FLOAT16_TO_FLOAT32_(imag))) {}
+        
+        template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& ele)
+        :re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
+        
+        template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && !std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& real, const U& imag)
+        :re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
+
+
+        template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& ele)
+        :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(ele))) {}
+        
+        template<typename U, std::enable_if_t<std::is_floating_point_v<U> && !std::is_same_v<T, U> && std::is_same_v<T, float16_t>, int> = 0>
+        my_complex(const U& real, const U& imag)
+        :re(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(real))), im(_NT_FLOAT32_TO_FLOAT16_(static_cast<float>(imag))) {}
+ 
+
+
 #ifndef SIMDE_FLOAT16_IS_SCALAR
-        // Enable only when T == nt::float16_t
-        template<typename U = T, std::enable_if_t<std::is_same<U, nt::float16_t>::value, int> = 0>
-        my_complex(half_float::half real, half_float::half imag) : re(real), im(imag) {}
-        
-        template<typename U, std::enable_if_t<std::is_convertible_v<U, T> && 
-                                             !std::is_same_v<T, U> && 
-                                             !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>), int> = 0>
-        my_complex(const U& real, const U& imag) : re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
+        template<typename U = T, std::enable_if_t<std::is_same_v<U, nt::float16_t>, int> = 0>
+        my_complex(const half_float::half& real, const half_float::half& imag) : re(real), im(imag) {}
 
-        template<typename U, std::enable_if_t<std::is_convertible_v<U, T> && 
-                                             !std::is_same_v<T, U> && 
-                                             !(std::is_same_v<T, nt::float16_t> && std::is_same_v<U, half_float::half>)
-                                             && !details::is_sub_my_complex<U>::value, int> = 0>
-        my_complex(const U& ele) : re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
-
-#else
-        template<typename U, std::enable_if_t<!std::is_same_v<T, U>, int> = 0>
-        my_complex(const U& real, const U& imag) : re(static_cast<T>(real)), im(static_cast<T>(imag)) {}
-        
-        template<typename U, std::enable_if_t<!std::is_same_v<T, U> && !details::is_sub_my_complex<U>::value, int> = 0>
-        my_complex(const U& ele) : re(static_cast<T>(ele)), im(static_cast<T>(ele)) {}
-
+        template<typename U = T, std::enable_if_t<std::is_same_v<U, nt::float16_t>, int> = 0>
+        my_complex(const half_float::half& ele) : re(ele), im(ele) {}
 #endif
+        
+
+        
+
 
 
 		using value_type = T;
