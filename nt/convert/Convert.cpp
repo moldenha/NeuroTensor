@@ -359,29 +359,29 @@ template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ?
 // template<> uint128_t convert<DType::uint128>(const bool &v){return uint128_t(0 ? v : 1);}
 #endif
 
-template<> complex_32 convert<DType::Complex32>(const float& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const double& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const float16_t& v){return complex_32(v, 0);}
+template<> complex_32 convert<DType::Complex32>(const float& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const double& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const float16_t& v){return complex_32(v, _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 template<> complex_32 convert<DType::Complex32>(const complex_32& v){return v;}
-template<> complex_32 convert<DType::Complex32>(const float128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> complex_32 convert<DType::Complex32>(const float128_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 #ifdef __SIZEOF_INT128__
-template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 #else
-template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(int64_t(v)), 0);}
+template<> complex_32 convert<DType::Complex32>(const int128_t& v){return complex_32(convert<DType::Float16>(int64_t(v)), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 #endif
-template<> complex_32 convert<DType::Complex32>(const uint128_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> complex_32 convert<DType::Complex32>(const uint128_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 template<> complex_32 convert<DType::Complex32>(const complex_64& v){return complex_32(v);}
 template<> complex_32 convert<DType::Complex32>(const complex_128& v){return complex_32(v);}
-template<> complex_32 convert<DType::Complex32>(const int64_t& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const int32_t& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const uint32_t& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const int16_t& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const uint16_t& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const int8_t& v){return complex_32(convert<DType::Float16>(v), 0);}
-template<> complex_32 convert<DType::Complex32>(const uint8_t& v){return complex_32(convert<DType::Float16>(v), 0);}
+template<> complex_32 convert<DType::Complex32>(const int64_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const int32_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const uint32_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const int16_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const uint16_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const int8_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const uint8_t& v){return complex_32(convert<DType::Float16>(v), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 template<> complex_32 convert<DType::Complex32>(const Tensor& v){return v.toScalar().to<complex_32>();}
-template<> complex_32 convert<DType::Complex32>(const uint_bool_t& v){return complex_32(convert<DType::Float16>(v.value), 0);}
-template<> complex_32 convert<DType::Complex32>(const bool &v){return complex_32(_NT_FLOAT32_TO_FLOAT16_(v ? 0.0f : 1.0f), 0);}
+template<> complex_32 convert<DType::Complex32>(const uint_bool_t& v){return complex_32(convert<DType::Float16>(v.value), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
+template<> complex_32 convert<DType::Complex32>(const bool &v){return complex_32(_NT_FLOAT32_TO_FLOAT16_(v ? 0.0f : 1.0f), _NT_FLOAT32_TO_FLOAT16_(float(0)));}
 
 
 template<> complex_64 convert<DType::Complex64>(const float& v){return complex_64(v, 0);}
@@ -473,7 +473,7 @@ template<> int8_t convert<DType::int8>(const int128_t& v){return static_cast<int
 template<> int8_t convert<DType::int8>(const uint128_t& v){return static_cast<int8_t>(v);}
 #else
 template<> int8_t convert<DType::int8>(const int128_t& v){return int8_t(v);}
-template<> int8_t convert<DType::int8>(const uint128_t& v){return int8_t(v);}
+template<> int8_t convert<DType::int8>(const uint128_t& v){return static_cast<int8_t>(uint8_t(v));}
 #endif
 template<> int8_t convert<DType::int8>(const complex_64& v){return static_cast<int8_t>(v.real());}
 template<> int8_t convert<DType::int8>(const complex_128& v){return static_cast<int8_t>(v.real());}
@@ -495,7 +495,7 @@ template<> int16_t convert<DType::int16>(const float16_t& v){return static_cast<
 template<> int16_t convert<DType::int16>(const complex_32& v){return static_cast<int16_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
 template<> int16_t convert<DType::int16>(const float128_t& v){return int16_t(v);}
 template<> int16_t convert<DType::int16>(const int128_t& v){return int16_t(v);}
-template<> int16_t convert<DType::int16>(const uint128_t& v){return int16_t(v);}
+template<> int16_t convert<DType::int16>(const uint128_t& v){return static_cast<int16_t>(uint16_t(v));}
 template<> int16_t convert<DType::int16>(const complex_64& v){return static_cast<int16_t>(v.real());}
 template<> int16_t convert<DType::int16>(const complex_128& v){return static_cast<int16_t>(v.real());}
 template<> int16_t convert<DType::int16>(const int64_t& v){return static_cast<int16_t>(v);}
@@ -535,7 +535,7 @@ template<> int32_t convert<DType::int32>(const float16_t& v){return static_cast<
 template<> int32_t convert<DType::int32>(const complex_32& v){return static_cast<int32_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
 template<> int32_t convert<DType::int32>(const float128_t& v){return int32_t(v);}
 template<> int32_t convert<DType::int32>(const int128_t& v){return int32_t(v);}
-template<> int32_t convert<DType::int32>(const uint128_t& v){return int32_t(v);}
+template<> int32_t convert<DType::int32>(const uint128_t& v){return static_cast<int32_t>(uint32_t(v));}
 template<> int32_t convert<DType::int32>(const complex_64& v){return static_cast<int32_t>(v.real());}
 template<> int32_t convert<DType::int32>(const complex_128& v){return static_cast<int32_t>(v.real());}
 template<> int32_t convert<DType::int32>(const int64_t& v){return static_cast<int32_t>(v);}
@@ -576,7 +576,7 @@ template<> int64_t convert<DType::int64>(const float16_t& v){return static_cast<
 template<> int64_t convert<DType::int64>(const complex_32& v){return static_cast<int64_t>(_NT_FLOAT16_TO_FLOAT32_(v.real()));}
 template<> int64_t convert<DType::int64>(const float128_t& v){return int64_t(v);}
 template<> int64_t convert<DType::int64>(const int128_t& v){return int64_t(v);}
-template<> int64_t convert<DType::int64>(const uint128_t& v){return int64_t(v);}
+template<> int64_t convert<DType::int64>(const uint128_t& v){return static_cast<int64_t>(uint64_t(v));}
 template<> int64_t convert<DType::int64>(const complex_64& v){return static_cast<int64_t>(v.real());}
 template<> int64_t convert<DType::int64>(const complex_128& v){return static_cast<int64_t>(v.real());}
 template<> int64_t convert<DType::int64>(const int32_t& v){return static_cast<int64_t>(v);}
