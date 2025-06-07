@@ -363,7 +363,7 @@ Tensor& Tensor::force_mutable_function(std::function<void(Tensor&)> func){
     return *this;
 }
 
-const int64_t Tensor::dims() const { return shape().size(); }
+int64_t Tensor::dims() const { return shape().size(); }
 
 template <typename T> T &Tensor::item() {
     __NT_HANDLE_NULL_TENSORS__();
