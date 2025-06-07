@@ -15,6 +15,12 @@
 
   #define NT_SUPPRESS_VA_ARGS_WARNING_POP \
     _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER) && defined(_WIN32)
+    #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH\
+        __pragma(warning(push))\
+        __pragma(warning(disable:C5100))
+  #define NT_SUPPRESS_VA_ARGS_WARNING_POP \
+        __pragma(warning(pop))
 #else
   #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH
   #define NT_SUPPRESS_VA_ARGS_WARNING_POP

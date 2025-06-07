@@ -295,7 +295,7 @@ SizeRef SizeRef::flatten(value_type _a, value_type _b) const{
 	value_type n_dims = size() - (end - begin) + 1;
 	ArrayRefInt n_vals = ArrayRefInt::zeros(n_dims); 
 	std::copy(cbegin(), cbegin() + begin, n_vals.d_data());
-	n_vals[begin] = static_cast<vlaue_t>(std::accumulate<typename SizeRef::ArrayRefInt::const_iterator, value_type>(cbegin() + begin, cbegin() + end, 1.0, std::multiplies<value_t>()));
+	n_vals[begin] = static_cast<value_t>(std::accumulate<typename SizeRef::ArrayRefInt::const_iterator, value_type>(cbegin() + begin, cbegin() + end, 1.0, std::multiplies<value_t>()));
 	std::copy(cbegin() + end, cend(), n_vals.d_data() + begin + 1);
 	return SizeRef(std::move(n_vals));
 }

@@ -1514,7 +1514,8 @@ TensorGrad TensorGrad::pad(std::vector<size_value_t> p, const char *mode,
     std::vector<nt::my_range> ranges(dims());
     auto begin = p.cbegin();
     size_value_t start = dims() - size_value_t(p.size() / 2);
-    for (size_value_t i = 0; i < dims(); ++i) {
+    size_value_t dims_size = static_cast<size_value_t>(this->dims());
+    for (size_value_t i = 0; i < dims_size; ++i) {
         if (i < (start)) {
             ranges[i] = my_range(0, shape()[i]);
             continue;
