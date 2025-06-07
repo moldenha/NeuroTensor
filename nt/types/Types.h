@@ -442,15 +442,25 @@ namespace std {
     };
 }
 
-
+#ifdef SIMDE_FLOAT16_IS_SCALAR
 #define _NT_DEFINE_STL_FUNC_FP16_ROUTE_(route)\
 	inline ::nt::float16_t route(::nt::float16_t num) { return _NT_FLOAT32_TO_FLOAT16_(route(_NT_FLOAT16_TO_FLOAT32_(num)));}
+
 
 #define _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(route)\
 	inline ::nt::complex_32 route(::nt::complex_32 num) { \
 		return ::nt::complex_32( _NT_FLOAT32_TO_FLOAT16_(route(_NT_FLOAT16_TO_FLOAT32_(std::get<0>(num)))),\
 					_NT_FLOAT32_TO_FLOAT16_(route(_NT_FLOAT16_TO_FLOAT32_(std::get<1>(num)))));\
 	}
+
+
+#else
+#define _NT_DEFINE_STL_FUNC_FP16_ROUTE_(route)\
+	inline ::nt::float16_t route(half_float::half num) { return half_float::half(half_float::detail::route(num));}
+#define _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(route)\
+	inline ::nt::complex_32 route(::nt::complex_32 num) { return ::nt::complex_32(route(std::get<0>(num)), route(std::get<1>(num))); }
+#endif
+
 
 namespace std{
 _NT_DEFINE_STL_FUNC_FP16_ROUTE_(exp)

@@ -136,7 +136,7 @@ inline void dtan(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = (base_type(1.0) / (std::pow(std::cos(*begin), 2)));
+			*out = (base_type(1.0) / (std::pow(std::cos(*begin), base_type(2))));
 	}else{
         for(;begin != end; ++begin, ++out){
             *out = (base_type(1.0) / (std::pow(std::cos(*begin), 2)));
@@ -159,7 +159,7 @@ inline void dtanh(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = (1 / (std::pow(std::cosh(*begin), 2)));
+			*out = (base_type(1) / (std::pow(std::cosh(*begin), base_type(2))));
 	}else{
 		for(;begin != end; ++begin, ++out){
 			*out = (1 / (std::pow(std::cosh(*begin), 2)));
@@ -205,8 +205,12 @@ inline void dasin(T begin, T end, U out){
 					      current = SimdTraits<base_type>::invsqrt(current);
 			it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-			*out = base_type(1) / std::sqrt(base_type(1) - (*begin * *begin));
+		for(;begin < end; ++begin, ++out){
+            base_type m = *begin * *begin;
+            base_type s = base_type(1) - m;
+            base_type sq = std::sqrt(s);
+            *out = base_type(1) / sq;
+        } 
 	}else{
         for(;begin != end; ++begin, ++out){
 			*out = 1.0 / std::sqrt(1.0 - (*begin * *begin));
@@ -232,8 +236,12 @@ inline void dacos(T begin, T end, U out){
 					      current = SimdTraits<base_type>::negative(current);
 			it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-			*out = base_type(-1) / std::sqrt(base_type(1) - (*begin * *begin));
+		for(;begin < end; ++begin, ++out){
+            base_type m = *begin * *begin;
+            base_type s = base_type(1) - m;
+            base_type sq = std::sqrt(s);
+            *out = base_type(-1) / sq;
+        }  
 	}else{
         for(;begin != end; ++begin, ++out){
 			*out = -1.0 / std::sqrt(1.0 - (*begin * *begin));
@@ -282,8 +290,12 @@ inline void dasinh(T begin, T end, U out){
 					      current = SimdTraits<base_type>::invsqrt(current);
 			it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-			*out = base_type(1) / std::sqrt((*begin * *begin) + base_type(1));
+		for(;begin < end; ++begin, ++out){
+            base_type s = *begin * *begin;
+            s += base_type(1);
+            base_type sq = std::sqrt(s);
+            *out = base_type(1) / sq;
+        }
 	}else{
         for(;begin != end; ++begin, ++out){
 			*out = 1.0 / std::sqrt((*begin * *begin) + 1.0);
@@ -308,8 +320,12 @@ inline void dacosh(T begin, T end, U out){
 					      current = SimdTraits<base_type>::invsqrt(current);
 			it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-			*out = base_type(1) / std::sqrt((*begin * *begin) - base_type(1));
+		for(;begin < end; ++begin, ++out){
+            base_type s = *begin * *begin;
+            s -= base_type(1);
+            base_type sq = std::sqrt(s);
+            *out = base_type(1) / sq;
+        } 
 	}else{
         for(;begin != end; ++begin, ++out){
 			*out = 1.0 / std::sqrt((*begin * *begin) - 1.0);
