@@ -40,7 +40,7 @@ inline value_t _nt_sub_ptr_determinant_(iterator it, int64_t n){
     if(n == 1){return *it;}
     if(n == 2){return determinant_2x2<value_t, iterator>(it);}
     if(n == 3){return determinant_3x3<value_t, iterator>(it);}
-    value_t det = 0;
+    value_t det(0);
     for(int64_t c = 0; c < n; ++c){
         det += it[c] * cofactor<value_t, iterator>(it, n, 0, c); 
     }
@@ -84,7 +84,7 @@ inline value_t cofactor(iterator mat, int64_t n, int64_t r, int64_t c){
     
     value_t minor_det = _nt_sub_ptr_determinant_<value_t, value_t*>(minor_mat, n-1);
     delete[] minor_mat;
-    minor_det *= ((r + c) % 2 == 0 ? 1 : -1);
+    minor_det *= value_t((r + c) % 2 == 0 ? 1 : -1);
     return minor_det;
 }
 

@@ -281,7 +281,7 @@ inline BucketIterator_blocked<T> iterator_parallel_for(UnaryFunction&& in_func, 
 	uint64_t block_start_index = start;
 	for(uint64_t i = 0; i < iterators.size(); ++i){
 		const auto& [begin_ptr, end_ptr] = bounds[i];
-		std::ptrdiff_t ptr_diff = end_ptr - begin_ptr;
+		uint64_t ptr_diff = end_ptr - begin_ptr;
 		if(last_start > 0){
 			if(ptr_diff <= last_start){last_start -= ptr_diff;continue;}
 		}

@@ -204,7 +204,7 @@ class Tensor final{
 		inline bool is_empty() const {return _vals.is_empty() && _total_size == 0;}
 		inline bool is_null() const {return _vals.is_null();}
 		inline int64_t contig_count() const {return _vals.use_count();}
-		const size_t dims() const;
+	    int64_t dims() const;
 		const SizeRef& shape() const;
 		Tensor operator[](size_value_t);
 		const Tensor operator[](size_value_t) const;

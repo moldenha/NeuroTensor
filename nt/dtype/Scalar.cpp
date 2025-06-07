@@ -128,102 +128,141 @@ Scalar& Scalar::operator=(const Scalar &s){
 	return *this;
 }
 
+template<typename T>
+void Scalar::init_from(const T& vv){
+    this->dtype = type_to_dtype<T>; 
+    if constexpr (std::is_same_v<T, bool>){
+        dtype = DType::Bool;
+        v.i = vv ? 1 : 0;
+    }else if constexpr(std::is_same_v<T, uint_bool_t>){
+        dtype = DType::Bool;
+        v.i = (vv == true) ? 1 : 0;
+    }else if constexpr(DTypeFuncs::is_dtype_floating<type_to_dtype<T>>){
+        v.d = convert::convert<decltype(v.d)>(vv);
+    }else if constexpr(DTypeFuncs::is_dtype_integer<type_to_dtype<T>>){
+        v.i = convert::convert<decltype(v.i)>(vv);
+    }else if constexpr(DTypeFuncs::is_dtype_complex<type_to_dtype<T>>){
+        v.c = convert::convert<decltype(v.c)>(vv);
+    }
+}
 
-template<>
-void Scalar::init_from<int32_t>(const int32_t& vv){
-    dtype = DType::Integer; 
-    v.i = convert::convert<decltype(v.i)>(vv);
-} 
-
+template void Scalar::init_from<bool>(const bool&);
+template void Scalar::init_from<uint_bool_t>(const uint_bool_t&);
+template void Scalar::init_from<int8_t>(const int8_t&);
+template void Scalar::init_from<uint8_t>(const uint8_t&);
+template void Scalar::init_from<int16_t>(const int16_t&);
+template void Scalar::init_from<uint16_t>(const uint16_t&);
+template void Scalar::init_from<int32_t>(const int32_t&);
+template void Scalar::init_from<uint32_t>(const uint32_t&);
+template void Scalar::init_from<int64_t>(const int64_t&);
 #ifdef __SIZEOF_INT128__
-template<>
-void Scalar::init_from<int128_t>(const int128_t& vv){
-	dtype = DType::int128;
-    v.i = convert::convert<decltype(v.i)>(vv);
-} 
-
-template<>
-void Scalar::init_from<uint128_t>(uint128_t vv){
-    dtype = DType::uint128;
-    v.i = convert::convert<decltype(v.i)>(vv);
-} 
+template void Scalar::init_from<int128_t>(const int128_t&);
+template void Scalar::init_from<uint128_t>(const uint128_t&);
 #endif
-template <>
-void Scalar::init_from<float16_t>(float16_t vv){
-    dtype = DType::Float16;
-    v.d = convert::convert<decltype(v.d)>(vv);
-}
+template void Scalar::init_from<float16_t>(const float16_t&);
+template void Scalar::init_from<float>(const float&);
+template void Scalar::init_from<double>(const double&);
+template void Scalar::init_from<float128_t>(const float128_t&);
+template void Scalar::init_from<complex_32>(const complex_32&);
+template void Scalar::init_from<complex_64>(const complex_64&);
+template void Scalar::init_from<complex_128>(const complex_128&);
 
-template <>
-void Scalar::init_from<complex_32>(complex_32 vv){
-    dtype = DType::Complex32;
-    v.c = convert::convert<decltype(v.c)>(vv);
-}
-template <>
-void Scalar::init_from<float128_t>(float128_t vv){
-    dtype = DType::Float128;
-    v.d = convert::convert<decltype(v.d)>(vv);
-}
-template <>
-void Scalar::init_from<double>(double vv){
-    dtype = DType::Double;
-    v.d = convert::convert<decltype(v.d)>(vv);
-}
-template <>
-void Scalar::init_from<float>(float vv){
-    dtype = DType::Float;
-    v.d = convert::convert<decltype(v.d)>(vv);
-}
-template <>
-void Scalar::init_from<uint32_t>(uint32_t vv){
-    dtype = DType::uint32;
-    v.i = convert::convert<decltype(v.i)>(vv);
-}
-template <>
-void Scalar::init_from<complex_64>(complex_64 vv){
-    dtype = DType::Complex64;
-    v.c = convert::convert<decltype(v.c)>(vv);
-}
-template <>
-void Scalar::init_from<complex_128>(complex_128 vv){
-    dtype = DType::Complex128;
-    v.c = convert::convert<decltype(v.c)>(vv);
-}
-template <>
-void Scalar::init_from<uint8_t>(uint8_t vv){
-    dtype = DType::uint8;
-    v.i = convert::convert<decltype(v.i)>(vv);
-}
-template <>
-void Scalar::init_from<int8_t>(int8_t vv){
-    dtype = DType::int8;
-    v.i = convert::convert<decltype(v.i)>(vv);
-}
-template <>
-void Scalar::init_from<int16_t>(int16_t vv){
-    dtype = DType::int16;
-    v.i = convert::convert<decltype(v.i)>(vv);
-}
-template <>
-void Scalar::init_from<uint16_t>(uint16_t vv){
-    dtype = DType::uint16;
-    v.i = convert::convert<decltype(v.i)>(vv);
-}
-template <>
-void Scalar::init_from<int64_t>(int64_t vv){
-    dtype = DType::int64;
-    v.i = convert::convert<decltype(v.i)>(vv);
-} 
-template <>
-void Scalar::init_from<uint_bool_t>(uint_bool_t vv){
-    dtype = DType::Bool;
-    v.i = (vv == true) ? 1 : 0;
-}
-template <>
-void Scalar::init_from<bool>(bool vv){
-    dtype = DType::Bool;
-    v.i = vv ? 1 : 0;
-}
+
+// template<>
+// void Scalar::init_from<int32_t>(const int32_t& vv){
+//     dtype = DType::Integer; 
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// } 
+
+// #ifdef __SIZEOF_INT128__
+// template<>
+// void Scalar::init_from<int128_t>(const int128_t& vv){
+// 	dtype = DType::int128;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// } 
+
+// template<>
+// void Scalar::init_from<uint128_t>(uint128_t vv){
+//     dtype = DType::uint128;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// } 
+// #endif
+// template <>
+// void Scalar::init_from<float16_t>(float16_t vv){
+//     dtype = DType::Float16;
+//     v.d = convert::convert<decltype(v.d)>(vv);
+// }
+
+// template <>
+// void Scalar::init_from<complex_32>(complex_32 vv){
+//     dtype = DType::Complex32;
+//     v.c = convert::convert<decltype(v.c)>(vv);
+// }
+// template <>
+// void Scalar::init_from<float128_t>(float128_t vv){
+//     dtype = DType::Float128;
+//     v.d = convert::convert<decltype(v.d)>(vv);
+// }
+// template <>
+// void Scalar::init_from<double>(double vv){
+//     dtype = DType::Double;
+//     v.d = convert::convert<decltype(v.d)>(vv);
+// }
+// template <>
+// void Scalar::init_from<float>(float vv){
+//     dtype = DType::Float;
+//     v.d = convert::convert<decltype(v.d)>(vv);
+// }
+// template <>
+// void Scalar::init_from<uint32_t>(uint32_t vv){
+//     dtype = DType::uint32;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// }
+// template <>
+// void Scalar::init_from<complex_64>(complex_64 vv){
+//     dtype = DType::Complex64;
+//     v.c = convert::convert<decltype(v.c)>(vv);
+// }
+// template <>
+// void Scalar::init_from<complex_128>(complex_128 vv){
+//     dtype = DType::Complex128;
+//     v.c = convert::convert<decltype(v.c)>(vv);
+// }
+// template <>
+// void Scalar::init_from<uint8_t>(uint8_t vv){
+//     dtype = DType::uint8;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// }
+// template <>
+// void Scalar::init_from<int8_t>(int8_t vv){
+//     dtype = DType::int8;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// }
+// template <>
+// void Scalar::init_from<int16_t>(int16_t vv){
+//     dtype = DType::int16;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// }
+// template <>
+// void Scalar::init_from<uint16_t>(uint16_t vv){
+//     dtype = DType::uint16;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// }
+// template <>
+// void Scalar::init_from<int64_t>(int64_t vv){
+//     dtype = DType::int64;
+//     v.i = convert::convert<decltype(v.i)>(vv);
+// } 
+// template <>
+// void Scalar::init_from<uint_bool_t>(uint_bool_t vv){
+//     dtype = DType::Bool;
+//     v.i = (vv == true) ? 1 : 0;
+// }
+// template <>
+// void Scalar::init_from<bool>(bool vv){
+//     dtype = DType::Bool;
+//     v.i = vv ? 1 : 0;
+// }
 
 Scalar::Scalar(std::string _str)
     :dtype(DType::Float64)

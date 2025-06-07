@@ -17,6 +17,9 @@ void _extract_sliding_windows_max_2d(const ArrayVoid& _input, ArrayVoid& output,
         throw std::invalid_argument("Expected output to be contiguous and have a dtype of bool," 
                                     "and the dimensions of the input tensor to be greater than or equal to 2");
     }
+    
+    int64_t rows_size = static_cast<int64_t>(rows.size());
+    int64_t cols_size = static_cast<int64_t>(cols.size());
 
     bool* o_begin = reinterpret_cast<bool*>(output.data_ptr());
     input.cexecute_function<WRAP_DTYPES<NumberTypesL>>(
@@ -32,9 +35,9 @@ void _extract_sliding_windows_max_2d(const ArrayVoid& _input, ArrayVoid& output,
         int64_t b_add = (batch_add * block.begin[0]);
         for(int64_t b = block.begin[0]; b < block.end[0]; ++b, b_add += batch_add){
             int64_t cur_row = 0;
-            for(int64_t r = 0; r < rows.size(); ++r){
+            for(int64_t r = 0; r < rows_size; ++r){
                 int64_t cur_col = 0;
-                for(int64_t c = 0; c < cols.size(); ++c){
+                for(int64_t c = 0; c < cols_size; ++c){
                     value_t val = begin[(b_add) + cur_row * in_cols + cur_col];
                     bool* b_val = &o_begin[(b_add) + cur_row * in_cols + cur_col];
                     for(int64_t _r = rows[r]-1; _r >= 0; --_r){
