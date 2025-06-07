@@ -277,13 +277,13 @@ inline void dgelu(T begin, T end, U out){
     base_type sqrt_2_pi = static_cast<base_type>(std::sqrt(2.0 / M_PI));
     base_type c  = static_cast<base_type>(0.044715);
     base_type cm  = static_cast<base_type>(3 * 0.044715);
-    base_type base__half(0.5);
+    
 
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
 		simde_type<base_type> three = SimdTraits<base_type>::set1(base_type(3.0));
 		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
-		simde_type<base_type> half = SimdTraits<base_type>::set1(base__half);
+		simde_type<base_type> half = SimdTraits<base_type>::set1(base_type(0.5));
 		simde_type<base_type> weird_num = SimdTraits<base_type>::set1(c);
 		simde_type<base_type> weird_num_M = SimdTraits<base_type>::set1(cm);
 		simde_type<base_type> pi_num = SimdTraits<base_type>::set1(sqrt_2_pi);
@@ -318,7 +318,7 @@ inline void dgelu(T begin, T end, U out){
             base_type tanh_derivative = 1 - (z * z);
             base_type dz_dx = sqrt_2_pi * (1 + cm * *begin * *begin);
             z += 1;
-            *out = base__half * z + base__half * *begin * tanh_derivative * dz_dx;
+            *out = base_type(0.5) * z + base_type(0.5) * *begin * tanh_derivative * dz_dx;
         }
 	}else{
         for(;begin != end; ++begin, ++out){
@@ -327,7 +327,7 @@ inline void dgelu(T begin, T end, U out){
             base_type tanh_derivative = 1 - (z * z);
             base_type dz_dx = sqrt_2_pi * (1 + cm * *begin * *begin);
             z += 1;
-            *out = base__half * z + base__half * *begin * tanh_derivative * dz_dx;
+            *out = 0.5 * z + 0.5 * *begin * tanh_derivative * dz_dx;
         }
 	}
 }
