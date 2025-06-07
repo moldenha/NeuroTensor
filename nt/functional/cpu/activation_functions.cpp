@@ -186,8 +186,16 @@ inline void gelu(T begin, T end, U out){
             current = SimdTraits<base_type>::multiply(current, half);
       		it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-            *out= base_type(0.5) * *begin * (base_type(1.0) + std::tanh(sqrt_2_pi * ( *begin + base_type(0.044715) * std::pow(*begin, base_type(3)))));
+		for(;begin < end; ++begin, ++out){
+            base_type p = std::pow(*begin, base_type(3));
+            base_type b = base_type(*begin + base_type(0.044715)) * p;
+            base_type t_inp = sqrt_2_pi * b;
+            base_type t = std::tanh(t_inp);
+            t += base_type(1);
+            t *= *begin;
+            t *= base_type(0.5);
+            *out= t;
+        }
 	}else{
         for(;begin != end; ++begin, ++out){
             *out= base_type(0.5) * *begin * (base_type(1.0) + std::tanh(sqrt_2_pi * ( *begin + base_type(0.044715) * std::pow(*begin, 3))));
@@ -283,7 +291,7 @@ inline void dsqrt(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = (1 / (2 * (std::sqrt(*begin))));
+			*out = (base_type(1) / (base_type(2) * (std::sqrt(*begin))));
 	}else{
 		for(;begin != end; ++begin, ++out){
 			*out = (-1 / (2 * (std::sqrt(*begin))));
@@ -308,9 +316,13 @@ inline void dinvsqrt(T begin, T end, U out){
 		}
         base_type base__Three(3);
         base_type base__Two(2);
-        base_type base__NegOne(2);
-		for(;begin < end; ++begin, ++out)
-			*out = (base__NegOne / (base__Two * (std::sqrt(std::pow(*begin, base__Three)))));
+        base_type base__NegOne(-1);
+		for(;begin < end; ++begin, ++out){
+		    base_type p = std::pow(*begin, base__Three);
+            p = std::sqrt(p);
+            p *= base_Two;
+            *out = base_type(base__NegOne / p);
+        }
 	}else{
 		for(;begin != end; ++begin, ++out){
 			*out = (-1 / (2 * (std::sqrt(std::pow(*begin, 3)))));
