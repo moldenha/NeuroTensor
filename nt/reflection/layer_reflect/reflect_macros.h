@@ -7,6 +7,21 @@
 #include "custom_iterator_map.hpp"
 #include "../../nn/Module.h"
 
+
+#if defined(__GNUC__)
+  #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wvariadic-macros\"")
+
+  #define NT_SUPPRESS_VA_ARGS_WARNING_POP \
+    _Pragma("GCC diagnostic pop")
+#else
+  #define NT_SUPPRESS_VA_ARGS_WARNING_PUSH
+  #define NT_SUPPRESS_VA_ARGS_WARNING_POP
+#endif
+
+
+NT_SUPPRESS_VA_ARGS_WARNING_PUSH
 namespace nt{
 namespace reflect{
 
@@ -556,4 +571,6 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 
 } //nt::
 
+
+NT_SUPPRESS_VA_ARGS_WARNING_POP
 #endif

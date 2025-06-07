@@ -74,9 +74,9 @@ class ArrayRef{
 		reverse_iterator rbegin() const;
 		reverse_iterator rend() const;
 		bool empty() const;
-		const T& operator[](int16_t index) const;
-		T& operator[](int16_t index);
-		const T& at(uint16_t index) const;
+		const T& operator[](size_t index) const;
+		T& operator[](size_t index);
+		const T& at(size_t index) const;
 		T multiply() const;
 		ArrayRef<T> pop_front() const;
 		std::vector<T> to_vec() const;

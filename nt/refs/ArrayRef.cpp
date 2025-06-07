@@ -179,18 +179,18 @@ typename ArrayRef<T>::reverse_iterator ArrayRef<T>::rend() const {return reverse
 template<typename T>
 bool ArrayRef<T>::empty() const {return _empty;}
 template<typename T>
-const T& ArrayRef<T>::operator[](int16_t index) const{
+const T& ArrayRef<T>::operator[](size_t index) const{
 	index = index < 0 ? size() + index : index;
 	return _vals[index];
 }
 template<typename T>
-T& ArrayRef<T>::operator[](int16_t index){
+T& ArrayRef<T>::operator[](size_t index){
 	index = index < 0 ? size() + index : index;
 	return _vals[index];
 }
 
 template<typename T>
-const T& ArrayRef<T>::at(uint16_t index) const {assert(index < _total_size);return _vals[index];}
+const T& ArrayRef<T>::at(size_t index) const {assert(index < _total_size);return _vals[index];}
 
 template<typename T>
 std::vector<T> ArrayRef<T>::to_vec() const {return std::vector<T>(begin(), end());}

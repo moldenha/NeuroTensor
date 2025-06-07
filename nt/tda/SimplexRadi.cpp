@@ -1,6 +1,7 @@
 #include "SimplexRadi.h"
 #include "SimplexConstruct.h"
 #include "../dtype/ArrayVoid.hpp"
+#include "../utils/macros.h"
 
 namespace nt {
 namespace tda {
@@ -208,7 +209,8 @@ Tensor compute_point_radii(const Tensor &index_simplicies,
     const int64_t Np1 = index_simplicies.shape()[1]; // N+1 verticies
 
     Tensor distances = functional::sqrt(balls.get_distances(batch)) / 2;
-    const double *radi[distances.shape()[0]];
+    NT_VLA(const double*, radi, distances.shape()[0]);
+    // const double *radi[distances.shape()[0]];
     const double *begin =
         reinterpret_cast<const double *>(distances.data_ptr());
     const double *end = begin + distances.numel();
@@ -234,7 +236,7 @@ Tensor compute_point_radii(const Tensor &index_simplicies,
             }
         }
     }
-
+    NT_VLA_DEALC(radi);
     return std::move(out_radi);
 }
 
@@ -245,7 +247,8 @@ std::pair<Tensor, Tensor> compute_point_grad_radii(const Tensor& index_simplicie
     const int64_t &B = index_simplicies.shape()[0];  // Batches
     const int64_t Np1 = index_simplicies.shape()[1]; // N+1 verticies
 
-    const float *radi[distances.shape()[0]];
+    NT_VLA(const double*, radi, distances.shape()[0]);
+    // const float *radi[distances.shape()[0]];
     const float *begin =
         reinterpret_cast<const float *>(distances.data_ptr());
     const float *end = begin + distances.numel();
@@ -286,6 +289,7 @@ std::pair<Tensor, Tensor> compute_point_grad_radii(const Tensor& index_simplicie
     if(o_indexes != o_indexes_end){
         *o_indexes = (current[cur_i] * cols + current[cur_j]);
     }
+    NT_VLA_DEALC(radi);
     return {out_radi, out_indexes};
 
     

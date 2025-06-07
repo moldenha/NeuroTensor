@@ -348,6 +348,26 @@ void transpose_last_manual(const std::uintptr_t* _in, std::uintptr_t* _out, cons
 }
 
 
+#ifdef _MSC_VER
+void transpose_last_manual_MSVC(void** _in, void** _out, const int64_t in_rows, const int64_t in_cols, const int64_t batches){
+    const int64_t mat_size = in_rows * in_cols;
+    tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, in_rows * in_cols),
+    [&](const tbb::blocked_range2d<int64_t>& range){
+    void** in = &_in[(mat_size * range.rows().begin())];
+    void** out = &_out[(mat_size * range.rows().begin())];
+    for(int64_t b = range.rows().begin(); b != range.rows().end(); ++b, in += mat_size, out += mat_size){
+        for(int64_t n = range.cols().begin(); n != range.cols().end(); n++) {
+            int64_t i = n/in_rows;
+            int64_t j = n%in_rows;
+            out[n] = in[in_cols*j + i];
+        }
+    }
+    });
+
+}
+
+#endif
+
 #define NT_MAKE_LOAD_STRIDE_IDX_(amt) simde_mm512_set_epi64(amt*7, amt*6, amt*5, amt*4, amt*3, amt*2, amt, 0)
 
 
@@ -459,11 +479,9 @@ void transpose_any_manual(void** _in, void** _out,
     if(axis0 > axis1) std::swap(axis0, axis1);
     
     
-#ifdef _MSC_VER
-    std::uintptr_t in_zero = reinterpret_cast<std::uintptr_t>(_in[0]);
-    using ptr_type = std::uintptr_t;
-    const std::uintptr_t* __in = (const std::uintptr_t*)_in;
-    std::uintptr_t* __out = (std::uintptr_t*)_out;
+#ifdef _MSC_VER    
+    void** __in = _in;
+    void** __out = _out;
 #else
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
@@ -492,6 +510,7 @@ void transpose_any_manual(void** _in, void** _out,
     std::copy(shape.begin()+axis0, shape.end(), n_shape.begin());
     std::swap(n_shape[0], n_shape[axis1-axis0]);
     int64_t total_inner = total_size / batches;
+#ifndef _MSC_VER
     tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
     [&](const tbb::blocked_range2d<int64_t>& range){
     const ptr_type* in = &__in[(range.rows().begin() * total_inner)];
@@ -504,6 +523,22 @@ void transpose_any_manual(void** _in, void** _out,
         in += total_inner;
         out += total_inner;
     }});
+#else
+    tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
+    [&](const tbb::blocked_range2d<int64_t>& range){
+    void** in = &__in[(range.rows().begin() * total_inner)];
+    void** out = &__out[(range.rows().begin() * total_inner)];
+    for(int64_t b = range.rows().begin(); b < range.rows().end(); ++b){
+        for(int64_t i = range.cols().begin(); i < range.cols().end(); ++i){
+            int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
+            out[i] = in[index];
+        }
+        in += total_inner;
+        out += total_inner;
+    }});
+
+
+#endif
 
 }
 
@@ -516,6 +551,7 @@ void transpose_row_col(void** _in, void** _out, std::vector<int64_t> shape){
     for(int64_t b = 0; b < shape.size()-2; ++b){
         batches *= shape[b];
     }
+#ifndef _MSC_VER
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
     const ptr_type* in = reinterpret_cast<ptr_type*>(_in);
@@ -525,6 +561,9 @@ void transpose_row_col(void** _in, void** _out, std::vector<int64_t> shape){
     }else{
         transpose_last_manual(reinterpret_cast<const std::uintptr_t*>(in), reinterpret_cast<std::uintptr_t*>(out), in_rows, in_cols, batches); 
     }
+#else
+    transpose_last_manual_MSVC(_in, _out, in_rows, in_cols, batches);
+#endif
 }
 
 void transpose(void** _in, void** _out, 
@@ -550,9 +589,8 @@ void permute(void** _in, void** _out,
     int64_t ndim = shape.size();
 
 #ifdef _MSC_VER
-    using ptr_type = std::uintptr_t;
-    const std::uintptr_t* __in = reinterpret_cast<std::uintptr_t*>(_in);
-    std::uintptr_t* __out = reinterpret_cast<std::uintptr_t*>(_out);
+    void** __in = _in;
+    void** __out = _out;
 #else
     using ptr_type = typename std::conditional_t<sizeof(int64_t) == sizeof(void*),
                                     int64_t, std::uintptr_t>;
@@ -604,6 +642,7 @@ void permute(void** _in, void** _out,
     }
 
     int64_t total_inner = total_size / batches;
+#ifndef _MSC_VER
     tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
     [&](const tbb::blocked_range2d<int64_t>& range){
     const ptr_type* in = &__in[(total_inner * range.rows().begin())];
@@ -617,6 +656,21 @@ void permute(void** _in, void** _out,
         in += total_inner;
         out += total_inner;
     }});
+#else
+    tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
+    [&](const tbb::blocked_range2d<int64_t>& range){
+    void** in = &__in[(total_inner * range.rows().begin())];
+    void** out = &__out[(total_inner * range.rows().begin())];
+    for(int64_t b = range.rows().begin(); b != range.rows().end(); ++b){
+        for(int64_t i = range.cols().begin(); i !=  range.cols().end(); ++i){
+            int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
+            out[i] = in[index];
+            // std::cout << "out["<<i<<"] = in["<<index<<']'<<std::endl;
+        }
+        in += total_inner;
+        out += total_inner;
+    }});
+#endif
 }
 
 SizeRef squeeze_and_adjust_transpose(std::vector<Tensor::size_value_t> size_vec, Tensor::size_value_t& a, Tensor::size_value_t& b){

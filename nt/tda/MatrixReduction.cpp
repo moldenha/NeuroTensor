@@ -1,6 +1,7 @@
 #include "MatrixReduction.h"
 #include "../functional/functional.h"
 #include "../linalg/linalg.h"
+#include "../utils/macros.h"
 
 namespace nt {
 namespace tda {
@@ -36,8 +37,10 @@ Tensor simultaneousReduce(SparseTensor &d_k, SparseTensor &d_kplus1) {
                            "Expected nummels to be same but got $ and $",
                            A_split.numel(), B_split.numel());
 
-    const float *a_access[A_split.numel()];
-    const float *b_access[A_split.numel()];
+    NT_VLA(const float *, a_access, A_split.numel())
+    NT_VLA(const float *, b_access, A_split.numel())
+    // const float *a_access[A_split.numel()];
+    // const float *b_access[A_split.numel()];
     for (int64_t i = 0; i < A_split.numel(); ++i) {
         a_access[i] = reinterpret_cast<const float *>(A_begin[i].data_ptr());
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
@@ -102,6 +105,9 @@ Tensor simultaneousReduce(SparseTensor &d_k, SparseTensor &d_kplus1) {
         ++i;
         ++j;
     }
+    
+    NT_VLA_DEALC(a_access)
+    NT_VLA_DEALC(b_access)
 
     return functional::list(functional::cat_unordered(A_split).view(A.shape()),
                             functional::cat_unordered(B_split).view(B.shape()));
@@ -112,7 +118,8 @@ Tensor &finishRowReducing(Tensor &B) {
     int64_t numCols = B.shape()[1];
     Tensor B_split = B.split_axis(-2);
     Tensor *B_begin = reinterpret_cast<Tensor *>(B_split.data_ptr());
-    const float *b_access[B_split.numel()];
+    NT_VLA(const float *, b_access, B_split.numel())
+    // const float *b_access[B_split.numel()];
     for (int64_t i = 0; i < B_split.numel(); ++i) {
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
     }
@@ -153,6 +160,7 @@ Tensor &finishRowReducing(Tensor &B) {
         ++i;
         ++j;
     }
+    NT_VLA_DEALC(b_access)
     Tensor catted = nt::functional::cat_unordered(B_split).view(B.shape());
     std::swap(B, catted);
     return B;
@@ -170,7 +178,8 @@ Tensor rowReduce(Tensor A) {
     int64_t row = 0;
     Tensor A_split = A.split_axis(-2);
     Tensor *A_begin = reinterpret_cast<Tensor *>(A_split.data_ptr());
-    const float *a_access[A_split.numel()];
+    NT_VLA(const float*, a_access, A_split.numel());
+    // const float *a_access[A_split.numel()];
     for (int64_t i = 0; i < A_split.numel(); ++i) {
         a_access[i] = reinterpret_cast<const float *>(A_begin[i].data_ptr());
     }
@@ -211,6 +220,7 @@ Tensor rowReduce(Tensor A) {
         row++; // Move to the next row
     }
 
+    NT_VLA_DEALC(a_access);
     return std::move(A);
 }
 
@@ -264,9 +274,11 @@ Tensor simultaneousCatReduce(Tensor &d_k, Tensor &d_kplus1,
                            "Expected nummels to be same but got $ and $",
                            A_split.numel(), B_split.numel());
 
-    int64_t num_cols = A_split.numel();    
-    const float *a_access[num_cols];
-    const float *b_access[num_cols];
+    int64_t num_cols = A_split.numel();
+    NT_VLA(const float*, a_access, num_cols);
+    NT_VLA(const float*, b_access, num_cols);
+    // const float *a_access[num_cols];
+    // const float *b_access[num_cols];
     for (int64_t i = 0; i < num_cols; ++i) {
         a_access[i] = reinterpret_cast<const float *>(A_begin[i].data_ptr());
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
@@ -351,6 +363,8 @@ Tensor simultaneousCatReduce(Tensor &d_k, Tensor &d_kplus1,
         ++j;
     }
 
+    NT_VLA_DEALC(a_access);
+    NT_VLA_DEALC(b_access);
     return functional::list(functional::cat_unordered(A_split).view(d_k.shape()),
                             functional::cat_unordered(B_split).view(d_kplus1.shape()));
 }
@@ -364,7 +378,8 @@ Tensor &finishCatRowReducing(Tensor &B,
     // int64_t numCols = B.shape()[1];
     Tensor B_split = B.split_axis(-2);
     Tensor *B_begin = reinterpret_cast<Tensor *>(B_split.data_ptr());
-    const float *b_access[B_split.numel()];
+    NT_VLA(const float*, b_access, B_split.numel());
+    // const float *b_access[B_split.numel()];
     for (int64_t i = 0; i < B_split.numel(); ++i) {
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
     }
@@ -405,6 +420,7 @@ Tensor &finishCatRowReducing(Tensor &B,
         ++i;
         ++j;
     }
+    NT_VLA_DEALC(b_access);
     return B;
 }
 
@@ -451,8 +467,9 @@ Tensor& partialColReduce(Tensor &d_k,
     Tensor A_split = d_k.split_axis(-2);
     Tensor *A_begin = reinterpret_cast<Tensor *>(A_split.data_ptr());
 
-    int64_t num_cols = A_split.numel();    
-    const float *a_access[num_cols];
+    int64_t num_cols = A_split.numel();
+    NT_VLA(const float*, a_access, num_cols);
+    // const float *a_access[num_cols];
     for (int64_t i = 0; i < num_cols; ++i) {
         a_access[i] = reinterpret_cast<const float *>(A_begin[i].data_ptr());
     }
@@ -531,6 +548,7 @@ Tensor& partialColReduce(Tensor &d_k,
     }
     Tensor catted = nt::functional::cat_unordered(A_split).view(d_k.shape());
     std::swap(d_k, catted);
+    NT_VLA_DEALC(a_access);
     // std::cout << A_split[0] << ',' << d_k[0] << std::endl;
     // std::cout << A_begin[0] << ',' << d_k[0] << std::endl;
     // std::cout << std::boolalpha << nt::functional::all(A_split[0] == d_k[0]) << std::noboolalpha << std::endl;
@@ -564,7 +582,8 @@ Tensor &partialRowReduce(Tensor &B,
     // int64_t numCols = B.shape()[1];
     Tensor B_split = B.split_axis(-2);
     Tensor *B_begin = reinterpret_cast<Tensor *>(B_split.data_ptr());
-    const float *b_access[B_split.numel()];
+    NT_VLA(const float*, b_access, B_split.numel());
+    // const float *b_access[B_split.numel()];
     for (int64_t i = 0; i < B_split.numel(); ++i) {
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
     }
@@ -627,6 +646,7 @@ Tensor &partialRowReduce(Tensor &B,
     }
     Tensor catted = nt::functional::cat_unordered(B_split).view(B.shape());
     std::swap(B, catted);
+    NT_VLA_DEALC(b_access);
     return B;
 }
 

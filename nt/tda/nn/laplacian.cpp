@@ -234,7 +234,7 @@ TensorGrad findAllPaths(const TensorGrad& laplacian){
         Tensor present_lap = (std::abs(_lap) > 0.1).to(DType::Float32);
         int64_t false_positives = functional::count((wanted_laplacian == 0) && (present_lap == 1));
         int64_t false_negatives = functional::count((wanted_laplacian == 1) && (present_lap == 0));
-        double total = std::max(false_positives + false_negatives, 1LL);
+        double total = static_cast<double>(std::max(false_positives + false_negatives, int64_t(1)));
         double alpha, beta;
         //so in the following, I am going to weight the false positives and false negatives based on what I am seeing
         alpha = sigmoid(static_cast<double>(false_negatives) / total);

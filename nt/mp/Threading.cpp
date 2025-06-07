@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <sys/types.h>
 #include <type_traits>
-#include <immintrin.h>
 #include <algorithm>
 #include <iostream>
 #include "../utils/utils.h"

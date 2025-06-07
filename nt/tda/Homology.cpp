@@ -7,6 +7,7 @@
 #include "SimplexConstruct.h"
 #include "SimplexRadi.h"
 #include <queue>
+#include "../utils/macros.h"
 
 namespace nt {
 namespace tda {
@@ -420,7 +421,8 @@ std::map<double, int64_t> PersistentHomology::GetH0BettiNumbers() {
     double *dist_begin = reinterpret_cast<double *>(distances.data_ptr());
     double *dist_end = reinterpret_cast<double *>(distances.data_ptr_end());
     bool *adjacency_begin = reinterpret_cast<bool *>(adjacency.data_ptr());
-    bool *adj[N];
+    NT_VLA(bool*, adj, N);
+    // bool *adj[N];
     for (int64_t i = 0; i < N; ++i, adjacency_begin += N) {
         adj[i] = adjacency_begin;
     }
@@ -450,6 +452,7 @@ std::map<double, int64_t> PersistentHomology::GetH0BettiNumbers() {
             last = amt_connected;
         }
     }
+    NT_VLA_DEALC(adj);
     return out;
     
     // example:
@@ -465,7 +468,8 @@ PersistentHomology::GetH0Generators() {
     double *dist_begin = reinterpret_cast<double *>(distances.data_ptr());
     double *dist_end = reinterpret_cast<double *>(distances.data_ptr_end());
     bool *adjacency_begin = reinterpret_cast<bool *>(adjacency.data_ptr());
-    bool *adj[N];
+    NT_VLA(bool*, adj, N);
+    // bool *adj[N];
     for (int64_t i = 0; i < N; ++i, adjacency_begin += N) {
         adj[i] = adjacency_begin;
     }
@@ -507,6 +511,7 @@ PersistentHomology::GetH0Generators() {
             generators[r] = gen;
         }
     }
+    NT_VLA_DEALC(adj);
     return std::make_tuple(std::move(out), std::move(generators));
 }
 
