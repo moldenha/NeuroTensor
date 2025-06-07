@@ -46,7 +46,7 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 					std::uniform_int_distribution<int64_t> dis(low, up);
 					std::generate(begin, end, [&]() { return convert::convert<::nt::uint128_t>(std::abs(dis(gen))); });
                 }
-                else if constexpr (std::is_same_v<int64_t, ::nt::int128_t>){
+                else if constexpr (std::is_same_v<value_t, ::nt::int128_t>){
                     int64_t low = lower.to<int64_t>();
                     int64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<int64_t> dis(low, up);
@@ -121,7 +121,7 @@ void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
 					std::uniform_int_distribution<int64_t> dis(low, up);
 					std::generate(begin, end, [&]() { return convert::convert<::nt::uint128_t>(std::abs(dis(gen))); });
                 }
-                else if constexpr (std::is_same_v<int64_t, ::nt::int128_t>){
+                else if constexpr (std::is_same_v<value_t, ::nt::int128_t>){
                     int64_t low = lower.to<int64_t>();
                     int64_t up = upper.to<int64_t>();
 					std::uniform_int_distribution<int64_t> dis(low, up);

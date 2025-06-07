@@ -4,7 +4,11 @@ on:
   push:
     tags:
       - "v*"
-
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "v_tag"
+        required: false
 jobs:
   release:
     runs-on: ${{ matrix.os }}
