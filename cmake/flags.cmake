@@ -42,6 +42,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/detect_simd.cmake)
 #this makes all the macros in NeuroTensor a lot more likely to work and a lot easier to use for reflection purposes
 if (MSVC)
     add_compile_options(/Zc:preprocessor)
+    add_compile_options(/bigobj)
 endif()
 
 
