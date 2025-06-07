@@ -20,7 +20,7 @@
 namespace std{
 
 #define NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(func)\
-inline ::nt::float128_t func(const ::nt::float128_t& x){return func(x);}
+inline ::nt::float128_t func(const ::nt::float128_t& x){return ::boost::multiprecision::func(x);}
 
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(tanh);
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(cosh);
@@ -39,7 +39,7 @@ NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(sqrt);
 #undef NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE
 
 inline ::nt::float128_t pow(const ::nt::float128_t& a, const ::nt::float128_t& b){
-    return pow(a, b);
+    return ::boost::multiprecision::pow(a, b);
 }
 
 }
@@ -78,12 +78,25 @@ __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sin)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, cos)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, to, sqrt)
 
+
 #ifdef __SIZEOF_INT128__
 NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t, int64_t)
-inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){return static_cast<::nt::int128_t>(std::pow(static_cast<long double>(a), static_cast<long double>(b)));}
+inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){
+    long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
+    long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));
+    long double _r = std::pow(_a, _b);
+    int64_t __r(_r);
+    return ::nt::convert::convert<::nt::int128_t>(__r);
+}
 #endif
 NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::uint128_t, uint64_t)
-inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){return static_cast<::nt::uint128_t>(std::pow(static_cast<long double>(a), static_cast<long double>(b)));}
+inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){
+    long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
+    long double _b = static_cast<long double>(::nt::convert::convert<int64_t>(b));
+    long double _r = std::pow(_a, _b);
+    int64_t __r(_r);
+    return ::nt::convert::convert<::nt::uint128_t>(__r);
+}
 
 
 // #undef NT_MAKE_STD_FUNCTION_ROUTE_LOG

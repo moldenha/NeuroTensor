@@ -14,7 +14,7 @@
 namespace std{
 
 #define NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(func)\
-inline ::nt::float128_t func(const ::nt::float128_t& x){return func(x);}
+inline ::nt::float128_t func(const ::nt::float128_t& x){return ::boost::multiprecision::func(x);}
 
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(exp);
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(log);

@@ -1580,7 +1580,7 @@ TensorGrad TensorGrad::flip(utils::optional_list list) const {
 
 TensorGrad TensorGrad::dilate(size_value_t dil) const {
     handle_null_tensors(*this);
-    TensorGrad result(this->dilate(dil));
+    TensorGrad result(this->tensor.dilate(dil));
     if (!is_tracking_grad(*this)) {
         result.do_track_grad = false;
         return std::move(result);
@@ -1596,7 +1596,7 @@ TensorGrad TensorGrad::dilate(size_value_t dil) const {
 
 TensorGrad TensorGrad::undilate(size_value_t dil) const {
     handle_null_tensors(*this);
-    TensorGrad result(this->undilate(dil));
+    TensorGrad result(this->tensor.undilate(dil));
     if (!is_tracking_grad(*this)) {
         result.do_track_grad = false;
         return std::move(result);
