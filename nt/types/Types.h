@@ -484,10 +484,11 @@ _NT_DEFINE_STL_FUNC_FP16_ROUTE_(acos)
 _NT_DEFINE_STL_FUNC_CFP16_ROUTE_(acos)
 
 
-
+#ifdef SIMDE_FLOAT16_IS_SCALAR
 inline ::nt::float16_t pow(::nt::float16_t a, ::nt::float16_t b){
     return _NT_FLOAT32_TO_FLOAT16_(std::pow(_NT_FLOAT16_TO_FLOAT32_(a), _NT_FLOAT16_TO_FLOAT32_(b)));
 }
+#endif
 
 template<typename T>
 inline ::nt::my_complex<T> pow(::nt::my_complex<T> __x, ::nt::my_complex<T> __y){

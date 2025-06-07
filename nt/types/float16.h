@@ -22,6 +22,13 @@ namespace nt{
 	#define _NT_FLOAT32_TO_FLOAT16_(f) half_float::half(f)
 	//by default has a way to print out the half_float::half
 }
+
+namespace std{
+inline ::nt::float16_t pow(const half_float::half& a, const half_float::half& b){
+    return half_float::half(half_float::detail::pow(a, b));
+}
+}
+
 #endif
 
 namespace nt{
