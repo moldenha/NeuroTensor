@@ -43,6 +43,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/detect_simd.cmake)
 if (MSVC)
     add_compile_options(/Zc:preprocessor)
     add_compile_options(/bigobj)
+    add_compile_options(/MP-) 
+    add_compile_definitions(_SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING) # disable depreciation warnings for MSVC
 endif()
 
 
