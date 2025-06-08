@@ -1,0 +1,45 @@
+name: Build and Package NeuroTensor (macOS arm64 Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional version override"
+        required: false
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=install
+          -DBUILD_MAIN=OFF
+          -DCMAKE_OSX_ARCHITECTURES=arm64
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Install
+        run: cmake --install build --prefix package-out
+
+      - name: Archive package
+        run: |
+          cd package-out
+          tar -czvf ../neurotensor-macos-arm64-${{ github.ref_name }}.tar.gz *
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: neurotensor-macos-arm64-${{ github.ref_name }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

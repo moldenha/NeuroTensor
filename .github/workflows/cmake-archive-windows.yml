@@ -1,0 +1,43 @@
+name: Build and Package NeuroTensor (Windows Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional version override"
+        required: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=install
+          -DBUILD_MAIN=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Install
+        run: cmake --install build --prefix package-out
+
+      - name: Archive package
+        run: |
+          powershell -Command "Compress-Archive -Path package-out\* -DestinationPath neurotensor-windows-x86_64-${{ github.ref_name }}.zip"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: neurotensor-windows-x86_64-${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
