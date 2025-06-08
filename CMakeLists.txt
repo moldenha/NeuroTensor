@@ -401,7 +401,12 @@ install(TARGETS neurotensor
 )
 
 file(GLOB_RECURSE NT_HEADERS ${CMAKE_SOURCE_DIR}/nt/*.h ${CMAKE_SOURCE_DIR}/nt/*.hpp)
-install(FILES ${NT_HEADERS} DESTINATION include/nt)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+# Install matplot headers if local
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/matplot/ DESTINATION include/matplot FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+# install(FILES ${NT_HEADERS} DESTINATION include/nt)
 # install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt DESTINATION include)
 
 # Set RPATH for runtime
