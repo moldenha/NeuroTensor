@@ -26,7 +26,7 @@ jobs:
           -DCMAKE_OSX_ARCHITECTURES=arm64
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release
 
       - name: Install
         run: cmake --install build --prefix package-out
