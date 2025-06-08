@@ -21,9 +21,9 @@ jobs:
           - os: windows-latest
             arch: x86_64
             ext: zip
-          - os: macos-latest
-            arch: x86_64
-            ext: tar.gz
+          # - os: macos-latest
+          #   arch: x86_64
+          #   ext: tar.gz
           - os: macos-latest
             arch: arm64
             ext: tar.gz
