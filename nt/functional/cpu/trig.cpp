@@ -135,8 +135,12 @@ inline void dtan(T begin, T end, U out){
 					      current = SimdTraits<base_type>::pow(current, twos);
 			it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-			*out = (base_type(1.0) / (std::pow(std::cos(*begin), base_type(2))));
+        base_type base__Two(2);
+		for(;begin < end; ++begin, ++out){
+            base_type cs = std::cos(*begin);
+            base_type p = std::pow(cs, base__Two);
+			*out = base_type(1.0) / p;
+        }
 	}else{
         for(;begin != end; ++begin, ++out){
             *out = (base_type(1.0) / (std::pow(std::cos(*begin), 2)));
@@ -158,8 +162,11 @@ inline void dtanh(T begin, T end, U out){
 					      current = SimdTraits<base_type>::pow(current, twos);
 			it_storeu(out, current);
 		}
-		for(;begin < end; ++begin, ++out)
-			*out = (base_type(1) / (std::pow(std::cosh(*begin), base_type(2))));
+        base_type base__Two(1);
+		for(;begin < end; ++begin, ++out){
+			base_type ch = std::cosh(*begin);
+            *out = (base_type(1) / (std::pow(ch, base__Two)));
+        }
 	}else{
 		for(;begin != end; ++begin, ++out){
 			*out = (1 / (std::pow(std::cosh(*begin), 2)));
