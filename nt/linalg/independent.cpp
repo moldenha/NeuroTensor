@@ -70,7 +70,8 @@ Tensor indp_rows(const Tensor& _a, const Tensor& _b){
     int64_t amt = std::count(independent.begin(), independent.end(), true);
     if(amt == 0){return Tensor::Null();}
     out.reserve(amt);
-    for(int64_t k = 0; k < independent.size(); ++k){
+    int64_t __independent_size = independent.size();
+    for(int64_t k = 0; k < __independent_size; ++k){
         if(independent[k]){
             out.push_back(a_begin[k]);
         }

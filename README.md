@@ -1,9 +1,9 @@
 ![github_logo](imgs/github_logo.png)
 <hr>
 
-Version: v0.1.4
+Version: v0.1.5
 
-NeuroTensor is a tensor framework that has a tda and autograd wrapper built in. The syntax follows PyTorch's closely, but in C++. Current version is 0.1.4 and there is still much to come for added support and testing. This is an early beta version, with an end goal being a framework for computational neuroscience tools.
+NeuroTensor is a tensor framework that has a tda and autograd wrapper built in. The syntax follows PyTorch's closely, but in C++. Current version is 0.1.5 and there is still much to come for added support and testing. This is an early beta version, with an end goal being a framework for computational neuroscience tools.
 
 
 ## Tensors and NeuroTensor

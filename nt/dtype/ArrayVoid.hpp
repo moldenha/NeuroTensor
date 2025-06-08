@@ -74,8 +74,19 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args
 		if constexpr(std::is_same_v<val_type, void>){
 			return;
         }else{
+
+#ifdef _MSC_VER
+    //disable uninitialized outp warning
+    //outp uninitialized out is the point
+    __pragma(warning(push))
+    __pragma(warning(disable: 5100))
+#endif
 			val_type outp;
 			return outp;
+#ifdef _MSC_VER
+    __pragma(warning(pop))
+#endif
+
 		}
 	}
     else if(m_dtype != dtype){
@@ -1286,9 +1297,18 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... arg
 			return;
 		}
 		else{
+#ifdef _MSC_VER
+    //disable uninitialized outp warning
+    //outp will be initialized based on the function being run
+    __pragma(warning(push))
+    __pragma(warning(disable: 5100))
+#endif
 			val_type outp;
 			return outp;
-		}
+#ifdef _MSC_VER
+    __pragma(warning(pop))
+#endif	
+        }
 	}
 	if(m_dtype != dtype){
 		return (cexecute_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...));
