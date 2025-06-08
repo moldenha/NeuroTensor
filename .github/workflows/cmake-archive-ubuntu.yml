@@ -39,6 +39,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
+          name: "NeuroTensor ${{ github.event.inputs.version }}"
           files: neurotensor-ubuntu-x86_64-${{ github.event.inputs.version }}.tar.gz
 
         env:

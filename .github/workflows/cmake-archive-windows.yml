@@ -25,7 +25,7 @@ jobs:
           -DBUILD_MAIN=OFF
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release
 
       - name: Install
         run: cmake --install build --prefix package-out
@@ -38,6 +38,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
+          name: "NeuroTensor ${{ github.event.inputs.version }}"
           files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

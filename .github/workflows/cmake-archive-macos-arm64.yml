@@ -36,11 +36,11 @@ jobs:
           cd package-out
           tar -czvf ../neurotensor-macos-arm64-${{ github.event.inputs.version }}.tar.gz *
 
-      - name: Upload as GitHub Actions artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: neurotensor-macos-arm64-${{ github.event.inputs.version }}
-          path: neurotensor-macos-arm64-${{ github.event.inputs.version }}.tar.gz
+#       - name: Upload as GitHub Actions artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: neurotensor-macos-arm64-${{ github.event.inputs.version }}
+#           path: neurotensor-macos-arm64-${{ github.event.inputs.version }}.tar.gz
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
