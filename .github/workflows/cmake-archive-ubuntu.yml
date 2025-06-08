@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Optional version override"
-        required: false
+        description: "Tag version (e.g., v1.2.3)"
+        required: true
 
 jobs:
   release:
@@ -25,20 +25,22 @@ jobs:
           -DBUILD_MAIN=OFF
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release
 
       - name: Install
         run: cmake --install build --prefix package-out
-
+      
       - name: Archive package
         run: |
           cd package-out
-          tar -czvf ../neurotensor-ubuntu-x86_64-${{ github.ref_name }}.tar.gz *
+          tar -czvf ../neurotensor-ubuntu-x86_64-${{ github.event.inputs.version }}.tar.gz *
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: neurotensor-ubuntu-x86_64-${{ github.ref_name }}.tar.gz
+          tag_name: ${{ github.event.inputs.version }}
+          files: neurotensor-ubuntu-x86_64-${{ github.event.inputs.version }}.tar.gz
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

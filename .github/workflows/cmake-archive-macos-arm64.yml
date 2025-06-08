@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Optional version override"
-        required: false
+        description: "Tag version (e.g., v1.2.3)"
+        required: true
 
 jobs:
   release:
@@ -34,12 +34,20 @@ jobs:
       - name: Archive package
         run: |
           cd package-out
-          tar -czvf ../neurotensor-macos-arm64-${{ github.ref_name }}.tar.gz *
+          tar -czvf ../neurotensor-macos-arm64-${{ github.event.inputs.version }}.tar.gz *
+
+      - name: Upload as GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurotensor-macos-arm64-${{ github.event.inputs.version }}
+          path: neurotensor-macos-arm64-${{ github.event.inputs.version }}.tar.gz
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: neurotensor-macos-arm64-${{ github.ref_name }}.tar.gz
+          tag_name: ${{ github.event.inputs.version }}
+          name: "NeuroTensor ${{ github.event.inputs.version }}"
+          files: neurotensor-macos-arm64-${{ github.event.inputs.version }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

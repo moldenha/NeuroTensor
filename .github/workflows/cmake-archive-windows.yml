@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Optional version override"
-        required: false
+        description: "Tag version (e.g., v1.2.3)"
+        required: true
 
 jobs:
   release:
@@ -32,12 +32,13 @@ jobs:
 
       - name: Archive package
         run: |
-          powershell -Command "Compress-Archive -Path package-out\* -DestinationPath neurotensor-windows-x86_64-${{ github.ref_name }}.zip"
+          powershell -Command "Compress-Archive -Path package-out\* -DestinationPath neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: neurotensor-windows-x86_64-${{ github.ref_name }}.zip
+          tag_name: ${{ github.event.inputs.version }}
+          files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
