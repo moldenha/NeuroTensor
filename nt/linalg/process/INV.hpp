@@ -1,3 +1,6 @@
+#ifndef NT_LINALG_PROCESS_INV_HPP__
+#define NT_LINALG_PROCESS_INV_HPP__ 
+
 #include "../../utils/utils.h"
 #include "../headers/EigenDetails.hpp"
 #include "../headers/SVD.h"
@@ -75,8 +78,11 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> pinv_eigen(
                                    Eigen::RowMajor> &,                         \
                      type);
 
-_NT_DECLARE_EIGEN_TYPES_(_NT_INV_EIGEN_DECLARE_);
-#undef _NT_INV_EIGEN_DECLARE_
+// _NT_DECLARE_EIGEN_TYPES_(_NT_INV_EIGEN_DECLARE_);
+// #undef _NT_INV_EIGEN_DECLARE_
 
 } // namespace linalg
 } // namespace nt
+
+
+#endif

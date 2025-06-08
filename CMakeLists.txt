@@ -189,10 +189,63 @@ set(LINALG_SOURCES
     nt/linalg/process/svd/svd_int8.cpp           
     nt/linalg/process/svd/svd_uint32.cpp
 
-    nt/linalg/process/QR.cpp
-    nt/linalg/process/inv.cpp
-    nt/linalg/process/null_space.cpp
-    nt/linalg/process/column_space.cpp
+    # nt/linalg/process/QR.cpp
+    #qr broken up into different types for compilation reasons
+    nt/linalg/process/qr/qr_complex_double.cpp 
+    nt/linalg/process/qr/qr_double.cpp         
+    nt/linalg/process/qr/qr_int16.cpp          
+    nt/linalg/process/qr/qr_int64.cpp          
+    nt/linalg/process/qr/qr_uint16.cpp         
+    nt/linalg/process/qr/qr_uint8.cpp
+    nt/linalg/process/qr/qr_complex_float.cpp  
+    nt/linalg/process/qr/qr_float.cpp          
+    nt/linalg/process/qr/qr_int32.cpp          
+    nt/linalg/process/qr/qr_int8.cpp           
+    nt/linalg/process/qr/qr_uint32.cpp
+
+    # nt/linalg/process/inv.cpp
+    # inv broken up into different types for compilation reasons
+    nt/linalg/process/inv/inv_complex_double.cpp 
+    nt/linalg/process/inv/inv_double.cpp         
+    nt/linalg/process/inv/inv_int16.cpp          
+    nt/linalg/process/inv/inv_int64.cpp          
+    nt/linalg/process/inv/inv_uint16.cpp         
+    nt/linalg/process/inv/inv_uint8.cpp
+    nt/linalg/process/inv/inv_complex_float.cpp  
+    nt/linalg/process/inv/inv_float.cpp          
+    nt/linalg/process/inv/inv_int32.cpp          
+    nt/linalg/process/inv/inv_int8.cpp           
+    nt/linalg/process/inv/inv_uint32.cpp
+
+    # nt/linalg/process/null_space.cpp
+    # null_space broken up into different types for compilation reasons
+    nt/linalg/process/null_space/null_space_complex_double.cpp 
+    nt/linalg/process/null_space/null_space_double.cpp         
+    nt/linalg/process/null_space/null_space_int16.cpp          
+    nt/linalg/process/null_space/null_space_int64.cpp          
+    nt/linalg/process/null_space/null_space_uint16.cpp         
+    nt/linalg/process/null_space/null_space_uint8.cpp
+    nt/linalg/process/null_space/null_space_complex_float.cpp  
+    nt/linalg/process/null_space/null_space_float.cpp          
+    nt/linalg/process/null_space/null_space_int32.cpp          
+    nt/linalg/process/null_space/null_space_int8.cpp           
+    nt/linalg/process/null_space/null_space_uint32.cpp
+
+
+    # nt/linalg/process/column_space.cpp
+    # column_space broken up into different types for compilation reasons
+    nt/linalg/process/column_space/column_space_complex_double.cpp 
+    nt/linalg/process/column_space/column_space_double.cpp         
+    nt/linalg/process/column_space/column_space_int16.cpp          
+    nt/linalg/process/column_space/column_space_int64.cpp          
+    nt/linalg/process/column_space/column_space_uint16.cpp         
+    nt/linalg/process/column_space/column_space_uint8.cpp
+    nt/linalg/process/column_space/column_space_complex_float.cpp  
+    nt/linalg/process/column_space/column_space_float.cpp          
+    nt/linalg/process/column_space/column_space_int32.cpp          
+    nt/linalg/process/column_space/column_space_int8.cpp           
+    nt/linalg/process/column_space/column_space_uint32.cpp
+
     nt/linalg/adjugate.cpp
     nt/linalg/determinant.cpp
     nt/linalg/norm.cpp
