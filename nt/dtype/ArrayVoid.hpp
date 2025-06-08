@@ -1,5 +1,5 @@
-#ifndef _ARRAY_VOID_HPP_
-#define _ARRAY_VOID_HPP_
+#ifndef NT_ARRAY_VOID_HPP_
+#define NT_ARRAY_VOID_HPP_
 
 #include "ArrayVoid.h"
 #include "DType.h"
@@ -21,16 +21,6 @@
 
 
 //silence depreciation warnings for certain needed headers
-#ifdef _MSC_VER
-#ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
-#define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
-#endif
-
-#ifndef _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-#endif
-
-#endif
 
 namespace nt{
 
@@ -98,8 +88,17 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args
 		return;
 	}
 	else{
-		val_type outp;
+#ifdef _MSC_VER
+    //disable uninitialized outp warning
+    //outp will be initialized based on the function being run
+    __pragma(warning(push))
+    __pragma(warning(disable: 5100))
+#endif
+        val_type outp;
 		sub_handle_execute_function<m_dtype>(std::forward<UnaryFunction&&>(unary_op), outp, check, std::forward<Args&&>(args)...);
+#ifdef _MSC_VER
+    __pragma(warning(pop))
+#endif
 		return std::move(outp);
 	}
 }
@@ -1302,8 +1301,17 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... arg
 		return;
 	}
 	else{
-		val_type outp;
+#ifdef _MSC_VER
+    //disable uninitialized outp warning
+    //outp will be initialized based on the function being run
+    __pragma(warning(push))
+    __pragma(warning(disable: 5100))
+#endif
+        val_type outp;
 		sub_handle_cexecute_function<m_dtype>(std::forward<UnaryFunction&&>(unary_op), outp, check, std::forward<Args&&>(args)...);
+#ifdef _MSC_VER
+    __pragma(warning(pop))
+#endif
 		return std::move(outp);
 	}
 }

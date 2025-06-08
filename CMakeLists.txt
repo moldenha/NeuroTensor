@@ -175,7 +175,20 @@ set(LINALG_SOURCES
     nt/linalg/QR.cpp
     nt/linalg/inv.cpp
     nt/linalg/column_space.cpp
-    nt/linalg/process/SVD.cpp
+    #nt/linalg/process/SVD.cpp
+    #svd broken up into different types for compilation reasons
+    nt/linalg/process/svd/svd_complex_double.cpp 
+    nt/linalg/process/svd/svd_double.cpp         
+    nt/linalg/process/svd/svd_int16.cpp          
+    nt/linalg/process/svd/svd_int64.cpp          
+    nt/linalg/process/svd/svd_uint16.cpp         
+    nt/linalg/process/svd/svd_uint8.cpp
+    nt/linalg/process/svd/svd_complex_float.cpp  
+    nt/linalg/process/svd/svd_float.cpp          
+    nt/linalg/process/svd/svd_int32.cpp          
+    nt/linalg/process/svd/svd_int8.cpp           
+    nt/linalg/process/svd/svd_uint32.cpp
+
     nt/linalg/process/QR.cpp
     nt/linalg/process/inv.cpp
     nt/linalg/process/null_space.cpp

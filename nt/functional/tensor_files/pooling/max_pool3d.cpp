@@ -217,7 +217,7 @@ Tensor adaptive_max_pool3d(Tensor x, utils::my_n_tuple<3> out_shape,
     int64_t kernel_size_d, stride_d, padding_d;
     find_adaptive(c_out, x.shape()[-1], kernel_size_c, stride_c, padding_c);
     find_adaptive(r_out, x.shape()[-2], kernel_size_r, stride_r, padding_r);
-    find_adaptive(d_out, x.shape()[-3], kernel_size_r, stride_r, padding_r);
+    find_adaptive(d_out, x.shape()[-3], kernel_size_d, stride_d, padding_d);
     return max_pool3d(x, {kernel_size_d, kernel_size_r, kernel_size_c},
                       {stride_d, stride_r, stride_c},
                       {padding_d, padding_r, padding_c}, 1, false,

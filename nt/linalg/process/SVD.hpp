@@ -1,3 +1,6 @@
+#ifndef NT_LINALG_PROCESS_SVD_HPP__
+#define NT_LINALG_PROCESS_SVD_HPP__ 
+
 #include "../../utils/utils.h"
 #include "../headers/EigenDetails.hpp"
 #include <Eigen/Dense>
@@ -71,8 +74,10 @@ SVD_eigen(
     SVD_eigen<type>(Eigen::Matrix<type, Eigen::Dynamic, Eigen::Dynamic,        \
                                   Eigen::RowMajor> &);
 
-_NT_DECLARE_EIGEN_TYPES_(_NT_SVD_EIGEN_DECLARE_);
-#undef _NT_SVD_EIGEN_DECLARE_
+// _NT_DECLARE_EIGEN_TYPES_(_NT_SVD_EIGEN_DECLARE_);
+// #undef _NT_SVD_EIGEN_DECLARE_
 
 } // namespace linalg
 } // namespace nt
+
+#endif

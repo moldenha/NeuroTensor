@@ -35,10 +35,6 @@
 //important for cross-platform multiprocessing values
     using pid_t = DWORD;
 
-#ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
-    #define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
-#endif
-
 #endif
 
 namespace nt{
