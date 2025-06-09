@@ -17,6 +17,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Restore CMake Build Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+          key: windows-build-${{ github.sha }}
+          restore-keys: |
+            windows-build-
+
       - name: Configure CMake
         run: >
           cmake -S . -B build
@@ -26,6 +35,13 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Save CMake Build Cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: build
+          key: windows-build-${{ github.sha }}
 
       - name: Install
         run: cmake --install build --prefix package-out

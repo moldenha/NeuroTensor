@@ -44,6 +44,7 @@ if (MSVC)
     add_compile_options(/Zc:preprocessor)
     add_compile_options(/bigobj)
     add_compile_definitions(_SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING) # disable depreciation warnings for MSVC
+    add_compile_options(/w) #disable warnings to potentially speed up compilation
 endif()
 
 

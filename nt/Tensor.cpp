@@ -695,7 +695,8 @@ Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
     size_value_t n = 1;
     bool is_neg = false;
     size_value_t neg_index = 0;
-    for (size_value_t i = 0; i < nv.size(); ++i) {
+    size_value_t nv_size_max = static_cast<size_value_t>(nv.size());
+    for (size_value_t i = 0; i < nv_size_max; ++i) {
         if (nv[i] < 0) {
             utils::THROW_EXCEPTION(
                 is_neg == false,
@@ -752,8 +753,8 @@ Tensor Tensor::flatten(size_value_t _a, size_value_t _b) const {
     std::vector<value_t> n_vals(n_dims);
     std::copy(shape().cbegin(), shape().cbegin() + begin, n_vals.begin());
     n_vals[begin] =
-        std::accumulate(shape().begin() + begin, shape().begin() + end, 1.0,
-                        std::multiplies<value_t>());
+        static_cast<value_t>(std::accumulate(shape().begin() + begin, shape().begin() + end, value_t(1),
+                        std::multiplies<value_t>()));
     std::copy(shape().cbegin() + end, shape().cend(),
               n_vals.begin() + begin + 1);
     return Tensor(_vals, std::move(n_vals)).set_mutability(_is_mutable);
@@ -762,7 +763,7 @@ Tensor Tensor::flatten(size_value_t _a, size_value_t _b) const {
 void insert_ones(std::vector<Tensor::size_value_t> &vec, Tensor::size_value_t a,
                  Tensor::size_value_t b) {
     // Check for valid position
-    if (a < 0 || a > vec.size()) {
+    if (a < 0 || a > static_cast<Tensor::size_value_t>(vec.size())) {
         throw std::out_of_range("Invalid position to insert 1's");
     }
 
@@ -1088,15 +1089,18 @@ void generate_ranges(const std::vector<my_range> &ranges,
 
 Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
     __NT_HANDLE_NULL_TENSORS__();
-    utils::THROW_EXCEPTION(ranges.size() <= dims(),
+    int64_t ranges_max_size = static_cast<int64_t>(ranges.size());
+    utils::THROW_EXCEPTION(ranges_max_size <= dims(),
                            "expected to have at most $ ranges but got $ ranges "
                            "for split_axis on tensor shape $",
                            dims(), ranges.size(), shape());
-    while (ranges.size() < dims()) {
+    while (ranges_max_size < dims()) {
         // Add a my_range(0, -1) to ranges
         ranges.push_back(my_range(0, shape()[ranges.size()]));
+        ranges_max_size = static_cast<int64_t>(ranges.size());
     }
-    for (uint32_t i = 0; i < ranges.size(); ++i){
+    ranges_max_size = static_cast<int64_t>(ranges.size());
+    for (int64_t i = 0; i < ranges_max_size; ++i){
         ranges[i].fix(shape()[i]);
         utils::throw_exception(ranges[i].length() > 0, 
                 "Cannot increment range at dimension $ with length of 0 got range of $", 
@@ -1281,7 +1285,7 @@ Tensor Tensor::unfold(size_value_t dim, size_value_t size,
 std::vector<Tensor::size_value_t>
 calculate_indices_fold_function(size_t index, const SizeRef &shape) {
     std::vector<Tensor::size_value_t> indices(shape.size());
-    for (size_t i = 0; i < shape.size(); ++i) {
+    for (int64_t i = 0; i < shape.size(); ++i) {
         indices[i] = index % shape[i];
         index /= shape[i];
     }
@@ -1648,7 +1652,7 @@ Tensor Tensor::unsqueeze(size_value_t dim) const {
 Tensor Tensor::unsqueeze_as(const Tensor &t) const {
     __NT_HANDLE_NULL_TENSORS__(t);
     std::vector<SizeRef::ArrayRefInt::value_type> Vec = shape().Vec();
-    while (Vec.size() < t.dims())
+    while (static_cast<int64_t>(Vec.size()) < t.dims())
         Vec.insert(Vec.begin(), 1);
     return view(SizeRef(std::move(Vec)));
 }
@@ -1656,7 +1660,7 @@ Tensor Tensor::unsqueeze_as(const Tensor &t) const {
 Tensor Tensor::unsqueeze_as(const SizeRef &s) const {
     __NT_HANDLE_NULL_TENSORS__();
     std::vector<SizeRef::ArrayRefInt::value_type> Vec = shape().Vec();
-    while (Vec.size() < s.size())
+    while (static_cast<int64_t>(Vec.size()) < s.size())
         Vec.insert(Vec.begin(), 1);
     return view(SizeRef(std::move(Vec)));
 }

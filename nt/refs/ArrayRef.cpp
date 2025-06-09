@@ -207,7 +207,7 @@ ArrayRef<T> ArrayRef<T>::permute(const std::vector<uint32_t> &Vec) const {
 
 
 template<typename T>
-T ArrayRef<T>::multiply() const{return std::accumulate(cbegin(), cend(), 1, std::multiplies<T>());}
+T ArrayRef<T>::multiply() const{return std::accumulate(cbegin(), cend(), T(1), std::multiplies<T>());}
 
 template<typename T>
 ArrayRef<T> ArrayRef<T>::pop_front() const {
