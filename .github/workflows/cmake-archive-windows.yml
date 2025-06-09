@@ -73,7 +73,7 @@ jobs:
 
 
 
-finalize:
+  package:
     needs: build
     runs-on: windows-latest
     steps:
