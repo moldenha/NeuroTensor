@@ -10,6 +10,25 @@ on:
 jobs:
   release:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - nt_core
+          - nt_types
+          - nt_functional
+          - nt_matmult
+          - nt_linalg
+          - nt_svd
+          - nt_qr
+          - nt_inv
+          - nt_column_space
+          - nt_null_space
+          - nt_ai
+          - nt_tda
+          - nt_sparse
+          - nt_images
+          - nt_memory
 
     steps:
       - name: Checkout code
@@ -17,16 +36,18 @@ jobs:
         with:
           submodules: recursive
 
-#       - name: Restore CMake Build Cache
-#         uses: actions/cache@v4
-#         with:
-#           path: |
-#             build
-#           key: windows-build-${{ github.sha }}
-#           restore-keys: |
-#             windows-build-
-      - name: Install sccache
-        uses: ilammy/setup-sccache@v1
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore build/ directory cache
+        uses: actions/cache@v4
+        with:
+          path: build/
+          key: neurotensor-win-build-${{ matrix.target }}-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            neurotensor-win-build-${{ matrix.target }}-
 
       - name: Configure CMake
         run: >
@@ -36,16 +57,38 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DBUILD_MAIN=OFF
+      
+      - name: Build target ${{ matrix.target }} if not already built
+        run: |
+          if not exist build\\.built_${{ matrix.target }} (
+            cmake --build build --target ${{ matrix.target }} --config Release
+            echo done > build\\.built_${{ matrix.target }}
+          )
 
-      - name: Build
-        run: cmake --build build --config Release
+      - name: Save updated build cache
+        uses: actions/cache/save@v4
+        with:
+          path: build/
+          key: neurotensor-win-build-${{ matrix.target }}-${{ github.run_id }}
 
-      # - name: Save CMake Build Cache
-      #   if: always()
-      #   uses: actions/cache/save@v4
-      #   with:
-      #     path: build
-      #     key: windows-build-${{ github.sha }}
+
+
+package:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore build from any target
+        uses: actions/cache@v4
+        with:
+          path: build/
+          key: neurotensor-win-final-${{ github.run_id }}
+          restore-keys: |
+            neurotensor-win-
 
       - name: Install
         run: cmake --install build --prefix package-out
@@ -62,4 +105,3 @@ jobs:
           files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

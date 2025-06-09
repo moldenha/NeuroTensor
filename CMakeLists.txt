@@ -137,6 +137,9 @@ set(FUNCTIONAL_SOURCES
     nt/functional/tensor_files/pooling/max_pool3d.cpp
     nt/functional/tensor_files/pooling/fractional.cpp
     
+)
+
+set(FUNCTIONAL_CPU_SOURCES
     nt/functional/cpu/unfold1d.cpp
     nt/functional/cpu/unfold2d.cpp
     nt/functional/cpu/unfold3d.cpp
@@ -171,51 +174,16 @@ set(FUNCTIONAL_SOURCES
 #this reduces compile times when specific functions need to be changed
 #would like to do this for all general function in the future and current 
 set(LINALG_SOURCES
-    nt/linalg/SVD.cpp
-    nt/linalg/QR.cpp
-    nt/linalg/inv.cpp
-    nt/linalg/column_space.cpp
-    #nt/linalg/process/SVD.cpp
-    #svd broken up into different types for compilation reasons
-    nt/linalg/process/svd/svd_complex_double.cpp 
-    nt/linalg/process/svd/svd_double.cpp         
-    nt/linalg/process/svd/svd_int16.cpp          
-    nt/linalg/process/svd/svd_int64.cpp          
-    nt/linalg/process/svd/svd_uint16.cpp         
-    nt/linalg/process/svd/svd_uint8.cpp
-    nt/linalg/process/svd/svd_complex_float.cpp  
-    nt/linalg/process/svd/svd_float.cpp          
-    nt/linalg/process/svd/svd_int32.cpp          
-    nt/linalg/process/svd/svd_int8.cpp           
-    nt/linalg/process/svd/svd_uint32.cpp
+    nt/linalg/adjugate.cpp
+    nt/linalg/determinant.cpp
+    nt/linalg/norm.cpp
+    nt/linalg/pivots.cpp
+    nt/linalg/eye.cpp
+    nt/linalg/independent.cpp
+)
 
-    # nt/linalg/process/QR.cpp
-    #qr broken up into different types for compilation reasons
-    nt/linalg/process/qr/qr_complex_double.cpp 
-    nt/linalg/process/qr/qr_double.cpp         
-    nt/linalg/process/qr/qr_int16.cpp          
-    nt/linalg/process/qr/qr_int64.cpp          
-    nt/linalg/process/qr/qr_uint16.cpp         
-    nt/linalg/process/qr/qr_uint8.cpp
-    nt/linalg/process/qr/qr_complex_float.cpp  
-    nt/linalg/process/qr/qr_float.cpp          
-    nt/linalg/process/qr/qr_int32.cpp          
-    nt/linalg/process/qr/qr_int8.cpp           
-    nt/linalg/process/qr/qr_uint32.cpp
-
-    # nt/linalg/process/inv.cpp
-    # inv broken up into different types for compilation reasons
-    nt/linalg/process/inv/inv_complex_double.cpp 
-    nt/linalg/process/inv/inv_double.cpp         
-    nt/linalg/process/inv/inv_int16.cpp          
-    nt/linalg/process/inv/inv_int64.cpp          
-    nt/linalg/process/inv/inv_uint16.cpp         
-    nt/linalg/process/inv/inv_uint8.cpp
-    nt/linalg/process/inv/inv_complex_float.cpp  
-    nt/linalg/process/inv/inv_float.cpp          
-    nt/linalg/process/inv/inv_int32.cpp          
-    nt/linalg/process/inv/inv_int8.cpp           
-    nt/linalg/process/inv/inv_uint32.cpp
+set(NULL_SPACE_SOURCES
+    nt/linalg/null_space.cpp
 
     # nt/linalg/process/null_space.cpp
     # null_space broken up into different types for compilation reasons
@@ -230,7 +198,10 @@ set(LINALG_SOURCES
     nt/linalg/process/null_space/null_space_int32.cpp          
     nt/linalg/process/null_space/null_space_int8.cpp           
     nt/linalg/process/null_space/null_space_uint32.cpp
+)
 
+set(COLUMN_SPACE_SOURCES
+    nt/linalg/column_space.cpp
 
     # nt/linalg/process/column_space.cpp
     # column_space broken up into different types for compilation reasons
@@ -246,14 +217,61 @@ set(LINALG_SOURCES
     nt/linalg/process/column_space/column_space_int8.cpp           
     nt/linalg/process/column_space/column_space_uint32.cpp
 
-    nt/linalg/adjugate.cpp
-    nt/linalg/determinant.cpp
-    nt/linalg/norm.cpp
-    nt/linalg/null_space.cpp
-    nt/linalg/pivots.cpp
-    nt/linalg/eye.cpp
-    nt/linalg/independent.cpp
 )
+
+set(INV_SOURCES
+    nt/linalg/inv.cpp
+
+    # nt/linalg/process/inv.cpp
+    # inv broken up into different types for compilation reasons
+    nt/linalg/process/inv/inv_complex_double.cpp 
+    nt/linalg/process/inv/inv_double.cpp         
+    nt/linalg/process/inv/inv_int16.cpp          
+    nt/linalg/process/inv/inv_int64.cpp          
+    nt/linalg/process/inv/inv_uint16.cpp         
+    nt/linalg/process/inv/inv_uint8.cpp
+    nt/linalg/process/inv/inv_complex_float.cpp  
+    nt/linalg/process/inv/inv_float.cpp          
+    nt/linalg/process/inv/inv_int32.cpp          
+    nt/linalg/process/inv/inv_int8.cpp           
+    nt/linalg/process/inv/inv_uint32.cpp
+
+)
+
+set(SVD_SOURCES
+    nt/linalg/SVD.cpp
+    #svd broken up into different types for compilation reasons
+    nt/linalg/process/svd/svd_complex_double.cpp 
+    nt/linalg/process/svd/svd_double.cpp         
+    nt/linalg/process/svd/svd_int16.cpp          
+    nt/linalg/process/svd/svd_int64.cpp          
+    nt/linalg/process/svd/svd_uint16.cpp         
+    nt/linalg/process/svd/svd_uint8.cpp
+    nt/linalg/process/svd/svd_complex_float.cpp  
+    nt/linalg/process/svd/svd_float.cpp          
+    nt/linalg/process/svd/svd_int32.cpp          
+    nt/linalg/process/svd/svd_int8.cpp           
+    nt/linalg/process/svd/svd_uint32.cpp
+)
+
+set(QR_SOURCES
+    nt/linalg/QR.cpp
+    
+    # nt/linalg/process/QR.cpp
+    #qr broken up into different types for compilation reasons
+    nt/linalg/process/qr/qr_complex_double.cpp 
+    nt/linalg/process/qr/qr_double.cpp         
+    nt/linalg/process/qr/qr_int16.cpp          
+    nt/linalg/process/qr/qr_int64.cpp          
+    nt/linalg/process/qr/qr_uint16.cpp         
+    nt/linalg/process/qr/qr_uint8.cpp
+    nt/linalg/process/qr/qr_complex_float.cpp  
+    nt/linalg/process/qr/qr_float.cpp          
+    nt/linalg/process/qr/qr_int32.cpp          
+    nt/linalg/process/qr/qr_int8.cpp           
+    nt/linalg/process/qr/qr_uint32.cpp
+
+) 
 
 set(FMRI_SOURCES
     nt/fmri/tensor_files/save_load.cpp
@@ -413,24 +431,92 @@ set(MEMORY_SOURCES
 
 
 
-# Source files
-set(SOURCES
-    ${MATMULT_SOURCES}
-    ${CORE_SOURCES}
-    ${TYPES_SOURCES}
-    ${FUNCTIONAL_SOURCES}
-    ${LINALG_SOURCES}
-    ${AI_SOURCES}
-    ${MP_SOURCES}
-    ${TDA_SOURCES}
-    ${FMRI_SOURCES}
-    ${SPARSE_SOURCES}
-    ${IMAGES_SOURCES}
-    ${MEMORY_SOURCES}
-)
+# # Source files
+# set(SOURCES
+#     ${MATMULT_SOURCES}
+#     ${CORE_SOURCES}
+#     ${TYPES_SOURCES}
+#     ${FUNCTIONAL_SOURCES}
+#     ${LINALG_SOURCES}
+#     ${AI_SOURCES}
+#     ${MP_SOURCES}
+#     ${TDA_SOURCES}
+#     ${FMRI_SOURCES}
+#     ${SPARSE_SOURCES}
+#     ${IMAGES_SOURCES}
+#     ${MEMORY_SOURCES}
+# )
+
+
+add_library(nt_core STATIC ${CORE_SOURCES})
+target_include_directories(nt_core PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_types STATIC ${TYPES_SOURCES})
+target_include_directories(nt_types PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_functional STATIC ${FUNCTIONAL_SOURCES})
+target_include_directories(nt_functional PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_functional STATIC ${FUNCTIONAL_CPU_SOURCES})
+target_include_directories(nt_functional_cpu PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_matmult STATIC ${MATMULT_SOURCES})
+target_include_directories(nt_matmult PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_linalg STATIC ${LINALG_SOURCES})
+target_include_directories(nt_linalg PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_svd STATIC ${SVD_SOURCES})
+target_include_directories(nt_svd PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_qr STATIC ${QR_SOURCES})
+target_include_directories(nt_qr PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_inv STATIC ${INV_SOURCES})
+target_include_directories(nt_inv PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_column_space STATIC ${COLUMN_SPACE_SOURCES})
+target_include_directories(nt_column_space PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_null_space STATIC ${NULL_SPACE_SOURCES})
+target_include_directories(nt_null_space PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_ai STATIC ${AI_SOURCES})
+target_include_directories(nt_ai PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_tda STATIC ${TDA_SOURCES})
+target_include_directories(nt_tda PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_sparse STATIC ${SPARSE_SOURCES})
+target_include_directories(nt_sparse PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_images STATIC ${IMAGES_SOURCES})
+target_include_directories(nt_images PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_memory STATIC ${MEMORY_SOURCES})
+target_include_directories(nt_memory PUBLIC ${CMAKE_SOURCE_DIR})
+
 
 # Add NeuroTensor library
-add_library(neurotensor STATIC ${SOURCES})
+add_library(neurotensor STATIC)
+target_link_libraries(neurotensor
+    nt_core
+    nt_types
+    nt_functional
+    nt_matmult
+    nt_linalg
+    nt_svd
+    nt_qr
+    nt_inv
+    nt_column_space
+    nt_null_space
+    nt_ai
+    nt_tda
+    nt_sparse
+    nt_images
+    nt_memory
+)
+
 target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
 
 # Optional: shared instead of static
@@ -443,6 +529,7 @@ target_link_libraries(neurotensor
     pthread
     niftiio
     znz
+
 )
 
 # Install the library and headers
