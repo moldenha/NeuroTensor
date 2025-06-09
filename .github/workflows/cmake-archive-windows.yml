@@ -17,31 +17,35 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Restore CMake Build Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            build
-          key: windows-build-${{ github.sha }}
-          restore-keys: |
-            windows-build-
+#       - name: Restore CMake Build Cache
+#         uses: actions/cache@v4
+#         with:
+#           path: |
+#             build
+#           key: windows-build-${{ github.sha }}
+#           restore-keys: |
+#             windows-build-
+      - name: Install sccache
+        uses: ilammy/setup-sccache@v1
 
       - name: Configure CMake
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_INSTALL_PREFIX=install
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DBUILD_MAIN=OFF
 
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Save CMake Build Cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: build
-          key: windows-build-${{ github.sha }}
+      # - name: Save CMake Build Cache
+      #   if: always()
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: build
+      #     key: windows-build-${{ github.sha }}
 
       - name: Install
         run: cmake --install build --prefix package-out
