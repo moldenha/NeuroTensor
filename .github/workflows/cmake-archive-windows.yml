@@ -73,35 +73,35 @@ jobs:
 
 
 
-  package:
-    needs: build
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+    package:
+      needs: build
+      runs-on: windows-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+          with:
+            submodules: recursive
 
-      - name: Restore build from any target
-        uses: actions/cache@v4
-        with:
-          path: build/
-          key: neurotensor-win-final-${{ github.run_id }}
-          restore-keys: |
-            neurotensor-win-
+        - name: Restore build from any target
+          uses: actions/cache@v4
+          with:
+            path: build/
+            key: neurotensor-win-final-${{ github.run_id }}
+            restore-keys: |
+              neurotensor-win-
 
-      - name: Install
-        run: cmake --install build --prefix package-out
+        - name: Install
+          run: cmake --install build --prefix package-out
 
-      - name: Archive package
-        run: |
-          powershell -Command "Compress-Archive -Path package-out\* -DestinationPath neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip"
+        - name: Archive package
+          run: |
+            powershell -Command "Compress-Archive -Path package-out\* -DestinationPath neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip"
 
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: "NeuroTensor ${{ github.event.inputs.version }}"
-          files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        - name: Upload to GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+            tag_name: ${{ github.event.inputs.version }}
+            name: "NeuroTensor ${{ github.event.inputs.version }}"
+            files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
