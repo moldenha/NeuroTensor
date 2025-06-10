@@ -132,8 +132,8 @@ jobs:
           if (Test-Path $stampPath) {
             (Get-Item $stampPath).LastWriteTime = $now.AddMinutes(1)
           }
-          if (Test-Path $dependsStampPath) {
-            (Get-Item $dependsStampPath).LastWriteTime = $now.AddMinutes(1)
+          if (Test-Path $dependStampPath) {
+            (Get-Item $dependStampPath).LastWriteTime = $now.AddMinutes(1)
           }
           (Get-ChildItem -Recurse -Path build/CMakeFiles/3.*/*.cmake) | ForEach-Object {
             $_.LastWriteTime = $now.AddMinutes(-1)
