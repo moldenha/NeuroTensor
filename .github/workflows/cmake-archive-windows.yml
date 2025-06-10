@@ -122,6 +122,23 @@ jobs:
       - name: Print build directory
         run: Get-ChildItem -Path build
 
+
+      - name: Adjust timestamps to prevent CMake from regenerating
+        shell: pwsh
+        run: |
+          $now = Get-Date
+          $stampPath = "build/CMakeFiles/generate.stamp"
+          $dependStampPath = "build/CMakeFiles/generate.stamp.depend"
+          if (Test-Path $stampPath) {
+            (Get-Item $stampPath).LastWriteTime = $now.AddMinutes(1)
+          }
+          if (Test-Path $dependsStampPath) {
+            (Get-Item $dependsStampPath).LastWriteTime = $now.AddMinutes(1)
+          }
+          (Get-ChildItem -Recurse -Path build/CMakeFiles/3.*/*.cmake) | ForEach-Object {
+            $_.LastWriteTime = $now.AddMinutes(-1)
+          }
+
       - name: Configure CMake if needed
         shell: cmd
         run: |
