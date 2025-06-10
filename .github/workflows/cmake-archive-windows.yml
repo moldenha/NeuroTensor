@@ -108,13 +108,15 @@ jobs:
         run: |
           $artifacts = Get-ChildItem -Directory temp_artifacts
           foreach ($artifact in $artifacts) {
-            try {
-              Copy-Item "temp_artifacts\$artifact\build\*" -Destination build\ -Recurse -Force -ErrorAction Stop
-              Write-Host "✅ Successfully copied $artifact into build/"
-            } catch {
-              Write-Host "❌ Failed to copy $artifact into build/"
-              Write-Host "   Error: $($_.Exception.Message)"
-            }
+              try {
+                  # Use $artifact.FullName to get the complete path of the artifact directory
+                  # This will correctly construct the source path like C:\a\NeuroTensor\NeuroTensor\temp_artifacts\neurotensor-build-nt_ai_artifact\build\*
+                  Copy-Item -Path "$($artifact.FullName)\build\*" -Destination build\ -Recurse -Force -ErrorAction Stop
+                  Write-Host "✅ Successfully copied $($artifact.Name) into build/" # Use $artifact.Name for cleaner output
+              } catch {
+                  Write-Host "❌ Failed to copy $($artifact.Name) into build/" # Use $artifact.Name for cleaner output
+                  Write-Host "   Error: $($_.Exception.Message)"
+              }
           }
 
       - name: Print build directory
