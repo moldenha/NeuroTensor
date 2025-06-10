@@ -90,6 +90,8 @@ jobs:
 
       - name: Install gh-actions-cache
         run: gh extension install actions/gh-actions-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
       - name: Restore all caches to build/
