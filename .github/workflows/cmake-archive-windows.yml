@@ -87,14 +87,168 @@ jobs:
 
       - name: Create build directory
         run: mkdir -p build
+  
+      - name: Restore nt_core build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_core/
+          key: neurotensor-win-build-nt_core-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_core-
 
-      - name: Install gh-actions-cache
-        run: gh extension install actions/gh-actions-cache
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-      - name: Restore all caches to build/
+      - name: Restore nt_types build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_types/
+          key: neurotensor-win-build-nt_types-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_types-
+
+
+
+      - name: Restore nt_functional build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_functional/
+          key: neurotensor-win-build-nt_functional-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_functional-
+
+
+
+      - name: Restore nt_functional_cpu build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_functional_cpu/
+          key: neurotensor-win-build-nt_functional_cpu-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_functional_cpu-
+
+
+
+      - name: Restore nt_matmult build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_matmult/
+          key: neurotensor-win-build-nt_matmult-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_matmult-
+
+
+
+      - name: Restore nt_linalg build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_linalg/
+          key: neurotensor-win-build-nt_linalg-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_linalg-
+
+
+
+      - name: Restore nt_svd build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_svd/
+          key: neurotensor-win-build-nt_svd-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_svd-
+
+
+
+      - name: Restore nt_qr build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_qr/
+          key: neurotensor-win-build-nt_qr-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_qr-
+
+
+
+      - name: Restore nt_inv build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_inv/
+          key: neurotensor-win-build-nt_inv-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_inv-
+
+
+
+      - name: Restore nt_column_space build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_column_space/
+          key: neurotensor-win-build-nt_column_space-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_column_space-
+
+
+
+      - name: Restore nt_null_space build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_null_space/
+          key: neurotensor-win-build-nt_null_space-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_null_space-
+
+
+
+      - name: Restore nt_ai build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_ai/
+          key: neurotensor-win-build-nt_ai-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_ai-
+
+
+
+      - name: Restore nt_tda build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_tda/
+          key: neurotensor-win-build-nt_tda-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_tda-
+
+
+
+      - name: Restore nt_sparse build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_sparse/
+          key: neurotensor-win-build-nt_sparse-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_sparse-
+
+
+
+      - name: Restore nt_images build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_images/
+          key: neurotensor-win-build-nt_images-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_images-
+
+
+
+      - name: Restore nt_memory build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_memory/
+          key: neurotensor-win-build-nt_memory-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_memory-
+
+
+
+      - name: Restore nt_multi_processing build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_multi_processing/
+          key: neurotensor-win-build-nt_multi_processing-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_multi_processing-
+
+
+
+      - name: Restore nt_fmri build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/nt_fmri/
+          key: neurotensor-win-build-nt_fmri-${ github.run_id }
+          restore-keys: neurotensor-win-build-nt_fmri-
+
+      - name: Combine build directories
         shell: pwsh
         run: |
           $targets = @(
@@ -105,21 +259,12 @@ jobs:
           )
 
           foreach ($target in $targets) {
-            Write-Host "Restoring cache for $target"
-            $temp = "$(New-TemporaryFile).dir"
-            New-Item -ItemType Directory -Path $temp | Out-Null
-
-            $cacheFile = gh actions-cache restore "neurotensor-win-build-$target-${{ github.run_id }}"
-            if (-not $cacheFile) {
-              Write-Host "No cache found for $target"
-              continue
+            $source = "temp/$target/build"
+            if (Test-Path $source) {
+              Write-Host "Merging $source into build/"
+              Copy-Item -Path "$source\*" -Destination build/ -Recurse -Force
             }
-
-            tar -xf $cacheFile -C $temp
-            Write-Host "Merging build cache for $target"
-            Copy-Item -Path "$temp\build\*" -Destination build\ -Recurse -Force
           }
-
 
       - name: Configure CMake if needed
         shell: cmd
