@@ -76,7 +76,7 @@ jobs:
           key: neurotensor-win-build-${{ matrix.target }}-${{ github.run_id }}
       
       - name: Upload builds artifacts 
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: neurotensor-build-${{ matrix.target }}_artifact
           if-no-files-found: ignore
