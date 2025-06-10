@@ -522,7 +522,10 @@ add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 
 target_link_libraries(nt_tda ${MATPLOT_LIB})
 
-target_link_libraries(neurotensor
+# Determine config directory (Release/Debug/etc.) — safe for both single/multi-config
+set(CONFIG_DIR ${CMAKE_CFG_INTDIR}) # Will be "Release" on MSVC, "." on single-config generators
+
+set(NEUROTENSOR_DEPS
     nt_core
     nt_types
     nt_functional
@@ -544,7 +547,46 @@ target_link_libraries(neurotensor
     nt_third_party
 )
 
-target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
+# Generate full paths with prefix/suffix
+foreach(dep IN LISTS NEUROTENSOR_DEPS)
+    list(APPEND NEUROTENSOR_LIBS
+        "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${dep}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+endforeach()
+
+# Third-party libs (adapt path as needed)
+list(APPEND NEUROTENSOR_LIBS
+    "${CMAKE_BINARY_DIR}/third_party/nifti_clib/niftilib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}niftiio${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    "${CMAKE_BINARY_DIR}/third_party/nifti_clib/znzlib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    "${CMAKE_BINARY_DIR}/third_party/tbb/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
+)
+
+# Link them to neurotensor
+target_link_libraries(neurotensor ${NEUROTENSOR_LIBS})
+
+# target_link_libraries(neurotensor
+#     nt_core
+#     nt_types
+#     nt_functional
+#     nt_functional_cpu
+#     nt_matmult
+#     nt_linalg
+#     nt_svd
+#     nt_qr
+#     nt_inv
+#     nt_column_space
+#     nt_null_space
+#     nt_ai
+#     nt_tda
+#     nt_sparse
+#     nt_images
+#     nt_memory
+#     nt_multi_processing
+#     nt_fmri
+#     nt_third_party
+# )
+
+# target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
 
 # Optional: shared instead of static
 # add_library(neurotensor SHARED ${SOURCES})
