@@ -60,6 +60,7 @@ jobs:
           -DBUILD_MAIN=OFF
       
       - name: Build target ${{ matrix.target }} if not already built
+        shell: cmd
         run: |
           if not exist build\\.built_${{ matrix.target }} (
             cmake --build build --target ${{ matrix.target }} --config Release
