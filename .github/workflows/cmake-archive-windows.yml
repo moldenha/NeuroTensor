@@ -110,7 +110,7 @@ jobs:
           foreach ($artifact in $artifacts) {
               try {
                   # Use $artifact.FullName to get the complete path of the artifact directory
-                  # This will correctly construct the source path like C:\a\NeuroTensor\NeuroTensor\temp_artifacts\neurotensor-build-nt_ai_artifact\build\*
+                  # This will correctly construct the source path like C:\a\NeuroTensor\NeuroTensor\temp_artifacts\neurotensor-build-nt_ai_artifact\*
                   Copy-Item -Path "$($artifact.FullName)\build\*" -Destination build\ -Recurse -Force -ErrorAction Stop
                   Write-Host "✅ Successfully copied $($artifact.Name) into build/" # Use $artifact.Name for cleaner output
               } catch {
