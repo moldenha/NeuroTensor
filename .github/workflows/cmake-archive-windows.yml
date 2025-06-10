@@ -88,27 +88,35 @@ jobs:
       - name: Create build directory
         run: mkdir -p build
 
-      - name: Restore all target caches
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const targets = [
-              'nt_core', 'nt_types', 'nt_functional', 'nt_functional_cpu',
-              'nt_matmult', 'nt_linalg', 'nt_svd', 'nt_qr', 'nt_inv',
-              'nt_column_space', 'nt_null_space', 'nt_ai', 'nt_tda',
-              'nt_sparse', 'nt_images', 'nt_memory', 'nt_multi_processing', 'nt_fmri'
-            ];
+      - name: Install gh-actions-cache
+        run: gh extension install actions/gh-actions-cache
 
-            for (const target of targets) {
-              await exec.exec('bash', ['-c', `
-                echo "Restoring cache for ${target}"
-                TEMP_DIR=$(mktemp -d)
-                CACHE_FILE=$(gh actions-cache restore neurotensor-win-build-${target}-${{ github.run_id }})
-                echo "Extracting $CACHE_FILE"
-                tar -xf "$CACHE_FILE" -C "$TEMP_DIR"
-                rsync -a "$TEMP_DIR/build/" build/
-              `]);
+
+      - name: Restore all caches to build/
+        shell: pwsh
+        run: |
+          $targets = @(
+            'nt_core', 'nt_types', 'nt_functional', 'nt_functional_cpu',
+            'nt_matmult', 'nt_linalg', 'nt_svd', 'nt_qr', 'nt_inv',
+            'nt_column_space', 'nt_null_space', 'nt_ai', 'nt_tda',
+            'nt_sparse', 'nt_images', 'nt_memory', 'nt_multi_processing', 'nt_fmri'
+          )
+
+          foreach ($target in $targets) {
+            Write-Host "Restoring cache for $target"
+            $temp = "$(New-TemporaryFile).dir"
+            New-Item -ItemType Directory -Path $temp | Out-Null
+
+            $cacheFile = gh actions-cache restore "neurotensor-win-build-$target-${{ github.run_id }}"
+            if (-not $cacheFile) {
+              Write-Host "No cache found for $target"
+              continue
             }
+
+            tar -xf $cacheFile -C $temp
+            Write-Host "Merging build cache for $target"
+            Copy-Item -Path "$temp\build\*" -Destination build\ -Recurse -Force
+          }
 
 
       - name: Configure CMake if needed
