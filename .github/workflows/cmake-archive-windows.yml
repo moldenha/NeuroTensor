@@ -118,6 +118,19 @@ jobs:
                   Write-Host "   Error: $($_.Exception.Message)"
               }
           }
+          foreach ($artifact in $artifacts) {
+              try {
+                  # Use $artifact.FullName to get the complete path of the artifact directory
+                  # This will correctly construct the source path like C:\a\NeuroTensor\NeuroTensor\temp_artifacts\neurotensor-build-nt_ai_artifact\*
+                  Copy-Item -Path "$($artifact.FullName)\*" -Destination build\ -Recurse -Force -ErrorAction Stop
+                  Write-Host "✅ Successfully copied $($artifact.Name) into build/" # Use $artifact.Name for cleaner output
+              } catch {
+                  Write-Host "❌ Failed to copy $($artifact.Name) into build/" # Use $artifact.Name for cleaner output
+                  Write-Host "   Error: $($_.Exception.Message)"
+              }
+              break
+          }
+
 
       - name: Print build directory
         run: Get-ChildItem -Path build
