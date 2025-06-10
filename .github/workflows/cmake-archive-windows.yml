@@ -73,7 +73,6 @@ jobs:
           key: neurotensor-win-build-${{ matrix.target }}-${{ github.run_id }}
 
 
-
   package:
     needs: build
     runs-on: windows-latest
@@ -91,6 +90,16 @@ jobs:
           restore-keys: |
             neurotensor-win-
 
+      - name: Reconfigure CMake (needed before building neurotensor)
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=install
+          -DBUILD_MAIN=OFF
+
+      - name: Build final neurotensor target
+        run: cmake --build build --target neurotensor --config Release
+
       - name: Install
         run: cmake --install build --prefix package-out
 
@@ -106,3 +115,4 @@ jobs:
           files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

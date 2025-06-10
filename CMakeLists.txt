@@ -457,7 +457,7 @@ target_include_directories(nt_types PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_functional STATIC ${FUNCTIONAL_SOURCES})
 target_include_directories(nt_functional PUBLIC ${CMAKE_SOURCE_DIR})
 
-add_library(nt_functional STATIC ${FUNCTIONAL_CPU_SOURCES})
+add_library(nt_functional_cpu STATIC ${FUNCTIONAL_CPU_SOURCES})
 target_include_directories(nt_functional_cpu PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_matmult STATIC ${MATMULT_SOURCES})
@@ -498,7 +498,7 @@ target_include_directories(nt_memory PUBLIC ${CMAKE_SOURCE_DIR})
 
 
 # Add NeuroTensor library
-add_library(neurotensor STATIC)
+add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 target_link_libraries(neurotensor
     nt_core
     nt_types
