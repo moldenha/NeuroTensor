@@ -11,18 +11,18 @@ message(STATUS "Root path is " ${CMAKE_FIND_ROOT_PATH})
 include(${CMAKE_SOURCE_DIR}/cmake/tbb_config.cmake)
 
 
-find_package(Matplot++ QUIET)
+# find_package(Matplot++ QUIET)
 
-if (Matplot++_FOUND)
-    message(STATUS "Found system-installed Matplot++")
-    include_directories(${Matplot++_INCLUDE_DIRS})
-    set(MATPLOT_LIB Matplot++::matplot)
-else()
-    message(STATUS "System-installed Matplot++ not found, using source")
-    add_subdirectory(third_party/matplot)
-    include_directories(${CMAKE_SOURCE_DIR}/third_party/matplot/source/matplot)
-    set(MATPLOT_LIB matplot)
-endif()
+#Now automatically compiling matplot from source for install
+# if (Matplot++_FOUND)
+#     message(STATUS "Found system-installed Matplot++")
+#     include_directories(${Matplot++_INCLUDE_DIRS})
+#     set(MATPLOT_LIB Matplot++::matplot)
+# else()
+#     message(STATUS "System-installed Matplot++ not found, using source")
+#     add_subdirectory(third_party/matplot)
+#     set(MATPLOT_LIB matplot)
+# endif()
 
 
 
@@ -44,6 +44,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib
 
+    ${CMAKE_SOURCE_DIR}/third_party/matplot/source/matplot
     #Boost files
     #Mainly for 128 bit data types
     ${CMAKE_SOURCE_DIR}/third_party/boost_config/include/
@@ -60,6 +61,9 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib)
 
 # Add NIfTI core library (creates niftiio target)
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib)
+
+add_subdirectory(third_party/matplot)
+set(MATPLOT_LIB matplot)
 
 set(CORE_SOURCES
     nt/refs/ArrayRef.cpp
@@ -545,7 +549,8 @@ file(GLOB_RECURSE NT_HEADERS ${CMAKE_SOURCE_DIR}/nt/*.h ${CMAKE_SOURCE_DIR}/nt/*
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 # Install matplot headers if local
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/matplot/ DESTINATION include/matplot FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/ DESTINATION include/third_party
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 # install(FILES ${NT_HEADERS} DESTINATION include/nt)
 # install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt DESTINATION include)

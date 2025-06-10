@@ -2,7 +2,7 @@
 #define _NT_PLOT_DIAGRAMS_H_
 
 #include "../Tensor.h"
-#include "matplot/matplot.h"
+#include "../../third_party/matplot/source/matplot/matplot.h"
 #include <algorithm>
 #include <tuple>
 #include <vector>
