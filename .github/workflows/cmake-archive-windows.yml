@@ -138,6 +138,16 @@ jobs:
           (Get-ChildItem -Recurse -Path build/CMakeFiles/3.*/*.cmake) | ForEach-Object {
             $_.LastWriteTime = $now.AddMinutes(-1)
           }
+      - name: Touch all restored build artifacts
+        shell: pwsh
+        run: |
+          $now = Get-Date
+          Get-ChildItem -Path build -Recurse -Include *.obj,*.lib,*.exp,*.pdb,*.idb,*.tlog -ErrorAction SilentlyContinue | ForEach-Object {
+            $_.LastWriteTime = $now.AddMinutes(10)
+          }
+          Get-ChildItem -Path build/CMakeFiles -Recurse -Include *.stamp* -ErrorAction SilentlyContinue | ForEach-Object {
+            $_.LastWriteTime = $now.AddMinutes(10)
+          }
 
       - name: Configure CMake if needed
         shell: cmd
