@@ -8,14 +8,15 @@ targets = ['nt_core', 'nt_types', 'nt_functional', 'nt_functional_cpu',
 
 def print_path(target):
     print("""
-          - name: Restore {} build cache
-            uses: actions/cache@v4
-            with:
-              path: temp/{}/
-              key: neurotensor-win-build-{}-${{ github.run_id }}
-              restore-keys: neurotensor-win-build-{}-
-
-          """.format(target, target, target, target))
+      - name: Restore {} build cache
+        uses: actions/cache@v4
+        with:
+          path: temp/{}/
+          key: neurotensor-win-build-{}-""".format(target, target, target), end= '')
+    print("${{ github.run_id }}", end = '')
+    print("""
+          restore-keys: neurotensor-win-build-{}-
+          """.format(target))
 
 
 for target in targets:
