@@ -3,6 +3,7 @@
 #include "../../nn/functional.h"
 #include "../../functional/functional.h"
 #include "../../functional/tensor_files/mesh.h"
+#include "../../utils/macros.h"
 
 namespace nt{
 namespace tda{
@@ -16,7 +17,8 @@ void linear_sum_assignment(const nt::Tensor& _cost_matrix,
     const int64_t& n_rows = _cost_matrix.shape()[0];
     const int64_t& n_cols = _cost_matrix.shape()[1];
     const float* cost_matrix_ptr = reinterpret_cast<const float*>(_cost_matrix.data_ptr());
-    const float* cost_matrix[n_rows];
+    NT_VLA(const float*, cost_matrix, n_rows);
+    // const float* cost_matrix[n_rows];
     for(int64_t i = 0; i < n_rows; ++i){
         cost_matrix[i] = &cost_matrix_ptr[i * n_cols];
     }
@@ -26,7 +28,8 @@ void linear_sum_assignment(const nt::Tensor& _cost_matrix,
     // Pad cost matrix to square
     nt::Tensor _cost = (n_rows != n_cols) ? nt::functional::zeros({dim, dim}, nt::DType::Float32) : _cost_matrix;
     float* cost_ptr = reinterpret_cast<float*>(_cost.data_ptr());
-    float* cost[dim];
+    NT_VLA(float*, cost, dim);
+    // float* cost[dim];
     for(int64_t i = 0; i < dim; ++i){
         cost[i] = &cost_ptr[i * dim];
     }
@@ -208,6 +211,8 @@ void linear_sum_assignment(const nt::Tensor& _cost_matrix,
   }
 
     
+    NT_VLA_DEALC(cost);
+    NT_VLA_DEALC(cost_matrix);
 }
 
 std::tuple<std::vector<int64_t>, std::vector<int64_t> >
@@ -223,9 +228,12 @@ std::tuple<std::vector<int64_t>, std::vector<int64_t> >
     nt::utils::throw_exception(A_split.numel() == B_split.numel(),
                            "Expected nummels to be same but got $ and $",
                            A_split.numel(), B_split.numel());
+    
+    NT_VLA(const float*, a_access, A_split.numel());
+    NT_VLA(const float*, b_access, A_split.numel());
 
-    const float *a_access[A_split.numel()];
-    const float *b_access[A_split.numel()];
+    // const float *a_access[A_split.numel()];
+    // const float *b_access[A_split.numel()];
     for (int64_t i = 0; i < A_split.numel(); ++i) {
         a_access[i] = reinterpret_cast<const float *>(A_begin[i].data_ptr());
         b_access[i] = reinterpret_cast<const float *>(B_begin[i].data_ptr());
@@ -287,7 +295,8 @@ std::tuple<std::vector<int64_t>, std::vector<int64_t> >
     }
     return std::make_tuple(row_perm, col_perm);
 
-
+    NT_VLA_DEALC(a_access);
+    NT_VLA_DEALC(b_access);
 }
 
 
