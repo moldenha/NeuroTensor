@@ -69,11 +69,11 @@ jobs:
             echo done > build\\.built_${{ matrix.target }}
           )
 
-      - name: Save updated build cache
+      - name: Save build cache
         uses: actions/cache/save@v4
         with:
           path: build/
-          key: neurotensor-win-build-${{ matrix.target }}-${{ github.run_id }}
+          key: neurotensor-win-build-all-${{ github.run_id }}
 
 
   package:
@@ -85,22 +85,25 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Restore build from any target
+      - name: Restore build from any matrix target
         uses: actions/cache@v4
         with:
           path: build/
-          key: neurotensor-win-final-${{ github.run_id }}
+          key: neurotensor-win-build-all-${{ github.run_id }}
           restore-keys: |
-            neurotensor-win-
+            neurotensor-win-build-
+      
+      - name: List build output
+        run: Get-ChildItem -Recurse build\Release
 
-      - name: Reconfigure CMake (needed before building neurotensor)
-        run: >
-          cmake -S . -B build
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_INSTALL_PREFIX=install
-          -DBUILD_MAIN=OFF
+      - name: Configure CMake if needed
+        shell: cmd
+        run: |
+          if not exist build/CMakeCache.txt (
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
+          )
 
-      - name: Build final neurotensor target
+      - name: Build neurotensor only
         run: cmake --build build --target neurotensor --config Release
 
       - name: Install
