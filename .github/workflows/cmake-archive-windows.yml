@@ -69,13 +69,13 @@ jobs:
             echo done > build\\.built_${{ matrix.target }}
           )
 
-      - name: Save build cache
+      - name: Save updated build cache
         uses: actions/cache/save@v4
         with:
           path: build/
-          key: neurotensor-win-build-all-${{ github.run_id }}
+          key: neurotensor-win-build-${{ matrix.target }}-${{ github.run_id }}
 
-
+    
   package:
     needs: build
     runs-on: windows-latest
@@ -85,16 +85,31 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Restore build from any matrix target
-        uses: actions/cache@v4
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Restore all target caches
+        uses: actions/github-script@v7
         with:
-          path: build/
-          key: neurotensor-win-build-all-${{ github.run_id }}
-          restore-keys: |
-            neurotensor-win-build-
-      
-      - name: List build output
-        run: Get-ChildItem -Recurse build\Release
+          script: |
+            const targets = [
+              'nt_core', 'nt_types', 'nt_functional', 'nt_functional_cpu',
+              'nt_matmult', 'nt_linalg', 'nt_svd', 'nt_qr', 'nt_inv',
+              'nt_column_space', 'nt_null_space', 'nt_ai', 'nt_tda',
+              'nt_sparse', 'nt_images', 'nt_memory', 'nt_multi_processing', 'nt_fmri'
+            ];
+
+            for (const target of targets) {
+              await exec.exec('bash', ['-c', `
+                echo "Restoring cache for ${target}"
+                TEMP_DIR=$(mktemp -d)
+                CACHE_FILE=$(gh actions-cache restore neurotensor-win-build-${target}-${{ github.run_id }})
+                echo "Extracting $CACHE_FILE"
+                tar -xf "$CACHE_FILE" -C "$TEMP_DIR"
+                rsync -a "$TEMP_DIR/build/" build/
+              `]);
+            }
+
 
       - name: Configure CMake if needed
         shell: cmd
