@@ -504,6 +504,19 @@ target_include_directories(nt_multi_processing PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_fmri STATIC ${FMRI_SOURCES})
 target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
 
+add_library(nt_third_party STATIC nt/utils/utils_systems/dummy_third.cpp)
+target_include_directories(nt_third_party PUBLIC ${CMAKE_SOURCE_DIR})
+
+# Link libraries
+target_link_libraries(nt_third_party
+    ${TBB_LIB}
+    pthread
+    niftiio
+    znz
+
+)
+
+
 # Add NeuroTensor library
 add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 
@@ -528,6 +541,7 @@ target_link_libraries(neurotensor
     nt_memory
     nt_multi_processing
     nt_fmri
+    nt_third_party
 )
 
 target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
@@ -535,14 +549,7 @@ target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
 # Optional: shared instead of static
 # add_library(neurotensor SHARED ${SOURCES})
 
-# Link libraries
-target_link_libraries(neurotensor
-    ${TBB_LIB}
-    pthread
-    niftiio
-    znz
 
-)
 
 # Install the library and headers
 install(TARGETS neurotensor
