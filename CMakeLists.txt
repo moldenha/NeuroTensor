@@ -506,6 +506,9 @@ target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
 
 # Add NeuroTensor library
 add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
+
+target_link_libraries(nt_tda ${MATPLOT_LIB})
+
 target_link_libraries(neurotensor
     nt_core
     nt_types
@@ -535,7 +538,6 @@ target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
 # Link libraries
 target_link_libraries(neurotensor
     ${TBB_LIB}
-    ${MATPLOT_LIB}
     pthread
     niftiio
     znz

@@ -1,6 +1,9 @@
+
+
+
+if(BUILD_MAIN)
 # Find TBB
 find_package(TBB QUIET)
-
 if (TBB_FOUND)
     # If TBB is found, link it
     message(STATUS "Found system-installed TBB")
@@ -17,4 +20,13 @@ else()
     add_subdirectory(third_party/tbb)
     set(TBB_LIB tbb)  # Use the built TBB target, when built from source just called tbb
     include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
+endif()
+else()
+    # If TBB is not found, build it from the third-party directory
+    message(STATUS "building TBB from source")
+    set(TBB_TEST OFF CACHE BOOL "Disable TBB tests") # Must be above add_subdirectory to take effect
+    add_subdirectory(third_party/tbb)
+    set(TBB_LIB tbb)  # Use the built TBB target, when built from source just called tbb
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
+
 endif()
