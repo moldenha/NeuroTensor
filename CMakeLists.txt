@@ -503,6 +503,7 @@ target_link_libraries(neurotensor
     nt_core
     nt_types
     nt_functional
+    nt_functional_cpu
     nt_matmult
     nt_linalg
     nt_svd
