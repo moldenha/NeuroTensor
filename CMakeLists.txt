@@ -11,18 +11,17 @@ message(STATUS "Root path is " ${CMAKE_FIND_ROOT_PATH})
 include(${CMAKE_SOURCE_DIR}/cmake/tbb_config.cmake)
 
 
-# find_package(Matplot++ QUIET)
+ find_package(Matplot++ QUIET)
 
-#Now automatically compiling matplot from source for install
-# if (Matplot++_FOUND)
-#     message(STATUS "Found system-installed Matplot++")
-#     include_directories(${Matplot++_INCLUDE_DIRS})
-#     set(MATPLOT_LIB Matplot++::matplot)
-# else()
-#     message(STATUS "System-installed Matplot++ not found, using source")
-#     add_subdirectory(third_party/matplot)
-#     set(MATPLOT_LIB matplot)
-# endif()
+ if (Matplot++_FOUND)
+     message(STATUS "Found system-installed Matplot++")
+     include_directories(${Matplot++_INCLUDE_DIRS})
+     set(MATPLOT_LIB Matplot++::matplot)
+ else()
+     message(STATUS "System-installed Matplot++ not found, using source")
+     add_subdirectory(third_party/matplot/source)
+     set(MATPLOT_LIB matplot)
+ endif()
 
 
 
@@ -44,7 +43,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib
     ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib
 
-    ${CMAKE_SOURCE_DIR}/third_party/matplot/source/matplot
     #Boost files
     #Mainly for 128 bit data types
     ${CMAKE_SOURCE_DIR}/third_party/boost_config/include/
@@ -500,6 +498,11 @@ target_include_directories(nt_images PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_memory STATIC ${MEMORY_SOURCES})
 target_include_directories(nt_memory PUBLIC ${CMAKE_SOURCE_DIR})
 
+add_library(nt_multi_processing STATIC ${MP_SOURCES})
+target_include_directories(nt_multi_processing PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_fmri STATIC ${FMRI_SOURCES})
+target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
 
 # Add NeuroTensor library
 add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
@@ -520,6 +523,8 @@ target_link_libraries(neurotensor
     nt_sparse
     nt_images
     nt_memory
+    nt_multi_processing
+    nt_fmri
 )
 
 target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})

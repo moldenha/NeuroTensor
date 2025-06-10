@@ -30,6 +30,8 @@ jobs:
           - nt_sparse
           - nt_images
           - nt_memory
+          - nt_multi_processing
+          - nt_fmri
 
     steps:
       - name: Checkout code
