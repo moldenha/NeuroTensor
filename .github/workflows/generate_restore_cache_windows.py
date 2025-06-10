@@ -15,6 +15,7 @@ def print_path(target):
           key: neurotensor-win-build-{}-""".format(target, target, target), end= '')
     print("${{ github.run_id }}", end = '')
     print("""
+          fail-on-cache-miss: true
           restore-keys: neurotensor-win-build-{}-
           """.format(target))
 
