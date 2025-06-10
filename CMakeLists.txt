@@ -19,7 +19,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/tbb_config.cmake)
      set(MATPLOT_LIB Matplot++::matplot)
  else()
      message(STATUS "System-installed Matplot++ not found, using source")
-     add_subdirectory(third_party/matplot/source)
+     include_directories(third_party/matplot/source)
+     add_subdirectory(third_party/matplot)
      set(MATPLOT_LIB matplot)
  endif()
 
@@ -60,8 +61,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib)
 # Add NIfTI core library (creates niftiio target)
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib)
 
-add_subdirectory(third_party/matplot)
-set(MATPLOT_LIB matplot)
+
 
 set(CORE_SOURCES
     nt/refs/ArrayRef.cpp
