@@ -142,7 +142,7 @@ jobs:
         shell: pwsh
         run: |
           $now = Get-Date
-          Get-ChildItem -Path build -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { {
+          Get-ChildItem -Path build -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
             $_.LastWriteTime = $now.AddMinutes(10)
           }
           Get-ChildItem -Path build/CMakeFiles -Recurse -Include *.stamp* -ErrorAction SilentlyContinue | ForEach-Object {
