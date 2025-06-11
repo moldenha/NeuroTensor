@@ -132,7 +132,7 @@ jobs:
         run: |
           rmdir build/CMakeFiles
           del build/CMakeCache.txt
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=package_out -DBUILD_MAIN=OFF
 
       - name: Build neurotensor only
         run: cmake --build build --target neurotensor --config Release

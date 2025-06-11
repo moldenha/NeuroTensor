@@ -1,4 +1,4 @@
-name: Build and Package NeuroTensor (Ubuntu Only)
+name: Build and Package NeuroTensor (MacOS Intel)
 
 on:
   workflow_dispatch:
@@ -8,24 +8,121 @@ on:
         required: true
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - nt_core
+          - nt_types
+          - nt_functional
+          - nt_functional_cpu
+          - nt_matmult
+          - nt_linalg
+          - nt_svd
+          - nt_qr
+          - nt_inv
+          - nt_column_space
+          - nt_null_space
+          - nt_ai
+          - nt_tda
+          - nt_sparse
+          - nt_images
+          - nt_memory
+          - nt_multi_processing
+          - nt_fmri
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+
+      - name: Restore build/ directory cache
+        uses: actions/cache@v4
+        with:
+          path: build/
+          key: neurotensor-ubuntu-latest-build-versioned-${{ matrix.target }}-${{ github.event.inputs.version }}
+
       - name: Configure CMake
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_INSTALL_PREFIX=install
+          -DCMAKE_INSTALL_PREFIX=package-out
           -DBUILD_MAIN=OFF
+      
+      - name: Build target ${{ matrix.target }} if not already built
+        shell: bash
+        run: |
+          if [ ! -f "build/.built_${{ matrix.target }}" ]; then
+            cmake --build build --target ${{ matrix.target }} --config Release
+            echo done > build/.built_${{ matrix.target }}
+          fi
 
-      - name: Build
-        run: cmake --build build --config Release
+      - name: Save updated build cache
+        uses: actions/cache/save@v4
+        with:
+          path: build/
+          key: neurotensor-ubuntu-latest-build-versioned-${{ matrix.target }}-${{ github.event.inputs.version }}
+      
+      - name: Upload builds artifacts 
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurotensor-build-${{ matrix.target }}_artifact
+          if-no-files-found: ignore
+          path: build/
+          retention-days: 1
+    
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: temp_artifacts
+
+      - name: Print temp_artifacts directory
+        run: ls temp_artifacts
+
+      - name: Merge all build artifacts
+        shell: bash
+        run: |
+          for artifact in temp_artifacts/*; do
+            if [ -d "$artifact" ]; then
+              if rsync -a "${artifact}"/ build; then
+                echo "✅ Successfully copied $(basename "$artifact") into build/"
+              else
+                echo "❌ Failed to copy $(basename "$artifact") into build/"
+              fi
+            fi
+          done
+
+
+
+      - name: Print build directory
+        run: ls build
+
+
+      - name: Configure CMake if needed
+        shell: bash
+        run: |
+            rm -f build/CMakeCache.txt
+            rm -rf build/CMakeFiles
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
+
+
+      - name: Build neurotensor only
+        run: cmake --build build --target neurotensor --config Release
 
       - name: Install
         run: cmake --install build --prefix package-out
@@ -41,7 +138,10 @@ jobs:
           tag_name: ${{ github.event.inputs.version }}
           name: "NeuroTensor ${{ github.event.inputs.version }}"
           files: neurotensor-ubuntu-x86_64-${{ github.event.inputs.version }}.tar.gz
-
+          overwrite: true
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
