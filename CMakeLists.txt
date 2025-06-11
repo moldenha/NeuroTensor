@@ -507,6 +507,9 @@ target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_third_party STATIC nt/utils/utils_systems/dummy_third.cpp)
 target_include_directories(nt_third_party PUBLIC ${CMAKE_SOURCE_DIR})
 
+set(TBB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(TBB_BUILD_STATIC ON CACHE BOOL "" FORCE)
+
 # Link libraries
 target_link_libraries(nt_third_party
     ${TBB_LIB}
