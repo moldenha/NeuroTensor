@@ -86,7 +86,7 @@ jobs:
           submodules: recursive
 
       - name: Create build directory
-        run: mkdir build
+        run: mkdir -p build
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -99,9 +99,9 @@ jobs:
       - name: Merge all build artifacts
         shell: bash
         run: |
-          for artifact in temp_artifacts/*/; do
+          for artifact in temp_artifacts/*; do
             if [ -d "$artifact" ]; then
-              if rsync -av "${artifact_dir}" build/; then
+              if rsync -a "${artifact}" build; then
                 echo "✅ Successfully copied $(basename "$artifact") into build/"
               else
                 echo "❌ Failed to copy $(basename "$artifact") into build/"
@@ -141,7 +141,7 @@ jobs:
       #     }
 
       - name: Configure CMake if needed
-        shell: cmd
+        shell: bash
         run: |
           if [ ! -f "build/CMakeCache.txt" ]; then
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
