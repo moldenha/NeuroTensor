@@ -557,10 +557,11 @@ list(APPEND NEUROTENSOR_LIBS
 # Link them to neurotensor
 target_link_libraries(neurotensor ${NEUROTENSOR_LIBS})
 
+# Make sure tbb is private to avoid installation, tbb is not exposed to user anyways
+target_link_libraries(neurotensor PRIVATE ${TBB_LIB})
 
 # Link libraries
 target_link_libraries(neurotensor
-    ${TBB_LIB}
     pthread
     niftiio
     znz
