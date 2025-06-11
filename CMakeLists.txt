@@ -561,7 +561,7 @@ set(TBB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(TBB_BUILD_STATIC ON CACHE BOOL "" FORCE)
 
 # Link libraries
-target_link_libraries(nt_third_party
+target_link_libraries(neurotensor
     ${TBB_LIB}
     pthread
     niftiio
