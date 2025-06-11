@@ -499,11 +499,16 @@ target_include_directories(nt_ai PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_tda_obj OBJECT ${TDA_SOURCES})
 target_include_directories(nt_tda_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_tda_obj ${MATPLOT_LIB}) # Reconfiguring matplot lib part of tda objects
 
 # -- TDA_SOURCES Have Duplicate Filenames like Points and MatrixReduction
 
 add_library(nt_tda STATIC $<TARGET_OBJECTS:nt_tda_obj>)
 target_include_directories(nt_tda PUBLIC ${CMAKE_SOURCE_DIR})
+
+# target_link_libraries(nt_tda ${MATPLOT_LIB})
+
+
 
 add_library(nt_sparse STATIC ${SPARSE_SOURCES})
 target_include_directories(nt_sparse PUBLIC ${CMAKE_SOURCE_DIR})
@@ -529,7 +534,7 @@ target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
 # Add NeuroTensor library
 add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 
-target_link_libraries(nt_tda ${MATPLOT_LIB})
+
 
 # Determine config directory (Release/Debug/etc.) — safe for both single/multi-config
 set(CONFIG_DIR ${CMAKE_CFG_INTDIR}) # Will be "Release" on MSVC, "." on single-config generators
