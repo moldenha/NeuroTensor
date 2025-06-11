@@ -1,4 +1,4 @@
-name: Build and Package NeuroTensor (MacOS Intel)
+name: Build and Package NeuroTensor (MacOS Arm64)
 
 on:
   workflow_dispatch:
