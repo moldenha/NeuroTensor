@@ -548,11 +548,12 @@ foreach(dep IN LISTS NEUROTENSOR_DEPS)
 endforeach()
 
 # Third-party libs (adapt path as needed)
-list(APPEND NEUROTENSOR_LIBS
-    "${CMAKE_BINARY_DIR}/third_party/nifti_clib/niftilib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}niftiio${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    "${CMAKE_BINARY_DIR}/third_party/nifti_clib/znzlib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    "${CMAKE_BINARY_DIR}/third_party/tbb/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}tbb${CMAKE_STATIC_LIBRARY_SUFFIX}"
-)
+# These will be linked because they are built with neurotensor
+# list(APPEND NEUROTENSOR_LIBS
+#     "${CMAKE_BINARY_DIR}/third_party/nifti_clib/niftilib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}niftiio${CMAKE_STATIC_LIBRARY_SUFFIX}"
+#     "${CMAKE_BINARY_DIR}/third_party/nifti_clib/znzlib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
+#     "${CMAKE_BINARY_DIR}/third_party/tbb/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}tbb${CMAKE_STATIC_LIBRARY_SUFFIX}"
+# )
 
 # Link them to neurotensor
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
