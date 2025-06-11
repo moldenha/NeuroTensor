@@ -147,6 +147,9 @@ jobs:
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
           fi
 
+      - name: Build tbb only
+        run: cmake --build build --target tbb --config Release
+
       - name: Build neurotensor only
         run: cmake --build build --target neurotensor --config Release
 
