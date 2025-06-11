@@ -505,7 +505,7 @@ target_include_directories(nt_ai PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_tda_obj OBJECT ${TDA_SOURCES})
 target_include_directories(nt_tda_obj PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(nt_tda_obj ${MATPLOT_LIB}) # Reconfiguring matplot lib part of tda objects
+target_link_libraries(nt_tda_obj PUBLIC ${MATPLOT_LIB}) # Reconfiguring matplot lib part of tda objects
 target_link_libraries(nt_tda_obj PRIVATE ${TBB_LIB} pthread)
 
 # -- TDA_SOURCES Have Duplicate Filenames like Points and MatrixReduction
