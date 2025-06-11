@@ -557,8 +557,6 @@ list(APPEND NEUROTENSOR_LIBS
 # Link them to neurotensor
 target_link_libraries(neurotensor ${NEUROTENSOR_LIBS})
 
-set(TBB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-set(TBB_BUILD_STATIC ON CACHE BOOL "" FORCE)
 
 # Link libraries
 target_link_libraries(neurotensor
@@ -622,6 +620,8 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/half DESTINATION include
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/multiprecision/include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/boost_config/include/ DESTINATION include
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 
 # install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/ DESTINATION include/third_party
