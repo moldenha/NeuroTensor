@@ -101,7 +101,7 @@ jobs:
         run: |
           for artifact in temp_artifacts/*; do
             if [ -d "$artifact" ]; then
-              if rsync -a "${artifact}" build; then
+              if rsync -a "${artifact}"/ build; then
                 echo "✅ Successfully copied $(basename "$artifact") into build/"
               else
                 echo "❌ Failed to copy $(basename "$artifact") into build/"
