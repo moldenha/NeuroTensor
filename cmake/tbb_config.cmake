@@ -24,8 +24,13 @@ else()
     add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
     set(TBB_ENABLE_IPO OFF CACHE BOOL "Disable IPO to compile tbb statically")
     add_subdirectory(third_party/tbb)
+    #Needed for GNU compatibility on linux
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+      target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
+    endif()
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
     include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
+
 endif()
 else()
     # If TBB is not found, build it from the third-party directory
@@ -39,8 +44,13 @@ else()
     add_compile_definitions(__TBB_DYNAMIC_LOAD_ENABLED=0)
     set(TBB_ENABLE_IPO OFF CACHE BOOL "Disable IPO to compile tbb statically")
     add_subdirectory(third_party/tbb)
+    #Needed for GNU compatibility on linux
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+      target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
+    endif()
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
     include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
+
     # set(TBB_CORE_LIB_FINAL_PATH "$<TARGET_FILE:TBB::tbb>")
     # message(STATUS "TBB core library will be found at: ${TBB_CORE_LIB_FINAL_PATH}")
 endif()
