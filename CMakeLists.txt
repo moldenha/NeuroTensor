@@ -450,9 +450,11 @@ set(MEMORY_SOURCES
 # )
 
 
-add_library(nt_core STATIC ${CORE_SOURCES})
+add_library(nt_core_obj OBJECT ${CORE_SOURCES})
+target_include_directories(nt_core_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_core_obj PUBLIC ${TBB_LIB} pthread)
+add_library(nt_core STATIC $<TARGET_OBJECTS:nt_core_obj>)
 target_include_directories(nt_core PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(nt_core PUBLIC ${TBB_LIB} pthread)
 
 add_library(nt_types STATIC ${TYPES_SOURCES})
 target_include_directories(nt_types PUBLIC ${CMAKE_SOURCE_DIR})
@@ -579,24 +581,30 @@ foreach(dep IN LISTS NEUROTENSOR_DEPS)
     )
 endforeach()
 
-# Third-party libs (adapt path as needed)
-# These will be linked because they are built with neurotensor
-# list(APPEND NEUROTENSOR_LIBS
-#     "${CMAKE_BINARY_DIR}/third_party/nifti_clib/niftilib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}niftiio${CMAKE_STATIC_LIBRARY_SUFFIX}"
-#     "${CMAKE_BINARY_DIR}/third_party/nifti_clib/znzlib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
-#     "${CMAKE_BINARY_DIR}/third_party/tbb/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}tbb${CMAKE_STATIC_LIBRARY_SUFFIX}"
-# )
-
 # Link them to neurotensor
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
 
 # Link libraries
 target_link_libraries(neurotensor PRIVATE
+    ${MATPLOT_LIB}
     ${TBB_LIB}
     pthread
     niftiio
     znz
 )
+
+# Third-party libs (adapt path as needed)
+# These will be linked because they are built with neurotensor
+# list(APPEND NEUROTENSOR_LIBS
+#     $<TARGET_FILE:tbb>
+#     $<TARGET_FILE:tbbmalloc>
+#     $<TARGET_FILE:tbbmalloc>
+#     $<TARGET_FILE:niftiio>
+#     $<TARGET_FILE:znz>
+#     $<TARGET_FILE:matplot++>
+# )
+
+
 
 
 message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
@@ -604,18 +612,38 @@ message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
 # Cross-platform merging of static libs into one archive
 if(APPLE)
   add_custom_command(TARGET neurotensor POST_BUILD
-    COMMAND libtool -static -o $<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
+    COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
+                                ${NEUROTENSOR_LIBS}
+                                    $<TARGET_FILE:tbb>
+                                    $<TARGET_FILE:tbbmalloc>
+                                    $<TARGET_FILE:niftiio>
+                                    $<TARGET_FILE:znz>
+                                    $<TARGET_FILE:matplot>
+
     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
   )
 elseif(UNIX)
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND rm -f $<TARGET_FILE:neurotensor>
-    COMMAND ar crus $<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
+    COMMAND ar crus $<TARGET_FILE:neurotensor> 
+                        ${NEUROTENSOR_LIBS}
+                        $<TARGET_FILE:tbb>
+                        $<TARGET_FILE:tbbmalloc>
+                        $<TARGET_FILE:niftiio>
+                        $<TARGET_FILE:znz>
+                        $<TARGET_FILE:matplot>
     COMMENT "🔧 Linux: Merging static libraries into libneurotensor.a with ar"
   )
 elseif(WIN32)
   add_custom_command(TARGET neurotensor POST_BUILD
-    COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
+    COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 
+                        ${NEUROTENSOR_LIBS}
+                        $<TARGET_FILE:tbb>
+                        $<TARGET_FILE:tbbmalloc>
+                        $<TARGET_FILE:niftiio>
+                        $<TARGET_FILE:znz>
+                        $<TARGET_FILE:matplot>
+
     COMMENT "🔧 Windows: Merging static libraries into libneurotensor.lib with lib.exe"
   )
 endif()

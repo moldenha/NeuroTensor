@@ -41,5 +41,6 @@ else()
     add_subdirectory(third_party/tbb)
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
     include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
-
+    # set(TBB_CORE_LIB_FINAL_PATH "$<TARGET_FILE:TBB::tbb>")
+    # message(STATUS "TBB core library will be found at: ${TBB_CORE_LIB_FINAL_PATH}")
 endif()
