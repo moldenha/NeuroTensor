@@ -504,20 +504,10 @@ target_include_directories(nt_multi_processing PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_fmri STATIC ${FMRI_SOURCES})
 target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
 
-add_library(nt_third_party STATIC nt/utils/utils_systems/dummy_third.cpp)
-target_include_directories(nt_third_party PUBLIC ${CMAKE_SOURCE_DIR})
+# add_library(nt_third_party STATIC nt/utils/utils_systems/dummy_third.cpp)
+# target_include_directories(nt_third_party PUBLIC ${CMAKE_SOURCE_DIR})
 
-set(TBB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-set(TBB_BUILD_STATIC ON CACHE BOOL "" FORCE)
 
-# Link libraries
-target_link_libraries(nt_third_party
-    ${TBB_LIB}
-    pthread
-    niftiio
-    znz
-
-)
 
 
 # Add NeuroTensor library
@@ -547,7 +537,7 @@ set(NEUROTENSOR_DEPS
     nt_memory
     nt_multi_processing
     nt_fmri
-    nt_third_party
+    # nt_third_party
 )
 
 # Generate full paths with prefix/suffix
@@ -566,6 +556,17 @@ list(APPEND NEUROTENSOR_LIBS
 
 # Link them to neurotensor
 target_link_libraries(neurotensor ${NEUROTENSOR_LIBS})
+
+set(TBB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(TBB_BUILD_STATIC ON CACHE BOOL "" FORCE)
+
+# Link libraries
+target_link_libraries(nt_third_party
+    ${TBB_LIB}
+    pthread
+    niftiio
+    znz
+)
 
 # target_link_libraries(neurotensor
 #     nt_core

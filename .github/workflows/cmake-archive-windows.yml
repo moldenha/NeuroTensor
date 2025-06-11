@@ -32,7 +32,6 @@ jobs:
           - nt_memory
           - nt_multi_processing
           - nt_fmri
-          - nt_third_party
 
     steps:
       - name: Checkout code
@@ -49,9 +48,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/
-          key: neurotensor-win-build-${{ matrix.target }}-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            neurotensor-win-build-${{ matrix.target }}-
+          key: neurotensor-win-build-versioned-${{ matrix.target }}-${{ github.event.inputs.version }}
 
       - name: Configure CMake
         run: >
