@@ -145,9 +145,9 @@ jobs:
       - name: Configure CMake if needed
         shell: bash
         run: |
-          if [ ! -f "build/CMakeCache.txt" ]; then
+            rm -f build/CMakeCache.txt
+            rm -rf build/CMakeFiles
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
-          fi
 
 
       - name: Build neurotensor only
