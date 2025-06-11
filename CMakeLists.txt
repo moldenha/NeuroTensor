@@ -452,17 +452,21 @@ set(MEMORY_SOURCES
 
 add_library(nt_core STATIC ${CORE_SOURCES})
 target_include_directories(nt_core PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_core PUBLIC ${TBB_LIB} pthread)
 
 add_library(nt_types STATIC ${TYPES_SOURCES})
 target_include_directories(nt_types PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_types PRIVATE ${TBB_LIB} pthread)
 
 
 # Create object libraries to isolate object files
 add_library(nt_functional_obj OBJECT ${FUNCTIONAL_SOURCES})
 target_include_directories(nt_functional_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_functional_obj PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_functional_cpu_obj OBJECT ${FUNCTIONAL_CPU_SOURCES})
 target_include_directories(nt_functional_cpu_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_functional_cpu_obj PRIVATE ${TBB_LIB} pthread)
 # -- The above is to avoid duplicate file/object names --
 
 add_library(nt_functional STATIC $<TARGET_OBJECTS:nt_functional_obj>)
@@ -473,9 +477,11 @@ target_include_directories(nt_functional_cpu PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_matmult STATIC ${MATMULT_SOURCES})
 target_include_directories(nt_matmult PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_matmult PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_linalg STATIC ${LINALG_SOURCES})
 target_include_directories(nt_linalg PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_linalg PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_svd STATIC ${SVD_SOURCES})
 target_include_directories(nt_svd PUBLIC ${CMAKE_SOURCE_DIR})
@@ -500,6 +506,7 @@ target_include_directories(nt_ai PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_tda_obj OBJECT ${TDA_SOURCES})
 target_include_directories(nt_tda_obj PUBLIC ${CMAKE_SOURCE_DIR})
 target_link_libraries(nt_tda_obj ${MATPLOT_LIB}) # Reconfiguring matplot lib part of tda objects
+target_link_libraries(nt_tda_obj PRIVATE ${TBB_LIB} pthread)
 
 # -- TDA_SOURCES Have Duplicate Filenames like Points and MatrixReduction
 
@@ -512,18 +519,22 @@ target_include_directories(nt_tda PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_sparse STATIC ${SPARSE_SOURCES})
 target_include_directories(nt_sparse PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_sparse PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_images STATIC ${IMAGES_SOURCES})
 target_include_directories(nt_images PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_memory STATIC ${MEMORY_SOURCES})
 target_include_directories(nt_memory PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_memory PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_multi_processing STATIC ${MP_SOURCES})
 target_include_directories(nt_multi_processing PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_multi_processing PUBLIC ${TBB_LIB} pthread)
 
 add_library(nt_fmri STATIC ${FMRI_SOURCES})
 target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(nt_fmri PRIVATE niftiio znz)
 
 # add_library(nt_third_party STATIC nt/utils/utils_systems/dummy_third.cpp)
 # target_include_directories(nt_third_party PUBLIC ${CMAKE_SOURCE_DIR})
@@ -587,13 +598,6 @@ target_link_libraries(neurotensor PRIVATE
     znz
 )
 
-
-# Sanity check: make sure each library actually exists
-foreach(lib ${NEUROTENSOR_LIBS})
-  if(NOT EXISTS "${lib}")
-        message(WARNING "❌ Missing static library: ${lib}")
-  endif()
-endforeach()
 
 message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
 
