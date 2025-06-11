@@ -126,38 +126,13 @@ jobs:
         run: Get-ChildItem -Path build/Release
 
 
-      - name: Adjust timestamps to prevent CMake from regenerating
-        shell: pwsh
-        run: |
-          $now = Get-Date
-          $stampPath = "build/CMakeFiles/generate.stamp"
-          $dependStampPath = "build/CMakeFiles/generate.stamp.depend"
-          if (Test-Path $stampPath) {
-            (Get-Item $stampPath).LastWriteTime = $now.AddMinutes(1)
-          }
-          if (Test-Path $dependStampPath) {
-            (Get-Item $dependStampPath).LastWriteTime = $now.AddMinutes(1)
-          }
-          (Get-ChildItem -Recurse -Path build/CMakeFiles/3.*/*.cmake) | ForEach-Object {
-            $_.LastWriteTime = $now.AddMinutes(-1)
-          }
-      - name: Touch all restored build artifacts
-        shell: pwsh
-        run: |
-          $now = Get-Date
-          Get-ChildItem -Path build -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
-            $_.LastWriteTime = $now.AddMinutes(10)
-          }
-          Get-ChildItem -Path build/CMakeFiles -Recurse -Include *.stamp* -ErrorAction SilentlyContinue | ForEach-Object {
-            $_.LastWriteTime = $now.AddMinutes(10)
-          }
 
       - name: Configure CMake if needed
         shell: cmd
         run: |
-          if not exist build/CMakeCache.txt (
+          rmdir build/CMakeFiles
+          del build/CMakeCache.txt
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
-          )
 
       - name: Build neurotensor only
         run: cmake --build build --target neurotensor --config Release
@@ -175,6 +150,10 @@ jobs:
           tag_name: ${{ github.event.inputs.version }}
           name: "NeuroTensor ${{ github.event.inputs.version }}"
           files: neurotensor-windows-x86_64-${{ github.event.inputs.version }}.zip
+          overwrite: true
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

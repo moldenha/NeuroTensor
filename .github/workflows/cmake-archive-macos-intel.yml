@@ -32,8 +32,6 @@ jobs:
           - nt_memory
           - nt_multi_processing
           - nt_fmri
-          - tbb
-          - tbbmalloc
 
     steps:
       - name: Checkout code

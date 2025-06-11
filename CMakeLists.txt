@@ -565,6 +565,24 @@ target_link_libraries(neurotensor PRIVATE
     znz
 )
 
+if(APPLE)
+  add_custom_command(TARGET neurotensor POST_BUILD
+    COMMAND libtool -static -o $<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
+    COMMENT "macOS: Merging static libraries into libneurotensor.a with libtool"
+  )
+elseif(UNIX)
+  add_custom_command(TARGET neurotensor POST_BUILD
+    COMMAND rm -f $<TARGET_FILE:neurotensor>
+    COMMAND ar crus $<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
+    COMMENT "Linux: Merging static libraries into libneurotensor.a with ar"
+  )
+elseif(WIN32)
+  add_custom_command(TARGET neurotensor POST_BUILD
+    COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
+    COMMENT "Windows: Merging static libraries into libneurotensor.lib with lib.exe"
+  )
+endif()
+
 # target_link_libraries(neurotensor
 #     nt_core
 #     nt_types
@@ -609,7 +627,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/matplot/source DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/simde DESTINATION include/simde
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/simde/simde DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/half DESTINATION include
