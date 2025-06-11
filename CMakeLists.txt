@@ -456,10 +456,19 @@ target_include_directories(nt_core PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_types STATIC ${TYPES_SOURCES})
 target_include_directories(nt_types PUBLIC ${CMAKE_SOURCE_DIR})
 
-add_library(nt_functional STATIC ${FUNCTIONAL_SOURCES})
+
+# Create object libraries to isolate object files
+add_library(nt_functional_obj OBJECT ${FUNCTIONAL_SOURCES})
+target_include_directories(nt_functional_obj PUBLIC ${CMAKE_SOURCE_DIR})
+
+add_library(nt_functional_cpu_obj OBJECT ${FUNCTIONAL_CPU_SOURCES})
+target_include_directories(nt_functional_cpu_obj PUBLIC ${CMAKE_SOURCE_DIR})
+# -- The above is to avoid duplicate file/object names --
+
+add_library(nt_functional STATIC $<TARGET_OBJECTS:nt_functional_obj>)
 target_include_directories(nt_functional PUBLIC ${CMAKE_SOURCE_DIR})
 
-add_library(nt_functional_cpu STATIC ${FUNCTIONAL_CPU_SOURCES})
+add_library(nt_functional_cpu STATIC $<TARGET_OBJECTS:nt_functional_cpu_obj>)
 target_include_directories(nt_functional_cpu PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_matmult STATIC ${MATMULT_SOURCES})
@@ -486,7 +495,14 @@ target_include_directories(nt_null_space PUBLIC ${CMAKE_SOURCE_DIR})
 add_library(nt_ai STATIC ${AI_SOURCES})
 target_include_directories(nt_ai PUBLIC ${CMAKE_SOURCE_DIR})
 
-add_library(nt_tda STATIC ${TDA_SOURCES})
+# -- Handling TDA Source Objects
+
+add_library(nt_tda_obj OBJECT ${TDA_SOURCES})
+target_include_directories(nt_tda_obj PUBLIC ${CMAKE_SOURCE_DIR})
+
+# -- TDA_SOURCES Have Duplicate Filenames like Points and MatrixReduction
+
+add_library(nt_tda STATIC $<TARGET_OBJECTS:nt_tda_obj>)
 target_include_directories(nt_tda PUBLIC ${CMAKE_SOURCE_DIR})
 
 add_library(nt_sparse STATIC ${SPARSE_SOURCES})
@@ -573,6 +589,8 @@ foreach(lib ${NEUROTENSOR_LIBS})
         message(WARNING "❌ Missing static library: ${lib}")
   endif()
 endforeach()
+
+message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
 
 # Cross-platform merging of static libs into one archive
 if(APPLE)
