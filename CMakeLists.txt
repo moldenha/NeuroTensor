@@ -607,9 +607,24 @@ install(TARGETS neurotensor
 file(GLOB_RECURSE NT_HEADERS ${CMAKE_SOURCE_DIR}/nt/*.h ${CMAKE_SOURCE_DIR}/nt/*.hpp)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-# Install matplot headers if local
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/ DESTINATION include/third_party
+#installing matplot header files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/matplot/source DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/simde DESTINATION include/simde
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/half DESTINATION include
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/multiprecision/include/ DESTINATION include
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+
+
+# install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/ DESTINATION include/third_party
+#         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 # install(FILES ${NT_HEADERS} DESTINATION include/nt)
 # install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt DESTINATION include)
