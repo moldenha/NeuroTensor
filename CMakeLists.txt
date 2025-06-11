@@ -551,7 +551,7 @@ endforeach()
 list(APPEND NEUROTENSOR_LIBS
     "${CMAKE_BINARY_DIR}/third_party/nifti_clib/niftilib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}niftiio${CMAKE_STATIC_LIBRARY_SUFFIX}"
     "${CMAKE_BINARY_DIR}/third_party/nifti_clib/znzlib/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    "${CMAKE_BINARY_DIR}/third_party/tbb/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    "${CMAKE_BINARY_DIR}/third_party/tbb/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}tbb${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 
 # Link them to neurotensor
@@ -565,23 +565,33 @@ target_link_libraries(neurotensor PRIVATE
     znz
 )
 
+
+# Sanity check: make sure each library actually exists
+foreach(lib ${NEUROTENSOR_LIBS})
+  if(NOT EXISTS "${lib}")
+        message(WARNING "❌ Missing static library: ${lib}")
+  endif()
+endforeach()
+
+# Cross-platform merging of static libs into one archive
 if(APPLE)
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND libtool -static -o $<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
-    COMMENT "macOS: Merging static libraries into libneurotensor.a with libtool"
+    COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
   )
 elseif(UNIX)
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND rm -f $<TARGET_FILE:neurotensor>
     COMMAND ar crus $<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
-    COMMENT "Linux: Merging static libraries into libneurotensor.a with ar"
+    COMMENT "🔧 Linux: Merging static libraries into libneurotensor.a with ar"
   )
 elseif(WIN32)
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> ${NEUROTENSOR_LIBS}
-    COMMENT "Windows: Merging static libraries into libneurotensor.lib with lib.exe"
+    COMMENT "🔧 Windows: Merging static libraries into libneurotensor.lib with lib.exe"
   )
 endif()
+
 
 # target_link_libraries(neurotensor
 #     nt_core
