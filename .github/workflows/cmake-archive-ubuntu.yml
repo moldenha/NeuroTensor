@@ -129,7 +129,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libtool && sudo apt-get install libtool-bin
       
       - name: Test libtool command
-        run: libtool
+        run: libtool --help
 
       - name: Configure CMake if needed
         shell: bash
