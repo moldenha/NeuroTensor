@@ -629,13 +629,7 @@ if(APPLE)
 elseif(UNIX)
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND rm -f $<TARGET_FILE:neurotensor>
-    COMMAND ar crus $<TARGET_FILE:neurotensor> 
-                        ${NEUROTENSOR_LIBS}
-                        $<TARGET_FILE:tbb>
-                        $<TARGET_FILE:tbbmalloc>
-                        $<TARGET_FILE:niftiio>
-                        $<TARGET_FILE:znz>
-                        $<TARGET_FILE:matplot>
+    COMMAND ar crus $<TARGET_FILE:neurotensor> *.o
     COMMAND echo "📦 Running ranlib on final archive"
     COMMAND ranlib $<TARGET_FILE:neurotensor>
     # Above command is to generate symbol index 
