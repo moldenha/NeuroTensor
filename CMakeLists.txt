@@ -590,7 +590,7 @@ endif()
 
 # Link them to neurotensor
 if(UNIX)
-target_link_libraries(neurotensor PUBLUC ${NEUROTENSOR_DEPS})
+target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_DEPS})
 else()
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
 endif()
