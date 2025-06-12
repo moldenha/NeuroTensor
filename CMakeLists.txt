@@ -627,7 +627,7 @@ if(APPLE)
     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
   )
 elseif(UNIX)
-  file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/CMakeFiles/*.o")
+  file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND rm -f $<TARGET_FILE:neurotensor>
     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
