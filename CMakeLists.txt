@@ -627,10 +627,10 @@ if(APPLE)
     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
   )
 elseif(UNIX)
+  file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/CMakeFiles/*.o")
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND rm -f $<TARGET_FILE:neurotensor>
-    COMMAND find ${CMAKE_BINARY_DIR} -name "*.o" > ${CMAKE_BINARY_DIR}/object_list.txt
-    COMMAND ar crus $<TARGET_FILE:neurotensor> @$<SHELL_PATH:${CMAKE_BINARY_DIR}/object_list.txt>
+    COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
     COMMAND echo "📦 Running ranlib on final archive"
     COMMAND ranlib $<TARGET_FILE:neurotensor>
     COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
