@@ -629,21 +629,20 @@ if(APPLE)
 elseif(UNIX)
   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
   add_custom_command(TARGET neurotensor POST_BUILD
-    COMMAND rm -f $<TARGET_FILE:neurotensor>
-    COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
-    COMMAND echo "📦 Running ranlib on final archive"
-    COMMAND ranlib $<TARGET_FILE:neurotensor>
+    # COMMAND rm -f $<TARGET_FILE:neurotensor>
+    # COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
+    # COMMAND echo "📦 Running ranlib on final archive"
+    # COMMAND ranlib $<TARGET_FILE:neurotensor>
     COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
-    # Needed for linux, other tools do this automatically
-    # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
-    # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-    #                             ${NEUROTENSOR_LIBS}
-    #                                 $<TARGET_FILE:tbb>
-    #                                 $<TARGET_FILE:tbbmalloc>
-    #                                 $<TARGET_FILE:niftiio>
-    #                                 $<TARGET_FILE:znz>
-    #                                 $<TARGET_FILE:matplot>
-    # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
+    COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
+    COMMAND glibtool -static -o $<TARGET_FILE:neurotensor> 
+                                ${NEUROTENSOR_LIBS}
+                                    $<TARGET_FILE:tbb>
+                                    $<TARGET_FILE:tbbmalloc>
+                                    $<TARGET_FILE:niftiio>
+                                    $<TARGET_FILE:znz>
+                                    $<TARGET_FILE:matplot>
+    COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
   )
 elseif(WIN32)
   add_custom_command(TARGET neurotensor POST_BUILD

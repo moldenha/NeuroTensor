@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -107,18 +107,18 @@ jobs:
       - name: Print temp_artifacts directory
         run: ls temp_artifacts
 
-      - name: Merge all build artifacts
-        shell: bash
-        run: |
-          for artifact in temp_artifacts/*; do
-            if [ -d "$artifact" ]; then
-              if rsync -a "${artifact}"/ build; then
-                echo "✅ Successfully copied $(basename "$artifact") into build/"
-              else
-                echo "❌ Failed to copy $(basename "$artifact") into build/"
-              fi
-            fi
-          done
+      # - name: Merge all build artifacts
+      #   shell: bash
+      #   run: |
+      #     for artifact in temp_artifacts/*; do
+      #       if [ -d "$artifact" ]; then
+      #         if rsync -a "${artifact}"/ build; then
+      #           echo "✅ Successfully copied $(basename "$artifact") into build/"
+      #         else
+      #           echo "❌ Failed to copy $(basename "$artifact") into build/"
+      #         fi
+      #       fi
+      #     done
 
 
 
