@@ -25,7 +25,7 @@ else()
     set(TBB_ENABLE_IPO OFF CACHE BOOL "Disable IPO to compile tbb statically")
     add_subdirectory(third_party/tbb)
     #Needed for GNU compatibility on linux
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
     endif()
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
@@ -45,7 +45,7 @@ else()
     set(TBB_ENABLE_IPO OFF CACHE BOOL "Disable IPO to compile tbb statically")
     add_subdirectory(third_party/tbb)
     #Needed for GNU compatibility on linux
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
     endif()
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
