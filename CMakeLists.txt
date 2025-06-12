@@ -636,7 +636,8 @@ elseif(UNIX)
                         $<TARGET_FILE:niftiio>
                         $<TARGET_FILE:znz>
                         $<TARGET_FILE:matplot>
-    COMMAND ranlib $<TARGET_FILE:neurotensor> 
+    COMMAND echo "📦 Running ranlib on final archive"
+    COMMAND ranlib $<TARGET_FILE:neurotensor>
     # Above command is to generate symbol index 
     # Needed for linux, other tools do this automatically
     COMMENT "🔧 Linux: Merging static libraries into libneurotensor.a with ar"

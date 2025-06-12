@@ -137,6 +137,9 @@ jobs:
       - name: Build neurotensor only
         run: cmake --build build --target neurotensor --config Release
 
+      - name: Checking neurotensor symbols
+        run: nm -s build/libneurotensor.a
+
       - name: Install
         run: cmake --install build --prefix package-out
       
