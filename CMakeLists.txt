@@ -4,7 +4,7 @@ project(NeuroTensor LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-include(${CMAKE_SOURCE_DIR}/cmake/flags.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/flags.cmake)
 set(CMAKE_VERBOSE_MAKEFILE OFF) 
 
 message(STATUS "Root path is " ${CMAKE_FIND_ROOT_PATH})

@@ -29,7 +29,7 @@ else()
       target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
     endif()
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
-    include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/tbb/include)
 
 endif()
 else()
@@ -49,7 +49,7 @@ else()
       target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
     endif()
     set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
-    include_directories(${CMAKE_SOURCE_DIR}/third_party/tbb/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/tbb/include)
 
     # set(TBB_CORE_LIB_FINAL_PATH "$<TARGET_FILE:TBB::tbb>")
     # message(STATUS "TBB core library will be found at: ${TBB_CORE_LIB_FINAL_PATH}")
