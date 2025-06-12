@@ -575,15 +575,18 @@ set(NEUROTENSOR_DEPS
     # nt_third_party
 )
 
-# Generate full paths with prefix/suffix
-# foreach(dep IN LISTS NEUROTENSOR_DEPS)
-#     list(APPEND NEUROTENSOR_LIBS $<TARGET_FILE:${dep}>)
-# endforeach()
+if(UNIX)
+#Generate full paths with prefix/suffix
+foreach(dep IN LISTS NEUROTENSOR_DEPS)
+    list(APPEND NEUROTENSOR_LIBS $<TARGET_FILE:${dep}>)
+endforeach()
+else()
 foreach(dep IN LISTS NEUROTENSOR_DEPS)
     list(APPEND NEUROTENSOR_LIBS
         "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${dep}${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
 endforeach()
+endif()
 
 # Link them to neurotensor
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
