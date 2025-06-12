@@ -124,7 +124,9 @@ jobs:
 
       - name: Print build directory
         run: ls build
-
+      
+      - name: Install libtool
+        run: sudo apt-get update && sudo apt-get install -y libtool
 
       - name: Configure CMake if needed
         shell: bash
@@ -133,7 +135,7 @@ jobs:
             rm -rf build/CMakeFiles
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
 
-
+      
       - name: Build neurotensor only
         run: cmake --build build --target neurotensor --config Release
 
