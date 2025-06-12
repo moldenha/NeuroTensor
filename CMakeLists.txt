@@ -628,22 +628,22 @@ if(APPLE)
   )
 elseif(UNIX)
   add_custom_command(TARGET neurotensor POST_BUILD
-    # COMMAND rm -f $<TARGET_FILE:neurotensor>
-    # COMMAND ar crus $<TARGET_FILE:neurotensor> *.o
-    # COMMAND echo "📦 Running ranlib on final archive"
-    # COMMAND ranlib $<TARGET_FILE:neurotensor>
-    # # Above command is to generate symbol index 
-    # # Needed for linux, other tools do this automatically
-    COMMENT "🔧 Linux: Merging static libraries into libneurotensor.a with libtool"
-    COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
-    COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-                                ${NEUROTENSOR_LIBS}
-                                    $<TARGET_FILE:tbb>
-                                    $<TARGET_FILE:tbbmalloc>
-                                    $<TARGET_FILE:niftiio>
-                                    $<TARGET_FILE:znz>
-                                    $<TARGET_FILE:matplot>
-    COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
+    COMMAND rm -f $<TARGET_FILE:neurotensor>
+    COMMAND find ${CMAKE_BINARY_DIR} -name "*.o" > ${CMAKE_BINARY_DIR}/object_list.txt
+    COMMAND ar crus $<TARGET_FILE:neurotensor> @$<SHELL_PATH:${CMAKE_BINARY_DIR}/object_list.txt>
+    COMMAND echo "📦 Running ranlib on final archive"
+    COMMAND ranlib $<TARGET_FILE:neurotensor>
+    COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
+    # Needed for linux, other tools do this automatically
+    # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
+    # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
+    #                             ${NEUROTENSOR_LIBS}
+    #                                 $<TARGET_FILE:tbb>
+    #                                 $<TARGET_FILE:tbbmalloc>
+    #                                 $<TARGET_FILE:niftiio>
+    #                                 $<TARGET_FILE:znz>
+    #                                 $<TARGET_FILE:matplot>
+    # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
   )
 elseif(WIN32)
   add_custom_command(TARGET neurotensor POST_BUILD

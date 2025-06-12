@@ -132,7 +132,7 @@ jobs:
         shell: bash
         run: |
             rm -f build/CMakeCache.txt
-            rm -rf build/CMakeFiles
+            rm -f build/CMakeFiles/cmake.check_cache
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
 
       
