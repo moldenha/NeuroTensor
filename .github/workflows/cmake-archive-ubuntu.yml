@@ -107,18 +107,18 @@ jobs:
       - name: Print temp_artifacts directory
         run: ls temp_artifacts
 
-      # - name: Merge all build artifacts
-      #   shell: bash
-      #   run: |
-      #     for artifact in temp_artifacts/*; do
-      #       if [ -d "$artifact" ]; then
-      #         if rsync -a "${artifact}"/ build; then
-      #           echo "✅ Successfully copied $(basename "$artifact") into build/"
-      #         else
-      #           echo "❌ Failed to copy $(basename "$artifact") into build/"
-      #         fi
-      #       fi
-      #     done
+      - name: Merge all build artifacts
+        shell: bash
+        run: |
+          for artifact in temp_artifacts/*; do
+            if [ -d "$artifact" ]; then
+              if rsync -a "${artifact}"/ build; then
+                echo "✅ Successfully copied $(basename "$artifact") into build/"
+              else
+                echo "❌ Failed to copy $(basename "$artifact") into build/"
+              fi
+            fi
+          done
 
 
 
@@ -126,7 +126,10 @@ jobs:
         run: ls build
       
       - name: Install libtool
-        run: sudo apt-get update && sudo apt-get install -y libtool
+        run: sudo apt-get update && sudo apt-get install -y libtool && sudo apt-get install libtool-bin
+      
+      - name: Test libtool command
+        run: libtool
 
       - name: Configure CMake if needed
         shell: bash
