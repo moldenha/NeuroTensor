@@ -589,7 +589,11 @@ endforeach()
 endif()
 
 # Link them to neurotensor
+if(UNIX)
+target_link_libraries(neurotensor PUBLUC ${NEUROTENSOR_DEPS})
+else()
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
+endif()
 
 # Link libraries
 target_link_libraries(neurotensor PRIVATE
