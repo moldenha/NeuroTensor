@@ -54,6 +54,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install GCC 12
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-12
 
       - name: Configure CMake
         if: steps.build-check.outputs.skip_build == 'false'
@@ -62,6 +66,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_INSTALL_PREFIX=package-out
           -DBUILD_MAIN=OFF
+          -DCMAKE_CXX_COMPILER=g++-12
+          -DCMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"
       
       - name: Build target ${{ matrix.target }} if not already built
         if: steps.build-check.outputs.skip_build == 'false'
@@ -125,18 +131,17 @@ jobs:
       - name: Print build directory
         run: ls build
       
-      - name: Install libtool
-        run: sudo apt-get update && sudo apt-get install -y libtool && sudo apt-get install libtool-bin
-      
-      - name: Test libtool command
-        run: libtool --help
+      - name: Install GCC 12
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-12
 
       - name: Configure CMake if needed
         shell: bash
         run: |
             rm -f build/CMakeCache.txt
             rm -f build/CMakeFiles/cmake.check_cache
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_MAIN=OFF -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"
 
       
       - name: Build neurotensor only
