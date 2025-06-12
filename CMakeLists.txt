@@ -450,6 +450,30 @@ set(MEMORY_SOURCES
 # )
 
 
+set(NEUROTENSOR_SOURCES_ALL
+    ${MATMULT_SOURCES}
+    ${CORE_SOURCES}
+    ${TYPES_SOURCES}
+    ${FUNCTIONAL_SOURCES}
+    ${FUNCTIONAL_CPU_SOURCES}
+    ${LINALG_SOURCES}
+    ${AI_SOURCES}
+    ${MP_SOURCES}
+    ${TDA_SOURCES}
+    ${FMRI_SOURCES}
+    ${SPARSE_SOURCES}
+    ${IMAGES_SOURCES}
+    ${MEMORY_SOURCES}
+    ${SVD_SOURCES}
+    ${QR_SOURCES}
+    ${INV_SOURCES}
+    ${COLUMN_SPACE_SOURCES}
+    ${NULL_SPACE_SOURCES}
+)
+
+
+ 
+
 add_library(nt_core_obj OBJECT ${CORE_SOURCES})
 target_include_directories(nt_core_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -546,8 +570,10 @@ target_link_libraries(nt_fmri PRIVATE niftiio znz)
 
 
 # Add NeuroTensor library
+if(UNIX)
+else()
 add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
-
+endif()
 
 
 # Determine config directory (Release/Debug/etc.) — safe for both single/multi-config
@@ -589,13 +615,11 @@ endforeach()
 # endif()
 
 # Link them to neurotensor
-# if(UNIX)
-# target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_DEPS})
-# else()
-# target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
-# endif()
-
+if(!UNIX)
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
+endif()
+
+# target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
 
 
 # Link libraries
@@ -636,24 +660,24 @@ if(APPLE)
 
     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
   )
-elseif(UNIX)
-  file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
-  add_custom_command(TARGET neurotensor POST_BUILD
-    COMMAND rm -f $<TARGET_FILE:neurotensor>
-    COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
-    COMMAND echo "📦 Running ranlib on final archive"
-    COMMAND ranlib $<TARGET_FILE:neurotensor>
-    # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
-    # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
-    # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-    #                             ${NEUROTENSOR_LIBS}
-    #                                 $<TARGET_FILE:tbb>
-    #                                 $<TARGET_FILE:tbbmalloc>
-    #                                 $<TARGET_FILE:niftiio>
-    #                                 $<TARGET_FILE:znz>
-    #                                 $<TARGET_FILE:matplot>
-    # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
-  )
+# elseif(UNIX)
+#   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
+#   add_custom_command(TARGET neurotensor POST_BUILD
+#     COMMAND rm -f $<TARGET_FILE:neurotensor>
+#     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
+#     COMMAND echo "📦 Running ranlib on final archive"
+#     COMMAND ranlib $<TARGET_FILE:neurotensor>
+#     # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
+#     # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
+#     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
+#     #                             ${NEUROTENSOR_LIBS}
+#     #                                 $<TARGET_FILE:tbb>
+#     #                                 $<TARGET_FILE:tbbmalloc>
+#     #                                 $<TARGET_FILE:niftiio>
+#     #                                 $<TARGET_FILE:znz>
+#     #                                 $<TARGET_FILE:matplot>
+#     # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
+#   )
 elseif(WIN32)
   add_custom_command(TARGET neurotensor POST_BUILD
     COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 

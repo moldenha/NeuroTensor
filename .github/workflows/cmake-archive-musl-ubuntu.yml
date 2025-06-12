@@ -1,0 +1,58 @@
+name: Build and Package NeuroTensor musl (Ubuntu x86_64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag version (e.g., v1.2.3)"
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Configure (musl, static)
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/musl.toolchain.cmake
+
+      - name: Build neurotensor with musl
+        run: cmake --build build --target neurotensor --config Release -j$(nproc)
+
+      - name: Check neurotensor symbols
+        run: nm -s build/libneurotensor.a || true
+
+      - name: Install NeuroTensor (headers + lib)
+        run: cmake --install build --prefix package-out
+
+      - name: Archive static package
+        run: |
+          cd package-out
+          tar -czvf ../neurotensor-static-musl-${{ github.event.inputs.version }}.tar.gz *
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: "NeuroTensor ${{ github.event.inputs.version }}"
+          files: neurotensor-static-musl-${{ github.event.inputs.version }}.tar.gz
+          overwrite: true
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+
