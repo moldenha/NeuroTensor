@@ -8,7 +8,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/flags.cmake)
 set(CMAKE_VERBOSE_MAKEFILE OFF) 
 
 message(STATUS "Root path is " ${CMAKE_FIND_ROOT_PATH})
-include(${CMAKE_SOURCE_DIR}/cmake/tbb_config.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tbb_config.cmake)
 
 
  find_package(Matplot++ QUIET)
@@ -35,31 +35,31 @@ include_directories(
     # ${TBB_INCLUDE_DIRS}
     # ${Boost_INCLUDE_DIRS}
     # ${CMAKE_SOURCE_DIR}/third_party/tbb/include
-    ${CMAKE_SOURCE_DIR}/third_party/simde
-    ${CMAKE_SOURCE_DIR}/third_party/half
-    ${CMAKE_SOURCE_DIR}/third_party/stb
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/simde
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/half
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
     #For matrix and vector linear algebra calculations
     #This incorperates most of the nt::linalg namespace
-    ${CMAKE_SOURCE_DIR}/third_party/eigen
-    ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib
-    ${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/znzlib
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/niftilib
 
     #Boost files
     #Mainly for 128 bit data types
-    ${CMAKE_SOURCE_DIR}/third_party/boost_config/include/
-    ${CMAKE_SOURCE_DIR}/third_party/multiprecision/include/
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost_config/include/
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/multiprecision/include/
 
 )
 
 
 # Include NIfTI macros
-include(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/cmake/nifti_macros.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/cmake/nifti_macros.cmake)
 
 # Add znzlib for compressed NIfTI support
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/znzlib)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/znzlib)
 
 # Add NIfTI core library (creates niftiio target)
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nifti_clib/niftilib)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/niftilib)
 
 
 
@@ -451,91 +451,92 @@ set(MEMORY_SOURCES
 
 
 add_library(nt_core_obj OBJECT ${CORE_SOURCES})
-target_include_directories(nt_core_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_core_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 target_link_libraries(nt_core_obj PUBLIC ${TBB_LIB} pthread)
 add_library(nt_core STATIC $<TARGET_OBJECTS:nt_core_obj>)
-target_include_directories(nt_core PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_types STATIC ${TYPES_SOURCES})
-target_include_directories(nt_types PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_types PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_types PRIVATE ${TBB_LIB} pthread)
 
 
 # Create object libraries to isolate object files
 add_library(nt_functional_obj OBJECT ${FUNCTIONAL_SOURCES})
-target_include_directories(nt_functional_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_functional_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_functional_obj PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_functional_cpu_obj OBJECT ${FUNCTIONAL_CPU_SOURCES})
-target_include_directories(nt_functional_cpu_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_functional_cpu_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_functional_cpu_obj PRIVATE ${TBB_LIB} pthread)
 # -- The above is to avoid duplicate file/object names --
 
 add_library(nt_functional STATIC $<TARGET_OBJECTS:nt_functional_obj>)
-target_include_directories(nt_functional PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_functional PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_functional_cpu STATIC $<TARGET_OBJECTS:nt_functional_cpu_obj>)
-target_include_directories(nt_functional_cpu PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_functional_cpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_matmult STATIC ${MATMULT_SOURCES})
-target_include_directories(nt_matmult PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_matmult PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_matmult PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_linalg STATIC ${LINALG_SOURCES})
-target_include_directories(nt_linalg PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_linalg PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_linalg PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_svd STATIC ${SVD_SOURCES})
-target_include_directories(nt_svd PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_svd PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_qr STATIC ${QR_SOURCES})
-target_include_directories(nt_qr PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_qr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_inv STATIC ${INV_SOURCES})
-target_include_directories(nt_inv PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_inv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_column_space STATIC ${COLUMN_SPACE_SOURCES})
-target_include_directories(nt_column_space PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_column_space PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_null_space STATIC ${NULL_SPACE_SOURCES})
-target_include_directories(nt_null_space PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_null_space PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_ai STATIC ${AI_SOURCES})
-target_include_directories(nt_ai PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_ai PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # -- Handling TDA Source Objects
 
 add_library(nt_tda_obj OBJECT ${TDA_SOURCES})
-target_include_directories(nt_tda_obj PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_tda_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_tda_obj PUBLIC ${MATPLOT_LIB}) # Reconfiguring matplot lib part of tda objects
 target_link_libraries(nt_tda_obj PRIVATE ${TBB_LIB} pthread)
 
 # -- TDA_SOURCES Have Duplicate Filenames like Points and MatrixReduction
 
 add_library(nt_tda STATIC $<TARGET_OBJECTS:nt_tda_obj>)
-target_include_directories(nt_tda PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_tda PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # target_link_libraries(nt_tda ${MATPLOT_LIB})
 
 
 
 add_library(nt_sparse STATIC ${SPARSE_SOURCES})
-target_include_directories(nt_sparse PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_sparse PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_sparse PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_images STATIC ${IMAGES_SOURCES})
-target_include_directories(nt_images PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_images PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(nt_memory STATIC ${MEMORY_SOURCES})
-target_include_directories(nt_memory PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_memory PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_memory PRIVATE ${TBB_LIB} pthread)
 
 add_library(nt_multi_processing STATIC ${MP_SOURCES})
-target_include_directories(nt_multi_processing PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_multi_processing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_multi_processing PUBLIC ${TBB_LIB} pthread)
 
 add_library(nt_fmri STATIC ${FMRI_SOURCES})
-target_include_directories(nt_fmri PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(nt_fmri PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nt_fmri PRIVATE niftiio znz)
 
 # add_library(nt_third_party STATIC nt/utils/utils_systems/dummy_third.cpp)
@@ -576,10 +577,13 @@ set(NEUROTENSOR_DEPS
 
 # Generate full paths with prefix/suffix
 foreach(dep IN LISTS NEUROTENSOR_DEPS)
-    list(APPEND NEUROTENSOR_LIBS
-        "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${dep}${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    )
+    list(APPEND NEUROTENSOR_LIBS $<TARGET_FILE:${dep}>)
 endforeach()
+# foreach(dep IN LISTS NEUROTENSOR_DEPS)
+#     list(APPEND NEUROTENSOR_LIBS
+#         "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${dep}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+#     )
+# endforeach()
 
 # Link them to neurotensor
 target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
@@ -686,24 +690,24 @@ install(TARGETS neurotensor
     RUNTIME DESTINATION bin
 )
 
-file(GLOB_RECURSE NT_HEADERS ${CMAKE_SOURCE_DIR}/nt/*.h ${CMAKE_SOURCE_DIR}/nt/*.hpp)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+file(GLOB_RECURSE NT_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/nt/*.h ${CMAKE_CURRENT_SOURCE_DIR}/nt/*.hpp)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 #installing matplot header files
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/matplot/source DESTINATION include
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/matplot/source DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/simde/simde DESTINATION include
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/simde/simde DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/half DESTINATION include
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/half DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/multiprecision/include/ DESTINATION include
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/multiprecision/include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/boost_config/include/ DESTINATION include
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost_config/include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 
