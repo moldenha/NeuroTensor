@@ -679,11 +679,26 @@ if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
         set(OBJECT_FILE_EXT "*.o")
     endif()
     file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}")
+    
+    set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-    add_library(neurotensor STATIC
-                        ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-                        )
-    set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
+    # Create archive with CMAKE_AR
+    add_custom_command(
+        OUTPUT "${OUTPUT_ARCHIVE}"
+        COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+        DEPENDS ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+        COMMENT "Archiving NeuroTensor object files into ${OUTPUT_ARCHIVE}"
+        VERBATIM
+    )
+
+    add_custom_target(neurotensor ALL
+        DEPENDS "${OUTPUT_ARCHIVE}"
+    )
+
+    # add_library(neurotensor STATIC
+    #                    ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+    #                     )
+    # set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
