@@ -672,18 +672,22 @@ endif()
 
 if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
     message(STATUS "Building neurotensor from static libraries")
+    message(STATUS "Looking for object files")
+    if (WIN32)
+        set(OBJECT_FILE_EXT "*.obj")
+    else()
+        set(OBJECT_FILE_EXT "*.o")
+    endif()
+    file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}")
+
     add_library(neurotensor STATIC
-                        $<TARGET_FILE:tbb>
-                        $<TARGET_FILE:niftiio>
-                        $<TARGET_FILE:znz>
-                        $<TARGET_FILE:matplot>
+                        ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
                         )
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 endif()
 
- 
 
 
 # Third-party libs (adapt path as needed)
