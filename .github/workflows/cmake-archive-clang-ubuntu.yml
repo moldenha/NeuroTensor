@@ -127,7 +127,7 @@ jobs:
         run: ls build
 
       - name: Run clang CMake
-        run: >
+        run: |
           rm -f build/CMakeCache.txt
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_MAIN=OFF
 
