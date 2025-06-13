@@ -674,11 +674,9 @@ if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
     message(STATUS "Building neurotensor from static libraries")
     add_library(neurotensor STATIC
                         $<TARGET_FILE:tbb>
-                        $<TARGET_FILE:tbbmalloc>
-                        $<TARGET_FILE:tbbmalloc>
                         $<TARGET_FILE:niftiio>
                         $<TARGET_FILE:znz>
-                        $<TARGET_FILE:matplot++>
+                        $<TARGET_FILE:matplot>
                         )
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
