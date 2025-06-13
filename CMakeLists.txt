@@ -568,15 +568,6 @@ target_link_libraries(nt_fmri PRIVATE niftiio znz)
 
 
 
-
-# Add NeuroTensor library
-if(UNIX)
-add_library(neurotensor STATIC ${NEUROTENSOR_SOURCES_ALL})
-else()
-add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
-endif()
-
-
 # Determine config directory (Release/Debug/etc.) — safe for both single/multi-config
 set(CONFIG_DIR ${CMAKE_CFG_INTDIR}) # Will be "Release" on MSVC, "." on single-config generators
 
@@ -599,7 +590,6 @@ set(NEUROTENSOR_DEPS
     nt_memory
     nt_multi_processing
     nt_fmri
-    # nt_third_party
 )
 
 #if(UNIX)
@@ -615,22 +605,15 @@ foreach(dep IN LISTS NEUROTENSOR_DEPS)
 endforeach()
 # endif()
 
-# Link them to neurotensor
-if(!UNIX)
-target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
-endif()
+add_library(neurotensor STATIC
+                        $<TARGET_FILE:tbb>
+                        $<TARGET_FILE:niftiio>
+                        $<TARGET_FILE:znz>
+                        $<TARGET_FILE:matplot++>
+                        ${NEUROTENSOR_LIBS})
 
-# target_link_libraries(neurotensor PUBLIC ${NEUROTENSOR_LIBS})
+ 
 
-
-# Link libraries
-target_link_libraries(neurotensor PRIVATE
-    ${MATPLOT_LIB}
-    ${TBB_LIB}
-    pthread
-    niftiio
-    znz
-)
 
 # Third-party libs (adapt path as needed)
 # These will be linked because they are built with neurotensor
@@ -646,52 +629,52 @@ target_link_libraries(neurotensor PRIVATE
 
 
 
-message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
+# message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
 
-# Cross-platform merging of static libs into one archive
-if(APPLE)
-  add_custom_command(TARGET neurotensor POST_BUILD
-    COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-                                ${NEUROTENSOR_LIBS}
-                                    $<TARGET_FILE:tbb>
-                                    $<TARGET_FILE:tbbmalloc>
-                                    $<TARGET_FILE:niftiio>
-                                    $<TARGET_FILE:znz>
-                                    $<TARGET_FILE:matplot>
-
-    COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
-  )
-# elseif(UNIX)
-#   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
+# # Cross-platform merging of static libs into one archive
+# if(APPLE)
 #   add_custom_command(TARGET neurotensor POST_BUILD
-#     COMMAND rm -f $<TARGET_FILE:neurotensor>
-#     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
-#     COMMAND echo "📦 Running ranlib on final archive"
-#     COMMAND ranlib $<TARGET_FILE:neurotensor>
-#     # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
-#     # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
-#     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-#     #                             ${NEUROTENSOR_LIBS}
-#     #                                 $<TARGET_FILE:tbb>
-#     #                                 $<TARGET_FILE:tbbmalloc>
-#     #                                 $<TARGET_FILE:niftiio>
-#     #                                 $<TARGET_FILE:znz>
-#     #                                 $<TARGET_FILE:matplot>
-#     # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
-#   )
-elseif(WIN32)
-  add_custom_command(TARGET neurotensor POST_BUILD
-    COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 
-                        ${NEUROTENSOR_LIBS}
-                        $<TARGET_FILE:tbb>
-                        $<TARGET_FILE:tbbmalloc>
-                        $<TARGET_FILE:niftiio>
-                        $<TARGET_FILE:znz>
-                        $<TARGET_FILE:matplot>
+#     COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
+#                                 ${NEUROTENSOR_LIBS}
+#                                     $<TARGET_FILE:tbb>
+#                                     $<TARGET_FILE:tbbmalloc>
+#                                     $<TARGET_FILE:niftiio>
+#                                     $<TARGET_FILE:znz>
+#                                     $<TARGET_FILE:matplot>
 
-    COMMENT "🔧 Windows: Merging static libraries into libneurotensor.lib with lib.exe"
-  )
-endif()
+#     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
+#   )
+# # elseif(UNIX)
+# #   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
+# #   add_custom_command(TARGET neurotensor POST_BUILD
+# #     COMMAND rm -f $<TARGET_FILE:neurotensor>
+# #     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
+# #     COMMAND echo "📦 Running ranlib on final archive"
+# #     COMMAND ranlib $<TARGET_FILE:neurotensor>
+# #     # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
+# #     # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
+# #     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
+# #     #                             ${NEUROTENSOR_LIBS}
+# #     #                                 $<TARGET_FILE:tbb>
+# #     #                                 $<TARGET_FILE:tbbmalloc>
+# #     #                                 $<TARGET_FILE:niftiio>
+# #     #                                 $<TARGET_FILE:znz>
+# #     #                                 $<TARGET_FILE:matplot>
+# #     # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
+# #   )
+# elseif(WIN32)
+#   add_custom_command(TARGET neurotensor POST_BUILD
+#     COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 
+#                         ${NEUROTENSOR_LIBS}
+#                         $<TARGET_FILE:tbb>
+#                         $<TARGET_FILE:tbbmalloc>
+#                         $<TARGET_FILE:niftiio>
+#                         $<TARGET_FILE:znz>
+#                         $<TARGET_FILE:matplot>
+
+#     COMMENT "🔧 Windows: Merging static libraries into libneurotensor.lib with lib.exe"
+#   )
+# endif()
 
 
 # target_link_libraries(neurotensor
@@ -741,7 +724,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/matplot/source DESTINA
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/simde/simde DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/half DESTINATION include
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/half/half DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 
