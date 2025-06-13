@@ -571,6 +571,7 @@ target_link_libraries(nt_fmri PRIVATE niftiio znz)
 
 # Add NeuroTensor library
 if(UNIX)
+add_library(neurotensor STATIC ${NEUROTENSOR_SOURCES_ALL})
 else()
 add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 endif()
