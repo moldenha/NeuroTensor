@@ -678,23 +678,37 @@ if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
     else()
         set(OBJECT_FILE_EXT "*.o")
     endif()
-    file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}")
     
+
+    # Collect object files
+    file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
+        RELATIVE "${CMAKE_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
+    )
+
+    # Output archive name (e.g., libneurotensor.a or neurotensor.lib)
     set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-    # Create archive with CMAKE_AR
+    # Create archive using CMAKE_AR
     add_custom_command(
         OUTPUT "${OUTPUT_ARCHIVE}"
         COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
         DEPENDS ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
         COMMENT "Archiving NeuroTensor object files into ${OUTPUT_ARCHIVE}"
         VERBATIM
     )
 
-    add_custom_target(neurotensor ALL
-        DEPENDS "${OUTPUT_ARCHIVE}"
+    # Declare IMPORTED static library target
+    add_library(neurotensor STATIC IMPORTED GLOBAL)
+    set_target_properties(neurotensor PROPERTIES
+        IMPORTED_LOCATION "${OUTPUT_ARCHIVE}"
+        LINKER_LANGUAGE CXX
     )
 
+    # Trigger archive creation before the imported target is usable
+    add_custom_target(neurotensor_archive DEPENDS "${OUTPUT_ARCHIVE}")
+    add_dependencies(neurotensor neurotensor_archive)
     # add_library(neurotensor STATIC
     #                    ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
     #                     )
