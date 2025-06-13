@@ -605,12 +605,32 @@ foreach(dep IN LISTS NEUROTENSOR_DEPS)
 endforeach()
 # endif()
 
-add_library(neurotensor STATIC
+set(NEUROTENSOR_ALL_LIBRARY_FILES
                         $<TARGET_FILE:tbb>
                         $<TARGET_FILE:niftiio>
                         $<TARGET_FILE:znz>
-                        $<TARGET_FILE:matplot++>
+                        $<TARGET_FILE:matplot>
                         ${NEUROTENSOR_LIBS})
+
+set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST TRUE)
+foreach(file_path IN LISTS NEUROTENSOR_ALL_LIBRARY_FILES)
+    if(NOT EXISTS "${file_path}")
+        set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST FALSE) 
+    endif()
+endforeach()
+
+if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
+    message(STATUS "Building neurotensor from static libraries")
+    add_library(neurotensor STATIC
+                        $<TARGET_FILE:tbb>
+                        $<TARGET_FILE:niftiio>
+                        $<TARGET_FILE:znz>
+                        $<TARGET_FILE:matplot>
+                        ${NEUROTENSOR_LIBS})
+else()
+    message(WARNING "Cannot find all library files, building dummy for neurotensor")
+    add_library(neurotensor STATIC nt/utils/utils_systems/dummy_third.cpp)
+endif()
 
  
 
@@ -752,7 +772,14 @@ option(BUILD_MAIN "Build main executable (main.cpp)" ON)
 
 if(BUILD_MAIN)
     add_executable(main.out main.cpp)
-    target_link_libraries(main.out PRIVATE neurotensor)
+    if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
+        target_link_libraries(main.out PRIVATE neurotensor)
+
+    else()
+        target_link_libraries(main.out PRIVATE ${TBB_LIB} ${MATPLOT_LIB} pthread znz niftiio ${NEUROTENSOR_DEPS})
+    endif()
+
+    # target_link_libraries(main.out PRIVATE neurotensor)
 
     # Optional RPATH
     # set_target_properties(main.out PROPERTIES
