@@ -811,6 +811,9 @@ endif()
 
 
 
+if( NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
+install(FILES "${OUTPUT_ARCHIVE}" DESTINATION lib)
+else()
 # Install the library and headers
 install(TARGETS neurotensor
     EXPORT neurotensorTargets
@@ -818,6 +821,7 @@ install(TARGETS neurotensor
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
 )
+endif()
 
 file(GLOB_RECURSE NT_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/nt/*.h ${CMAKE_CURRENT_SOURCE_DIR}/nt/*.hpp)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
