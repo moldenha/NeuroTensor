@@ -34,19 +34,30 @@ jobs:
           - nt_fmri
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
 
       - name: Restore build/ directory cache
         uses: actions/cache@v4
         with:
           path: build/
           key: neurotensor-macos-13-build-versioned-${{ matrix.target }}-${{ github.event.inputs.version }}
+      
+      - name: Check for existing build marker
+        id: build-check
+        run: |
+          if [ -f "build/.built_${{ matrix.target }}" ]; then
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout code
+        if: steps.build-check.outputs.skip_build == 'false'
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Configure CMake
+        if: steps.build-check.outputs.skip_build == 'false'
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
@@ -55,6 +66,7 @@ jobs:
           -DCMAKE_OSX_ARCHITECTURES=x86_64
       
       - name: Build target ${{ matrix.target }} if not already built
+        if: steps.build-check.outputs.skip_build == 'false'
         shell: bash
         run: |
           if [ ! -f "build/.built_${{ matrix.target }}" ]; then
@@ -63,6 +75,7 @@ jobs:
           fi
 
       - name: Save updated build cache
+        if: steps.build-check.outputs.skip_build == 'false'
         uses: actions/cache/save@v4
         with:
           path: build/

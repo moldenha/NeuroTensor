@@ -672,11 +672,11 @@ endif()
 
 if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
     message(STATUS "Building neurotensor from static libraries")
-    add_library(neurotensor STATIC
+    add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp
                         ${NEUROTENSOR_LIBS})
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
-    add_library(neurotensor STATIC nt/utils/utils_systems/dummy_third.cpp)
+    add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 endif()
 
  
