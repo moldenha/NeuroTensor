@@ -1,4 +1,4 @@
-name: Build and Package NeuroTensor musl (Ubuntu x86_64)
+name: Build and Package NeuroTensor clang (Ubuntu x86_64)
 
 on:
   workflow_dispatch:
