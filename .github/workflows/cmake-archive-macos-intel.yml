@@ -161,7 +161,7 @@ jobs:
 
 
       - name: Build neurotensor only
-        run: cmake --build build --target neurotensor --config Release
+        run: cmake --build build --target neurotensor_archive --config Release
 
       - name: Install
         run: cmake --install build --prefix package-out
