@@ -36,7 +36,7 @@ jobs:
       - name: Archive static package
         run: |
           cd package-out
-          tar -czvf ../neurotensor-static-clang-${{ github.event.inputs.version }}.tar.gz *
+          tar -czvf ../neurotensor-ubuntu_x86_64-clang-${{ github.event.inputs.version }}.tar.gz *
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
@@ -44,7 +44,7 @@ jobs:
           tag_name: ${{ github.event.inputs.version }}
           name: "NeuroTensor ${{ github.event.inputs.version }}"
           files: neurotensor-ubuntu_x86_64-clang-${{ github.event.inputs.version }}.tar.gz
-          overwrite: true
+          # overwrite: true
           fail_on_unmatched_files: false
           draft: false
           prerelease: false
