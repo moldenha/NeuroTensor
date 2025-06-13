@@ -683,6 +683,7 @@ if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
     add_library(neurotensor STATIC
                         ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
                         )
+    set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
