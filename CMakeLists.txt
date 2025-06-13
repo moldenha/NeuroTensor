@@ -615,7 +615,8 @@ set(NEUROTENSOR_ALL_LIBRARY_FILES
 set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST TRUE)
 foreach(file_path IN LISTS NEUROTENSOR_ALL_LIBRARY_FILES)
     if(NOT EXISTS "${file_path}")
-        set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST FALSE) 
+        set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST FALSE)
+        message(STATUS "Cannot find file " ${file_path})
     endif()
 endforeach()
 
