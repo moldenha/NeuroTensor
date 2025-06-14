@@ -27,6 +27,8 @@ inline unsigned int getThreadsPerCore() {
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
         result += buffer;
     }
+    pclose(pipe);
+    size_t pos = result.find(":");
     if (pos != std::string::npos) {
         std::string threads_per_core_str = result.substr(pos + 2);
         try{
