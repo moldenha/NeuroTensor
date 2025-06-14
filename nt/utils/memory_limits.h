@@ -13,26 +13,30 @@ inline uint64_t get_shared_memory_max() { return 0; }
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <cstdio>
+#include <string>
+#include <thread>
 // Function to get the number of threads per core on Linux
 inline unsigned int getThreadsPerCore() {
-    std::ifstream cpuinfo("/proc/cpuinfo");
-    std::string line;
-    unsigned int threadsPerCore = 0;
-
-    while (std::getline(cpuinfo, line)) {
-        if (line.find("siblings") != std::string::npos) {
-            std::istringstream iss(line);
-            std::string key, value;
-            iss >> key >> value;
-            
-            if (key == "siblings") {
-                threadsPerCore = std::stoi(value);
-                break;
-            }
+    FILE *pipe = popen("lscpu | grep 'Thread(s) per core:'", "r");
+    if (!pipe) {
+        return static_cast<unsigned int>(std::thread::hardware_concurrency());
+    }
+    char buffer[128];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
+    if (pos != std::string::npos) {
+        std::string threads_per_core_str = result.substr(pos + 2);
+        try{
+            int threads_per_core = std::stoi(threads_per_core_str);
+            return  threads_per_core <= 1 ?  static_cast<unsigned int>(std::thread::hardware_concurrency()) :  static_cast<unsigned int>(threads_per_core); 
+        } catch (const std::invalid_argument& e) {
+            return static_cast<unsigned int>(std::thread::hardware_concurrency());
         }
     }
-
-    return threadsPerCore;
+    return static_cast<unsigned int>(std::thread::hardware_concurrency());
 }
 
 inline uint64_t get_shared_memory_max() {
