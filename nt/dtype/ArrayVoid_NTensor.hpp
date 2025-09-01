@@ -37,7 +37,7 @@ namespace nt{
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args){
 	using val_type = std::invoke_result_t<UnaryFunction, DTypeFuncs::dtype_to_type_t<dt>*, DTypeFuncs::dtype_to_type_t<dt>*, Args...>;
-	bool check = dtype == dt || DTypeFuncs::is_in<dts...>(dtype);
+	bool check = dtype() == dt || DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if constexpr(std::is_same_v<val_type, void>){
 			return;
@@ -48,7 +48,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args
 		}
 	}
 	check = false;
-	if(dtype == dt){
+	if(dtype() == dt){
 		if constexpr (std::is_same_v<val_type, void>){
 			sub_handle_execute_function_void<dt>(std::forward<UnaryFunction&&>(unary_op), check, std::forward<Args&&>(args)...);
 			return;
@@ -77,7 +77,7 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args){
 	constexpr DType m_dtype = WrappedTypes::next;
-	if(m_dtype != dtype && WrappedTypes::done){
+	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction&&, DTypeFuncs::dtype_to_type_t<m_dtype>*, DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
 		if constexpr(std::is_same_v<val_type, void>)
 			return;
@@ -86,7 +86,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args
 			return outp;
 		}
 	}
-	if(m_dtype != dtype){
+	if(m_dtype != dtype()){
 		return execute_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...);
 	}
 	bool check = false;
@@ -110,7 +110,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 	      DTypeFuncs::dtype_to_type_t<dt, dts...>*, 
 	      DTypeFuncs::dtype_to_type_t<dt, dts...>*, 
 	      DTypeFuncs::dtype_to_type_t<dt, dts...>*, Args...>;
-	bool check = dtype == dt || DTypeFuncs::is_in<dts...>(dtype);
+	bool check = dtype() == dt || DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if constexpr(std::is_same_v<val_type, void>){
 			return;
@@ -121,7 +121,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 		}
 	}
 	check = false;
-	if(dtype == dt){
+	if(dtype() == dt){
 		if constexpr (std::is_same_v<val_type, void>){
 			sub_handle_execute_function_void<dt>(std::forward<UnaryFunction&&>(unary_op), check, inp_arr, std::forward<Args&&>(args)...);
 			return;
@@ -149,7 +149,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 template<typename WrappedTypes, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args){
 	constexpr DType m_dtype = WrappedTypes::next;
-	if(m_dtype != dtype && WrappedTypes::done){
+	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction, 
 		      DTypeFuncs::dtype_to_type_t<m_dtype>*, 
 		      DTypeFuncs::dtype_to_type_t<m_dtype>*,
@@ -161,7 +161,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 			return outp;
 		}
 	}
-	if(m_dtype != dtype){
+	if(m_dtype != dtype()){
 		return execute_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), inp_arr, std::forward<Args&&>(args)...);
 	}
 	bool check = false;
@@ -181,7 +181,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 //DTypeFuncs::dtype_to_type_t<dts...>*/DTypeFuncs::dtype_to_type_t<dts...>*
 template<DType dt, DType...dts>
 inline auto ArrayVoid::execute_function(bool throw_error, const char* func_name){
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(func_name, dtype) : DTypeFuncs::is_in<dt, dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(func_name, dtype()) : DTypeFuncs::is_in<dt, dts...>(dtype());
 	return [throw_error, func_name, this](auto&& unary_op, auto&&... args) -> std::invoke_result_t<decltype(unary_op), DTypeFuncs::dtype_to_type_t<dts...>*, DTypeFuncs::dtype_to_type_t<dts...>*, decltype(args)...>{
 			return this->execute_function<dt, dts...>(std::forward<decltype(unary_op)&&>(unary_op), std::forward<decltype(args)&&>(args)...);	
 		};
@@ -192,13 +192,13 @@ void throw_wrapped_types_error(const DType& dt, const char* func_name){
 	if(WrappedTypes::next == dt)
 		return;
 	if(WrappedTypes::done)
-		utils::throw_exception(WrappedTypes::next == dt, "\nRuntime Error: Got unexpected dtype $ for function $", dt, func_name);
+		utils::throw_exception(WrappedTypes::next == dt, "\nRuntime Error: Got unexpected dtype() $ for function $", dt, func_name);
 	throw_wrapped_types_error<typename WrappedTypes::next_wrapper>(dt, func_name);
 }
 
 template<typename WrappedTypes, std::enable_if_t<DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 inline auto ArrayVoid::execute_function(bool throw_error, const char* func_name){
-	if(throw_error){throw_wrapped_types_error<WrappedTypes>(dtype, func_name);}
+	if(throw_error){throw_wrapped_types_error<WrappedTypes>(dtype(), func_name);}
 	return [throw_error, func_name, this](auto&& unary_op, auto&&... args){
 			return execute_function<WrappedTypes>(std::forward<decltype(unary_op)&&>(unary_op), std::forward<decltype(args)&&>(args)...);	
 		};
@@ -206,7 +206,7 @@ inline auto ArrayVoid::execute_function(bool throw_error, const char* func_name)
 
 template<DType dt, typename UnaryFunction, typename Output, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function(UnaryFunction&& unary_op, Output& v, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -228,7 +228,7 @@ inline void ArrayVoid::sub_handle_execute_function(UnaryFunction&& unary_op, Out
 
 template<DType dt, typename UnaryFunction, typename Output, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function(UnaryFunction&& unary_op, Output& v, bool& called, ArrayVoid& inp_arr, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -289,7 +289,7 @@ inline void ArrayVoid::sub_handle_execute_function(UnaryFunction&& unary_op, Out
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_void(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -311,7 +311,7 @@ inline void ArrayVoid::sub_handle_execute_function_void(UnaryFunction&& unary_op
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_void(UnaryFunction&& unary_op, bool& called, ArrayVoid& inp_arr, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -373,7 +373,7 @@ inline void ArrayVoid::sub_handle_execute_function_void(UnaryFunction&& unary_op
 #ifdef USE_PARALLEL
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -386,7 +386,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1(UnaryFunction&& unary
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	/* uint32_t type_a = bucket.iterator_type(); */
@@ -400,7 +400,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3(UnaryFunction&& unary
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
@@ -443,7 +443,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2(UnaryFunction&& unary
 #else
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -452,7 +452,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1(UnaryFunction&& unary
 }
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -462,7 +462,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3(UnaryFunction&& unary
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2(UnaryFunction&& unary_op, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
@@ -497,10 +497,10 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline void ArrayVoid::execute_function_chunk(UnaryFunction&& unary_op, Args&&... args){
 	constexpr DType m_dtype = WrappedTypes::next;
-	if(m_dtype != dtype && WrappedTypes::done){
+	if(m_dtype != dtype() && WrappedTypes::done){
 		return;	
 	}
-	if(m_dtype != dtype){
+	if(m_dtype != dtype()){
 		return execute_function_chunk<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...);
 	}
 	bool check = false;
@@ -522,7 +522,7 @@ inline void ArrayVoid::execute_function_chunk(UnaryFunction&& unary_op, Args&&..
 #ifdef USE_PARALLEL
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -536,7 +536,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_1(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -550,7 +550,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_3(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -564,7 +564,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_3(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -579,7 +579,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_1(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
@@ -620,7 +620,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_1(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
@@ -659,7 +659,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_3(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -698,7 +698,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_2(UnaryFunction&& una
 }
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -738,7 +738,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_2(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	utils::THROW_EXCEPTION(inp_arr.size == size || inp_arr.bucket.buckets_amt() == bucket.buckets_amt(), "When chunking functions, the memory layout for 2 buckets specifies they must either have the same size, or the same number of buckets");
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
@@ -818,7 +818,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& una
 #else
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -829,7 +829,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_1(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -841,7 +841,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_3(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -852,7 +852,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_3(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -864,7 +864,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_1(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_1(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
@@ -892,7 +892,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_1(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_3(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
@@ -919,7 +919,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_3(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_3_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<3, value_t>();
@@ -945,7 +945,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_2(UnaryFunction&& una
 }
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_1_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	auto begin = bucket.begin<1, value_t>();
@@ -973,7 +973,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_2(UnaryFunction&& una
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	utils::THROW_EXCEPTION(inp_arr.size == size || inp_arr.bucket.buckets_amt() == bucket.buckets_amt(), "When chunking functions, the memory layout for 2 buckets specifies they must either have the same size, or the same number of buckets");
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
@@ -1050,10 +1050,10 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args){
 	constexpr DType m_dtype = WrappedTypes::next;
-	if(m_dtype != dtype && WrappedTypes::done){
+	if(m_dtype != dtype() && WrappedTypes::done){
 		return;	
 	}
-	if(m_dtype != dtype){
+	if(m_dtype != dtype()){
 		return execute_function_chunk<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...);
 	}
 	bool check = false;
@@ -1100,7 +1100,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 
 /* template<DType dt, typename UnaryFunction, typename... Args> */
 /* inline void ArrayVoid::sub_handle_execute_function_parallel_1(UnaryFunction&& unary_op, bool& called, Args&&... args){ */
-/* 	if(called || dt != dtype){return;} */
+/* 	if(called || dt != dtype()){return;} */
 /* 	called = true; */
 /* 	using value_t = DTypeFuncs::dtype_to_type_t<dt>; */
 /* 	auto begin = bucket.begin<1, value_t>(); */
@@ -1112,7 +1112,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 /* } */
 /* template<DType dt, typename UnaryFunction, typename... Args> */
 /* inline void ArrayVoid::sub_handle_execute_function_parallel_2(UnaryFunction&& unary_op, bool& called, Args&&... args){ */
-/* 	if(called || dt != dtype){return;} */
+/* 	if(called || dt != dtype()){return;} */
 /* 	called = true; */
 /* 	using value_t = DTypeFuncs::dtype_to_type_t<dt>; */
 /* 	//this is the blocked version */
@@ -1200,7 +1200,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 
 /* template<DType dt, typename UnaryFunction, typename... Args> */
 /* inline void ArrayVoid::sub_handle_execute_function_parallel_3(UnaryFunction&& unary_op, bool& called, Args&&... args){ */
-/* 	if(called || dt != dtype){return;} */
+/* 	if(called || dt != dtype()){return;} */
 /* 	called = true; */
 /* 	using value_t = DTypeFuncs::dtype_to_type_t<dt>; */
 /* 	/1* uint32_t type_a = bucket.iterator_type(); *1/ */
@@ -1218,10 +1218,10 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 /* 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>> */
 /* inline void ArrayVoid::execute_function_parallel(UnaryFunction&& unary_op, Args&&... args){ */
 /* 	constexpr DType m_dtype = WrappedTypes::next; */
-/* 	if(m_dtype != dtype && WrappedTypes::done){ */
+/* 	if(m_dtype != dtype() && WrappedTypes::done){ */
 /* 		return; */	
 /* 	} */
-/* 	if(m_dtype != dtype){ */
+/* 	if(m_dtype != dtype()){ */
 /* 		return execute_function_parallel<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...); */
 /* 	} */
 /* 	bool check = false; */
@@ -1242,7 +1242,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... args) const{
 	using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, Args...>;
-	bool check = DTypeFuncs::is_in<dt, dts...>(dtype);
+	bool check = DTypeFuncs::is_in<dt, dts...>(dtype());
 	if(!check){
 		if constexpr(std::is_same_v<val_type, void>)
 			return;
@@ -1250,7 +1250,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... arg
 			return val_type();
 	}
 	check = false;
-	if(dt == dtype){
+	if(dt == dtype()){
 		if constexpr(std::is_same_v<val_type, void>){
 			sub_handle_cexecute_function_void<dt>(std::forward<UnaryFunction&&>(unary_op), check, std::forward<Args&&>(args)...);
 			return;
@@ -1279,7 +1279,7 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 					&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... args) const{
 	constexpr DType m_dtype = WrappedTypes::next;
-	if(m_dtype != dtype && WrappedTypes::done){
+	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<m_dtype>*, const DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
 		if constexpr(std::is_same_v<val_type, void>){
 			return;
@@ -1289,7 +1289,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... arg
 			return outp;
 		}
 	}
-	if(m_dtype != dtype){
+	if(m_dtype != dtype()){
 		return (cexecute_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...));
 	}
 	bool check = false;
@@ -1310,7 +1310,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... arg
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVoid& inp_arr, Args&&... args) const{
 	using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, Args...>;
-	bool check = DTypeFuncs::is_in<dt, dts...>(dtype);
+	bool check = DTypeFuncs::is_in<dt, dts...>(dtype());
 	if(!check){
 		if constexpr(std::is_same_v<val_type, void>)
 			return;
@@ -1318,7 +1318,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVo
 			return val_type(); 
 	}
 	check = false;
-	if(dt == dtype){
+	if(dt == dtype()){
 		if constexpr(std::is_same_v<val_type, void>){
 			sub_handle_cexecute_function_void<dt>(std::forward<UnaryFunction&&>(unary_op), check, inp_arr, std::forward<Args&&>(args)...);
 			return;
@@ -1345,7 +1345,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVo
 template<typename WrappedTypes, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVoid& inp_arr, Args&&... args) const{
 	constexpr DType m_dtype = WrappedTypes::next;
-	if(m_dtype != dtype && WrappedTypes::done){
+	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<m_dtype>*, const DTypeFuncs::dtype_to_type_t<m_dtype>*, const DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
 		if constexpr(std::is_same_v<val_type, void>)
 			return;
@@ -1354,7 +1354,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVo
 			return outp;
 		}
 	}
-	if(m_dtype != dtype){
+	if(m_dtype != dtype()){
 		return cexecute_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), inp_arr, std::forward<Args&&>(args)...);
 	}
 	bool check = false;
@@ -1372,7 +1372,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVo
 
 template<DType dt, DType...dts>
 inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name) const{
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(func_name, dtype) : DTypeFuncs::is_in<dt, dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(func_name, dtype()) : DTypeFuncs::is_in<dt, dts...>(dtype());
 	return [throw_error, func_name, this](auto&& unary_op, auto&&... args) -> std::invoke_result_t<decltype(unary_op), const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, decltype(args)...>{
 			return this->cexecute_function<dt, dts...>(std::forward<decltype(unary_op)&&>(unary_op), std::forward<decltype(args)&&>(args)...);	
 		};
@@ -1383,10 +1383,10 @@ inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name
 
 template<typename WrappedTypes, std::enable_if_t<DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name) const{
-	bool check = DTypeFuncs::is_in<WrappedTypes>(dtype);
+	bool check = DTypeFuncs::is_in<WrappedTypes>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 	}
 
 	return [this](auto&& unary_op, auto&&... args){
@@ -1398,7 +1398,7 @@ inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name
 
 template<DType dt, typename UnaryFunction, typename Output, typename... Args>
 inline void ArrayVoid::sub_handle_cexecute_function(UnaryFunction&& unary_op, Output& v, bool& called, Args&&... args) const{
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -1420,7 +1420,7 @@ inline void ArrayVoid::sub_handle_cexecute_function(UnaryFunction&& unary_op, Ou
 
 template<DType dt, typename UnaryFunction, typename Output, typename... Args>
 inline void ArrayVoid::sub_handle_cexecute_function(UnaryFunction&& unary_op, Output& v, bool& called, const ArrayVoid& inp_arr, Args&&... args) const{
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -1489,7 +1489,7 @@ std::forward<UnaryFunction&&>(unary_op)((type_a == 1) ? bucket.cbegin_contiguous
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_cexecute_function_void(UnaryFunction&& unary_op, bool& called, Args&&... args) const{
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -1511,7 +1511,7 @@ inline void ArrayVoid::sub_handle_cexecute_function_void(UnaryFunction&& unary_o
 
 template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_cexecute_function_void(UnaryFunction&& unary_op, bool& called, const ArrayVoid& inp_arr, Args&&... args) const{
-	if(called || dt != dtype){return;}
+	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
@@ -1600,10 +1600,10 @@ inline auto ArrayVoid::cexecute_function_nbool(UnaryOperator&& unary_op, const A
 
 template<DType... dts, class OutputIt, class UnaryOperator, std::enable_if_t<!std::is_same_v<OutputIt, bool>, bool>>
 inline OutputIt ArrayVoid::transform_function(UnaryOperator&& unary_op, OutputIt d_first, bool throw_error, const char* str) const{
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>("Transform", dtype) : DTypeFuncs::is_in<dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>("Transform", dtype()) : DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return d_first; 
 	}
 	/* return transform_function<WRAP_DTYPES<DTypeEnum<dts...>>(std::forward<UnaryOperator&&>(unary_op), d_first, , str); */
@@ -1619,12 +1619,12 @@ template<typename WrappedTypes, class OutputIt, class UnaryOperation, std::enabl
 		&& !DTypeFuncs::is_wrapped_dtype<UnaryOperation>::value
 		&& !DTypeFuncs::is_wrapped_dtype<OutputIt>::value, bool>>
 inline OutputIt ArrayVoid::transform_function(UnaryOperation&& unary_op, OutputIt d_first, bool throw_error, const char* str) const{
-	if(WrappedTypes::next != dtype && !WrappedTypes::done)
+	if(WrappedTypes::next != dtype() && !WrappedTypes::done)
 		return transform_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryOperation&&>(unary_op), d_first, throw_error, str);
-	bool check = (dtype == WrappedTypes::next);
+	bool check = (dtype() == WrappedTypes::next);
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return d_first; 
 	}
 	sub_transform_function<WrappedTypes::next>(std::forward<UnaryOperation&&>(unary_op), d_first);
@@ -1648,10 +1648,10 @@ template<DType... dts, class InputIt2, class OutputIt, class UnaryOperation,
 				&& !std::is_same_v<InputIt2, bool> 
 				&& !std::is_same_v<InputIt2, const char*>, bool>>
 inline OutputIt ArrayVoid::transform_function(UnaryOperation&& unary_op, InputIt2 inp2, OutputIt d_first, bool throw_error, const char* str) const{
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype) : DTypeFuncs::is_in<dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype()) : DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return d_first; 
 	}
 	((sub_transform_function<dts...>(std::forward<UnaryOperation&&>(unary_op), inp2, d_first)));
@@ -1667,12 +1667,12 @@ template<typename WrappedTypes, class InputIt2, class OutputIt, class UnaryOpera
 				&& !std::is_same_v<InputIt2, const char*>
 			, bool>>	
 inline OutputIt ArrayVoid::transform_function(UnaryOperation&& unary_op, InputIt2 inp2, OutputIt d_first, bool throw_error, const char* str) const{
-	if(WrappedTypes::next != dtype && !WrappedTypes::done)
+	if(WrappedTypes::next != dtype() && !WrappedTypes::done)
 		return transform_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryOperation&&>(unary_op), inp2, d_first, throw_error, str);
-	bool check = (dtype == WrappedTypes::next);
+	bool check = (dtype() == WrappedTypes::next);
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return d_first; 
 	}
 	sub_transform_function<WrappedTypes::next>(std::forward<UnaryOperation&&>(unary_op), inp2, d_first);
@@ -1693,10 +1693,10 @@ inline OutputIt ArrayVoid::transform_function_nbool(UnaryOperation&& unary_op, I
 
 template<DType... dts, class OutputIt, class UnaryOperator, std::enable_if_t<!std::is_same_v<OutputIt, bool>, bool>>
 inline OutputIt ArrayVoid::transform_function(UnaryOperator&& unary_op, const ArrayVoid& inp_arr, OutputIt d_first, bool throw_error, const char* str) const{
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype) : DTypeFuncs::is_in<dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype()) : DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return d_first; 
 	}
 	sub_transform_function<dts...>(std::forward<UnaryOperator&&>(unary_op), inp_arr, d_first);
@@ -1706,12 +1706,12 @@ inline OutputIt ArrayVoid::transform_function(UnaryOperator&& unary_op, const Ar
 template<typename WrappedTypes, class OutputIt, class UnaryOperation, std::enable_if_t<
 			DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value && !std::is_same_v<OutputIt, bool>, bool>>
 inline OutputIt ArrayVoid::transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr, OutputIt d_first, bool throw_error, const char* str) const{
-	if(WrappedTypes::next != dtype && !WrappedTypes::done)
+	if(WrappedTypes::next != dtype() && !WrappedTypes::done)
 		return transform_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryOperation&&>(unary_op), inp_arr, d_first, throw_error, str);
-	bool check = (dtype == WrappedTypes::next);
+	bool check = (dtype() == WrappedTypes::next);
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return d_first; 
 	}
 	sub_transform_function<WrappedTypes::next>(std::forward<UnaryOperation&&>(unary_op), inp_arr, d_first);
@@ -1732,14 +1732,14 @@ inline OutputIt ArrayVoid::transform_function_nbool(UnaryOperation&& unary_op, c
 
 template<DType dt, DType... dts, class UnaryOperator>
 inline void ArrayVoid::transform_function(UnaryOperator&& unary_op, const ArrayVoid& inp_arr, bool throw_error, const char* str){
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(str, dtype) : DTypeFuncs::is_in<dt, dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(str, dtype()) : DTypeFuncs::is_in<dt, dts...>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return; 
 	}
 	/* transform_function<WRAP_DTYPES<DTypeEnum<dts...>>(std::forward<UnaryOperator&&>(unary_op), d_first, , str); */
-	if(dt == dtype){
+	if(dt == dtype()){
 		sub_transform_function<dt>(std::forward<UnaryOperator&&>(unary_op), inp_arr);
 		return;
 	}
@@ -1749,14 +1749,14 @@ inline void ArrayVoid::transform_function(UnaryOperator&& unary_op, const ArrayV
 
 template<typename WrappedTypes, class UnaryOperation, std::enable_if_t< DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 inline void ArrayVoid::transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr, bool throw_error, const char* str){
-	if(WrappedTypes::next != dtype && !WrappedTypes::done){
+	if(WrappedTypes::next != dtype() && !WrappedTypes::done){
 		transform_function<typename WrappedTypes::next_wrapper>(std::forward<UnaryOperation&&>(unary_op), inp_arr, throw_error, str);
 		return;
 	}
-	bool check = (dtype == WrappedTypes::next);
+	bool check = (dtype() == WrappedTypes::next);
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 	}
 	sub_transform_function<WrappedTypes::next>(std::forward<UnaryOperation&&>(unary_op), inp_arr);
 }
@@ -1781,10 +1781,10 @@ inline void ArrayVoid::transform_function_nbool(UnaryOperation&& unary_op, const
 
 template<DType... dts, class UnaryOperation>
 inline void ArrayVoid::for_ceach(UnaryOperation&& unary_op, bool throw_error, const char* str) const{
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype) : DTypeFuncs::is_in<dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype()) : DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return; 
 	}
 	(sub_for_ceach<dts...>(std::forward<UnaryOperation&&>(unary_op)));
@@ -1793,10 +1793,10 @@ inline void ArrayVoid::for_ceach(UnaryOperation&& unary_op, bool throw_error, co
 
 template<DType... dts, class UnaryOperation>
 inline void ArrayVoid::for_each(UnaryOperation&& unary_op, bool throw_error, const char* str){
-	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype) : DTypeFuncs::is_in<dts...>(dtype);
+	bool check = throw_error ? DTypeFuncs::check_dtypes<dts...>(str, dtype()) : DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return; 
 	}
 	((sub_for_each<dts>(std::forward<UnaryOperation&&>(unary_op))), ...);
@@ -1806,28 +1806,28 @@ inline void ArrayVoid::for_each(UnaryOperation&& unary_op, bool throw_error, con
 
 template<typename WrappedTypes, class UnaryOperation, std::enable_if_t< DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 void ArrayVoid::for_ceach(UnaryOperation&& unary_op, bool throw_error, const char* str) const{
-	if(WrappedTypes::next != dtype && !WrappedTypes::done){
+	if(WrappedTypes::next != dtype() && !WrappedTypes::done){
 		for_ceach<typename WrappedTypes::next_wrapper>(std::forward<UnaryOperation&&>(unary_op), throw_error, str);
 		return;
 	}
-	bool check = (dtype == WrappedTypes::next);
+	bool check = (dtype() == WrappedTypes::next);
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return; 
 	}
 	sub_for_ceach<WrappedTypes::next>(std::forward<UnaryOperation&&>(unary_op)); 
 }
 template<typename WrappedTypes, class UnaryOperation, std::enable_if_t< DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 void ArrayVoid::for_each(UnaryOperation&& unary_op, bool throw_error, const char* str){
-	if(WrappedTypes::next != dtype && !WrappedTypes::done){
+	if(WrappedTypes::next != dtype() && !WrappedTypes::done){
 		for_each<typename WrappedTypes::next_wrapper>(std::forward<UnaryOperation&&>(unary_op), throw_error, str);
 		return;
 	}
-	bool check = (dtype == WrappedTypes::next);
+	bool check = (dtype() == WrappedTypes::next);
 	if(!check){
 		if(throw_error)
-			throw std::runtime_error("Unexpected dtype for current function");
+			throw std::runtime_error("Unexpected dtype() for current function");
 		return; 
 	}
 	sub_for_each<WrappedTypes::next>(std::forward<UnaryOperation&&>(unary_op)); 
@@ -1859,7 +1859,7 @@ inline void ArrayVoid::for_each_nbool(UnaryOperation&& unary_op){
 
 template<DType dt, class OutputIt, class UnaryOperation>
 void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, OutputIt& d_first) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -1880,7 +1880,7 @@ void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, OutputIt& d_fi
 
 template<DType dt, class InputIt2, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, InputIt2& inp2, OutputIt& d_first) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -1902,7 +1902,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, InputIt
 
 template<DType dt, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr, OutputIt& d_first) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	uint32_t type_b = inp_arr.bucket.iterator_type();
@@ -1955,7 +1955,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const A
 
 template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr){
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	uint32_t type_b = inp_arr.bucket.iterator_type();
@@ -2008,7 +2008,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const A
 
 template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_ceach(UnaryOperation&& unary_op) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -2029,7 +2029,7 @@ inline void ArrayVoid::sub_for_ceach(UnaryOperation&& unary_op) const{
 
 template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_each(UnaryOperation&& unary_op){
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -2054,7 +2054,7 @@ inline void ArrayVoid::sub_for_each(UnaryOperation&& unary_op){
 
 template<DType dt, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, OutputIt& d_first) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -2078,7 +2078,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, OutputI
 
 template<DType dt, class InputIt2, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, InputIt2& inp2, OutputIt& d_first) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -2102,7 +2102,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, InputIt
 
 template<DType dt, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr, OutputIt& d_first) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	uint32_t type_b = inp_arr.bucket.iterator_type();
@@ -2165,7 +2165,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const A
 
 template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr){
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	uint32_t type_b = inp_arr.bucket.iterator_type();
@@ -2232,7 +2232,7 @@ inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const A
 
 template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_ceach(UnaryOperation&& unary_op) const{
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){
@@ -2255,7 +2255,7 @@ inline void ArrayVoid::sub_for_ceach(UnaryOperation&& unary_op) const{
 
 template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_each(UnaryOperation&& unary_op){
-	if(dt != dtype){return;}
+	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	uint32_t type_a = bucket.iterator_type();
 	if(type_a == 1){

@@ -1,5 +1,5 @@
-#ifndef _NT_MODULE_H_
-#define _NT_MODULE_H_
+#ifndef NT_MODULE_H__
+#define NT_MODULE_H__
 namespace nt {
 class Module; // forward declaration
 }
@@ -18,7 +18,7 @@ class Module; // forward declaration
 
 namespace nt {
 
-class Module : public intrusive_ptr_target {
+class NEUROTENSOR_API Module : public intrusive_ptr_target {
     std::map<std::string, std::reference_wrapper<TensorGrad>>
         _mapped_grad_names_wrapped;
     std::map<std::string, std::reference_wrapper<Layer>>

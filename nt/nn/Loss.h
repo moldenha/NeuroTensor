@@ -11,7 +11,7 @@ namespace loss{
 
 
 ScalarGrad raw_error(const TensorGrad&, const Tensor&); //target - output
-ScalarGrad MSE(const TensorGrad&, const Tensor&); //std::pow(output.tensor - target, 2) / target.numel();
+ScalarGrad MSE(const TensorGrad&, const Tensor&); //std::pow(output.detach() - target, 2) / target.numel();
 
 }} //nt::loss::
 

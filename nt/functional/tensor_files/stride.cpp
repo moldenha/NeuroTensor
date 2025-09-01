@@ -62,7 +62,7 @@ Tensor as_strided_force_contiguity(const Tensor& input, const SizeRef& n_size, c
 
 Tensor diagonal(const Tensor& t, bool keep_dims){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj && t.dims() < 2){
+    if(t.dtype() == DType::TensorObj && t.dims() < 2){
         Tensor out = Tensor::makeNullTensorArray(t.numel());
         Tensor* out_begin = reinterpret_cast<Tensor*>(out.data_ptr());
         t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >( [&out_begin, &keep_dims](auto begin, auto end){

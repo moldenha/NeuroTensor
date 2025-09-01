@@ -6,6 +6,7 @@
 #include "../index.h"
 #include "../fill.h"
 #include "../../cpu/fractional_pooling.h"
+#include "../../../utils/tuple_or_var.h"
 
 #include <vector>
 #include <variant>
@@ -73,8 +74,9 @@ Tensor extract_sliding_windows_max_3d(const std::vector<int64_t>& channels, cons
 }
 
 
-Tensor fractional_max_pool2d(Tensor input, utils::my_tuple kernel_size, utils::my_tuple output_size = -1, 
-                                 std::variant<double, std::tuple<double, double>> output_ratio = double(-1.0), bool return_indices = false){
+Tensor fractional_max_pool2d(Tensor input, utils::my_tuple kernel_size, utils::my_tuple output_size, 
+                                 utils::tuple_or_var<double, 2> output_ratio, bool return_indices){
+    static_assert(std::is_same_v<decltype(output_ratio)::tuple_t, std::tuple<double, double>>, "Error, tuple or var implemented incorrectly for tuple type");
     std::vector<int64_t> row_bounds, col_bounds;
     if(!(output_size == -1)){
         utils::throw_exception(output_ratio.index() == 0 && std::get<0>(output_ratio) == -1.0,
@@ -84,12 +86,7 @@ Tensor fractional_max_pool2d(Tensor input, utils::my_tuple kernel_size, utils::m
         row_bounds = getSlidingWindowSizesOutput(kernel_size[0], input.shape()[-2], output_size[0]);
         col_bounds = getSlidingWindowSizesOutput(kernel_size[1], input.shape()[-1], output_size[1]);
     }else{
-        std::tuple<double, double> output_ratio_tup;
-        if(output_ratio.index() == 0){
-            output_ratio_tup = std::tuple<double, double>{std::get<0>(output_ratio), std::get<0>(output_ratio)};
-        }else{
-            output_ratio_tup = std::get<1>(output_ratio);
-        }
+        const std::tuple<double, double>& output_ratio_tup = output_ratio.get_tup();
 
         utils::throw_exception(std::get<0>(output_ratio_tup) > 0.0 && std::get<0>(output_ratio_tup) < 1.0
                                && std::get<1>(output_ratio_tup) > 0.0 && std::get<1>(output_ratio_tup) < 1.0,
@@ -112,8 +109,9 @@ Tensor fractional_max_pool2d(Tensor input, utils::my_tuple kernel_size, utils::m
 
 
 
-Tensor fractional_max_pool3d(Tensor input, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> output_size = -1, 
-                                 std::variant<double, std::tuple<double, double, double>> output_ratio = double(-1.0), bool return_indices = false){
+Tensor fractional_max_pool3d(Tensor input, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> output_size, 
+                                 utils::tuple_or_var<double, 3> output_ratio, bool return_indices){
+    static_assert(std::is_same_v<decltype(output_ratio)::tuple_t, std::tuple<double, double, double>>, "Error, tuple or var implemented incorrectly for tuple type");
     std::vector<int64_t> chan_bounds, row_bounds, col_bounds;
     if(!(output_size == -1)){
         utils::throw_exception(output_ratio.index() == 0 && std::get<0>(output_ratio) == -1.0,
@@ -125,12 +123,7 @@ Tensor fractional_max_pool3d(Tensor input, utils::my_n_tuple<3> kernel_size, uti
         row_bounds = getSlidingWindowSizesOutput(kernel_size[1], input.shape()[-2], output_size[1]);
         col_bounds = getSlidingWindowSizesOutput(kernel_size[2], input.shape()[-1], output_size[2]);
     }else{
-        std::tuple<double, double, double> output_ratio_tup;
-        if(output_ratio.index() == 0){
-            output_ratio_tup = std::tuple<double, double, double>{std::get<0>(output_ratio), std::get<0>(output_ratio), std::get<0>(output_ratio)};
-        }else{
-            output_ratio_tup = std::get<1>(output_ratio);
-        }
+        const std::tuple<double, double, double>& output_ratio_tup = output_ratio.get_tup();
 
         utils::throw_exception(std::get<0>(output_ratio_tup) > 0.0 && std::get<0>(output_ratio_tup) < 1.0
                                && std::get<1>(output_ratio_tup) > 0.0 && std::get<1>(output_ratio_tup) < 1.0

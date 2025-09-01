@@ -341,8 +341,8 @@ std::tuple<std::vector<int64_t>, std::vector<int64_t> >
 
 
 Tensor permute_cols_float(const Tensor& mult, const std::vector<int64_t>& col_perm){
-    utils::throw_exception(mult.dtype == DType::Float32, "Expected to permute float matrix columns");
-    Tensor out(mult.shape(), mult.dtype);
+    utils::throw_exception(mult.dtype() == DType::Float32, "Expected to permute float matrix columns");
+    Tensor out(mult.shape(), mult.dtype());
     float* out_ptr = reinterpret_cast<float*>(out.data_ptr());
     const float* mult_ptr = reinterpret_cast<const float*>(mult.data_ptr());
     const int64_t& rows = mult.shape()[0];
@@ -409,7 +409,7 @@ TensorGrad Sinkhorn(const TensorGrad& cost, float tau = 0.01, int n_iters = 20) 
     
     log_p.exp_();
     return log_p;
-    // TensorGrad out(log_p.tensor);
+    // TensorGrad out(log_p.detach());
     // TensorGrad::redefine_tracking(out, log_p,
     //             [](const Tensor& grad, intrusive_ptr<TensorGrad> parent){
     //                 std::cout << "gradient for sink horn is "<<grad<<std::endl;
@@ -428,7 +428,7 @@ inline TensorGrad pairwise_l2(const TensorGrad& x, const TensorGrad& y){
 }
 
 Tensor sample_gumbel(const TensorGrad& logits){
-    Tensor u = functional::rand(0, 1, logits.shape(), logits.dtype); //uniform (0,1)
+    Tensor u = functional::rand(0, 1, logits.shape(), logits.dtype()); //uniform (0,1)
     return -functional::log(-functional::log(u + 1e-10));       // Gumbel(0,1)
 }
 
@@ -444,9 +444,9 @@ TensorGrad gumbel_softmax(const TensorGrad& logits, float tau, bool hard = false
 
     if (hard) {
         // Straight-through: make y_hard one-hot
-        Tensor y_hard = functional::one_hot(functional::argmax(y.tensor, -1), y.shape()[-1]).to(y.dtype);
+        Tensor y_hard = functional::one_hot(functional::argmax(y.detach(), -1), y.shape()[-1]).to(y.dtype());
         // Use straight-through estimator
-        return (y_hard - y).tensor + y;
+        return (y_hard - y).detach() + y;
     }
 
     return y;
@@ -458,7 +458,7 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
     
     auto [x_indexes, y_indexes, boundaries] = 
                 compute_differentiable_boundary_sparse_matrix_index(simplex_complex_kp1, simplex_complex_k,
-                                                                    radi_kp1.tensor, radi_k.tensor);
+                                                                    radi_kp1.detach(), radi_k.detach());
 
     
     //this constructs a regular boundary matrix
@@ -470,19 +470,26 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
     for(size_t i = 0; i < x_indexes.size(); ++i){
         access[x_indexes[i] * cols + y_indexes[i]] = (boundaries[i] < 1 ? -1 : 1.0);
     }
+    std::cout << "boundary no grad: "<<boundary_no_grad<<std::endl;
 
     //[boundary radi does have autograd tracked]
     TensorGrad boundary_radi = radi_k.view(-1, 1) * radi_kp1;
-    boundary_radi.tensor *= boundary_no_grad;
+    boundary_radi.detach() *= boundary_no_grad;
     
     //computing soft cost for rows and columns [autograd tracked] 
     TensorGrad logits_r = pairwise_l2(radi_k, radi_k);
     TensorGrad logits_c = pairwise_l2(radi_kp1, radi_kp1);
-
-
+    // logits_r -= functional::max(logits_r.detach(), -1, true).values;
+    // logits_c -= functional::max(logits_c.detach(), -1, true).values;
+    // std::cout << "logits_r: "<<logits_r.shape()<<std::endl;
+    // std::cout << "logits_c: "<<logits_c.shape()<<std::endl;
+    // std::cout << "logits_r: "<<logits_r<<std::endl;
     //computing soft permutations accross the matrices  [autograd tracked]
-    TensorGrad P_row = gumbel_softmax(logits_r, 1.0, true);
-    TensorGrad P_col = gumbel_softmax(logits_c, 1.0, true);
+    // TensorGrad P_row = ::nt::functional::gumbel_softmax(logits_r, 1.0, true, -1, true);
+    // TensorGrad P_col =::nt::functional::gumbel_softmax(logits_c, 1.0, true, -1, true);
+    // std::cout << "P_row: "<<P_row.shape() << std::endl;
+    // std::cout << "P_col: "<<P_col.shape() << std::endl;
+    // std::cout << "P_row: "<<P_row << std::endl;
 
     //applying soft differentiable permutations
     //the gradients on the permutations are tracked
@@ -494,7 +501,7 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
 }
 
 Tensor sample_gumbel_sigmoid(const TensorGrad& logits) {
-    Tensor u = functional::rand(0, 1, logits.shape(), logits.dtype); // Uniform(0,1)
+    Tensor u = functional::rand(0, 1, logits.shape(), logits.dtype()); // Uniform(0,1)
     return -functional::log(-functional::log(u + 1e-10));
 }
 
@@ -504,8 +511,8 @@ TensorGrad gumbel_sigmoid(const TensorGrad& logits, float tau = 1.0, bool hard =
     y = functional::sigmoid(y);
 
     if (hard) {
-        Tensor y_hard = (y.tensor > 0.5).to(y.dtype);  // binary threshold
-        return (y_hard - y).tensor + y;  // Straight-through estimator
+        Tensor y_hard = (y.detach() > 0.5).to(y.dtype());  // binary threshold
+        return (y_hard - y).detach() + y;  // Straight-through estimator
     }
 
     return y;
@@ -571,7 +578,7 @@ TensorGrad _nt_boundary_learnable_cols_matrix_(TensorGrad& boundary_radi, Tensor
     
     TensorGrad col_mask = gumbel_sigmoid(radi_kp1_2, 1.0, true).view(1, -1); // shape (1, cols)
     
-    TensorGrad mask = nt::functional::ones({boundary_permuted.shape()[0], 1}, boundary_permuted.dtype) * col_mask;
+    TensorGrad mask = nt::functional::ones({boundary_permuted.shape()[0], 1}, boundary_permuted.dtype()) * col_mask;
     TensorGrad boundary_final = boundary_permuted * mask;
     return std::move(boundary_final);
 
@@ -585,13 +592,13 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
 
     auto [x_indexes, y_indexes, boundaries] = 
                 compute_differentiable_boundary_sparse_matrix_index(simplex_complex_kp1, simplex_complex_k,
-                                                                    radi_kp1.tensor, radi_k.tensor);
+                                                                    radi_kp1.detach(), radi_k.detach());
     bool rows_learnable = (simplex_complex_k.shape()[-1] > 1);
     // std::cout << simplex_complex_k.shape() << std::endl;
     // this constructs a regular boundary matrix
     //this doesn't necessarily change per simplex
     //[autograd not tracked] 
-    Tensor boundary_no_grad = functional::zeros({radi_k.shape()[0], radi_kp1.shape()[0]}, radi_k.dtype);
+    Tensor boundary_no_grad = functional::zeros({radi_k.shape()[0], radi_kp1.shape()[0]}, radi_k.dtype());
     const int64_t& cols = boundary_no_grad.shape()[-1];
     float* access = reinterpret_cast<float*>(boundary_no_grad.data_ptr());
     for(size_t i = 0; i < x_indexes.size(); ++i){
@@ -600,8 +607,8 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
 
     //[boundary radi does have autograd tracked]
     // TensorGrad boundary_radi = radi_k.view(-1, 1) * radi_kp1;
-    TensorGrad boundary_radi(nt::functional::ones({radi_k.shape()[0], radi_kp1.shape()[0]}, radi_k.dtype));
-    boundary_radi.tensor *= boundary_no_grad;
+    TensorGrad boundary_radi(nt::functional::ones({radi_k.shape()[0], radi_kp1.shape()[0]}, radi_k.dtype()));
+    boundary_radi.detach() *= boundary_no_grad;
     // std::cout << "boundary: "<<boundary_radi<<std::endl;
     if(rows_learnable){
         return _nt_boundary_learnable_rows_matrix_(boundary_radi, radi_k, radi_kp1, radi_k_2, radi_kp1_2);
@@ -616,8 +623,8 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
 
 /*
 
-    // intrusive_ptr<tensor_holder> rk = make_intrusive<tensor_holder>(radi_k.tensor.clone());
-    // intrusive_ptr<tensor_holder> rkp1 = make_intrusive<tensor_holder>(radi_kp1.tensor.clone());
+    // intrusive_ptr<tensor_holder> rk = make_intrusive<tensor_holder>(radi_k.detach().clone());
+    // intrusive_ptr<tensor_holder> rkp1 = make_intrusive<tensor_holder>(radi_kp1.detach().clone());
     
     // TensorGrad sig_radi_k = (apply_sigmoid ? functional::sigmoid(radi_k * alpha) : radi_k);
     // TensorGrad sig_radi_kp1 = (apply_sigmoid ? functional::sigmoid(radi_kp1 * alpha) : radi_kp1);

@@ -1,12 +1,46 @@
-#ifndef _NT_TENSORGAD_FUNCTIONAL_LIST_H_
-#define _NT_TENSORGAD_FUNCTIONAL_LIST_H_
+#ifndef NT_TENSORGAD_FUNCTIONAL_LIST_H__
+#define NT_TENSORGAD_FUNCTIONAL_LIST_H__
 
 #include "../TensorGrad.h"
 #include <type_traits>
 #include "../../utils/utils.h"
+#include "../../utils/always_inline_macro.h"
 
 namespace nt{
 namespace functional{
+
+namespace details{
+
+template<typename T,
+         std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, bool> = true>
+NT_ALWAYS_INLINE bool all_not_tracking_grad(T&& first){
+    return first.track_grad() == false;
+}
+
+
+template<typename T, typename... Args,
+         std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, bool> = true>
+NT_ALWAYS_INLINE bool all_not_tracking_grad(T&& first, Args&&... args){
+    return (first.track_grad() == false) && all_not_tracking_grad(std::forward<Args&&>(args)...);
+}
+
+template<typename T,
+         std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, bool> = true>
+NT_ALWAYS_INLINE void set_grad_if_tracking(Tensor* begin, T&& first){
+    if(std::forward<T>(first).track_grad())
+        *begin = std::forward<T>(first).grad();
+}
+
+template<typename T, typename... Args,
+         std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, bool> = true>
+NT_ALWAYS_INLINE void set_grad_if_tracking(Tensor* begin, T&& first, Args&&... args){
+    if(std::forward<T>(first).track_grad())
+        *begin = std::forward<T>(first).grad();
+    ++begin;
+    set_grad_if_tracking(begin, std::forward<Args>(args)...);
+}
+
+}
 
 template<typename T, typename... Args,
          std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, int>>
@@ -15,53 +49,40 @@ inline TensorGrad list(T&& first, Args&&... rest){
                   "Expected to make a list of all TensorGrads");
 
     // create the result TensorGrad
-    TensorGrad result(list(first.tensor, (rest.tensor) ...),
-                      first.grad_required);
-
-    bool track_grad = first.do_track_grad;
-    bool require_grad = first.grad_required;
-
-    // ensure consistency for tracking and requiring gradients
-    ((utils::throw_exception(std::forward<Args>(rest).do_track_grad ==
-                                 track_grad,
-                             "Expected consistent track_grad values")),
-     ...);
-    ((utils::throw_exception(std::forward<Args>(rest).grad_required ==
-                                 require_grad,
-                             "Expected consistent grad_required values")),
-     ...);
-
-    // update track_grad and grad_required flags
-    if (!require_grad) {
-        track_grad = false;
-    }
-    if (!track_grad) {
-        result.do_track_grad = false;
-        return result; // return directly if tracking is not needed
+    bool all_not_tracking = details::all_not_tracking_grad(std::forward<T>(first), std::forward<Args>(rest)...);
+    if(all_not_tracking){
+        return TensorGrad(list(std::forward<T>(first).detach(), (std::forward<Args>(rest).detach())...), false);
     }
 
+    TensorGrad result(list(std::forward<T>(first).detach(), (std::forward<Args>(rest).detach()) ...),
+                        true);
+    // From here on out
+    // If there is a tensor who's gradient is not being tracked
+    // the result.grad()[i].item<Tensor>().is_null() == true
+    if(!result.Node->grad) result.Node->grad = make_intrusive<tensor_holder>(Tensor::makeNullTensorArray(sizeof...(Args) + 1));
+    else result.grad() = Tensor::makeNullTensorArray(sizeof...(Args) + 1);
+    // for fast access:
+    Tensor* grad_begin = reinterpret_cast<Tensor*>(result.grad().data_ptr());
+    Tensor* grad_end = reinterpret_cast<Tensor*>(result.grad().data_ptr_end());
+    if(std::forward<T>(first).track_grad()) std::forward<T>(first).Node->ensure_gradient_init();
 
-
-    // initialize grads if not already set
-    if (first.grad == nullptr) {
-        first.grad =
-            make_intrusive<tensor_holder>(functional::zeros_like(first.tensor));
-    }
-    ((rest.grad = (rest.grad == nullptr)
-                      ? make_intrusive<tensor_holder>(
-                            functional::zeros_like(rest.tensor))
-                      : rest.grad),
-     ...);
-    //create the gradient for the result
-    result.grad = make_intrusive<tensor_holder>(
-        list(first.grad->tensor, (rest.grad->tensor) ...));
+    ((std::forward<Args>(rest).track_grad() ? (std::forward<Args>(rest).Node->ensure_gradient_init(), void()) : void()), ...);
     
-    // set up parent references
-    // this also automatically tracks children
-    result.track_tensors(first, rest...);
+    details::set_grad_if_tracking(grad_begin, std::forward<T>(first), std::forward<Args>(rest)...); 
 
-    return result;
+    ////create the gradient for the result
+    //result.grad = make_intrusive<tensor_holder>(
+    //    list(first.grad->tensor, (rest.grad->tensor) ...));
+  
+    // Only track if the gradient is supposed to be tracked
+    // There will not be a backward function anyways
+    if(std::forward<T>(first).track_grad()) result.track_tensors(std::forward<T>(first));
+    
+    ((std::forward<Args>(rest).track_grad() ? (result.track_tensors(std::forward<Args>(rest)), void()) : void()), ...);
+
+    return std::move(result);
 }
+
 }
 }
 

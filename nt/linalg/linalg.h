@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_H_
-#define _NT_LINALG_H_
+#ifndef NT_LINALG_H__
+#define NT_LINALG_H__
 
 #include "headers/QR.h"
 #include "headers/SVD.h"
@@ -13,4 +13,4 @@
 #include "headers/column_space.h"
 // #include "headers/independent.h"
 
-#endif //_NT_LINALG_H_
+#endif //NT_LINALG_H__

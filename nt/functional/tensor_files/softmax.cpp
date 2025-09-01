@@ -3,6 +3,9 @@
 #include "../cpu/softmax.h"
 #include "../../dtype/ArrayVoid.hpp"
 #include "exceptions.hpp"
+#include "rand.h"
+#include "mesh.h"
+#include "min_max.h"
 
 namespace nt {
 namespace functional {
@@ -12,7 +15,7 @@ void softmax_(Tensor& inp){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(inp);
     utils::throw_exception(inp.is_mutable(),
                            "Can only perform softmax function on self if the tensor is mutable");
-    if(inp.dtype == DType::TensorObj){
+    if(inp.dtype() == DType::TensorObj){
         inp.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
             for(;begin != end; ++begin)
                 softmax_(*begin);
@@ -48,25 +51,25 @@ void softmax_(Tensor& inp, typename SizeRef::value_type dim){
 
 Tensor softmax(Tensor inp){
     //convert it to a double for stability
-	Tensor outp = inp.dtype == DType::Float64 ? inp.clone() : inp.to(DType::Float64);
+	Tensor outp = inp.dtype() == DType::Float64 ? inp.clone() : inp.to(DType::Float64);
 	softmax_(outp);
     //convert back to the original dtype
-	return outp.to(inp.dtype);
+	return outp.to(inp.dtype());
 }
 
 Tensor softmax(Tensor inp, typename SizeRef::value_type dim){
     //convert it to a double for stability
-	Tensor outp = inp.dtype == DType::Float64 ? inp.clone() : inp.to(DType::Float64);
+	Tensor outp = inp.dtype() == DType::Float64 ? inp.clone() : inp.to(DType::Float64);
     softmax_(outp, dim);
     //convert back to the original dtype
-	return outp.to(inp.dtype);
+	return outp.to(inp.dtype());
 }
 
 void softmax_stable_(Tensor& inp){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(inp);
     utils::throw_exception(inp.is_mutable(),
                            "Can only perform softmax function on self if the tensor is mutable");
-    if(inp.dtype == DType::TensorObj){
+    if(inp.dtype() == DType::TensorObj){
         inp.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
             for(;begin != end; ++begin)
                 softmax_stable_(*begin);
@@ -98,42 +101,68 @@ void softmax_stable_(Tensor& inp, typename SizeRef::value_type dim){
 }
 
 Tensor softmax_stable(Tensor inp){
-	Tensor outp = inp.dtype == DType::Float64 ? inp.clone() : inp.to(DType::Float64);
+    DType to_dtype = DTypeFuncs::is_complex(inp.dtype()) ? DType::Complex128 : DType::Float64;
+	Tensor outp = inp.dtype() == to_dtype ? inp.clone() : inp.to(to_dtype);
     softmax_stable_(outp);
-	return outp.to(inp.dtype);
+	return outp.to(inp.dtype());
 }
 
 
 Tensor softmax_stable(Tensor inp, typename SizeRef::value_type dim){
-	Tensor outp = inp.dtype == DType::Float64 ? inp.clone() : inp.to(DType::Float64);
+    DType to_dtype = DTypeFuncs::is_complex(inp.dtype()) ? DType::Complex128 : DType::Float64;
+	Tensor outp = inp.dtype() == to_dtype ? inp.clone() : inp.to(to_dtype);
     softmax_stable_(outp, dim);
-	return outp.to(inp.dtype);
+	return outp.to(inp.dtype());
 }
+
+
+Tensor gumbel_softmax(const Tensor& __logits, Scalar tau, bool hard, int64_t dim, bool stable){
+    if(stable){
+        DType to_dtype = DTypeFuncs::is_complex(__logits.dtype()) ? DType::Complex128 : DType::Float64;
+        Tensor logits = __logits.to(to_dtype);
+        Tensor u = rand(0, 1, logits.shape(), logits.dtype()); // Uniform(0, 1)
+        Tensor y = (__logits.dtype() == to_dtype) ? logits.clone() : logits;
+        cpu::_gumbel_algorithm_(y.arr_void(), u.arr_void(), tau);
+        softmax_stable_(y, dim);
+        if(!hard){
+            return y.to(__logits.dtype());
+        }
+        return ::nt::functional::one_hot(::nt::functional::argmax(y, dim), y.shape()[dim]).to(__logits.dtype());
+    }
+    Tensor u = rand(0, 1, __logits.shape(), __logits.dtype()); // Uniform(0, 1)
+    // this is the noise before applying the  gumbel algorithm (look at cpu)
+    Tensor y = __logits.clone();
+    cpu::_gumbel_algorithm_(y.arr_void(), u.arr_void(), tau);
+    softmax_(y, dim);
+    if(!hard) return std::move(y);
+    return ::nt::functional::one_hot(::nt::functional::argmax(y, dim), y.shape()[dim]).to(__logits.dtype());
+}
+
 
 
 Tensor dsoftmax(const Tensor& dy, const Tensor& last_softmax){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(dy, last_softmax);
-    utils::THROW_EXCEPTION(dy.dtype == last_softmax.dtype,
+    utils::THROW_EXCEPTION(dy.dtype() == last_softmax.dtype(),
                            "Expected the softmax derivative ($) and last softmax ($) to have the same dtype" , 
-                           dy.dtype, last_softmax.dtype);
+                           dy.dtype(), last_softmax.dtype());
     utils::THROW_EXCEPTION(dy.shape() == last_softmax.shape(),
                            "Expected the softmax derivative ($) and last softmax ($) to have the same shape" , 
                            dy.shape(), last_softmax.shape());
-    utils::THROW_EXCEPTION(dy.dtype != DType::TensorObj,
+    utils::THROW_EXCEPTION(dy.dtype() != DType::TensorObj,
                            "dsoftmax is not implemented for tensor objects");
 
     Tensor output(last_softmax.shape(), DType::Float64);
     Tensor _last_softmax = last_softmax.to(DType::Float64);
     Tensor _dy = dy.to(DType::Float64);
     cpu::_dsoftmax(_last_softmax.arr_void(), _dy.arr_void(), output.arr_void());
-    return output.to(dy.dtype);
+    return output.to(dy.dtype());
 }
 
 Tensor dsoftmax(const Tensor& dy, const Tensor& last_softmax, typename SizeRef::value_type dim){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(dy, last_softmax);
-    utils::THROW_EXCEPTION(dy.dtype == last_softmax.dtype,
+    utils::THROW_EXCEPTION(dy.dtype() == last_softmax.dtype(),
                            "Expected the softmax derivative ($) and last softmax ($) to have the same dtype" , 
-                           dy.dtype, last_softmax.dtype);
+                           dy.dtype(), last_softmax.dtype());
     utils::THROW_EXCEPTION(dy.shape() == last_softmax.shape(),
                            "Expected the softmax derivative ($) and last softmax ($) to have the same shape" , 
                            dy.shape(), last_softmax.shape());
@@ -162,7 +191,7 @@ Tensor dsoftmax(const Tensor& dy, const Tensor& last_softmax, typename SizeRef::
     for(;dy_begin != dy_end; ++dy_begin, ++o_begin, ++ls_begin){
         cpu::_dsoftmax(ls_begin->arr_void(), dy_begin->arr_void(), o_begin->arr_void());
     }
-    return output.to(dy.dtype);
+    return output.to(dy.dtype());
 
 }
 

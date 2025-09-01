@@ -20,7 +20,7 @@ Tensor compute_circumradii(const Tensor &simplicies) {
             B: the radius associated with each simplex
 
     */
-    if (simplicies.dtype == DType::TensorObj) {
+    if (simplicies.dtype() == DType::TensorObj) {
         Tensor out = Tensor::makeNullTensorArray(simplicies.numel());
         Tensor *begin = reinterpret_cast<Tensor *>(out.data_ptr());
         for (auto t : simplicies) {
@@ -66,7 +66,7 @@ Tensor compute_circumradii(const Tensor &index_simplicies,
             B: the radius associated with each simplex
 
     */
-    if (index_simplicies.dtype == DType::TensorObj) {
+    if (index_simplicies.dtype() == DType::TensorObj) {
         Tensor out =
             Tensor::makeNullTensorArray(index_simplicies.numel());
         Tensor *begin = reinterpret_cast<Tensor *>(out.data_ptr());
@@ -118,7 +118,7 @@ Tensor compute_point_radii(Tensor simplicies) {
             B: the radius associated with each simplex
 
     */
-    if (simplicies.dtype == DType::TensorObj) {
+    if (simplicies.dtype() == DType::TensorObj) {
         Tensor out = Tensor::makeNullTensorArray(simplicies.numel());
         Tensor *begin = reinterpret_cast<Tensor *>(out.data_ptr());
         for (auto t : simplicies) {
@@ -165,7 +165,7 @@ Tensor compute_point_radii(const Tensor &index_simplicies,
             B: the radius associated with each simplex
 
     */
-    if (index_simplicies.dtype == DType::TensorObj) {
+    if (index_simplicies.dtype() == DType::TensorObj) {
         Tensor out =
             Tensor::makeNullTensorArray(index_simplicies.numel());
         Tensor *begin = reinterpret_cast<Tensor *>(out.data_ptr());
@@ -296,9 +296,9 @@ std::pair<Tensor, Tensor> compute_point_grad_radii(const Tensor& index_simplicie
 }
 
 void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi) {
-    if (simplicies.dtype != DType::TensorObj) {
+    if (simplicies.dtype() != DType::TensorObj) {
         utils::THROW_EXCEPTION(
-            simplex_radi.dtype != DType::TensorObj,
+            simplex_radi.dtype() != DType::TensorObj,
             "Expected if simplicies are not batched, neither are the radi");
         auto [sorted, indices] = get<2>(functional::sort(simplex_radi));
         Tensor n_simplex = simplicies[indices];
@@ -307,7 +307,7 @@ void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi) {
         return;
     }
     utils::THROW_EXCEPTION(
-        simplex_radi.dtype == DType::TensorObj,
+        simplex_radi.dtype() == DType::TensorObj,
         "Expected if simplicies were batched so were the radi");
     Tensor *radi_begin =
         reinterpret_cast<Tensor *>(simplex_radi.data_ptr());
@@ -325,7 +325,7 @@ void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi) {
 
 void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi, Tensor& grad_indexes) {
     utils::THROW_EXCEPTION(
-        simplex_radi.dtype != DType::TensorObj,
+        simplex_radi.dtype() != DType::TensorObj,
         "Expected if simplicies are not batched, neither are the radi");
     auto [sorted, indices] = get<2>(functional::sort(simplex_radi));
     Tensor n_simplex = simplicies[indices];
@@ -338,12 +338,12 @@ void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi, Tensor& grad
 
 
 std::set<double> get_radi_set(const Tensor &simplex_radi, int64_t batch) {
-    if (simplex_radi.dtype == DType::TensorObj) {
+    if (simplex_radi.dtype() == DType::TensorObj) {
         std::set<double> rSimplex;
         utils::THROW_EXCEPTION(
-            simplex_radi[batch].item<Tensor>().dtype == DType::Float64,
+            simplex_radi[batch].item<Tensor>().dtype() == DType::Float64,
             "Expected dtype of radi to be double but got $",
-            simplex_radi[batch].item<Tensor>().dtype);
+            simplex_radi[batch].item<Tensor>().dtype());
         simplex_radi[batch]
             .item<Tensor>()
             .arr_void()
@@ -356,9 +356,9 @@ std::set<double> get_radi_set(const Tensor &simplex_radi, int64_t batch) {
                 });
         return std::move(rSimplex);
     }
-    utils::THROW_EXCEPTION(simplex_radi.dtype == DType::Float64,
+    utils::THROW_EXCEPTION(simplex_radi.dtype() == DType::Float64,
                                "Expected dtype of radi to be double but got $",
-                               simplex_radi.dtype);
+                               simplex_radi.dtype());
     std::set<double> rSimplex;
     simplex_radi.arr_void()
         .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Float64>>>(

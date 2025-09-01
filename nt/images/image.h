@@ -1,5 +1,5 @@
-#ifndef _NT_IMAGE_PROCESSOR_H_
-#define _NT_IMAGE_PROCESSOR_H_
+#ifndef NT_IMAGE_PROCESSOR_H__
+#define NT_IMAGE_PROCESSOR_H__
 
 #include "../Tensor.h"
 #include <vector>
@@ -7,7 +7,7 @@
 namespace nt{
 namespace images{
 
-class Image{
+class NEUROTENSOR_API Image{
 	Tensor pixels;
 	Tensor read_img(const char*, DType) const;
 	Tensor read_stb(const char*, DType) const;

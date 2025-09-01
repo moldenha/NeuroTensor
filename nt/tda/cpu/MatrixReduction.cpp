@@ -13,6 +13,7 @@
 #include <tbb/blocked_range2d.h>
 #include <tbb/blocked_range3d.h>
 #include <unordered_map>
+#include "../../memory/meta_allocator.h"
 
 namespace nt {
 namespace tda {
@@ -129,12 +130,11 @@ typename mp::SimdTraits<T>::Type **allocateSIMDeMatrix(const T *input, size_t ro
     size_t full_blocks = cols / simd_size;
     size_t tail_size = cols % simd_size;
 
-    typename mp::SimdTraits<T>::Type **simd_matrix = new typename mp::SimdTraits<T>::Type *[rows];
+    typename mp::SimdTraits<T>::Type **simd_matrix = MetaNewArr(typename mp::SimdTraits<T>::Type *, rows);
     for (size_t i = 0; i < rows; ++i) {
         // Allocate aligned memory for the __m256 array
         typename mp::SimdTraits<T>::Type *simd_array =
-            (typename mp::SimdTraits<T>::Type *)detail::portable_aligned_alloc(
-                32, num_vectors * sizeof(simde__m256));
+            (typename mp::SimdTraits<T>::Type *)MetaAlignedAlloc(32, num_vectors * sizeof(simde__m256));
 
         for (size_t j = 0; j < full_blocks; ++j) {
             simd_array[j] =
@@ -166,14 +166,12 @@ typename mp::SimdTraits<T>::Type **allocateSIMDeMatrix(size_t rows, size_t cols)
     size_t num_vectors = (cols + simd_size - 1) / simd_size; // Ceiling division
 
     static const typename mp::SimdTraits<T>::Type simde_zero = mp::SimdTraits<T>::zero();
-    typename mp::SimdTraits<T>::Type **simd_matrix = new typename mp::SimdTraits<T>::Type *[rows];
+    typename mp::SimdTraits<T>::Type **simd_matrix = MetaNewArr(typename mp::SimdTraits<T>::Type *, rows);
 
     for (size_t i = 0; i < rows; ++i) {
         // Allocate aligned memory for the SIMD vectors
-        typename mp::SimdTraits<T>::Type *simd_array =
-            (typename mp::SimdTraits<T>::Type *)detail::portable_aligned_alloc(
-                32, num_vectors * sizeof(typename mp::SimdTraits<T>::Type));
-
+        typename mp::SimdTraits<T>::Type *simd_array = (typename mp::SimdTraits<T>::Type *)
+                                                        MetaAlignedAlloc(32, num_vectors * sizeof(typename mp::SimdTraits<T>::Type));
         // Initialize everything to zero
         for (size_t j = 0; j < num_vectors; ++j) {
             simd_array[j] = simde_zero;
@@ -187,14 +185,14 @@ typename mp::SimdTraits<T>::Type **allocateSIMDeMatrix(size_t rows, size_t cols)
 template<typename T>
 inline void freeSIMDeArray(typename mp::SimdTraits<T>::Type **ptr, int64_t num_rows) {
     for (int64_t i = 0; i < num_rows; ++i) {
-        std::free(ptr[i]);
+        MetaAlignedFree(ptr[i]);
     }
-    delete[] ptr;
+    MetaFreeArr<typename mp::SimdTraits<T>::Type *>(ptr); 
 }
 
 template<typename T>
 inline T** SIMDeMatrix_TemplateMatrix(typename mp::SimdTraits<T>::Type **ptr, int64_t num_rows){
-    T** out = new T*[num_rows];
+    T** out = MetaNewArr(T*, num_rows);
     for(int64_t i = 0; i < num_rows; ++i){
         out[i] = reinterpret_cast<T*>(ptr[i]);
     }
@@ -217,7 +215,7 @@ void loadSparseMatrix(T** arr, const SparseMatrix& spm, bool transpose){
 }
 
 template<typename T>
-inline void freeTemplateMatrix(T** ptr){delete[] ptr;}
+inline void freeTemplateMatrix(T** ptr){MetaFreeArr<T*>(ptr);}
 ////TODO make a store matrix
 
 
@@ -651,7 +649,7 @@ std::pair<std::map<double, int64_t>, std::vector<std::pair<double, SparseMatrix>
 
 //template<typename T>
 //inline T** SIMDeMatrix_TemplateMatrix(typename mp::SimdTraits<T>::Type **ptr, int64_t num_rows){
-//    T** out = new T*[num_rows];
+//    T** out = MetaNewArr(T, num_rows);
 //    for(int64_t i = 0; i < num_rows; ++i){
 //        out[i] = reinterpret_cast<T*>(ptr[i]);
 //    }
@@ -769,7 +767,7 @@ struct MemoryArena {
     size_t offset;
 
     MemoryArena(size_t size) {
-        memory = reinterpret_cast<char*>(new mp::SimdTraits<int8_t>::Type[size]);
+        memory = reinterpret_cast<char*>(MetaNewArr(mp::SimdTraits<int8_t>::Type, size));
         capacity = size;
         offset = 0;
     }
@@ -791,7 +789,7 @@ struct MemoryArena {
     }
 
     ~MemoryArena() {
-        delete[] memory;
+        MetaFreeArr<char>(memory);
     }
 };
 

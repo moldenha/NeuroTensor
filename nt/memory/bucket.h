@@ -1,7 +1,8 @@
-#ifndef _NT_BUCKET_H_
-#define _NT_BUCKET_H_
+#ifndef NT_BUCKET_H__
+#define NT_BUCKET_H__
 
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../intrusive_ptr/intrusive_tracked_list.hpp"
 #include "device.h"
 #include <memory>
 /* #include "../dtype/DType.h" */
@@ -11,6 +12,7 @@
 #include <functional>
 #include "iterator.h"
 #include <type_traits>
+#include "../utils/api_macro.h"
 /* #include "../dtype/ArrayVoid.h" */
 
 namespace nt{
@@ -30,9 +32,9 @@ class Bucket;
 //          or it will make the output memory non-modifiable <- this seems like the best option (maybe print warning)
 //          or it will clone that specific memory
 
-class Bucket{
+class NEUROTENSOR_API Bucket{
 	intrusive_ptr<DeviceHolder> buckets_; //buckets of contiguous memory
-	intrusive_ptr<void*[]> strides_; //void* to store beggining and end
+	intrusive_tracked_list<void*> strides_; //void* to store beggining and end
 					   //or to store in terms of just pointing to specific pointers
 					   // (more memory efficient for more random indexing)
 	const int64_t stride_size; // holds the size of the strides_
@@ -50,7 +52,7 @@ class Bucket{
 		// default this is true unless the buckets are split up
 		// I may have the constructor directly below have a total_size and when it is (-1) use the function that calculates the entire size up
 
-	Bucket(intrusive_ptr<DeviceHolder> buckets, intrusive_ptr<void*[]> strides, int64_t strideS, int64_t bS, bool blocked, DType dt);
+	Bucket(intrusive_ptr<DeviceHolder> buckets, intrusive_tracked_list<void*> strides, int64_t strideS, int64_t bS, bool blocked, DType dt);
 	int64_t blocked_stride_size() const;
 	Bucket blocked_strides_clone() const;
 	Bucket strided_clone() const;
@@ -61,11 +63,11 @@ class Bucket{
 	uint64_t getBucketSize(const uint64_t bucket_index) const;
 
 	template<typename Buck>
-	static void processCatData(const Buck& b, std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_ptr<void*[]> nStrides, uint64_t& stride_index);
+	static void processCatData(const Buck& b, std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_tracked_list<void*> nStrides, uint64_t& stride_index);
 	template<typename First>
-	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_ptr<void*[]>& nStrides,  uint64_t& stride_index, const First& first);
+	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_tracked_list<void*>& nStrides,  uint64_t& stride_index, const First& first);
 	template<typename First, typename... Rest>
-	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_ptr<void*[]>& nStrides, uint64_t& stride_index, const First& first, const Rest&... rest);
+	static void processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, intrusive_tracked_list<void*>& nStrides, uint64_t& stride_index, const First& first, const Rest&... rest);
 
 	static Bucket catV(const std::vector<Bucket>& buckets);
 	static Bucket catV(const std::vector<std::reference_wrapper<const Bucket> >& buckets);
@@ -100,6 +102,13 @@ class Bucket{
 	T split_contiguous_(uint64_t splitting) const;
 	template<typename T>
 	T split_bucketed_(uint64_t splitting) const;
+
+    template<typename T>
+    T range_contiguous_(std::vector<std::pair<int64_t, int64_t>> ranges) const;
+    template<typename T>
+    T range_strided_(std::vector<std::pair<int64_t, int64_t>> ranges) const;
+    template<typename T>
+    T range_bucketed_(std::vector<std::pair<int64_t, int64_t>> ranges) const;
 	static Bucket makeCopyBucket(DType dt, const intrusive_ptr<DeviceHolder>& bucks, bool blocked, int64_t bS, int64_t stride_size=0);
 	public:
 		DType dtype;
@@ -112,7 +121,7 @@ class Bucket{
 		Bucket& operator=(const Bucket& b);
 		Bucket& operator=(Bucket&& b);
 
-		const intrusive_ptr<void*[]>& intrusive_strides() const& noexcept {return strides_;}
+		const intrusive_tracked_list<void*>& intrusive_strides() const& noexcept {return strides_;}
 		const intrusive_ptr<DeviceHolder>& intrusive_device() const& noexcept {return buckets_;} 
 
 		static Bucket makeNullBucket(DType dt = DType::Float32, int64_t stride_size=0); //dangerous to use if not immediately initialized right after
@@ -349,6 +358,8 @@ class Bucket{
 		}
 		template<typename T>
 		T split(uint64_t splitting) const;
+        template<typename T>
+        T range(std::vector<std::pair<int64_t, int64_t>> ranges) const;
 		void swap(Bucket&);
 		Bucket bucket_all_indices() const;
 		inline const bool is_strided() const {return strides_blocked == false;}
@@ -356,7 +367,7 @@ class Bucket{
 		//strides are not initialized, and is inteaded to be filled in by the user
 		//it is now going to be assumed that it is no longer blocked
 		inline Bucket new_stride_size(int64_t n_stride_size, bool is_blocked=false) const {
-			return Bucket(buckets_, intrusive_ptr<void*[]>(n_stride_size), n_stride_size, bs, is_blocked, dtype);
+			return Bucket(buckets_, intrusive_tracked_list<void*>(n_stride_size), n_stride_size, bs, is_blocked, dtype);
 		}
 		Bucket copy_strides() const;
 };

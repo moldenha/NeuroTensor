@@ -1,6 +1,7 @@
 #include "../combine.h"
 #include "../compare.h"
 #include "../index.h"
+#include "../min_max.h"
 #include "pool_utilities.hpp"
 
 namespace nt {
@@ -43,7 +44,7 @@ Tensor max_pool1d(Tensor input, int64_t kernel_size, int64_t stride = -1,
     // std::cout << strided.shape() << std::endl;
     //  Tensor arg_max = argmax(strided, -1, true);
     //  std::cout << arg_max << std::endl;
-    auto max_output = strided.max(-1);
+    auto max_output = ::nt::functional::max(strided, -1, false);
     if (return_indices) {
         if (get_bools)
             return list(max_output.values, max_output.indices);
@@ -60,7 +61,7 @@ Tensor max_pool1d(Tensor input, int64_t kernel_size, int64_t stride = -1,
 
 Tensor backward_max_pool1d(SizeRef input_shape, Tensor dldg, Tensor indices) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(dldg, indices);
-    Tensor grad = zeros(input_shape, dldg.dtype);
+    Tensor grad = zeros(input_shape, dldg.dtype());
     Tensor setting = at_tensor_split(grad, indices, -2);
     setting.set_(dldg);
     return std::move(grad);
@@ -70,9 +71,9 @@ Tensor max_unpool1d(Tensor input, Tensor indices, int64_t kernel_size,
                     int64_t stride = -1, int64_t padding = 0,
                     int64_t output_size = -1) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(input, indices);
-    utils::throw_exception(indices.dtype == DType::int64,
+    utils::throw_exception(indices.dtype() == DType::int64,
                            "max_unpool requires indices to be int64 got $",
-                           indices.dtype);
+                           indices.dtype());
     if (stride == -1)
         stride = kernel_size;
     int64_t h_out = (output_size != -1 ? output_size
@@ -82,7 +83,7 @@ Tensor max_unpool1d(Tensor input, Tensor indices, int64_t kernel_size,
         h_out);
     if (padding > 0)
         indices = indices + padding;
-    Tensor unpooled = zeros(input.shape().redo_index(-1, h_out), input.dtype);
+    Tensor unpooled = zeros(input.shape().redo_index(-1, h_out), input.dtype());
     Tensor setting = at_tensor_split(unpooled, indices, -2);
     setting.set_(input);
     if(padding != 0){
@@ -99,7 +100,7 @@ Tensor backward_max_unpool1d(SizeRef input_shape, Tensor dldg, Tensor indices,
     }
     // if (padding > 0)
     //     indices = indices + padding;
-    Tensor grad = zeros(input_shape, dldg.dtype);
+    Tensor grad = zeros(input_shape, dldg.dtype());
     at_tensor_split(dldg, indices, -2, grad);
     return std::move(grad);
 }

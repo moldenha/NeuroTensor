@@ -42,11 +42,11 @@ namespace utils{
 /* template<> void print_format_inner<DType>(std::ostringstream&, std::string_view&, size_t&, const DType&); */
 
 
-namespace memory_details{
-int64_t cpu_memory_allocated = 0;
-int64_t shared_cpu_memory_allocated = 0;
-int64_t meta_memory_allocated = 0;
-}
+// namespace memory_details{
+// int64_t cpu_memory_allocated = 0;
+// int64_t shared_cpu_memory_allocated = 0;
+// int64_t meta_memory_allocated = 0;
+// }
 
 #ifdef USE_PARALLEL
 
@@ -157,7 +157,7 @@ my_tuple::my_tuple(std::tuple<int64_t, int64_t> t)
 {}
 
 my_tuple& my_tuple::operator=(int64_t x){first = x; second = x; return *this;}
-my_tuple& my_tuple::operator=(std::tuple<int64_t, int64_t> x){first = std::get<0>(x); second = std::get<1>(x); return *this;}
+// my_tuple& my_tuple::operator=(std::tuple<int64_t, int64_t> x){first = std::get<0>(x); second = std::get<1>(x); return *this;}
 const int64_t& my_tuple::operator[](const int64_t x) const {if(x == 0){return first;}return second;}
 bool my_tuple::operator==(const int64_t x) const {return (first == x && second == x);}
 bool my_tuple::operator!=(const int64_t x) const {return (first != x && second != x);}

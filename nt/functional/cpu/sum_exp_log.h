@@ -1,5 +1,5 @@
-#ifndef __NT_FUNCTIONAL_CPU_SUM_LOG_EXP_H__
-#define __NT_FUNCTIONAL_CPU_SUM_LOG_EXP_H__
+#ifndef NT_FUNCTIONAL_CPU_SUM_LOG_EXP_H__
+#define NT_FUNCTIONAL_CPU_SUM_LOG_EXP_H__
 
 #include "../../dtype/ArrayVoid.h"
 #include "../../dtype/Scalar.h"
@@ -9,12 +9,12 @@ namespace functional{
 namespace cpu{
 
 
-void _exp(const ArrayVoid& a, ArrayVoid&);
-void _log(const ArrayVoid& a, ArrayVoid& out);
-void _exp_(ArrayVoid& a);
-void _log_(ArrayVoid& a);
-Scalar _accumulate(const ArrayVoid& a, Scalar initial);
-void _sum_every(const ArrayVoid&, ArrayVoid&, int64_t);
+NEUROTENSOR_API void _exp(const ArrayVoid& a, ArrayVoid&);
+NEUROTENSOR_API void _log(const ArrayVoid& a, ArrayVoid& out);
+NEUROTENSOR_API void _exp_(ArrayVoid& a);
+NEUROTENSOR_API void _log_(ArrayVoid& a);
+NEUROTENSOR_API Scalar _accumulate(const ArrayVoid& a, Scalar initial);
+NEUROTENSOR_API void _sum_every(const ArrayVoid&, ArrayVoid&, int64_t);
 
 }
 }

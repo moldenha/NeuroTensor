@@ -21,8 +21,8 @@ int fold_autograd_test(){
 	nt::TensorGrad A(nt::functional::randn({10,3,4,2}));
 	nt::TensorGrad W(nt::functional::randn({3,2,4}));
 
-	nt::TensorGrad B = nt::functional::matmult(A[nt::my_range(2,4)], W);
-	nt::TensorGrad C = nt::functional::matmult(A[nt::my_range(6,8)], W);
+	nt::TensorGrad B = nt::functional::matmult(A[nt::range_(2,4)], W);
+	nt::TensorGrad C = nt::functional::matmult(A[nt::range_(6,8)], W);
 
 	std::cout << B.shape() << ',' << C.shape();
 	nt::TensorGrad fB_1 = B[0];
@@ -56,7 +56,7 @@ int relu_autograd_test(){
 
 	nt::TensorGrad A(nt::functional::randn({3,4,2}));
 	nt::TensorGrad myScalar(0.5f);
-	A.tensor[A.tensor < 0.01] *= -1;
+	A.detach()[A.detach() < 0.01] *= -1;
 	nt::Tensor track = nt::functional::where(A <= 0);
 	auto shape = A[A <= 0].shape();
 	nt::TensorGrad Add_Branch(nt::functional::randn(shape));
@@ -243,7 +243,7 @@ int linear_autograd_test(){
 	A = c.forward(A);
 	A.zero_grad();
 
-	nt::Tensor dA = nt::functional::randn(A.tensor.shape());
+	nt::Tensor dA = nt::functional::randn(A.detach().shape());
 	std::cout << "dA: "<<dA<<std::endl;
 	A.backward(dA);
 

@@ -1,5 +1,5 @@
-#ifndef _NT_MATMULT_BLOCKS_H_
-#define _NT_MATMULT_BLOCKS_H_
+#ifndef NT_MATMULT_BLOCKS_H__
+#define NT_MATMULT_BLOCKS_H__
 
 #include <cstddef>
 #include <cstdint>

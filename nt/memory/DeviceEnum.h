@@ -1,5 +1,5 @@
-#ifndef _NT_DEVICE_ENUM_H_
-#define _NT_DEVICE_ENUM_H_
+#ifndef NT_DEVICE_ENUM_H__
+#define NT_DEVICE_ENUM_H__
 
 namespace nt{
 

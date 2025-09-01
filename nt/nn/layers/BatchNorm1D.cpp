@@ -21,8 +21,8 @@ BatchNorm1D::BatchNorm1D(int64_t num_features, double epsilon, double momentum,
     if(affine){
         this->register_parameter("gamma", gamma);
         this->register_parameter("beta", beta);
-        gamma.tensor.set_mutability(false);
-        beta.tensor.set_mutability(false);
+        gamma.detach().set_mutability(false);
+        beta.detach().set_mutability(false);
     }
 }
 

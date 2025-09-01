@@ -1,5 +1,5 @@
-#ifndef _NT_UTILS_H_
-#define _NT_UTILS_H_
+#ifndef NT_UTILS_H__
+#define NT_UTILS_H__
 #include <iostream>
 #include <sstream>
 #include <string_view>
@@ -26,9 +26,9 @@
 #include <tbb/blocked_range3d.h>
 #include <thread>
 #endif
-#include "../memory/DeviceEnum.h"
 #include <cstdint>
 #include <limits>
+#include "api_macro.h"
 
 
 #ifdef _MSC_VER
@@ -38,26 +38,10 @@
 #endif
 
 namespace nt{
-template<class T>struct tag_t{};
-template<class T>constexpr tag_t<T> tag{};
+// template<class T>struct tag_t{};
+// template<class T>constexpr tag_t<T> tag{};
 
 namespace utils{
-
-/* template <typename T> */
-/* struct IsInitializerList : std::false_type {}; */
-
-/* template <typename T> */
-/* struct IsInitializerList<std::initializer_list<T>> : std::true_type {}; */
-
-/* template<typename T> */
-/* constexpr bool IsInitializerList_t = IsInitializerList<T>::value; */
-
-
-/* template <typename T> */
-/* struct InitializerList_size{ */
-/* 	using type = std::conditional_t<IsInitializerList_t<T>, T::value_type, T>; */
-/* 	std::size_t value = !IsInitializerList_t<T> ? 0 : 1 + InitializerList_size<type>::value; */
-/* }; */
 
 
 
@@ -142,6 +126,24 @@ inline bool endsWith(const char* str, const char* suffix) {
     return strncmp(str + str_len - suffix_len, suffix, suffix_len) == 0;
 }
 
+namespace details{
+template<typename T>
+inline std::ostream& print_to_stringstream(std::ostringstream& out, const T& var){
+    return out << var;
+}
+
+template<typename T>
+inline std::ostream& print_to_stringstream(std::ostringstream& out, const std::vector<T>& var){
+    out << '{';
+    for(size_t i = 0; i < var.size()-1; ++i){
+        out << var[i] << ',';
+    }
+    out << var.back() << '}';
+    return out;
+}
+
+}
+
 template<typename T>
 inline void print_format_inner(std::ostringstream& out, std::string_view& str, size_t& last_pos, const T& var){
 	size_t pos = str.substr(last_pos, str.size()).find('$');
@@ -154,7 +156,7 @@ inline void print_format_inner(std::ostringstream& out, std::string_view& str, s
 		return;
 	}
 	out << str.substr(last_pos, pos);
-	out << var;
+    details::print_to_stringstream(out, var);
 	last_pos += pos + 1;
 }
 
@@ -201,7 +203,8 @@ inline void throw_exception_2(const bool err, std::string_view str, const char* 
 
 }} //nt::utils::
 
-#include "memory_limits.h"
+#include "../memory/track_memory.h"
+
 
 namespace nt{
 namespace utils{
@@ -229,16 +232,16 @@ inline void flatten_func(const typename NestedInitializerLists_type<T, N>::type&
 	}
 }
 
-void beginDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width=50);
-void printDualProgressBar(uint32_t progress_a, uint32_t total_a, uint32_t progress_b, uint32_t total_b, uint32_t width=50);
-void endDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width=50);
-void printProgressBar(uint32_t progress, uint32_t total, std::string add = "", uint32_t width = 50);
+NEUROTENSOR_API void beginDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width=50);
+NEUROTENSOR_API void printDualProgressBar(uint32_t progress_a, uint32_t total_a, uint32_t progress_b, uint32_t total_b, uint32_t width=50);
+NEUROTENSOR_API void endDualProgressBar(uint32_t total_a, uint32_t total_b, uint32_t width=50);
+NEUROTENSOR_API void printProgressBar(uint32_t progress, uint32_t total, std::string add = "", uint32_t width = 50);
 
 #ifdef USE_PARALLEL
-void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string add = "", uint32_t width = 50);
+NEUROTENSOR_API void printThreadingProgressBar(uint32_t progress, uint32_t total, std::string add = "", uint32_t width = 50);
 
-bool isPipeReadable(int pipefd);
-bool pid_still_running(pid_t pid);
+NEUROTENSOR_API bool isPipeReadable(int pipefd);
+NEUROTENSOR_API bool pid_still_running(pid_t pid);
 
 inline bool pids_still_running(const std::vector<pid_t>& pids){
 	for(auto begin = pids.cbegin(); begin != pids.cend(); ++begin)
@@ -333,14 +336,35 @@ inline tbb::blocked_range3d<int64_t> calculateGrainSize3D(int64_t pages_start, i
 #endif
 
 
-class my_tuple{
+class NEUROTENSOR_API my_tuple{
 	int64_t first, second;
 	public:
 		my_tuple(const int64_t a, const int64_t b);
 		my_tuple(const int64_t a);
-	    my_tuple(std::tuple<int64_t, int64_t> t);
+        template<typename T, std::enable_if_t<std::is_convertible_v<T, int64_t> && !std::is_same_v<T, int64_t>, bool> = true>
+        my_tuple(const T val) : first(static_cast<int64_t>(val)), second(static_cast<int64_t>(val)) {}
+	    explicit my_tuple(std::tuple<int64_t, int64_t> t);
+        template<typename T2>
+        my_tuple(std::initializer_list<T2> ls){
+            throw_exception(ls.size() == 2, "Expected initializer list for tuple to have 2 variables");
+            auto begin = ls.begin();
+            first = static_cast<int64_t>(*begin);
+            ++begin;
+            second = static_cast<int64_t>(*begin);
+        }
+        
 		my_tuple& operator=(int64_t x);
-		my_tuple& operator=(std::tuple<int64_t, int64_t> x);
+        template<typename T2>
+        inline my_tuple& operator=(std::initializer_list<T2> ls){
+            throw_exception(ls.size() == 2, "Expected initializer list for tuple to have 2 variables");
+            auto begin = ls.begin();
+            first = static_cast<int64_t>(*begin);
+            ++begin;
+            second = static_cast<int64_t>(*begin);
+            return *this;
+        }
+ 
+		// my_tuple& operator=(std::tuple<int64_t, int64_t> x);
 		const int64_t& operator[](const int64_t x) const;
 		bool operator==(const int64_t x) const ;
 		bool operator!=(const int64_t x) const ;
@@ -350,7 +374,7 @@ class my_tuple{
 		bool operator <= (const int64_t x) const ;
 };
 
-std::ostream& operator<<(std::ostream& out, const my_tuple& t);
+NEUROTENSOR_API std::ostream& operator<<(std::ostream& out, const my_tuple& t);
 
 
 
@@ -367,7 +391,7 @@ struct generate_tuple_type_n<T, 0, REST...> {
 };
 
 template<size_t N>
-class my_n_tuple{
+class NEUROTENSOR_API my_n_tuple{
 	std::array<int64_t, N> arr;
 
 	inline void set_array(int64_t index){}
@@ -396,15 +420,41 @@ class my_n_tuple{
 
 		my_n_tuple(const int64_t a);
 
-		inline my_n_tuple(typename generate_tuple_type_n<int64_t, N>::type t){
-			set_array_tuple(t, std::make_index_sequence<N>{});
-		}
+        template<typename T, std::enable_if_t<std::is_convertible_v<T, int64_t> && !std::is_same_v<T, int64_t>, bool> = true>
+        my_n_tuple(const T val){
+            for(size_t i = 0; i < N; ++i){arr[i] = val;}
+        }
+
+
+        template<typename T2>
+        my_n_tuple(std::initializer_list<T2> ls){
+            throw_exception(ls.size() == N, "Expected initializer list for tuple to have $ variables", N);
+            auto begin = ls.begin();
+            int64_t index = 0;
+            for(;begin != ls.end(); ++begin, ++index)
+                arr[index] = *begin;
+        }
+        
+        template<typename T2>
+        inline my_n_tuple& operator=(std::initializer_list<T2> ls){
+            throw_exception(ls.size() == N, "Expected initializer list for tuple to have $ variables", N);
+            auto begin = ls.begin();
+            int64_t index = 0;
+            for(;begin != ls.end(); ++begin, ++index)
+                arr[index] = *begin;
+            return *this;
+        }
+
+
+		// inline my_n_tuple(typename generate_tuple_type_n<int64_t, N>::type t){
+		// 	set_array_tuple(t, std::make_index_sequence<N>{});
+		// }
 
 		my_n_tuple& operator=(int64_t x);
-		inline my_n_tuple& operator=(typename generate_tuple_type_n<int64_t, N>::type t){
-			set_array_tuple(t, std::make_index_sequence<N>{});
-            return *this;
-		}
+		// inline my_n_tuple& operator=(typename generate_tuple_type_n<int64_t, N>::type t){
+		// 	set_array_tuple(t, std::make_index_sequence<N>{});
+            // return *this;
+		// }
 		const int64_t& operator[](const int64_t x) const; 
 		bool operator==(const int64_t x) const ;
         bool operator!=(const int64_t x) const; 
@@ -416,9 +466,9 @@ class my_n_tuple{
 
 
 template<std::size_t N>
-std::ostream& operator<<(std::ostream& out, const my_n_tuple<N>& t);
+NEUROTENSOR_API std::ostream& operator<<(std::ostream& out, const my_n_tuple<N>& t);
 
-class tuple_or_int{
+class NEUROTENSOR_API tuple_or_int{
 	std::variant<int64_t, std::tuple<int64_t, int64_t>> val;
 	public:
 		tuple_or_int(int64_t x);
@@ -431,49 +481,6 @@ class tuple_or_int{
 };
 
 
-namespace memory_details{
-extern int64_t cpu_memory_allocated;
-extern int64_t shared_cpu_memory_allocated;
-extern int64_t meta_memory_allocated;
-
-}
-
-inline int64_t& AllocatedMemory(DeviceType dt){
-	switch(dt){
-		case DeviceType::META:
-			return memory_details::meta_memory_allocated;
-		case DeviceType::CPU:
-			return memory_details::cpu_memory_allocated;
-		case DeviceType::CPUShared:
-			return memory_details::shared_cpu_memory_allocated;
-		default:
-			return memory_details::meta_memory_allocated;
-	}
-}
-
-inline int64_t MaxMemory(DeviceType dt){
-	switch(dt){
-		case DeviceType::META:
-			return -1;
-		case DeviceType::CPU:
-			return std::numeric_limits<int64_t>::max();
-		case DeviceType::CPUShared:
-			return get_shared_memory_max();
-
-	}
-}
-
-inline void CheckAllocation(DeviceType dt, int64_t bytes){
-	int64_t& curMem = AllocatedMemory(dt);
-	int64_t maxMem = MaxMemory(dt);
-	throw_exception((maxMem - curMem - bytes) >= 0,
-			"Trying to allocate $ bytes of memory on $, but already allocated $ and there is a max of $ bytes to allocate", bytes, dt, curMem, maxMem);
-	curMem += bytes;
-}
-
-inline void DeallocateMemory(DeviceType dt, int64_t bytes){
-	AllocatedMemory(dt) -= bytes;
-}
 
 //struct to reverse an index_sequence
 template <typename Seq, std::size_t N>
@@ -540,6 +547,33 @@ inline static constexpr bool is_all_same_v = is_all_same<T, Args...>::value;
 
 inline thread_local bool g_print_dtype_on_tensor = true;
 
+
+template<typename T, typename... Ts>
+struct contains_type;
+
+template<typename T>
+struct contains_type<T> : std::false_type {};
+
+template<typename T, typename First, typename... Rest>
+struct contains_type<T, First, Rest...> 
+    : std::conditional_t<std::is_same<T, First>::value,
+                         std::true_type,
+                         contains_type<T, Rest...>> {};
+
+template<typename T, typename... Ts>
+struct contains_decayed_type;
+
+template<typename T>
+struct contains_decayed_type<T> : std::false_type {};
+
+template<typename T, typename First, typename... Rest>
+struct contains_decayed_type<T, First, Rest...> 
+    : std::conditional_t<std::is_same<T, std::decay_t<First>>::value,
+                         std::true_type,
+                         contains_type<T, Rest...>> {};
+
+
+
 } //nt::utils::
 
 inline std::ostream& noprintdtype(std::ostream& os) {
@@ -592,4 +626,4 @@ inline std::ostream& printdtype(std::ostream& os) {
 
 // }
 
-#endif // _NT_UTILS_H_
+#endif // NT_UTILS_H__

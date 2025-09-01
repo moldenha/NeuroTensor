@@ -6,14 +6,15 @@
 #include "softmax.h"
 #include "fill.h"
 #include "exceptions.hpp"
+#include <set>
 
 namespace nt {
 namespace functional {
 
 //ln(x)
-Tensor log(Tensor x){
+Tensor log(const Tensor& x){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
-    if(x.dtype == DType::TensorObj){
+    if(x.dtype() == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(x.numel());
         Tensor* begin = reinterpret_cast<Tensor*>(out.data_ptr());
         Tensor* end = reinterpret_cast<Tensor*>(out.data_ptr_end());
@@ -24,17 +25,34 @@ Tensor log(Tensor x){
         });
         return out.view(x.shape());
     }
-    utils::throw_exception(x.dtype != DType::Bool, "Cannot take the log of boolean values");
-    Tensor out(x.shape(), x.dtype);
+    utils::throw_exception(x.dtype() != DType::Bool, "Cannot take the log of boolean values");
+    Tensor out(x.shape(), x.dtype());
     cpu::_log(x.arr_void(), out.arr_void());
     return std::move(out);
 }
 
-//derivative of ln(x) is just 1/x
-Tensor dlog(Tensor x){return x.inverse();}
-Tensor exp(Tensor x){
+Tensor& log_(Tensor& x){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
-   if(x.dtype == DType::TensorObj){
+    utils::throw_exception(x.is_mutable(), "Can only perform log_ on a mutable tensor");
+    if(x.dtype() == DType::TensorObj){
+        x.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+            for(;begin != end; ++begin){
+                log_(*begin);
+            }
+        });
+        return x;
+    }
+    utils::throw_exception(x.dtype() != DType::Bool, "Cannot take the log of boolean values");
+    cpu::_log(x.arr_void(), x.arr_void());
+    return x;
+}
+
+
+//derivative of ln(x) is just 1/x
+Tensor dlog(const Tensor& x){return x.inverse();}
+Tensor exp(const Tensor& x){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
+   if(x.dtype() == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(x.numel());
         Tensor* begin = reinterpret_cast<Tensor*>(out.data_ptr());
         Tensor* end = reinterpret_cast<Tensor*>(out.data_ptr_end());
@@ -45,11 +63,29 @@ Tensor exp(Tensor x){
         });
         return out.view(x.shape());
     }
-    utils::throw_exception(x.dtype != DType::Bool, "Cannot take the log of boolean values");
-    Tensor out(x.shape(), x.dtype);
+    utils::throw_exception(x.dtype() != DType::Bool, "Cannot take the log of boolean values");
+    Tensor out(x.shape(), x.dtype());
     cpu::_exp(x.arr_void(), out.arr_void());
     return std::move(out);    
 }
+
+Tensor& exp_(Tensor& x){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
+    utils::throw_exception(x.is_mutable(), "Can only perform exp_ on a mutable tensor");
+    if(x.dtype() == DType::TensorObj){
+        x.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
+            for(;begin != end; ++begin){
+                exp_(*begin);
+            }
+        });
+        return x;
+    }
+    utils::throw_exception(x.dtype() != DType::Bool, "Cannot take the log of boolean values");
+    cpu::_exp(x.arr_void(), x.arr_void());
+    return x; 
+}
+
+
 
 
 
@@ -59,7 +95,7 @@ Tensor sum_one(const Tensor &t, Tensor::size_value_t dim) {
     if (dim == t.dims() || dim == (-1) * (t.dims() + 1))
         return t;
     dim = dim < 0 ? dim + t.dims() : dim;
-    if (t.dtype == DType::TensorObj) {
+    if (t.dtype() == DType::TensorObj) {
         Tensor outp(t.shape(), DType::TensorObj);
         t.arr_void().transform_function<DType::TensorObj>(
             [&dim](const Tensor &output) -> Tensor { return sum(output, dim); },
@@ -70,7 +106,7 @@ Tensor sum_one(const Tensor &t, Tensor::size_value_t dim) {
         if(dim == -1 || dim == (t.dims()-1)){
             SizeRef out_shape = t.shape().clone();
             out_shape = out_shape.redo_index(-1, 1);
-            Tensor out = zeros(std::move(out_shape), t.dtype);
+            Tensor out = zeros(std::move(out_shape), t.dtype());
             cpu::_sum_every(t.arr_void(), out.arr_void(), t.shape()[-1]);
             return std::move(out);
         }
@@ -99,9 +135,9 @@ Tensor sum_one(const Tensor &t, Tensor::size_value_t dim) {
     return a.view(SizeRef(std::move(Vec)));
 }
 
-Tensor sum(Tensor x, utils::optional_list list, bool keepdim){
+Tensor sum(const Tensor& x, utils::optional_list list, bool keepdim){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
-    if (x.dtype == DType::TensorObj) {
+    if (x.dtype() == DType::TensorObj) {
         Tensor outp(x.shape(), DType::TensorObj);
         x.arr_void().transform_function<DType::TensorObj>(
             [&](const Tensor &output) -> Tensor {
@@ -111,7 +147,7 @@ Tensor sum(Tensor x, utils::optional_list list, bool keepdim){
         return std::move(outp);
     }
     if (!list) {
-        Tensor outp(1, x.dtype);
+        Tensor outp(1, x.dtype());
         outp = cpu::_accumulate(x.arr_void(), 0);
         if (keepdim) {
             std::vector<SizeRef::ArrayRefInt::value_type> Vec(x.dims());
@@ -120,35 +156,48 @@ Tensor sum(Tensor x, utils::optional_list list, bool keepdim){
         }
         return std::move(outp);
     }
+    const int64_t& dims = x.dims();
+    std::for_each(list.begin(), list.end(), [&dims](auto& val){val = (val < 0) ? val + dims : val;});
+
     int64_t dim = list[0] < 0 ? list[0] + x.dims() : list[0];
     Tensor output = sum_one(x, dim);
     for (auto begin = list->cbegin() + 1; begin != list->cend(); ++begin) {
         dim = *begin < 0 ? *begin + x.dims() : *begin;
         output = sum_one(output, dim);
     }
-    if (!keepdim) {
-        return output.squeeze();
+    if(!keepdim){
+        std::set<int64_t> remove_set(list.cbegin(), list.cend());
+        std::vector<int64_t> n_shape;
+        n_shape.reserve(x.dims() - list->size());
+        const auto& shape = x.shape();
+        for(int64_t i = 0; i < shape.size(); ++i){
+            if(remove_set.find(i) == remove_set.end()) {
+                n_shape.push_back(shape[i]);
+            }
+        }
+        return output.view(SizeRef(std::move(n_shape)));
     }
     return std::move(output);
 }
 
-void dsum(Tensor grad, Tensor& out, SizeRef summed_shape){
+void dsum(const Tensor& grad, Tensor& out, SizeRef summed_shape){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, out);
     out += grad.view(summed_shape).expand(out.shape());
 }
 
 //an optimized version of this will be added
-Tensor logsumexp(Tensor x, utils::optional_list list,
+Tensor logsumexp(const Tensor& x, utils::optional_list list,
                  bool keepdim){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     return log(sum(exp(x), list, keepdim));
 }
-Tensor dlogsumexp(Tensor grad, Tensor x, utils::optional_list list){
-    _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, x);
+Tensor dlogsumexp(const Tensor& _grad, const Tensor& x, utils::optional_list list){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(_grad, x);
     if(!list){
-        return grad * softmax_stable(x);
+        return _grad * softmax_stable(x);
     }
     utils::throw_exception(list->size() == 1, "logsumexp gradient is not implemented for more than 1 dimension currently");
+    Tensor grad = _grad;
     if(grad.dims() != x.dims()){
         utils::THROW_EXCEPTION(x.dims() - grad.dims() == 1, "EXPECTED SIZE DIFF 1 INTERNAL LOGIC ERROR");
         std::vector<int64_t> n_grad_shape = grad.shape().Vec();
@@ -157,7 +206,7 @@ Tensor dlogsumexp(Tensor grad, Tensor x, utils::optional_list list){
         grad = grad.view(SizeRef(n_grad_shape));
     }
     Tensor out = grad * softmax_stable(x, list[0]);
-    return out;
+    return std::move(out);
 }
 
 } // namespace functional

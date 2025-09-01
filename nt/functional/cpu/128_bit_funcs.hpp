@@ -2,7 +2,7 @@
 #define NT_FUNCTIONAL_CPU_128_BIT_FUNCS_HPP__
 
 #include "../../types/Types.h"
-#include "../../convert/std_convert.h"
+#include "../../convert/Convert.h"
 #include <cmath>
 #include <math.h>
 
@@ -13,9 +13,9 @@ namespace std{
 
 #define NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(func)\
 inline ::nt::float128_t func(const ::nt::float128_t& x){\
-    double _x = ::nt::convert::convert<double, ::nt::float128_t>(x);\
+    double _x = ::nt::convert::convert<double>(x);\
     double _r = func(_x);\
-    return ::nt::convert::convert<::nt::float128_t, double>(_r);\
+    return ::nt::convert::convert<::nt::float128_t>(_r);\
 }\
 
 NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(exp);
@@ -40,10 +40,10 @@ NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE(cos);
 #undef NT_MAKE_BOOST_FLOAT128_FUNCTION_ROUTE
 
 inline ::nt::float128_t pow(const ::nt::float128_t& a, const ::nt::float128_t& b){
-    double _a = ::nt::convert::convert<double, ::nt::float128_t>(a);
-    double _b = ::nt::convert::convert<double, ::nt::float128_t>(b);
+    double _a = ::nt::convert::convert<double>(a);
+    double _b = ::nt::convert::convert<double>(b);
     double _r = pow(_a, _b);
-    return ::nt::convert::convert<::nt::float128_t, double>(_r);
+    return ::nt::convert::convert<::nt::float128_t>(_r);
 }
 
 }
@@ -59,9 +59,9 @@ namespace std{
 
 #define __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, func_name)\
 inline type func_name(type t){\
-    ::nt::float128_t _t = ::nt::convert::convert<::nt::float128_t, type>(t);\
+    ::nt::float128_t _t = ::nt::convert::convert<::nt::float128_t>(t);\
     ::nt::float128_t _r = func_name(_t);\
-    return ::nt::convert::convert<type, ::nt::float128_t>(_r);\
+    return ::nt::convert::convert<type>(_r);\
 }
 
 #define NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type)\
@@ -82,7 +82,6 @@ __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, sin)\
 __NT_MAKE_LARGE_STD_FUNCTION_ROUTE(type, cos)\
 
 
-#ifdef __SIZEOF_INT128__
 NT_MAKE_LARGE_STD_FUNCTION_ROUTE(::nt::int128_t)
 inline ::nt::int128_t pow(::nt::int128_t a, ::nt::int128_t b){
     long double _a = static_cast<long double>(::nt::convert::convert<int64_t>(a));
@@ -101,7 +100,6 @@ inline ::nt::uint128_t pow(::nt::uint128_t a, ::nt::uint128_t b){
     return ::nt::convert::convert<::nt::uint128_t>(__r);
 }
 
-#endif
 
 // #undef NT_MAKE_STD_FUNCTION_ROUTE_LOG
 // #undef NT_MAKE_STD_FUNCTION_ROUTE_EXP

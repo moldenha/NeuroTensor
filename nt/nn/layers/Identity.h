@@ -1,5 +1,5 @@
-#ifndef _NT_LAYERS_IDENTITY_H_
-#define _NT_LAYERS_IDENTITY_H_
+#ifndef NT_LAYERS_IDENTITY_H_
+#define NT_LAYERS_IDENTITY_H_
 
 #include "../../Tensor.h"
 #include "../Module.h"
@@ -8,7 +8,7 @@
 namespace nt {
 namespace layers {
 
-class Identity : public Module {
+class NEUROTENSOR_API Identity : public Module {
   public:
     Identity() = default;
 };

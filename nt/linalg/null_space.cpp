@@ -71,7 +71,7 @@ Tensor get_reduced_rows_null_space(const Tensor& t, bool pivots_first){
     // std::cout << "null space is {"<<cols<<','<<free_vars<<"} "<<rows<<',' << cols<<std::endl;
 
     if(pivots_first){
-        Tensor null_space = functional::zeros({free_vars, rows}, t.dtype);
+        Tensor null_space = functional::zeros({free_vars, rows}, t.dtype());
         #ifdef USE_PARALLEL
         null_space.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> > (
             [&](auto begin, auto end, auto begin2){
@@ -105,7 +105,7 @@ Tensor get_reduced_rows_null_space(const Tensor& t, bool pivots_first){
         #endif
         return std::move(null_space);
     }
-    Tensor null_space = functional::zeros({rows, free_vars}, t.dtype);
+    Tensor null_space = functional::zeros({rows, free_vars}, t.dtype());
     #ifdef USE_PARALLEL
     null_space.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> > (
         [&](auto begin, auto end, auto begin2){
@@ -145,7 +145,7 @@ Tensor get_reduced_rows_null_space(const Tensor& t, bool pivots_first){
 
 Tensor reduced_null_space(const Tensor& t, bool pivot_rows, bool pivot_first) { 
     utils::throw_exception(t.dims() == 2, "expected to get the null space of a reduced matrix");
-    utils::throw_exception(t.dtype != DType::Bool && t.dtype != DType::TensorObj, "Can only find the null space of numerical types, got $", t.dtype);
+    utils::throw_exception(t.dtype() != DType::Bool && t.dtype() != DType::TensorObj, "Can only find the null space of numerical types, got $", t.dtype());
     if(pivot_rows){return get_reduced_rows_null_space(t, pivot_first);}
     Tensor rT = t;
     const int64_t& rows = t.shape()[0];
@@ -184,7 +184,7 @@ Tensor reduced_null_space(const Tensor& t, bool pivot_rows, bool pivot_first) {
 
 
     if(!pivot_first){
-        Tensor null_space = functional::zeros({cols, free_vars}, t.dtype);
+        Tensor null_space = functional::zeros({cols, free_vars}, t.dtype());
         #ifdef USE_PARALLEL
         null_space.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> > (
             [&](auto begin, auto end, auto begin2){
@@ -218,7 +218,7 @@ Tensor reduced_null_space(const Tensor& t, bool pivot_rows, bool pivot_first) {
         #endif
         return std::move(null_space);
     }
-   Tensor null_space = functional::zeros({free_vars, cols}, t.dtype);
+   Tensor null_space = functional::zeros({free_vars, cols}, t.dtype());
     #ifdef USE_PARALLEL
     null_space.arr_void().execute_function<WRAP_DTYPES<NumberTypesL> > (
         [&](auto begin, auto end, auto begin2){
@@ -257,7 +257,7 @@ Tensor reduced_null_space(const Tensor& t, bool pivot_rows, bool pivot_first) {
 Tensor null_space(const Tensor& _t, std::string mode){
     utils::throw_exception(mode == "svd" || mode == "lu", "Only accepted modes for null space computation are 'svd' and 'lu' got '$'", mode);
     return runEigenFunction(_t, [&mode](auto& mat) -> Tensor{
-        using MatrixType = std::remove_cvref_t<decltype(mat)>;
+        using MatrixType = ::nt::type_traits::remove_cvref_t<decltype(mat)>;
         using ScalarType = typename MatrixType::Scalar;
         if(mode == "lu"){
             auto _n = lu_null_space_eigen(mat);

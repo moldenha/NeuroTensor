@@ -1,5 +1,5 @@
-#ifndef _NT_THREADING_H_
-#define _NT_THREADING_H_
+#ifndef NT_THREADING_H__
+#define NT_THREADING_H__
 
 #include <array>
 #include <type_traits>
@@ -18,6 +18,8 @@
 	#include <tbb/blocked_range2d.h>
 	#include <tbb/blocked_range3d.h>
 #endif
+
+#include "../utils/api_macro.h"
 
 /* #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__) */
 /*     // Compiler supports AVX, AVX2, and AVX-512F instruction sets */
@@ -286,7 +288,7 @@ class block_ranges;
 
 
 template<size_t N>
-class blocked_range{
+class NEUROTENSOR_API blocked_range{
 	public:
 		std::array<int64_t, N> begin;
 		std::array<int64_t, N> end;
@@ -432,7 +434,7 @@ inline std::ostream& operator << (std::ostream& os, const blocked_range<N>& b){
 //this will probably replace the tbb::parallel_for in most of its implementations
 //unless tbb::parallel_for is faster, then this will only be used for child processes made with fork()
 template<size_t N>
-class block_ranges{
+class NEUROTENSOR_API block_ranges{
 	std::vector<blocked_range<N>> blocks;
 	std::array<std::pair<int64_t, int64_t>, N> pairs;
 	static_assert(N > 0, "Must have an N greater than 0 for block_ranges");
@@ -645,4 +647,4 @@ in_func example:
 #include "iterator_parallel_for.hpp"
 
 
-#endif // _NT_THREADING_H_
+#endif // NT_THREADING_H__

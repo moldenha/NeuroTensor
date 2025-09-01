@@ -14,10 +14,10 @@ namespace tda {
 
 // this is to make maps
 std::map<double, int64_t> make_simplex_radi_map(const Tensor &simplex_radi) {
-    utils::THROW_EXCEPTION(simplex_radi.dtype == DType::Float64,
+    utils::THROW_EXCEPTION(simplex_radi.dtype() == DType::Float64,
                            "Expected to get simplex radi with dtype "
                            "Float64 but got $ when making map",
-                           simplex_radi.dtype);
+                           simplex_radi.dtype());
     std::map<double, int64_t> out;
     simplex_radi.arr_void()
         .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Float64>>>(
@@ -43,13 +43,13 @@ std::map<double, int64_t> make_simplex_radi_map(const Tensor &simplex_radi) {
 std::map<double, std::array<int64_t, 2>>
 make_simplex_radi_map(const Tensor &r1, const Tensor &r2) {
     utils::THROW_EXCEPTION(
-        r1.dtype == r2.dtype,
+        r1.dtype() == r2.dtype(),
         "Expected radi for both tensors r1 ($) and r2 ($) to be the same",
-        r1.dtype, r2.dtype);
-    utils::THROW_EXCEPTION(r1.dtype == DType::Float64,
+        r1.dtype(), r2.dtype());
+    utils::THROW_EXCEPTION(r1.dtype() == DType::Float64,
                            "Expected to get simplex radi with dtype "
                            "Float64 but got $ when making map",
-                           r1.dtype);
+                           r1.dtype());
     std::map<double, int64_t> s1 = make_simplex_radi_map(r1);
     std::map<double, int64_t> s2 = make_simplex_radi_map(r2);
     std::map<double, std::array<int64_t, 2>> out;
@@ -84,10 +84,10 @@ make_simplex_radi_map(const Tensor &r1, const Tensor &r2) {
 
 std::map<double, std::array<int64_t, 2>>
 make_simplex_radi_map(const Tensor &simplex_radi, int64_t input) {
-    utils::THROW_EXCEPTION(simplex_radi.dtype == DType::Float64,
+    utils::THROW_EXCEPTION(simplex_radi.dtype() == DType::Float64,
                            "Expected to get simplex radi with dtype "
                            "Float64 but got $ when making map",
-                           simplex_radi.dtype);
+                           simplex_radi.dtype());
     std::map<double, std::array<int64_t, 2>> out;
     simplex_radi.arr_void()
         .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Float64>>>(
@@ -112,10 +112,10 @@ make_simplex_radi_map(const Tensor &simplex_radi, int64_t input) {
 
 std::map<double, std::array<int64_t, 2>>
 make_simplex_radi_map(int64_t input, const Tensor &simplex_radi) {
-    utils::THROW_EXCEPTION(simplex_radi.dtype == DType::Float64,
+    utils::THROW_EXCEPTION(simplex_radi.dtype() == DType::Float64,
                            "Expected to get simplex radi with dtype "
                            "Float64 but got $ when making map",
-                           simplex_radi.dtype);
+                           simplex_radi.dtype());
     std::map<double, std::array<int64_t, 2>> out;
     simplex_radi.arr_void()
         .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::Float64>>>(
@@ -154,7 +154,7 @@ SparseTensor boundary_to_radius(std::map<double, std::array<int64_t, 2>> &map,
     const int64_t &y_max = begin->second[1];
     utils::THROW_EXCEPTION(x_max > 0 && y_max > 0,
                            "Too low of radius, got 0 as an index");
-    return boundary[{my_range(0, x_max), my_range(0, y_max)}];
+    return boundary(range> x_max, range> y_max);
 }
 
 SparseTensor boundary_to_radius(const std::array<int64_t, 2> &keys,
@@ -163,7 +163,7 @@ SparseTensor boundary_to_radius(const std::array<int64_t, 2> &keys,
     const int64_t &y_max = keys[1];
     utils::THROW_EXCEPTION(x_max > 0 && y_max > 0,
                            "Too low of radius, got 0 as an index");
-    return boundary[{my_range(0, x_max), my_range(0, y_max)}];
+    return boundary(range> x_max, range> y_max);
 }
 
 Tensor extract_columns(const Tensor &space, const Tensor &cols) {
@@ -184,7 +184,7 @@ Tensor extract_columns(const Tensor &space, const Tensor &cols) {
     if (count == 0) {
         return Tensor::Null();
     }
-    Tensor out({space.shape()[0], count}, space.dtype);
+    Tensor out({space.shape()[0], count}, space.dtype());
     float *ptr = reinterpret_cast<float *>(out.data_ptr());
 
     const int64_t &num_cols = space.shape()[-1];
@@ -220,7 +220,7 @@ Tensor extract_columns(const Tensor &space, Tensor &cols, int64_t min) {
         return Tensor::Null();
     }
     int64_t count = col_end - col_begin;
-    Tensor out({space.shape()[0], count}, space.dtype);
+    Tensor out({space.shape()[0], count}, space.dtype());
     float *ptr = reinterpret_cast<float *>(out.data_ptr());
     const int64_t &num_cols = space.shape()[-1];
     const float *begin = reinterpret_cast<const float *>(space.data_ptr());

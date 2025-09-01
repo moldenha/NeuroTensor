@@ -58,11 +58,11 @@ Tensor eye(int64_t n, int64_t b, DType dtype){
 Tensor eye_like(const Tensor& t){
 	utils::throw_exception(t.dims() >= 2, "Expected to make identity matrix with dimensions greater than or equal to 2 but got $", t.dims());
 	if(t.dims() == 2){
-		return eye(t.shape()[-1], 0, t.dtype);
+		return eye(t.shape()[-1], 0, t.dtype());
 	}
 	auto vec = t.shape().Vec();
 	vec[vec.size()-2] = vec.back();
-	return eye(t.shape()[-1], t.shape().flatten(0, -3)[0], t.dtype).view(SizeRef(std::move(vec)));
+	return eye(t.shape()[-1], t.shape().flatten(0, -3)[0], t.dtype()).view(SizeRef(std::move(vec)));
 }
 
 

@@ -21,8 +21,14 @@ nt::Tensor combinations(nt::Tensor vec, int64_t r, int64_t start){
     nt::utils::throw_exception(vec.dims() == 1, "Expected to get a vector of dimensions 1 but got dimensionality of $", vec.dims());
     const int64_t n = vec.shape()[0];
     nt::Tensor myints = nt::functional::arange(r, nt::DType::int64, start);
-    nt::Tensor out = nt::Tensor::makeNullTensorArray(num_combinations(n, r));
+    // nt::Tensor out = nt::Tensor::makeNullTensorArray(num_combinations(n, r));
+    nt::Tensor out({num_combinations(n, r)}, DType::TensorObj);
     nt::Tensor* begin = reinterpret_cast<nt::Tensor*>(out.data_ptr());
+    Tensor* end = begin + out.numel();
+    for(;begin != end; ++begin){
+        *begin = Tensor(nullptr);
+    }
+    begin = reinterpret_cast<nt::Tensor*>(out.data_ptr());
     *begin = vec[myints];
     ++begin;
     int64_t* first = reinterpret_cast<int64_t*>(myints.data_ptr());

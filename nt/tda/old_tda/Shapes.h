@@ -139,7 +139,7 @@ inline void set(uint8_t* ptr, const uint32_t& rows, const uint32_t& cols, const 
 //assumes tensor is dtype uint8_t
 inline void fillTensor(Tensor& tensor, const Point& center, uint8_t setting, double radius){
 	utils::throw_exception(center.dims() == 2, "Expected to fill tensor with a basis dimension of 2 but got $", center.dims());
-	utils::throw_exception(tensor.dtype == DType::uint8, "Expected to get a dtype for fill tensor of $ but got $", DType::uint8, tensor.dtype);
+	utils::throw_exception(tensor.dtype() == DType::uint8, "Expected to get a dtype for fill tensor of $ but got $", DType::uint8, tensor.dtype());
 	uint8_t* ptr = reinterpret_cast<uint8_t*>(tensor.data_ptr());
 	Tensor t({1}, DType::uint8);
 	t = 1;

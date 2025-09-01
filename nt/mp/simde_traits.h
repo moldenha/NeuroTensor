@@ -8,8 +8,8 @@
 //done: avx, avx2
 //next: avx512, arm_neon
 
-#ifndef _NT_SIMDE_TRAITS_H_
-#define _NT_SIMDE_TRAITS_H_
+#ifndef NT_SIMDE_TRAITS_H__
+#define NT_SIMDE_TRAITS_H__
 #include <cstddef>
 #include <cstddef>
 #include <array>

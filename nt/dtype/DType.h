@@ -1,7 +1,9 @@
-#ifndef DTYPE_H
-#define DTYPE_H
-#include "DType_enum.h"
+#ifndef NT_DTYPE_H__
+#define NT_DTYPE_H__
 
+#include "DType_enum.h"
+#include "../utils/api_macro.h"
+#include "../utils/always_inline_macro.h"
 
 namespace nt {
 
@@ -69,15 +71,17 @@ template <class T> struct is_wrapped_dtype {
 };
 
 // universal declarations to any dtype
-template <DType dt> bool is_in(const DType inp);
+template <DType dt> 
+NT_ALWAYS_INLINE bool is_in(const DType inp){return inp == dt;}
 
-template <DType dt, DType M, DType... Rest> bool is_in(const DType inp) {
+template <DType dt, DType M, DType... Rest> 
+NT_ALWAYS_INLINE bool is_in(const DType inp) {
     return (inp == dt) ? true : is_in<M, Rest...>(inp);
 }
 
 template <typename T,
           std::enable_if_t<DTypeFuncs::is_wrapped_dtype<T>::value, bool> = true>
-bool is_in(const DType &inp) {
+NT_ALWAYS_INLINE bool is_in(const DType &inp) {
     if (inp != T::next) {
         if (T::done)
             return false;
@@ -116,21 +120,23 @@ template <DType dt> inline constexpr bool is_in_v<dt, DType::Bool> = false;
 #include <type_traits>
 
 namespace nt {
-std::ostream &operator<<(std::ostream &out, DType const &data);
-std::ostream &operator<<(std::ostream &out, const uint_bool_t &data);
+NEUROTENSOR_API std::ostream &operator<<(std::ostream &out, DType const &data);
+NEUROTENSOR_API std::ostream &operator<<(std::ostream &out, const uint_bool_t &data);
 
 namespace DTypeFuncs {
 
-template <DType dt> std::ostream &print_dtypes(std::ostream &os) {
+template <DType dt> 
+inline std::ostream &print_dtypes(std::ostream &os) {
     return os << dt << "}";
 }
 template <DType dt, DType M, DType... Rest>
-std::ostream &print_dtypes(std::ostream &os) {
+inline std::ostream &print_dtypes(std::ostream &os) {
     os << dt << ",";
     return print_dtypes<M, Rest...>(os);
 }
 
-template <DType... Rest> bool check_dtypes(const char *str, const DType dtype) {
+template <DType... Rest> bool 
+inline check_dtypes(const char *str, const DType dtype) {
     bool outp = is_in<Rest...>(dtype);
     if (!outp) {
         std::cout << str << "() was expected to support {";
@@ -152,62 +158,40 @@ struct all_dtype<T, Rest...>
 template <class... DTs>
 inline constexpr bool all_dtype_v = all_dtype<DTs...>::value;
 
-template <class T> void is_same(DType a, bool &outp, T b);
-
-template <DType dt = DType::Integer>
-std::size_t size_of_dtype_p(const DType &d);
-
-template <class... DTs> bool is_in(DType dt, DTs... dts) {
-    static_assert(all_dtype_v<DTs...>, "Expected to only get DType types");
-    bool outp = false;
-    (is_same(dt, outp, dts), ...);
-    return outp;
+template <class T> 
+inline void is_same(DType a, bool &outp, T b){
+    if constexpr(std::is_same_v<T, DType>){
+		if(a == b) outp = true;
+	}
 }
 
-void convert_this_dtype_array(void *arr, const DType &from, const DType &to,
-                              const std::size_t &total);
+inline constexpr std::size_t size_of_dtype_p(const DType &d){return sizeof(std::uintptr_t);}
 
-template <DType F, DType T>
-bool convert_this_typed_array(void *arr, void *arr2, const DType &from,
-                              const DType &to, const std::size_t &total);
-void convert_to_dtype_array(void *arr, void *arr2, const DType &from,
-                            const DType &to, const std::size_t &total);
+template<typename T>
+inline bool is_in(T&& a){return false;} 
+template <typename T, typename T2, class... DTs>  
+inline bool is_in(T&& dt, T2&& sub_dt, DTs&&... dts) {
+    static_assert(std::is_same_v<std::decay_t<T>, std::decay_t<T2>>, "Expected to get same types for is_in");
+    return dt == sub_dt || is_in(std::forward<T>, std::forward<DTs>(dts)...);
+}
 
-std::shared_ptr<void> make_shared_array(size_t size, const DType &dt);
-std::shared_ptr<void> make_shared_array(size_t size, const DType &dt,
-                                        void **original_mem);
-// #ifdef USE_PARALLEL
-// std::shared_ptr<void> make_shared_memory_shared_array(size_t size,
-//                                                       const DType &dt,
-//                                                       key_t key = IPC_PRIVATE);
-// std::shared_ptr<void> make_shared_memory_shared_array(size_t size,
-//                                                       const DType &dt,
-//                                                       void **original_mem,
-//                                                       key_t key = IPC_PRIVATE);
-// std::shared_ptr<void *>
-// make_shared_memory_shared_stride_array(size_t size, const DType &dt,
-//                                        key_t key = IPC_PRIVATE);
-// #endif
-template <DType dt = DType::Integer>
-std::shared_ptr<void> share_part_ptr(const uint32_t &index, const DType &m_dt,
-                                     const std::shared_ptr<void> &ptr);
 
-std::size_t size_of_dtype(const DType &);
-bool can_convert(const DType &, const DType &);
+NEUROTENSOR_API std::size_t size_of_dtype(const DType &);
+NEUROTENSOR_API bool can_convert(const DType &, const DType &);
 
 template <DType dt = DType::Integer>
-void initialize_strides(void **ptrs, void *cast, const std::size_t &s,
+NEUROTENSOR_API void initialize_strides(void **ptrs, void *cast, const std::size_t &s,
                         const DType &ds);
-bool is_unsigned(const DType &dt);
-bool is_integer(const DType &dt);
-bool is_floating(const DType &dt);
-bool is_complex(const DType &dt);
-DType complex_size(const std::size_t &s);
-DType floating_size(const std::size_t &s);
-DType integer_size(const std::size_t &s);
-DType unsigned_size(const std::size_t &s);
-uint8_t dtype_int_code(const DType &);
-DType code_int_dtype(const uint8_t &);
+NEUROTENSOR_API bool is_unsigned(const DType &dt);
+NEUROTENSOR_API bool is_integer(const DType &dt);
+NEUROTENSOR_API bool is_floating(const DType &dt);
+NEUROTENSOR_API bool is_complex(const DType &dt);
+NEUROTENSOR_API DType complex_size(const std::size_t &s);
+NEUROTENSOR_API DType floating_size(const std::size_t &s);
+NEUROTENSOR_API DType integer_size(const std::size_t &s);
+NEUROTENSOR_API DType unsigned_size(const std::size_t &s);
+NEUROTENSOR_API uint8_t dtype_int_code(const DType &);
+NEUROTENSOR_API DType code_int_dtype(const uint8_t &);
 
 } // namespace DTypeFuncs
 } // namespace nt

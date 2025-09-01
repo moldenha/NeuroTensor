@@ -364,7 +364,7 @@ namespace cpu {
 
 #define NT_MAKE_ACCESSIBLE_ACTIVATION_FUNCTION_(func_name)\
 void ADD_UNDERSCORE(func_name)(const ArrayVoid& a, ArrayVoid& out){\
-    if(a.dtype == DType::Bool){\
+    if(a.dtype() == DType::Bool){\
         throw std::logic_error("Cannot run" \
                                 #func_name \
                                 "on bool data type"); \
@@ -377,7 +377,7 @@ void ADD_UNDERSCORE(func_name)(const ArrayVoid& a, ArrayVoid& out){\
 \
 \
 void ADD_DOUBLE_UNDERSCORE(func_name)(ArrayVoid& out){\
-   if(out.dtype == DType::Bool){\
+   if(out.dtype() == DType::Bool){\
         throw std::logic_error("Cannot run" \
                                 #func_name \
                                 "on bool data type"); \
@@ -407,7 +407,7 @@ NT_MAKE_ACCESSIBLE_ACTIVATION_FUNCTION_(dgelu);
 
 
 void _dsigmoid(const ArrayVoid& a, ArrayVoid& out, const bool& apply_sigmoid){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run dsigmoid on bool data type");
     }
     out = a.clone();
@@ -417,7 +417,7 @@ void _dsigmoid(const ArrayVoid& a, ArrayVoid& out, const bool& apply_sigmoid){
 }
 
 void _dsigmoid_(ArrayVoid& a, const bool& apply_sigmoid){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run exp on bool data type");
     }
     a.execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([&apply_sigmoid](auto begin, auto end){
@@ -442,26 +442,21 @@ void _pow(const ArrayVoid& a, ArrayVoid& out, Scalar p){
 }
 
 void _abs_(ArrayVoid& a){
-    if(!DTypeFuncs::is_complex(a.dtype)){
+    if(!DTypeFuncs::is_complex(a.dtype())){
         a.execute_function_chunk<WRAP_DTYPES< FloatingTypesL, SignedTypesL> >([](auto begin, auto end){
             using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-#ifdef __SIZEOF_INT128__
             if constexpr (std::is_same_v<value_t, int128_t>){
                 for(;begin != end; ++begin)
-                    *begin = static_cast<int128_t>(std::abs(static_cast<int64_t>(*begin)));
+                    *begin = static_cast<int128_t>(std::abs(int64_t(*begin)));
                     
             }
             else{
                 for(;begin != end; ++begin)
                     *begin = std::abs(*begin);
             }
-#else
-            for(;begin != end; ++begin)
-                *begin = std::abs(*begin);
-#endif
         });
     }
-    if(DTypeFuncs::is_complex(a.dtype)){
+    if(DTypeFuncs::is_complex(a.dtype())){
         a.execute_function_chunk<WRAP_DTYPES<ComplexTypesL> >([](auto begin, auto end){
             using value_t = utils::IteratorBaseType_t<decltype(begin)>;
             for(;begin != end; ++begin)

@@ -3,6 +3,9 @@
 #include "../functional.h"
 #include "exceptions.hpp"
 #include "../../dtype/ArrayVoid.hpp"
+#include <algorithm>
+#include <functional>
+#include <set>
 
 namespace nt{
 namespace functional{
@@ -14,10 +17,12 @@ Tensor clamp(const Tensor& x, std::optional<Scalar> min, std::optional<Scalar> m
         cpu::_clamp(out.arr_void(), min.value(), max.value());
 		return std::move(out);
 	}
-	else if(min)
-		out[out < min.value()] = 0;
-	else if(max)
-		out[out > max.value()] = max.value();
+	else if(min){
+		cpu::_clamp_below(out.arr_void(), min.value());
+    }
+	else if(max){
+		cpu::_clamp_above(out.arr_void(), max.value());
+    }
 	return std::move(out);
 }
 
@@ -30,10 +35,12 @@ Tensor& clamp_(Tensor& x, std::optional<Scalar> min, std::optional<Scalar> max){
         cpu::_clamp(x.arr_void(), min.value(), max.value());
 		return x;
 	}
-	else if(min)
-		x[x < min.value()] = 0;
-	else if(max)
-		x[x > max.value()] = max.value();
+	else if(min){
+		cpu::_clamp_below(x.arr_void(), min.value());
+    }
+	else if(max){
+		cpu::_clamp_above(x.arr_void(), max.value());
+    }
 	return x;
 }
 
@@ -127,7 +134,7 @@ inline Scalar compare_scalars_floating(const std::vector<Scalar>& scs, Comp&& fu
     // }
 }
 
-Scalar min(std::vector<Scalar> scalars){
+Scalar minimum(std::vector<Scalar> scalars){
     if(scalars.size() == 1){return scalars[0];}
     utils::throw_exception(scalars.size() > 0, "Cannot find min of no scalars");
     utils::throw_exception(same_type(scalars), "Expected to compare all scalars of the same type");
@@ -141,7 +148,7 @@ Scalar min(std::vector<Scalar> scalars){
     }
     return compare_scalars_floating(scalars, func); 
 }
-Scalar max(std::vector<Scalar> scalars){
+Scalar maximum(std::vector<Scalar> scalars){
     if(scalars.size() == 1){return scalars[0];}
     utils::throw_exception(scalars.size() > 0, "Cannot find max of no scalars");
     utils::throw_exception(same_type(scalars), "Expected to compare all scalars of the same type");
@@ -158,9 +165,9 @@ Scalar max(std::vector<Scalar> scalars){
 }
 
 inline bool same_type(const std::vector<Tensor>& tensors){
-    DType dt = tensors[0].dtype;
+    DType dt = tensors[0].dtype();
     for(size_t i = 1; i < tensors.size(); ++i){
-        if(tensors[i].dtype != dt){return false;}
+        if(tensors[i].dtype() != dt){return false;}
     }
     return true;
 }
@@ -174,7 +181,7 @@ inline bool same_shape(const std::vector<Tensor>& tensors){
 }
 
 
-Tensor min(std::vector<Tensor> tensors){
+Tensor minimum(std::vector<Tensor> tensors){
     for(const auto& x : tensors)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     if(tensors.size() == 1){return tensors[0];}
@@ -182,7 +189,7 @@ Tensor min(std::vector<Tensor> tensors){
     const SizeRef& shape = tensors[0].shape();
     utils::throw_exception(same_type(tensors), "Expected to compare all tensors of the same dtype for min");
     utils::throw_exception(same_shape(tensors), "Expected to compare all tensors of the same shape for min");
-    const DType& dt = tensors[0].dtype;
+    const DType& dt = tensors[0].dtype();
     utils::throw_exception(dt != DType::Bool && dt != DType::TensorObj, 
                            "Expected to get dtype of number type for min got $", dt);
     Tensor out = tensors[0].clone();
@@ -195,7 +202,7 @@ Tensor min(std::vector<Tensor> tensors){
     return std::move(out);
 }
 
-Tensor max(std::vector<Tensor> tensors){
+Tensor maximum(std::vector<Tensor> tensors){
     for(const auto& x : tensors)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     if(tensors.size() == 1){return tensors[0];}
@@ -203,7 +210,7 @@ Tensor max(std::vector<Tensor> tensors){
     const SizeRef& shape = tensors[0].shape();
     utils::throw_exception(same_type(tensors), "Expected to compare all tensors of the same dtype for max");
     utils::throw_exception(same_shape(tensors), "Expected to compare all tensors of the same shape for max");
-    const DType& dt = tensors[0].dtype;
+    const DType& dt = tensors[0].dtype();
     utils::throw_exception(dt != DType::Bool && dt != DType::TensorObj, 
                            "Expected to get dtype of number type for max got $", dt);
     Tensor out = tensors[0].clone();
@@ -217,7 +224,7 @@ Tensor max(std::vector<Tensor> tensors){
 }
 
 
-Tensor min(std::vector<Tensor> tensors, Scalar sc){
+Tensor minimum(std::vector<Tensor> tensors, Scalar sc){
     for(const auto& x : tensors)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     if(tensors.size() == 1){return tensors[0];}
@@ -225,7 +232,7 @@ Tensor min(std::vector<Tensor> tensors, Scalar sc){
     const SizeRef& shape = tensors[0].shape();
     utils::throw_exception(same_type(tensors), "Expected to compare all tensors of the same dtype for min");
     utils::throw_exception(same_shape(tensors), "Expected to compare all tensors of the same shape for min");
-    const DType& dt = tensors[0].dtype;
+    const DType& dt = tensors[0].dtype();
     utils::throw_exception(dt != DType::Bool && dt != DType::TensorObj, 
                            "Expected to get dtype of number type for min got $", dt);
     Tensor out(shape, dt);
@@ -239,7 +246,7 @@ Tensor min(std::vector<Tensor> tensors, Scalar sc){
     return std::move(out);
 
 }
-Tensor max(std::vector<Tensor> tensors, Scalar sc){
+Tensor maximum(std::vector<Tensor> tensors, Scalar sc){
     for(const auto& x : tensors)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     if(tensors.size() == 1){return tensors[0];}
@@ -247,7 +254,7 @@ Tensor max(std::vector<Tensor> tensors, Scalar sc){
     const SizeRef& shape = tensors[0].shape();
     utils::throw_exception(same_type(tensors), "Expected to compare all tensors of the same dtype for max");
     utils::throw_exception(same_shape(tensors), "Expected to compare all tensors of the same shape for max");
-    const DType& dt = tensors[0].dtype;
+    const DType& dt = tensors[0].dtype();
     utils::throw_exception(dt != DType::Bool && dt != DType::TensorObj, 
                            "Expected to get dtype of number type for max got $", dt);
     Tensor out(shape, dt);
@@ -263,7 +270,7 @@ Tensor max(std::vector<Tensor> tensors, Scalar sc){
 }
 
 result_types::max<Tensor, Tensor> max_(const Tensor &_x) {
-    if (_x.dtype == DType::TensorObj) {
+    if (_x.dtype() == DType::TensorObj) {
         result_types::max<Tensor, Tensor> output(
             Tensor(_x.shape(), DType::TensorObj),
             Tensor(_x.shape(), DType::TensorObj));
@@ -282,7 +289,7 @@ result_types::max<Tensor, Tensor> max_(const Tensor &_x) {
                 });
         return std::move(output);
     }
-    Tensor outp(1, _x.dtype);
+    Tensor outp(1, _x.dtype());
     Tensor indices(_x.shape(), DType::Bool);
     indices.fill_(false);
     outp = cpu::_max_scalar(_x.arr_void(), indices.arr_void());
@@ -291,7 +298,7 @@ result_types::max<Tensor, Tensor> max_(const Tensor &_x) {
 }
 
 result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
-    if (_x.dtype == DType::TensorObj) {
+    if (_x.dtype() == DType::TensorObj) {
         result_types::max<Tensor, Tensor> output(
             Tensor(_x.shape(), DType::TensorObj),
             Tensor(_x.shape(), DType::TensorObj));
@@ -303,14 +310,14 @@ result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
                     Tensor *i_begin =
                         reinterpret_cast<Tensor *>(output.indices.data_ptr());
                     for (; begin != end; ++begin, ++v_begin, ++i_begin) {
-                        result_types::max<Tensor, Tensor> o = begin->min();
+                        result_types::max<Tensor, Tensor> o = min_(*begin);
                         *v_begin = o.values;
                         *i_begin = o.indices;
                     }
                 });
         return std::move(output);
     }
-    Tensor outp(1, _x.dtype);
+    Tensor outp(1, _x.dtype());
     Tensor indices(_x.shape(), DType::Bool);
     indices.fill_(false);
     outp = cpu::_min_scalar(_x.arr_void(), indices.arr_void());
@@ -321,7 +328,7 @@ result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
 //result_types::max<Tensor, Tensor> max_(const Tensor &_x,
 //                                       Tensor::size_value_t dim) {
 //    dim = dim < 0 ? dim + _x.dims() : dim;
-//    if (_x.dtype == DType::TensorObj) {
+//    if (_x.dtype() == DType::TensorObj) {
 //        result_types::max<Tensor, Tensor> output(
 //            Tensor(_x.shape(), DType::TensorObj),
 //            Tensor(_x.shape(), DType::TensorObj));
@@ -400,7 +407,7 @@ result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
 //    /* } */
 
 //    /* size_value_t total_size = shape().flatten(0,dim)[0]; */
-//    /* Tensor outp(shape()[my_range(0, dim)], dtype); */
+//    /* Tensor outp(shape()[range_(0, dim)], dtype); */
 //    /* const Tensor split = this->split_axis(dim); */
 //    /* outp._vals.execute_function<WRAP_DTYPES<RealNumberTypesL>>()([](auto
 //     * begin, auto end, const Tensor* vals){ */
@@ -416,8 +423,8 @@ result_types::max<Tensor, Tensor> min_(const Tensor &_x) {
 
 Tensor& max_(const Tensor &_x, Tensor& bools) {
 
-    if (_x.dtype == DType::TensorObj) {
-        utils::throw_exception(bools.dtype == DType::TensorObj,
+    if (_x.dtype() == DType::TensorObj) {
+        utils::throw_exception(bools.dtype() == DType::TensorObj,
                                "Expected indices to be tensor obj for a tensor obj comparison");
         _x.arr_void()
             .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
@@ -441,8 +448,8 @@ Tensor& max_(const Tensor &_x, Tensor& bools) {
 
 
 Tensor& min_(const Tensor &_x, Tensor& bools) {
-    if (_x.dtype == DType::TensorObj) {
-        utils::throw_exception(bools.dtype == DType::TensorObj,
+    if (_x.dtype() == DType::TensorObj) {
+        utils::throw_exception(bools.dtype() == DType::TensorObj,
                                "Expected indices to be tensor obj for a tensor obj comparison");
         _x.arr_void()
             .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
@@ -463,7 +470,7 @@ Tensor& max_(const Tensor &_x,
                                        Tensor::size_value_t dim,
                                        Tensor& bools) {
     dim = dim < 0 ? dim + _x.dims() : dim;
-    if (_x.dtype == DType::TensorObj) {
+    if (_x.dtype() == DType::TensorObj) {
         _x.arr_void()
             .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
                 [&bools, &dim](auto begin, auto end) {
@@ -496,7 +503,7 @@ Tensor& min_(const Tensor &_x,
                                        Tensor::size_value_t dim,
                                        Tensor& bools) {
     dim = dim < 0 ? dim + _x.dims() : dim;
-    if (_x.dtype == DType::TensorObj) {
+    if (_x.dtype() == DType::TensorObj) {
         _x.arr_void()
             .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
                 [&bools, &dim](auto begin, auto end) {
@@ -524,23 +531,64 @@ Tensor& min_(const Tensor &_x,
 }
 
 
+std::vector<Tensor::size_value_t> get_max_correct_perms(const Tensor& tensor, utils::optional_list list){
+    //first going to check if the list has all the elements right after one another and if they start at the back
+    //return an empty vector so that the function knows it doesn't have to call a permute
+    const int64_t& dims = tensor.dims();
+    //fix the list
+    std::for_each(list.begin(), list.end(), [&dims](auto& val){val = (val < 0) ? dims + val : val;});
+    //sort from largest to smallest
+    std::sort(list.begin(), list.end(), std::greater<int64_t>());
+    if(list[0] == (dims-1)){
+        //this is the check
+        auto begin_f = list->begin();
+        auto begin = begin_f+1;
+        auto end = list->end();
+        bool dont_permute = true;
+        //if it is true, begin is one before begin_f so it should be one larger (after sorting)
+        for(;begin != end; ++begin, ++begin_f){
+            if((*begin - 1) != *begin_f){
+                dont_permute = false;
+            }
+        }
+        if(dont_permute){return std::vector<Tensor::size_value_t>();}
+    }
+    std::vector<Tensor::size_value_t> perms;
+    perms.reserve(tensor.dims());
+    for(int64_t i = 0; i < tensor.dims(); ++i){
+        bool inside = false;
+        for(auto begin = list->cbegin(); begin != list->cend(); ++begin){
+            if(*begin == i){inside = true; break;}
+        }
+        if(!inside)
+            perms.push_back(i);
+    }
+    for(auto begin = list->cbegin(); begin != list->cend(); ++begin){
+        perms.push_back(*begin);
+    }
+    return std::move(perms);
+}
+
 Tensor& max_indices(const Tensor& tensor, Tensor& indices, utils::optional_list list){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(tensor, indices);
     utils::throw_exception(indices.is_mutable(),
                            "Output indices from the max indices function must be mutable");
     utils::THROW_EXCEPTION(tensor.shape() == indices.shape(),
                            "The indices shape ($) must equal tensor shape ($)", indices.shape(), tensor.shape());
-    utils::THROW_EXCEPTION((tensor.dtype == DType::TensorObj && indices.dtype == DType::TensorObj) || indices.dtype == DType::Bool,
-                           "Expected max_indices to be dtype Bool or tensors of bools if the values are tensors but got $", indices.dtype);
-    if(indices.dtype == DType::Bool){indices.fill_(false);}
-    if(!list){
+    utils::THROW_EXCEPTION((tensor.dtype() == DType::TensorObj && indices.dtype() == DType::TensorObj) || indices.dtype() == DType::Bool,
+                           "Expected max_indices to be dtype Bool or tensors of bools if the values are tensors but got $", indices.dtype());
+    if(indices.dtype() == DType::Bool){indices.fill_(false);}
+    if(!list || list->size() == tensor.dims()){
         return max_(tensor, indices);
     }
-    max_(tensor, list[0], indices);
-    //SizeRef o_shape = tensor.shape().delete_index(list[0]);
-    for(auto begin = list->cbegin() + 1; begin != list->cend(); ++begin){
-        max_(tensor, *begin, indices);
+    if(list->size() == 1){
+        max_(tensor, list[0], indices);
+        return indices;
     }
+    std::vector<Tensor::size_value_t> perms = get_max_correct_perms(tensor, list);
+    Tensor _input = perms.empty() ? tensor.flatten((-1) * (list->size()), -1) : permute(tensor, perms).flatten((-1) * (list->size()), -1);
+    Tensor _indices = perms.empty() ? indices.flatten((-1) * (list->size()), -1) : permute(indices, perms).flatten((-1) * (list->size()), -1);
+    max_(_input, -1, _indices);
     return indices;
 }
 Tensor& min_indices(const Tensor& tensor, Tensor& indices, utils::optional_list list){
@@ -549,19 +597,23 @@ Tensor& min_indices(const Tensor& tensor, Tensor& indices, utils::optional_list 
                            "Output indices from the min indices function must be mutable");
     utils::throw_exception(tensor.shape() == indices.shape(),
                            "The indices shape ($) must equal tensor shape ($)", indices.shape(), tensor.shape());
-    utils::throw_exception((tensor.dtype == DType::TensorObj && indices.dtype == DType::TensorObj) || indices.dtype == DType::Bool,
-                           "Expected max_indices to be dtype Bool or tensors of bools if the values are tensors but got $", indices.dtype);
-    if(indices.dtype == DType::Bool){indices.fill_(false);}
-    if(!list){
+    utils::throw_exception((tensor.dtype() == DType::TensorObj && indices.dtype() == DType::TensorObj) || indices.dtype() == DType::Bool,
+                           "Expected max_indices to be dtype Bool or tensors of bools if the values are tensors but got $", indices.dtype());
+    if(indices.dtype() == DType::Bool){indices.fill_(false);}
+    if(!list || list->size() == tensor.dims()){
         return min_(tensor, indices);
     }
-    min_(tensor, list[0], indices);
-    //SizeRef o_shape = tensor.shape().delete_index(list[0]);
-    for(auto begin = list->cbegin() + 1; begin != list->cend(); ++begin){
-        min_(tensor, *begin, indices);
+    if(list->size() == 1){
+        min_(tensor, list[0], indices);
+        return indices;
     }
+
+    std::vector<Tensor::size_value_t> perms = get_max_correct_perms(tensor, list);
+    Tensor _input = perms.empty() ? tensor.flatten((-1) * (list->size()), -1) : permute(tensor, perms).flatten((-1) * (list->size()), -1);
+    Tensor _indices = perms.empty() ? indices.flatten((-1) * (list->size()), -1) : permute(indices, perms).flatten((-1) * (list->size()), -1);
+
+    min_(_input, -1, _indices);
     return indices;
- 
 }
 
 Tensor max_indices(const Tensor& tensor, utils::optional_list list){
@@ -578,38 +630,71 @@ Tensor min_indices(const Tensor& tensor, utils::optional_list list){
     return std::move(indices);
 }
 
-
-result_types::max<Tensor, Tensor> max(const Tensor& self, utils::optional_list list){
+//the list is the dimensions to get the max along
+result_types::max<Tensor, Tensor> max(const Tensor& self, utils::optional_list list, bool keepdim){
     if(!list){
         _NT_FUNCTIONAL_ALWAYS_CHECK_(self);
         return max_(self);
     }
+    const int64_t& dims = self.dims();
+    std::for_each(list.begin(), list.end(), [&dims](auto& val){val = (val < 0) ? val + dims : val;});
     Tensor indices = max_indices(self, list);
-    SizeRef o_shape = self.shape().delete_index(list[0]);
-    for(auto begin = list->cbegin() + 1; begin != list->cend(); ++begin){
-        o_shape = o_shape.delete_index(*begin);
+
+    if(keepdim){
+        SizeRef o_shape = self.shape().redo_index(list[0], 1);
+        for(auto begin = list->cbegin() + 1; begin != list->cend(); ++begin){
+            o_shape = o_shape.redo_index(*begin, 1);
+        }
+        return result_types::max<Tensor, Tensor>(self[indices].view(o_shape).contiguous(), std::move(indices));
     }
-    return result_types::max<Tensor, Tensor>(self[indices].view(o_shape).contiguous(), std::move(indices));
+    else{
+        std::set<int64_t> remove_set(list.cbegin(), list.cend());
+        std::vector<int64_t> n_shape;
+        n_shape.reserve(self.dims() - list->size());
+        const auto& shape = self.shape();
+        for(int64_t i = 0; i < shape.size(); ++i){
+            if(remove_set.find(i) == remove_set.end()) {
+                n_shape.push_back(shape[i]);
+            }
+        }
+        return result_types::max<Tensor, Tensor>(self[indices].view(SizeRef(std::move(n_shape))).contiguous(), std::move(indices));
+    }
 }
 
-result_types::max<Tensor, Tensor> min(const Tensor& self, utils::optional_list list){
+result_types::max<Tensor, Tensor> min(const Tensor& self, utils::optional_list list, bool keepdim){
     if(!list){
         _NT_FUNCTIONAL_ALWAYS_CHECK_(self);
         return min_(self);
     }
+    const int64_t& dims = self.dims();
+    std::for_each(list.begin(), list.end(), [&dims](auto& val){val = (val < 0) ? val + dims : val;});
     Tensor indices = min_indices(self, list);
-    SizeRef o_shape = self.shape().delete_index(list[0]);
-    for(auto begin = list->cbegin() + 1; begin != list->cend(); ++begin){
-        o_shape = o_shape.delete_index(*begin);
+    if(keepdim){
+        SizeRef o_shape = self.shape().redo_index(list[0], 1);
+        for(auto begin = list->cbegin() + 1; begin != list->cend(); ++begin){
+            o_shape = o_shape.redo_index(*begin, 1);
+        } 
+        return result_types::max<Tensor, Tensor>(self[indices].view(o_shape).contiguous(), std::move(indices));
+    }else{
+        std::set<int64_t> remove_set(list.cbegin(), list.cend());
+        std::vector<int64_t> n_shape;
+        n_shape.reserve(self.dims() - list->size());
+        const auto& shape = self.shape();
+        for(int64_t i = 0; i < shape.size(); ++i){
+            if(remove_set.find(i) == remove_set.end()) {
+                n_shape.push_back(shape[i]);
+            }
+        }
+        return result_types::max<Tensor, Tensor>(self[indices].view(SizeRef(std::move(n_shape))).contiguous(), std::move(indices));
     }
-    return result_types::max<Tensor, Tensor>(self[indices].view(o_shape).contiguous(), std::move(indices));
 }
 
 Tensor argmin(Tensor x){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
-    auto results = x.view(-1).min();
+    // auto results = x.view(-1).min();
+    auto results = min_(x);
     Tensor out = where(results.indices.view(-1));
-    if(out.dtype == DType::TensorObj){
+    if(out.dtype() == DType::TensorObj){
         return out.item<Tensor>();
     }
     return std::move(out);
@@ -618,7 +703,7 @@ Tensor argmax(Tensor x){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     auto results = x.view(-1).max();
     Tensor out = where(results.indices.view(-1));
-    if(out.dtype == DType::TensorObj){
+    if(out.dtype() == DType::TensorObj){
         return out.item<Tensor>();
     }
     return std::move(out);
@@ -627,7 +712,7 @@ Tensor argmin(Tensor x, int64_t dim, bool keepdims){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     dim = dim < 0 ? dim + x.dims() : dim;
     utils::throw_exception(dim >= 0 && dim < x.dims(), "Dim $ out of range for argmin of tensor $", (dim < 0 ? dim - x.dims() : dim), x.shape());
-    auto results = x.min(dim);
+    result_types::max<Tensor, Tensor> results = x.min(dim);
     Tensor out = where(results.indices)[dim].item<Tensor>();
     if(!keepdims) return out;
     auto out_shape = x.shape().redo_index(dim, 1);

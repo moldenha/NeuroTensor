@@ -68,27 +68,21 @@ int parse_header(std::string header, DType& dt, std::vector<int64_t>& vec){
         else if (dtype_str == "<f8") {
             dt = DType::Float64;
         }
-#ifdef _HALF_FLOAT_SUPPORT_
         else if (dtype_str == "<f2") {
             dt = DType::Float16;
         }
         else if (dtype_str == "<c4") {
             dt = DType::Complex32;
         }
-#endif
-#ifdef _128_FLOAT_SUPPORT_
         else if (dtype_str == "<f16") {
             dt = DType::Float128;
         }
-#endif
-#ifdef __SIZEOF_INT128__
         else if (dtype_str == "<i16") {
             dt = DType::int128;
         }
         else if (dtype_str == "<u16") {
             dt = DType::uint128;
         }
-#endif
         else if (dtype_str == "<c8") {
             dt = DType::Complex64;
         }
@@ -171,21 +165,15 @@ void to_numpy(const Tensor &tensor, std::string filename){
 
     // Tensor dtype conversion to NumPy dtype
     std::string dtype_str;
-    utils::throw_exception(tensor.dtype != DType::TensorObj, "Currently tensors of tensors cannot be loaded or saved");
-    switch (tensor.dtype) {
+    utils::throw_exception(tensor.dtype() != DType::TensorObj, "Currently tensors of tensors cannot be loaded or saved");
+    switch (tensor.dtype()) {
         case DType::Float32: dtype_str = "<f4"; break;
         case DType::Float64: dtype_str = "<f8"; break;
-#ifdef _HALF_FLOAT_SUPPORT_
         case DType::Float16: dtype_str = "<f2"; break;
         case DType::Complex32: dtype_str = "<c4"; break;
-#endif
-#ifdef _128_FLOAT_SUPPORT_
         case DType::Float128: dtype_str = "<f16"; break;
-#endif
-#ifdef __SIZEOF_INT128__
         case DType::int128: dtype_str = "<i16"; break;
         case DType::uint128: dtype_str = "<u16"; break;
-#endif
         case DType::Complex64: dtype_str = "<c8"; break;
         case DType::Complex128: dtype_str = "<c16"; break;
         case DType::uint8: dtype_str = "|u1"; break;
@@ -225,7 +213,7 @@ void to_numpy(const Tensor &tensor, std::string filename){
 
     // Write tensor data
     Tensor cloned = tensor.clone();
-    file.write(static_cast<const char*>(cloned.data_ptr()), cloned.numel() * DTypeFuncs::size_of_dtype(cloned.dtype));
+    file.write(static_cast<const char*>(cloned.data_ptr()), cloned.numel() * DTypeFuncs::size_of_dtype(cloned.dtype()));
 
     file.close();
     return;

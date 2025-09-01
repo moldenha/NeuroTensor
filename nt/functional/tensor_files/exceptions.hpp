@@ -1,5 +1,5 @@
-#ifndef __NT_FUNCTIONAL_TENSOR_FILES_EXCEPTIONS_HPP__
-#define __NT_FUNCTIONAL_TENSOR_FILES_EXCEPTIONS_HPP__
+#ifndef NT_FUNCTIONAL_TENSOR_FILES_EXCEPTIONS_HPP__
+#define NT_FUNCTIONAL_TENSOR_FILES_EXCEPTIONS_HPP__
 #include "../../Tensor.h"
 #include "../../utils/name_func_macro.h"
 
@@ -50,16 +50,20 @@ inline void exception_shapes(const SizeRef& a, const SizeRef& b, bool singletons
 	}
 }
 
-inline void _NT_FUNCTIONAL_ALWAYS_CHECK_(const Tensor& t){
+inline void nt_functional_always_check(const char* func_name, const Tensor& t){
     utils::throw_exception(!t.is_null(),
-                           "Cannot perform operations on a null tensor");
+                           "Cannot perform function $ on a null tensor", func_name);
 }
 
 template<typename... T>
-inline void _NT_FUNCTIONAL_ALWAYS_CHECK_(const Tensor& t, const T&... tensors){
-    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    _NT_FUNCTIONAL_ALWAYS_CHECK_(tensors...);
+inline void nt_functional_always_check(const char* func_name, const Tensor& t, const T&... tensors){
+    nt_functional_always_check(func_name, t);
+    nt_functional_always_check(func_name, tensors...);
 }
+
+
+
+#define _NT_FUNCTIONAL_ALWAYS_CHECK_(...) nt_functional_always_check(__func__, __VA_ARGS__)
 
 inline void check_mutability(Tensor& x, const char* func_name = __NT_FUNCTION_NAME__){
     utils::throw_exception(x.is_mutable(), "Cannot perform function $ on an immutable tensor", func_name);

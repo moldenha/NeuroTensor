@@ -1,5 +1,5 @@
-#ifndef _NT_TDA_PERSISTENT_HOMOLOGY_H_
-#define _NT_TDA_PERSISTENT_HOMOLOGY_H_
+#ifndef NT_TDA_PERSISTENT_HOMOLOGY_H__
+#define NT_TDA_PERSISTENT_HOMOLOGY_H__
 
 #include "../Tensor.h"
 #include "../sparse/SparseMatrix.h"
@@ -14,23 +14,23 @@
 namespace nt {
 namespace tda {
 
-struct GeneratorHash {
+struct NEUROTENSOR_API GeneratorHash {
     std::size_t operator()(const Tensor &vec) const;
 };
 
-struct GeneratorEqual {
+struct NEUROTENSOR_API GeneratorEqual {
     bool operator()(const Tensor &a, const Tensor &b) const;
 };
 
-std::map<double, int64_t> make_simplex_radi_map(const Tensor &simplex_radi);
-std::map<double, std::array<int64_t, 2>>
+NEUROTENSOR_API std::map<double, int64_t> make_simplex_radi_map(const Tensor &simplex_radi);
+NEUROTENSOR_API std::map<double, std::array<int64_t, 2>>
     make_simplex_radi_map(const Tensor &r1, const Tensor &r2);
-std::map<double, std::array<int64_t, 2>>
+NEUROTENSOR_API std::map<double, std::array<int64_t, 2>>
     make_simplex_radi_map(const Tensor &simplex_radi, int64_t input);
-std::map<double, std::array<int64_t, 2>>
+NEUROTENSOR_API std::map<double, std::array<int64_t, 2>>
     make_simplex_radi_map(int64_t input, const Tensor &simplex_radi);
 
-class PersistentHomology {
+class NEUROTENSOR_API PersistentHomology {
     BasisOverlapping balls;
     Tensor points;
     // boundary matricies are in terms of indexes

@@ -1,7 +1,7 @@
 ![github_logo](imgs/github_logo.png)
 <hr>
 
-Version: v0.1.5
+Version: v0.1.5.3
 
 NeuroTensor is a tensor framework that has a tda and autograd wrapper built in. The syntax follows PyTorch's closely, but in C++. Current version is 0.1.5 and there is still much to come for added support and testing. This is an early beta version, with an end goal being a framework for computational neuroscience tools.
 
@@ -14,13 +14,33 @@ This is an example function pulled from the tests file, showing how it is able t
 
 ```C++
 //some basic syntax and functionality
-nt::Tensor t = nt::functional::randn({3,4,5}); //creates a 3x4x5 float tensor
+nt::Tensor t = nt::randn({3,4,5}); //creates a 3x4x5 float tensor
 t[1] += 1;
 t[t < 0.01] *= -1;
 nt::Tensor t2 = t[2];
 t2[t2 > 0].exp_(); //also modifies t
 t2 = t2.to(nt::DType::Double);
 std::cout << t2 << std::endl;
+
+```
+
+## User Interface
+
+This library is built for C++17, and as C++26 comes out will be adapted for that. NeuroTensor offers an extension for named parameters in the `nt` namespace. NeuroTensor also offers more streamlined ranges, and much more. This is an example of working use in C++17 below.
+
+```
+// important to define this macro if you want named parameters to work like arg = 10, instead of ntarg_(arg) = 10
+#define NT_DEFINE_PARAMETER_ARGUMENTS
+#include <nt/nt.h>
+
+int main(){
+    using namespace nt::literals; // if you want to have arguments define
+    auto x = nt::randn({2, 3, 10});
+    auto y = nt::pow(exponent = 2, input = x);
+    auto z = nt::softplus(y, threshold = 30.0);
+    nt::Tensor o = z(1 <nt::range> -1, nt::range, 2 <nt::range> 8); // returns a slice of z
+    return 0;
+}
 
 ```
 

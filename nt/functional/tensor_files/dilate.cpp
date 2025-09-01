@@ -54,7 +54,7 @@ Tensor undilate_(const Tensor& input, Tensor::size_value_t dil){
     return undilate_(input, 1, dil);
 }
 
-Tensor undilate_(const Tensor& input, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil, Tensor::size_value_t chan_dil){
+Tensor undilate_(const Tensor& input, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(input);
     using size_value_t = Tensor::size_value_t;
     if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1)) {
@@ -107,13 +107,13 @@ Tensor undilate_(const Tensor& input, Tensor::size_value_t row_dil, Tensor::size
     
 }
 
-Tensor undilate(Tensor t, Tensor::size_value_t dil) {
+Tensor undilate(const Tensor& t, Tensor::size_value_t dil) {
     return undilate_(t, dil).clone();
 }
-Tensor undilate(Tensor t, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
+Tensor undilate(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
     return undilate_(t, row_dil, col_dil).clone(); 
 }
-Tensor undilate(Tensor t, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
+Tensor undilate(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
     return undilate_(t, chan_dil, row_dil, col_dil).clone(); 
 }
 
@@ -134,8 +134,8 @@ Tensor dilate(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_
     vec[vec.size() - 2] *= row_dil; // Adjust rows
     vec[vec.size() - 2] -= (row_dil - 1);
 
-    Tensor outp = zeros(SizeRef(vec), t.dtype);
-    undilate(outp, row_dil, col_dil).set_(t);
+    Tensor outp = zeros(SizeRef(vec), t.dtype());
+    undilate_(outp, row_dil, col_dil).set_(t);
     return std::move(outp);
 }
 
@@ -162,8 +162,8 @@ Tensor dilate(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value
     vec[vec.size() - 3] *= chan_dil; // Adjust channels
     vec[vec.size() - 3] -= (chan_dil - 1);
     
-    Tensor outp = zeros(SizeRef(vec), t.dtype);
-    undilate(outp, chan_dil, row_dil, col_dil).set_(t);
+    Tensor outp = zeros(SizeRef(vec), t.dtype());
+    undilate_(outp, chan_dil, row_dil, col_dil).set_(t);
     return std::move(outp);
 }
 

@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_NULL_SPACE_H_
-#define _NT_LINALG_NULL_SPACE_H_
+#ifndef NT_LINALG_NULL_SPACE_H__
+#define NT_LINALG_NULL_SPACE_H__
 
 #include "../../Tensor.h"
 #include <Eigen/Dense>
@@ -16,11 +16,11 @@ namespace linalg {
 //reduced_null_space(t, true) is the same as reduced_null_space(t.transpose(-1, -2), false).transpose(-1, -2)
 //pivot rows is to look for pivot rows instead of columns
 //reduced_null_space(t, true, true) is the same as reduced_null_space(t.transpose(-1, -2), false, false) 
-Tensor reduced_null_space(const Tensor&, bool pivot_rows=false, bool pivots_first = false);
+NEUROTENSOR_API Tensor reduced_null_space(const Tensor&, bool pivot_rows=false, bool pivots_first = false);
 
 //can find the null space from SVD decomposition or LU decomposition
 //  Accepted: "svd" or "lu"
-Tensor null_space(const Tensor&, std::string mode = "svd");
+NEUROTENSOR_API Tensor null_space(const Tensor&, std::string mode = "svd");
 
 template<typename T>
 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>

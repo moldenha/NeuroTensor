@@ -25,11 +25,11 @@ void SparseMemoryData::reserve(int64_t new_max_size) {
     if (new_max_size <= max_size) return;
     
     indices.reserve(new_max_size);
-    void* new_memory = std::malloc(type_size * new_max_size);
+    void* new_memory = MetaMalloc(type_size * new_max_size);
 
     if (memory) {
         std::memcpy(new_memory, memory, type_size * size);
-        std::free(memory);
+        MetaCStyleFree(memory);
     }
 
     memory = new_memory;

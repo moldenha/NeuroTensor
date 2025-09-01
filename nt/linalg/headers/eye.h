@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_EYE_H_
-#define _NT_LINALG_EYE_H_
+#ifndef NT_LINALG_EYE_H__
+#define NT_LINALG_EYE_H__
 
 #include "../../Tensor.h"
 #include <functional>
@@ -10,8 +10,8 @@
 
 namespace nt {
 namespace linalg {
-Tensor eye(int64_t n, int64_t b=0, DType dtype = DType::Float32); //make the identity matrix, b means batches
-Tensor eye_like(const Tensor&);
+NEUROTENSOR_API Tensor eye(int64_t n, int64_t b=0, DType dtype = DType::Float32); //make the identity matrix, b means batches
+NEUROTENSOR_API Tensor eye_like(const Tensor&);
 } // namespace linalg
 } // namespace nt
 

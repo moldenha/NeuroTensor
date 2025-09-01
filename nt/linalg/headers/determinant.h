@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_DETERMINANT_H_
-#define _NT_LINALG_DETERMINANT_H_
+#ifndef NT_LINALG_DETERMINANT_H__
+#define NT_LINALG_DETERMINANT_H__
 
 #include "../../Tensor.h"
 #include <functional>
@@ -10,7 +10,7 @@
 
 namespace nt {
 namespace linalg {
-Tensor determinant(const Tensor&);
+NEUROTENSOR_API Tensor determinant(const Tensor&);
 } // namespace linalg
 } // namespace nt
 

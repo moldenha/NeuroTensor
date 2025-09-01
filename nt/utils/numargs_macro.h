@@ -1,8 +1,8 @@
 //this is a header file containing macros to determine the number of arguments in a __VA_ARGS__ macro expansion
 //and also if there are none
 //this is really useful and used a few different times
-#ifndef __NT_NUMARGS_MACRO_IS_EMPTY_MACRO_HEADER__
-#define __NT_NUMARGS_MACRO_IS_EMPTY_MACRO_HEADER__
+#ifndef NT_NUMARGS_MACRO_IS_EMPTY_MACRO_HEADER__
+#define NT_NUMARGS_MACRO_IS_EMPTY_MACRO_HEADER__
 
 namespace nt{
 

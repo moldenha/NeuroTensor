@@ -1,3 +1,6 @@
+#ifndef NT_DTYPE_OPERATORS_H__
+#define NT_DTYPE_OPERATORS_H__
+
 #include "../Tensor.h"
 #include "compatible/DType_compatible.h"
 #include "../utils/utils.h"
@@ -147,3 +150,5 @@ class Add<dt, std::enable_if_t<dt == DType::TensorObj, bool>>{
 
 }
 }
+
+#endif //NT_DTYPE_OPERATORS_H__

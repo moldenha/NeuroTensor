@@ -1,5 +1,5 @@
-#ifndef SIZE_REF_H_
-#define SIZE_REF_H_
+#ifndef NT_SIZE_REF_H__
+#define NT_SIZE_REF_H__
 
 namespace nt{
 class SizeRef;
@@ -13,11 +13,11 @@ class SizeRef;
 #include <initializer_list>
 #include "../dtype/ranges.h"
 #include <cassert>
-
+#include "../utils/api_macro.h"
 
 namespace nt{
 
-class SizeRef{
+class NEUROTENSOR_API SizeRef{
 	public:
 		using ArrayRefInt = ArrayRef<int64_t>;
 		using value_type = int64_t;
@@ -45,7 +45,12 @@ class SizeRef{
 		SizeRef(const std::array<ArrayRefInt::value_type, N> &Arr);
 		template<size_t N>
 		SizeRef(const ArrayRefInt::value_type (&Arr)[N]);
-		SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec);
+        template<typename U, std::enable_if_t<!std::is_same_v<U, ArrayRefInt::value_type> && std::is_integral_v<U>, bool> = true>
+		SizeRef(const std::initializer_list<U> &Vec)
+        :_sizes(Vec) {}
+        SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec)
+        :_sizes(Vec) {}
+        
 		SizeRef(ArrayRefInt&&);
 		SizeRef(const ArrayRefInt&);
 		SizeRef(std::nullptr_t);
@@ -70,7 +75,7 @@ class SizeRef{
 		const ArrayRefInt::value_type& operator[](value_type) const;
 		SizeRef redo_index(value_type, value_type) const;
 		SizeRef delete_index(value_type) const;
-		SizeRef operator[](my_range) const;
+		SizeRef operator[](range_) const;
 		SizeRef range(value_type, value_type) const;
 		/* ArrayRefInt::value_type& operator[](int16_t); */
 		ArrayRefInt::value_type multiply(value_type i =0) const;

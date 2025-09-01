@@ -1,5 +1,5 @@
-#ifndef _NT_BUCKET_ITERATOR_H_
-#define _NT_BUCKET_ITERATOR_H_
+#ifndef NT_BUCKET_ITERATOR_H__
+#define NT_BUCKET_ITERATOR_H__
 
 #include <iterator>
 
@@ -390,4 +390,4 @@ inline static constexpr bool iterator_is_list_v = iterator_is_list<T>::value;
 
 } // nt::
 
-#endif //_NT_BUCKET_ITERATOR_H_
+#endif //NT_BUCKET_ITERATOR_H__

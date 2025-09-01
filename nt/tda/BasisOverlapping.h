@@ -1,8 +1,8 @@
-#ifndef _NT_TDA_BASIS_OVERLAPPING_H_
-#define _NT_TDA_BASIS_OVERLAPPING_H_
+#ifndef NT_TDA_BASIS_OVERLAPPING_H__
+#define NT_TDA_BASIS_OVERLAPPING_H__
 
 #include "../Tensor.h"
-#include "../convert/std_convert.h"
+#include "../convert/Convert.h"
 #include "../functional/functional.h"
 #include <algorithm>
 #include <cmath>
@@ -19,7 +19,7 @@
 namespace nt {
 namespace tda {
 
-class BasisOverlapping {
+class NEUROTENSOR_API BasisOverlapping {
     Tensor dist_sq;
 
   public:

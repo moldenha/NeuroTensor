@@ -1,13 +1,15 @@
-#ifndef _NT_SPARSE_DATA_H_
-#define _NT_SPARSE_DATA_H_
+#ifndef NT_SPARSE_DATA_H__
+#define NT_SPARSE_DATA_H__
 #include "../../intrusive_ptr/intrusive_ptr.hpp"
 #include <iostream>
 #include <memory>
 #include <cstring>
+#include "../utils/api_macro.h"
+#include "../memory/meta_allocator.h"
 
 namespace nt{
 namespace sparse_details{
-class SparseMemoryData : public intrusive_ptr_target{
+class NEUROTENSOR_API SparseMemoryData : public intrusive_ptr_target{
     std::size_t type_size;
     size_t max_size;
     void* memory;
@@ -18,14 +20,14 @@ class SparseMemoryData : public intrusive_ptr_target{
     SparseMemoryData(std::size_t type_size, int64_t reserve_size = 0)
         : type_size(type_size), max_size(reserve_size), size(0), memory(nullptr) {
         if (reserve_size > 0) {
-            memory = std::malloc(type_size * reserve_size);
+            memory = MetaMalloc(type_size * reserve_size);
             indices.reserve(reserve_size);
         }
     }
 
     ~SparseMemoryData() {
         if(memory != nullptr){
-            std::free(memory);
+            MetaCStyleFree(memory);
             memory = nullptr;
         }
     }

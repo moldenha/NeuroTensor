@@ -1,5 +1,5 @@
-#ifndef _NT_TENSOR_H_
-#define _NT_TENSOR_H_
+#ifndef NT_TENSOR_H__
+#define NT_TENSOR_H__
 #include "types/TensorDeclare.h"
 #include "dtype/compatible/DType_compatible.h"
 
@@ -20,6 +20,8 @@
 #include "utils/utils.h"
 #include "utils/optional_list.h"
 #include "utils/CommaOperator.h"
+#include "utils/api_macro.h"
+#include "utils/collect_ri.hpp"
 
 /* #include "CustomOperator.h" */
 #include <type_traits>
@@ -46,7 +48,7 @@ class TensorIterator;
 
 namespace result_types{
 	template<typename T, typename G>
-	struct max{ 
+	struct NEUROTENSOR_API max{ 
 		T values; 
 		G indices;
 		explicit max(const T& a, const G& b) :values(a), indices(b) {}
@@ -61,12 +63,11 @@ namespace result_types{
 }
 
 
-class Tensor final{
+class NEUROTENSOR_API Tensor final{
 	friend class ArrayVoid;
 	friend class Bucket;
     friend class SparseTensor;
 	public:
-		DType dtype;
 		using size_value_t = typename SizeRef::ArrayRefInt::value_type;
 	private:
 		/* friend class layers::AttributeAccess; */
@@ -74,13 +75,13 @@ class Tensor final{
 		ArrayVoid _vals;
 		SizeRef _size;
 		size_value_t _total_size;
-		intrusive_ptr<size_value_t[]> stored_strides;
+		intrusive_tracked_list<size_value_t> stored_strides;
         bool _is_mutable;
 		/* Tensor(float*, const std::vector<long long>&); */
 		/* Tensor(const float*, const float*, const std::vector<long long>&); */
 		/* Tensor(ArrayVoid, std::shared_ptr<SizeRef>); */
 		Tensor(size_value_t, const ArrayVoid&, SizeRef&&);
-		Tensor(ArrayVoid, SizeRef, intrusive_ptr<size_value_t[]>);
+		Tensor(ArrayVoid, SizeRef, intrusive_tracked_list<size_value_t>);
 
 		inline void collectIntegers(std::vector<int64_t>& a) const {;}
 		template<typename... Args>
@@ -99,14 +100,15 @@ class Tensor final{
 		Tensor view_Tensor_vector(std::vector<size_value_t> v) const;
         inline bool is_sub_tensor() const {return _vals.get_bucket().is_sub_memory() && !this->is_null();}
 	public:
-
-		Tensor(DType _dt = DType::Float);
+        Tensor();
+		Tensor(DType _dt);
 		Tensor(SizeRef, DType _dt = DType::Float);
 		Tensor(ArrayVoid, SizeRef);
 		Tensor(ArrayVoid, SizeRef, const std::vector<size_value_t>&);
 		Tensor(std::string_view);
 		Tensor(const Tensor&);
 		Tensor(Tensor&&);
+        Tensor(std::initializer_list<Tensor>);
 		explicit Tensor(std::nullptr_t);
 		explicit Tensor(Scalar);
 		void swap(Tensor&);
@@ -114,6 +116,7 @@ class Tensor final{
 
 		template<std::size_t N>
 		static Tensor FromInitializer(typename utils::NestedInitializerLists_type<Scalar, N>::type v, DType dt=DType::Float);
+        inline const DType& dtype() const noexcept {return _vals.dtype();}
 		Tensor& operator++();
 		Tensor& operator=(Scalar);
 		Tensor& operator=(const Tensor&);
@@ -157,7 +160,9 @@ class Tensor final{
 		Tensor operator-(const Tensor&) const;
 		Tensor& operator-=(Scalar);
 		Tensor& operator-=(const Tensor&);
-		
+	    
+        Tensor operator%(Scalar) const;
+
 		Tensor operator-() const;
 	
 
@@ -208,33 +213,20 @@ class Tensor final{
 		const SizeRef& shape() const;
 		Tensor operator[](size_value_t);
 		const Tensor operator[](size_value_t) const;
-		Tensor operator[](const my_range&);
-		const Tensor operator[](const my_range&) const;
+		Tensor operator[](const range_&);
+		const Tensor operator[](const range_&) const;
 		Tensor operator[](const Tensor&) const;
-		/* template<std::is_integral ...Ts> */
-		/* Tensor operator[](Ts... ts); */
-		/* template<std::is_integral ...Ts> */
-		/* const Tensor operator[](Ts... ts) const; */
-		const Tensor operator[](std::vector<my_range>) const;
-		Tensor operator[](std::vector<my_range>);
+		const Tensor operator[](std::vector<range_>) const;
+		Tensor operator[](std::vector<range_>);
 		const Tensor operator[](std::vector<size_value_t>) const;
 		Tensor operator[](std::vector<size_value_t>);
-        Tensor index_except(int64_t dim, int64_t excluding_index) const;   
+        Tensor index_except(int64_t dim, int64_t excluding_index) const; 
 
-		template<typename... Args>
-        inline const Tensor operator()(int64_t i, Args&&... args) const {
-			std::vector<size_value_t> s;
-			collectIntegers(s, i, args...);
-			return (*this)[std::move(s)];
-			
-		}
-        template<typename... Args>
-        inline Tensor operator()(int64_t i, Args&&... args) {
-			std::vector<size_value_t> s;
-			collectIntegers(s, i, args...);
-			return (*this)[std::move(s)];
-			
-		}
+        template<typename Arg, typename... Args>
+        inline Tensor operator()(Arg&& i, Args&&... args) const {
+            auto vec = utils::collect_integers_or_ranges<size_value_t>(std::forward<Arg>(i), std::forward<Args>(args)...);
+            return (*this)[vec];
+        }
 		void print() const;
 		void* data_ptr(); // _vals.strides()[0] <- important distinction btwn what vals and this will return this tensors beggining ptr, versus vals will return the shared pointers first
 		const void* data_ptr() const;
@@ -298,7 +290,7 @@ class Tensor final{
 			return strides();
 		}
 		inline Tensor& set_stored_strides(const std::vector<size_value_t>& nS){
-			stored_strides = intrusive_ptr<size_value_t[]>(nS.size());
+			stored_strides = intrusive_tracked_list<size_value_t>(nS.size());
 			for(size_t i = 0; i < nS.size(); ++i){stored_strides[i] = nS[i];}
 			return *this;
 		}
@@ -317,10 +309,10 @@ class Tensor final{
 		/* Tensor split_axis(size_value_t); */ //replaced by just a const version
 						       //felt it was okay to be const becaust it is just a stride/view change
 		/* Tensor split_axis_experimental(size_value_t); */
-		Tensor split_axis(std::vector<my_range>) const;
+		Tensor split_axis(std::vector<range_>) const;
 		Tensor split_axis(size_value_t) const;
 		Tensor split_axis_1() const;
-		/* const Tensor split_axis(std::vector<my_range>) const; */
+		/* const Tensor split_axis(std::vector<range_>) const; */
 		ArrayVoid& arr_void();
 		const ArrayVoid& arr_void() const;
 		std::string_view sv() const;
@@ -397,10 +389,10 @@ class Tensor final{
 		//      and then iteratively increment a numerical value
 		//that can just be done by the user, and the user can then split by which ever dimension they choose
 		//may decide to change this in the future
-		class Iterator{
+		class NEUROTENSOR_API Iterator{
 			public:
 				explicit Iterator(const Tensor& p, int64_t index) : ptr(p), index(index) {}
-				inline const Tensor operator*() {return ptr.dtype == DType::TensorObj ? ptr[index].item<Tensor>() : ptr[index];}
+				inline const Tensor operator*() {return ptr.dtype() == DType::TensorObj ? ptr[index].item<Tensor>() : ptr[index];}
 				inline const Iterator& operator++() {++index;return *this;}
 				inline bool operator!=(const Iterator& other) const {return other.index != index;}
 			private:
@@ -419,17 +411,9 @@ class Tensor final{
 		/* 	return Tensor(ArrayVoid::makeEmptyArray(dt), {0}); */
 		/* } */
 
-		inline static Tensor makeNullTensorArray(int64_t num){
-			void* mem = std::calloc(num, sizeof(Tensor));
-			Tensor* begin = reinterpret_cast<Tensor*>(mem);
-			Tensor* end = begin + num;
-			std::for_each(begin, end, [](Tensor& val){val.nullify();});
-			return Tensor(ArrayVoid(num, DType::TensorObj, mem, &detail::defaultCStyleDeallocator<void>), {num});
-		}
+		inline static Tensor makeNullTensorArray(int64_t num){ return Tensor({num}, DType::TensorObj); }
 
 		inline static Tensor Null(){ return Tensor(nullptr); }
-
-
 };
 
 /* template<std::is_integral ...Ts> */

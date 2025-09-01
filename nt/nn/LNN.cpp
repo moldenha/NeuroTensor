@@ -48,7 +48,7 @@ TensorGrad LNN::forward(TensorGrad x){
     }
     // Timespans: (batch_size, sequence_length)
     // Example: Varying time intervals between elements in the sequence
-    // timespans = torch.tensor([[1, 2, 1, 0.5, 1, 1] for _ in range(batch_size)], dtype=torch.float32)
+    // timespans = torch.detach()([[1, 2, 1, 0.5, 1, 1] for _ in range(batch_size)], dtype=torch.float32)
     return this->lnn(x, hidden_state, Tensor::Null(), hidden_state);
 
 

@@ -1,5 +1,5 @@
-#ifndef _MY_CONVERT_DTYPE_H
-#define _MY_CONVERT_DTYPE_H
+#ifndef NT_CONVERT_DTYPE_H__
+#define NT_CONVERT_DTYPE_H__
 
 #include "compatible/DType_compatible.h"
 #include "DType.h"
@@ -16,10 +16,8 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){return val;}
 
 template<DType T, typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_complex_v<T> && ::nt::DTypeFuncs::is_dtype_real_num_v<::nt::DTypeFuncs::type_to_dtype<A>>, bool> = true>
 inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
-#ifdef _HALF_FLOAT_SUPPORT_
 	if(T == DType::Complex32)
 		return complex_32(static_cast<float16_t>(val), 0);
-#endif
 	if(T == DType::cdouble)
 		return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<double>(val), 0);
 	return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<float>(val), 0);
@@ -27,10 +25,8 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 
 template<DType T, typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_complex_v<T> && std::is_same_v<A, uint_bool_t>, bool> = true>
 inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
-#ifdef _HALF_FLOAT_SUPPORT_
 	if(T == DType::Complex32)
 		return complex_32(static_cast<float16_t>(val.value), 0);
-#endif
 	if(T == DType::cdouble)
 		return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<double>(val.value), 0);
 	return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<float>(val.value), 0);
@@ -39,10 +35,8 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 
 template<DType T, typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_complex_v<T> && std::is_same_v<A, bool>, bool> = true>
 inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
-#ifdef _HALF_FLOAT_SUPPORT_
 	if(T == DType::Complex32)
 		return complex_32(static_cast<float16_t>(val), 0);
-#endif
 	if(T == DType::cdouble)
 		return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<double>(val), 0);
 	return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<float>(val), 0);
@@ -119,7 +113,6 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 /* } */
 
 
-#ifdef _HALF_FLOAT_SUPPORT_
 
 template<typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_floating_v<::nt::DTypeFuncs::type_to_dtype<A>>, bool> = true>
 inline float16_t to_float_16_from_floating(const A& val){
@@ -133,11 +126,9 @@ inline float16_t to_float_16_from_complex(const A& val){
 
 template<typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_integer_v<::nt::DTypeFuncs::type_to_dtype<A>>, bool> = true>
 inline float16_t to_float_16_from_int(const A& val){
-#ifdef __SIZEOF_INT128__
 	if constexpr(std::is_same_v<A, uint128_t> || std::is_same_v<A, int128_t>){
 		return float16_t(int(val));
 	}
-#endif
 	return static_cast<float16_t>(val);
 }
 
@@ -179,10 +170,8 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 	else if(::nt::DTypeFuncs::is_dtype_floating_v<T>)
 		return static_cast<::nt::DTypeFuncs::dtype_to_type_t<T>>(val);
 	else if(::nt::DTypeFuncs::is_dtype_integer_v<::nt::DTypeFuncs::type_to_dtype<A>>){
-#ifdef __SIZEOF_INT128__
 		if constexpr(T == DType::int128 || T == DType::uint128)
 			return ::nt::DTypeFuncs::dtype_to_type_t<T>(static_cast<int>(val));
-#endif
 		return static_cast<::nt::DTypeFuncs::dtype_to_type_t<T>>(val);
 	}
 	else if(T == DType::Bool)
@@ -197,9 +186,6 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 }
 
 
-#endif
-
-#ifdef _128_FLOAT_SUPPORT_
 
 template<typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_floating_v<::nt::DTypeFuncs::type_to_dtype<A>>, bool> = true>
 inline float128_t to_float_128_from_floating(const A& val){
@@ -213,11 +199,9 @@ inline float128_t to_float_128_from_complex(const A& val){
 
 template<typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_integer_v<::nt::DTypeFuncs::type_to_dtype<A>>, bool> = true>
 inline float128_t to_float_128_from_int(const A& val){
-#ifdef __SIZEOF_INT128__
 	if constexpr(std::is_same_v<A, uint128_t> || std::is_same_v<A, int128_t>){
 		return float128_t(val);
 	}
-#endif
 	return static_cast<float128_t>(val);
 }
 
@@ -271,9 +255,7 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 		return ::nt::DTypeFuncs::dtype_to_type_t<T>(0);
 }
 
-#endif
 
-#ifdef __SIZEOF_INT128__
 template<typename A, std::enable_if_t<::nt::DTypeFuncs::is_dtype_floating_v<::nt::DTypeFuncs::type_to_dtype<A>>, bool> = true>
 inline int128_t to_int128_from_floating(const A& val){
 	return static_cast<int128_t>(val);
@@ -400,7 +382,6 @@ inline ::nt::DTypeFuncs::dtype_to_type_t<T> convert(const A& val){
 		return ::nt::DTypeFuncs::dtype_to_type_t<T>(0);
 }
 
-#endif
 
 template<typename T, typename A>
 inline T convert(const A& val){return convert<::nt::DTypeFuncs::type_to_dtype<T>>(val);}

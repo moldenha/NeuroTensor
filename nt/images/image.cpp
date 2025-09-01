@@ -100,7 +100,7 @@ void parsePPM(const std::string& filename, int& width, int& height) {
 }
 
 void Image::savePPM(const std::string& filename, const Tensor& rgb) const {
-    utils::throw_exception(rgb.dtype == DType::uint8, "Expected tensor to have dtype uint8 but had $", pixels.dtype);
+    utils::throw_exception(rgb.dtype() == DType::uint8, "Expected tensor to have dtype uint8 but had $", pixels.dtype());
     utils::throw_exception(rgb.is_contiguous(), "Expected tensor to be contiguous");
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) {

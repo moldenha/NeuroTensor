@@ -1,5 +1,5 @@
-#ifndef _NT_LAYER_REGISTRY_HPP_
-#define _NT_LAYER_REGISTRY_HPP_
+#ifndef NT_LAYER_REGISTRY_HPP__
+#define NT_LAYER_REGISTRY_HPP__
 #include "../../nn/Module.h"
 #include "custom_iterator.hpp"
 #include "custom_iterator_map.hpp"
@@ -260,4 +260,4 @@ inline TensorGrad run_eval_function(intrusive_ptr<Module>& ptr, std::vector<util
 
 }}}
 
-#endif //_NT_LAYER_REGISTRY_HPP_
+#endif //NT_LAYER_REGISTRY_HPP__

@@ -1,5 +1,5 @@
-#ifndef _NT_UTILS_OPTIONAL_H_
-#define _NT_UTILS_OPTIONAL_H_
+#ifndef NT_UTILS_OPTIONAL_H__
+#define NT_UTILS_OPTIONAL_H__
 
 #include "optional_tensor.h"
 #include "optional_list.h"

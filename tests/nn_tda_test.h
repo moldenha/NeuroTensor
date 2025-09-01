@@ -22,7 +22,8 @@ void persistent_dist_mat_gradient(){
     int8_t point = 1;
     // cloud[bools] = 1;
     nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
-    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    cloud.detach()
+          << 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 1, 0,
              0, 0, 1, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -35,11 +36,11 @@ void persistent_dist_mat_gradient(){
     
     nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
     std::cout << "dist mat: "<<dist_mat<<std::endl;
-    nt::Tensor wanted = nt::functional::rand(0.3, 2.5, dist_mat.shape(), dist_mat.dtype);
-    nt::Tensor grad = dist_mat.tensor - wanted;
+    nt::Tensor wanted = nt::functional::rand(0.3, 2.5, dist_mat.shape(), dist_mat.dtype());
+    nt::Tensor grad = dist_mat.detach() - wanted;
     dist_mat.backward(grad);
     std::cout << "cloud: " << cloud << std::endl;
-    std::cout << "cloud grad: " << cloud.grad_value() << std::endl;
+    std::cout << "cloud grad: " << cloud.grad() << std::endl;
     cloud.update();
     std::cout << "cloud: " << cloud << std::endl;
 
@@ -50,7 +51,8 @@ void persistent_dist_mat_gradient(){
 //tests gettingg the gradient of a simplex complex
 void persistent_simplex_complex_gradient(){
     nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
-    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    cloud.detach()
+          << 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 1, 0,
              0, 0, 1, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -66,10 +68,10 @@ void persistent_simplex_complex_gradient(){
     //negative values increase the radii
     //positive values decrease the radii
     nt::Tensor wanted = nt::functional::rand(1.0, 6.0, radi.shape(), nt::DType::Float32);
-    nt::TensorGrad loss = nt::tda::loss::filtration_loss(radi, wanted);
+    nt::ScalarGrad loss = nt::tda::loss::filtration_loss(radi, wanted);
     loss.backward();
     std::cout << "cloud: " << cloud << std::endl;
-    std::cout << "cloud grad: " << cloud.grad_value() << std::endl;
+    std::cout << "cloud grad: " << cloud.grad() << std::endl;
     cloud.update();
     std::cout << "cloud: " << cloud << std::endl;
     std::cout << "wanted: "<<wanted<<std::endl;
@@ -85,7 +87,8 @@ void persistent_simplex_complex_gradient(){
 //tests gettingg the gradient of a simplex complex
 void persistent_boundary_gradient(){
     nt::TensorGrad cloud(nt::Tensor({9, 9}, nt::DType::Float32));
-    cloud << 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    cloud.detach()
+          << 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 1, 0,
              0, 0, 1, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -107,7 +110,7 @@ void persistent_boundary_gradient(){
     std::cout << "sig_radi_2: "<<sig_radi_2 << std::endl;
     auto [x_indexes, y_indexes, boundaries] = 
             nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
-                                                                         sig_radi_3.tensor, sig_radi_2.tensor);
+                                                                         sig_radi_3.detach(), sig_radi_2.detach());
 
     nt::utils::throw_exception(x_indexes.size() == y_indexes.size()
                            && x_indexes.size() == boundaries.size(),
@@ -200,7 +203,7 @@ void hodge_laplacian_1d_gradient(){
     
     auto [x_indexes_k, y_indexes_k, boundaries_k] = 
             nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_2, simplex_complex_1,
-                                                                         sig_radi_2.tensor, sig_radi_1.tensor);
+                                                                         sig_radi_2.detach(), sig_radi_1.detach());
     
     nt::TensorGrad boundary_k = sig_radi_1.view(-1, 1) * sig_radi_2;
    
@@ -213,7 +216,7 @@ void hodge_laplacian_1d_gradient(){
         access[x_indexes_k[i] * cols + y_indexes_k[i]] = (boundaries_k[i] < 1 ? -1 : 1.0);
         access2[x_indexes_k[i] * cols + y_indexes_k[i]] = 1;
     }
-    boundary_k.tensor *= mult_2;
+    boundary_k.detach() *= mult_2;
     boundary_k *= mult;
     
     auto hodge_laplacian = nt::functional::matmult(boundary_k, boundary_k, false, true);
@@ -236,15 +239,15 @@ void hodge_laplacian_1d_gradient(){
         
     }
     // std::cout << "wanted laplacian: "<<wanted_laplacian<<std::endl;
-    nt::Tensor gradient = std::pow(wanted_laplacian - hodge_laplacian.tensor, 2) / wanted_laplacian.numel();
+    nt::Tensor gradient = std::pow(wanted_laplacian - hodge_laplacian.detach(), 2) / wanted_laplacian.numel();
     hodge_laplacian.backward(-gradient);
     // std::cout << "boundary k: "<<boundary_k<<std::endl;
     // std::cout << "boundary_k gradient: "<<boundary_k.grad->tensor << std::endl;
     
     // std::cout << "sig_radi_2 grad: "<<sig_radi_2.grad->tensor<<std::endl;
      
-    std::cout << "distance matrix gradient: "<<dist_mat.grad->tensor<<std::endl;
-    std::cout << "weighted distance matrx gradient: "<< weighted_distance.grad->tensor; 
+    std::cout << "distance matrix gradient: "<<dist_mat.grad()<<std::endl;
+    std::cout << "weighted distance matrx gradient: "<< weighted_distance.grad(); 
     weighted_distance.update();
     std::cout << weighted_distance << std::endl;
     std::cout << simplex_complex_1 << std::endl; 
@@ -274,11 +277,11 @@ void hodge_laplacian_gradient(){
     // std::cout << "sig_radi_1: "<<sig_radi_1 << std::endl;
     auto [x_indexes_kp1, y_indexes_kp1, boundaries_kp1] = 
             nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
-                                                                         sig_radi_3.tensor, sig_radi_2.tensor);
+                                                                         sig_radi_3.detach(), sig_radi_2.detach());
 
    auto [x_indexes_k, y_indexes_k, boundaries_k] = 
             nt::tda::compute_differentiable_boundary_sparse_matrix_index(simplex_complex_2, simplex_complex_1,
-                                                                         sig_radi_2.tensor, sig_radi_1.tensor);
+                                                                         sig_radi_2.detach(), sig_radi_1.detach());
     
 
 
@@ -304,7 +307,7 @@ void hodge_laplacian_gradient(){
             access[x_indexes_kp1[i] * cols + y_indexes_kp1[i]] = (boundaries_kp1[i] < 1 ? -1 : 1.0);
             access2[x_indexes_kp1[i] * cols + y_indexes_kp1[i]] = 1;
         }
-        boundary_kp1.tensor *= mult_2;
+        boundary_kp1.detach() *= mult_2;
         boundary_kp1 *= mult;
     }
 
@@ -318,11 +321,11 @@ void hodge_laplacian_gradient(){
             access[x_indexes_k[i] * cols + y_indexes_k[i]] = (boundaries_k[i] < 1 ? -1 : 1.0);
             access2[x_indexes_k[i] * cols + y_indexes_k[i]] = 1;
         }
-        boundary_k.tensor *= mult_2;
+        boundary_k.detach() *= mult_2;
         boundary_k *= mult;
     }
-    // boundary_kp1 = boundary_kp1[{nt::my_range(0, k), nt::my_range(0, kp1)}];
-    // boundary_k = boundary_k[{nt::my_range(0, km1), nt::my_range(0, k)}];
+    // boundary_kp1 = boundary_kp1[{nt::range_(0, k), nt::range_(0, kp1)}];
+    // boundary_k = boundary_k[{nt::range_(0, km1), nt::range_(0, k)}];
 
     
     
@@ -334,7 +337,7 @@ void hodge_laplacian_gradient(){
     auto hodge_laplacian = delta_up + delta_down;
     // std::cout << hodge_laplacian << std::endl;
     // for(int64_t i = 0; i < hodge_laplacian.shape()[0]; ++i){
-    //     auto all_paths = findAllPaths(hodge_laplacian.tensor, i);
+    //     auto all_paths = findAllPaths(hodge_laplacian.detach(), i);
     //     for(const auto& path : all_paths){
     //         std::cout << "path: ";
     //         for(const auto& element : path)
@@ -361,16 +364,16 @@ void hodge_laplacian_gradient(){
         
     }
     // std::cout << "wanted laplacian: "<<wanted_laplacian<<std::endl;
-    nt::Tensor gradient = std::pow(wanted_laplacian - hodge_laplacian.tensor, 2) / wanted_laplacian.numel();
+    nt::Tensor gradient = std::pow(wanted_laplacian - hodge_laplacian.detach(), 2) / wanted_laplacian.numel();
     hodge_laplacian.backward(gradient);
     std::cout << "boundary kp1: "<<boundary_kp1<<std::endl;
-    std::cout << "boundary_kp1 gradient: "<<boundary_kp1.grad->tensor << std::endl;
+    std::cout << "boundary_kp1 gradient: "<<boundary_kp1.grad() << std::endl;
     
-    std::cout << "sig_radi_2 grad: "<<sig_radi_2.grad->tensor<<std::endl;
-    std::cout << "sig_radi_3 grad: "<<sig_radi_3.grad->tensor<<std::endl;
+    std::cout << "sig_radi_2 grad: "<<sig_radi_2.grad()<<std::endl;
+    std::cout << "sig_radi_3 grad: "<<sig_radi_3.grad()<<std::endl;
      
-    std::cout << "distance matrix gradient: "<<dist_mat.grad->tensor<<std::endl;
-    std::cout << "weighted distance matrx gradient: "<< weighted_distance.grad->tensor; 
+    std::cout << "distance matrix gradient: "<<dist_mat.grad()<<std::endl;
+    std::cout << "weighted distance matrx gradient: "<< weighted_distance.grad(); 
 }
 
 
@@ -419,8 +422,8 @@ void nn_laplacian_1d_test(){
     
     for(int i = 0; i < 100; ++i){
         nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
-        if(weight.tensor.is_null()){
-            weight.tensor = nt::functional::randn( dist_mat.shape());
+        if(weight.detach().is_null()){
+            weight.detach() = nt::functional::randn( dist_mat.shape());
             std::cout << "weight: "<<weight<<std::endl;
         }
         dist_mat *= weight;
@@ -436,12 +439,12 @@ void nn_laplacian_1d_test(){
 
         }
         auto loss = nt::tda::loss::path_loss(paths, target_paths);
-        std::cout << "loss: "<<loss.item() << " with "<<paths.numel()<<" paths "<<std::endl;
+        std::cout << "loss: "<< loss << " with "<<paths.numel()<<" paths "<<std::endl;
         loss.backward();
         if(i == 0){
             // std::cout << paths.grad->tensor<<std::endl;
-            std::cout << laplacian.grad->tensor<<std::endl;
-            std::cout << weight.grad->tensor << std::endl;
+            std::cout << laplacian.grad() <<std::endl;
+            std::cout << weight.grad() << std::endl;
             std::cout << simplexes << std::endl;
         }
         // weight.grad->tensor *= 40;
@@ -475,14 +478,14 @@ void nn_laplacian_2_test(){
     for(int i = 0; i < iterations; ++i){
         std::cout << "[ITERATION  "<<i<<"]:"<<std::endl;
         // nt::TensorGrad dist_mat = nt::tda::cloudToDist(cloud, 1);
-        if(weight1.tensor.is_null()){
+        if(weight1.detach().is_null()){
             weight1 = nt::TensorGrad(nt::functional::randn(dist_mat.shape()));
             bias1 = nt::TensorGrad(nt::functional::randn(dist_mat.shape()));
             weight2 = nt::TensorGrad(nt::functional::randn(dist_mat.shape()));
             bias2 = nt::TensorGrad(nt::functional::randn(dist_mat.shape()));
         }
         // nt::TensorGrad temp_mult1 = nt::functional::matmult(dist_mat, weight1);
-        // nt::TensorGrad redefine_temp1(temp_mult1.tensor);
+        // nt::TensorGrad redefine_temp1(temp_mult1.detach());
         // nt::TensorGrad::redefine_tracking(redefine_temp1, temp_mult1,
         //                                   [](const nt::Tensor& grad, nt::intrusive_ptr<nt::TensorGrad>& parent){
 	    	                            // std::cout << "[!] -> -> operator+ redefined tracking backward called [!] [!]" <<std::endl;
@@ -557,7 +560,7 @@ void nn_laplacian_2_test(){
             }
         }
         auto loss = nt::tda::loss::path_loss(paths, target_paths);
-        std::cout << "loss: "<<loss.item() << " with "<<paths.numel()<<" paths "<<std::endl;
+        std::cout << "loss: "<<loss << " with "<<paths.numel()<<" paths "<<std::endl;
         loss.backward();
         // if(i == -1){
         //     std::cout << "grads: "<<std::endl;
@@ -570,13 +573,13 @@ void nn_laplacian_2_test(){
         //     std::cout << dist_mat2.grad->tensor << std::endl;
         // }
         if(i < 75){
-        weight1.grad->tensor *= lr;
+        weight1.grad() *= lr;
         weight1.update();
-        bias1.grad->tensor *= lr;
+        bias1.grad() *= lr;
         bias1.update();
-        weight2.grad->tensor *= lr;
+        weight2.grad() *= lr;
         weight2.update();
-        bias2.grad->tensor *= lr;
+        bias2.grad() *= lr;
         bias2.update();
         // if(i > 50) lr = 0.1;
         }
@@ -608,9 +611,9 @@ void nn_laplacian_2_test(){
             std::cout << laplacian<<std::endl;
             std::cout << simplexes << std::endl;
             std::cout << "where != 0:"<<std::endl;
-            laplacian.tensor[wanted_laplacian != 0].print();
-            std::cout << nt::functional::count(laplacian.tensor[wanted_laplacian != 0] != 0) << std::endl;
-            std::cout << dist_mat1.grad->tensor << std::endl;
+            laplacian.detach()[wanted_laplacian != 0].print();
+            std::cout << nt::functional::count(laplacian.detach()[wanted_laplacian != 0] != 0) << std::endl;
+            std::cout << dist_mat1.grad() << std::endl;
         }
         // break;
     }
@@ -697,10 +700,10 @@ void nn_laplacian_2_test_sub(){
         begin[i * N + i] = degree;
     }
     
-    laplacian.tensor[laplacian.tensor > 1] = 1;
-    laplacian.tensor[laplacian.tensor < -1] = -1;
+    laplacian.detach()[laplacian.detach() > 1] = 1;
+    laplacian.detach()[laplacian.detach() < -1] = -1;
     std::cout << "laplacian: "<<laplacian<<std::endl<<"wanted laplacian: "<<wanted_laplacian<<std::endl;
-    nt::Tensor dL = std::pow(std::abs(laplacian.tensor) - wanted_laplacian, 2);
+    nt::Tensor dL = std::pow(std::abs(laplacian.detach()) - wanted_laplacian, 2);
     dL.fill_diagonal_(0.0);
     std::cout << "dL: "<<dL<<std::endl;
     laplacian.backward(dL);
@@ -776,12 +779,15 @@ void nn_boundary_test(){
     auto [simplex_complex_3, radi_3] = nt::tda::VRfiltration(dist_mat, 3, -1.0);
     auto [simplex_complex_2, radi_2] = nt::tda::VRfiltration(dist_mat, 2, -1.0);
     std::cout << "radi 2: "<<radi_2<<std::endl;
+    std::cout << "radi_3: "<<radi_3 << std::endl;
+    std::cout << "simplex_complex_2: " << simplex_complex_2 << std::endl;
+    std::cout << "simplex_complex_3: " << simplex_complex_3 << std::endl;
     // auto [simplex_complex_1, radi_1] = nt::tda::VRfiltration(dist_mat, 1);
 
     nt::TensorGrad boundary = nt::tda::BoundaryMatrix(simplex_complex_3,  simplex_complex_2, radi_3,radi_2);  
     std::cout << "boundary: " << boundary<<std::endl; 
     
-    nt::Tensor grad = boundary.tensor - wanted_boundary;
+    nt::Tensor grad = boundary.detach() - wanted_boundary;
     boundary.backward(grad);
     std::cout << "old weight: "<<weight<<std::endl;
     weight.update();
@@ -806,7 +812,7 @@ inline nt::TensorGrad pairwise_l2(const nt::TensorGrad& x, const nt::TensorGrad&
 }
 
 inline nt::Tensor sample_gumbel(const nt::TensorGrad& logits){
-    nt::Tensor u = nt::functional::rand(0, 1, logits.shape(), logits.dtype); //uniform (0,1)
+    nt::Tensor u = nt::functional::rand(0, 1, logits.shape(), logits.dtype()); //uniform (0,1)
     return -nt::functional::log(-nt::functional::log(u + 1e-10));       // Gumbel(0,1)
 }
 
@@ -821,9 +827,9 @@ nt::TensorGrad gumbel_softmax(const nt::TensorGrad& logits, float tau, bool hard
 
     if (hard) {
         // Straight-through: make y_hard one-hot
-        nt::Tensor y_hard = nt::functional::one_hot(nt::functional::argmax(y.tensor, -1), y.shape()[-1]).to(y.dtype);
+        nt::Tensor y_hard = nt::functional::one_hot(nt::functional::argmax(y.detach(), -1), y.shape()[-1]).to(y.dtype());
         // Use straight-through estimator
-        return (y_hard - y).tensor + y;
+        return (y_hard - y).detach() + y;
     }
 
     return y;
@@ -866,8 +872,8 @@ void row_swap_test(){
     for(int i = 0; i < iterations; ++i){
         nt::TensorGrad swapped = perform_row_swap(matrix, nt::functional::tanh(row_vec));
         if(i == 0 || i == iterations-1) std::cout << swapped << std::endl;
-        nt::TensorGrad loss = critereon(swapped, wanted_matrix);
-        std::cout << "loss: "<<loss.item() << std::endl;
+        nt::ScalarGrad loss = critereon(swapped, wanted_matrix);
+        std::cout << "loss: "<<loss << std::endl;
         loss.backward();
         // std::cout << row_vec.grad->tensor  << std::endl;
         // row_vec.grad->tensor *= lr;

@@ -7,6 +7,7 @@
 
 #include "../../mp/simde_traits.h"
 #include "../../mp/simde_traits/simde_traits_iterators.h"
+#include "../../types/Types.h"
 
 namespace nt{
 namespace mp{
@@ -74,6 +75,16 @@ inline void fill(T begin, T end, const U& value){
 	}
 }
 
+// template<typename base_type>
+// void print_simd_register(simde_type<base_type> t){
+//     base_type l[SimdTraits<base_type>::pack_size];
+//     SimdTraits<base_type>::storeu(l, t);
+//     for(int i = 0; i < SimdTraits<base_type>::pack_size; ++i){
+//         std::cout << l[i] << ' ';
+//     }
+//     std::cout << std::endl;
+// }
+
 template<typename T>
 inline void iota(T begin, T end, utils::IteratorBaseType_t<T> value = 0){
 	using base_type = utils::IteratorBaseType_t<T>;
@@ -82,23 +93,35 @@ inline void iota(T begin, T end, utils::IteratorBaseType_t<T> value = 0){
 		base_type loading[pack_size];
         utils::IteratorBaseType_t<T> value_cpy = value;
 		for(size_t i = 0; i < pack_size; ++i, ++value_cpy){
-			loading[i] = value_cpy;
+			loading[i] = base_type(value_cpy);
 		}
+        base_type to_set_1__ = (details::is_sub_my_complex<base_type>::value) ? base_type(pack_size) : static_cast<base_type>(pack_size);
 		simde_type<base_type> val;
-		simde_type<base_type> add = SimdTraits<base_type>::set1(static_cast<base_type>(pack_size));
+		simde_type<base_type> add = SimdTraits<base_type>::set1(to_set_1__);
 
 		if constexpr (std::is_integral<base_type>::value || std::is_unsigned<base_type>::value){
 			val = SimdTraits<base_type>::loadu(reinterpret_cast<const simde_type<base_type>*>(loading));
 		}else{
 			val = SimdTraits<base_type>::loadu(loading);
 		}
+        
+        static base_type adding_pack_size(pack_size);
 
-		for(;begin + pack_size <= end; begin += pack_size, value += pack_size){
+		for(;begin + pack_size <= end; begin += pack_size, value += adding_pack_size){
 			it_storeu(begin, val);
 			val = SimdTraits<base_type>::add(val, add);
 		}
-		for(;begin < end; ++begin, ++value)
-			*begin = value;
+
+		if constexpr (details::is_sub_my_complex<base_type>::value){
+            base_type my_cur_one__(1, 1);
+            for(;begin < end; ++begin, value += my_cur_one__){
+                *begin = value;
+            }
+        }
+        else{
+            for(;begin < end; ++begin, ++value)
+                *begin = value;
+        }
 	}else{
 		std::iota(begin, end, value);
 	}	
@@ -156,7 +179,7 @@ void _fill_scalar_(ArrayVoid& arr, Scalar s){
 void _set_(ArrayVoid& arr, const ArrayVoid& arr2){
     const uint64_t size = arr.Size();
     const uint64_t size2 = arr2.Size();
-    if((size != size2) || (arr.dtype != arr2.dtype)){throw std::invalid_argument("cpu::_set_ function requires both arrays to have the same size and dtype");}
+    if((size != size2) || (arr.dtype() != arr2.dtype())){throw std::invalid_argument("cpu::_set_ function requires both arrays to have the same size and dtype");}
     arr.execute_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >(
     [&size](auto _begin, auto _end, auto _begin2){
         threading::preferential_parallel_for(threading::block_ranges<1>(0, size),

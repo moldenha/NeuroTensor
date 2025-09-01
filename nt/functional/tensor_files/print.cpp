@@ -291,22 +291,22 @@ std::ostream& print(std::ostream &out, const Tensor &_t){
     }
     if (_t.is_empty()) {
         if(utils::g_print_dtype_on_tensor){
-            return out << "Tensor([], " << _t.dtype << ")";
+            return out << "Tensor([], " << _t.dtype() << ")";
         }else{
             return out << "Tensor([])";
         }
     }
-    if (_t.dtype == DType::TensorObj && _t.numel() == 1) {
+    if (_t.dtype() == DType::TensorObj && _t.numel() == 1) {
         return print(out, *reinterpret_cast<const Tensor *>(_t.data_ptr())) << std::endl;
     }
-    if (_t.dtype == DType::Bool)
+    if (_t.dtype() == DType::Bool)
         out << std::boolalpha;
     _t.arr_void().cexecute_function<WRAP_DTYPES<AllTypesL>>(
         print_tensor_func, out, _t.shape(), false, 0);
-    if (_t.dtype == DType::Bool)
+    if (_t.dtype() == DType::Bool)
         out << std::noboolalpha;
     if(utils::g_print_dtype_on_tensor){
-        out << std::endl << _t.dtype;
+        out << std::endl << _t.dtype();
     }
     return out;
 }

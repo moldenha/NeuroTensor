@@ -19,7 +19,7 @@ inline bool _nt_sort_ascending_(const int64_t& a, const int64_t& b, const Iterat
 }
 
 void _sort_vals_only_(ArrayVoid& values, const bool& descending, const int64_t& dim_size){
-    if(values.dtype == DType::TensorObj){
+    if(values.dtype() == DType::TensorObj){
         throw std::invalid_argument("_sort_vals_only_ is not designated to handle tensor dtype, try _sort_vals_dtype_tensor_only_");
     }
     if(!values.is_contiguous()){
@@ -77,7 +77,7 @@ void _sort_vals_only_(ArrayVoid& values, const bool& descending, const int64_t& 
 
 
 void _sort_(ArrayVoid& values, int64_t* indices_begin, int64_t* indices_end, const bool& descending, const int64_t& dim_size){
-    if(values.dtype == DType::TensorObj){
+    if(values.dtype() == DType::TensorObj){
         throw std::invalid_argument("_sort_ is not designated to handle tensor dtype, try _sort_tensor_");
     }
     if(!values.is_contiguous()){

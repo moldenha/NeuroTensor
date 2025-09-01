@@ -28,8 +28,8 @@ void max_pool(int64_t n){
     std::cout << "indices: "<<indices << std::endl;
     nt::TensorGrad unpooled = unpool(output, indices);
     std::cout << "unpooled: "<<unpooled<<std::endl;
-    output.backward(output.tensor-1);
-    unpooled.backward(unpooled.tensor-1);
+    output.backward(output.detach()-1);
+    unpooled.backward(unpooled.detach()-1);
 }
 
 void lp_pool(int64_t n){
@@ -50,7 +50,7 @@ void lp_pool(int64_t n){
     
     nt::TensorGrad output = pool(input);
     std::cout << "output: "<<output << std::endl;
-    output.backward(output.tensor-1);
+    output.backward(output.detach()-1);
 }
 
 void avg_pool(int64_t n){
@@ -72,7 +72,7 @@ void avg_pool(int64_t n){
     
     nt::TensorGrad output = pool(input);
     std::cout << "output: "<<output << std::endl;
-    output.backward(output.tensor-1);
+    output.backward(output.detach()-1);
 
 }
 
@@ -94,7 +94,7 @@ void fractional_max_pool(int64_t n){
 
     nt::TensorGrad output = pool(input);
     std::cout << "output: "<<output << std::endl;
-    output.backward(output.tensor-1);
+    output.backward(output.detach()-1);
 
 }
 

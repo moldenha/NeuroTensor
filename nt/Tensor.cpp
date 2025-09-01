@@ -76,50 +76,54 @@ DType specify_dtype_from_scalar(const Scalar &s) {
     return s.type();
 }
 
+
+// The default for Tensor is nullptr for a few reasons:
+// Can have a truly null tensor array that fully tracks all the memory
+Tensor::Tensor()
+    : Tensor(nullptr) {}
+
+
 Tensor::Tensor(DType dt)
-    : _vals(1, dt), _total_size(1), _size({1}), dtype(dt),
+    : _vals(1, dt), _total_size(1), _size({1}),
       stored_strides(nullptr), _is_mutable(true) {}
 
+
 Tensor::Tensor(SizeRef v, DType dt)
-    : _vals(v.unsigned_multiply(), dt), _size(std::move(v)), dtype(dt),
+    : _vals(v.unsigned_multiply(), dt), _size(std::move(v)),
       stored_strides(nullptr), _is_mutable(true) {
     _total_size = _vals.Size();
 }
 
 Tensor::Tensor(ArrayVoid ptr, SizeRef v)
-    : _vals(ptr), _size(std::move(v)), dtype(ptr.dtype),
-      _total_size(ptr.Size()), stored_strides(nullptr), _is_mutable(true) {
-    /* std::cout << "setting dtype"<<std::endl; */
+    : _vals(ptr), _size(std::move(v)),
+    _total_size(ptr.Size()), stored_strides(nullptr), _is_mutable(true) {
     _total_size = _vals.Size();
-    dtype = _vals.dtype;
-    /* std::cout << "dtype set"<<std::endl; */
 }
 Tensor::Tensor(std::string_view _sv)
     : _vals(_sv.size(), DType::uint8),
       _size({static_cast<SizeRef::value_type>(_sv.size())}),
-      dtype(DType::uint8), _total_size(_sv.size()), stored_strides(nullptr), _is_mutable(true) {
+      _total_size(_sv.size()), stored_strides(nullptr), _is_mutable(true) {
     char *begin = reinterpret_cast<char *>(data_ptr());
     std::transform(_sv.cbegin(), _sv.cend(), begin,
                    [](const char &v) { return v; });
 }
 
 Tensor::Tensor(std::nullptr_t)
-    : dtype(nt::DType::Float32), _vals(nullptr), _size(nullptr), _total_size(0),
+    : _vals(nullptr), _size(nullptr), _total_size(0),
       stored_strides(nullptr), _is_mutable(false) {}
 
 
 Tensor::Tensor(const Tensor &t)
     : _vals(t._vals), _total_size(t._total_size), _size(t._size),
-      dtype(t.dtype), stored_strides(t.stored_strides), _is_mutable(t._is_mutable) {}
+      stored_strides(t.stored_strides), _is_mutable(t._is_mutable) {}
 
 Tensor::Tensor(Tensor &&t)
     : _vals(std::move(t._vals)), _total_size(t._total_size),
-      _size(std::move(t._size)), dtype(t.dtype),
+      _size(std::move(t._size)),
       stored_strides(std::move(t.stored_strides)), _is_mutable(t._is_mutable) {}
 
 Tensor::Tensor(Scalar s)
     : _vals(1, specify_dtype_from_scalar(s)), _total_size(1), _size({1}),
-      dtype(specify_dtype_from_scalar(s)),
       stored_strides(nullptr), _is_mutable(true){
     if (s.isZero()) {
         _vals.fill_(0);
@@ -128,6 +132,14 @@ Tensor::Tensor(Scalar s)
     }
 }
 
+Tensor::Tensor(std::initializer_list<Tensor> tensors)
+    :Tensor(Tensor::makeNullTensorArray(tensors.size()))
+{
+    Tensor* begin = reinterpret_cast<Tensor*>(this->data_ptr());
+    for(auto l_begin = tensors.begin(); l_begin != tensors.end(); ++l_begin, ++begin){
+        *begin = *l_begin;
+    }
+}
 
 
 /* template<> */
@@ -176,33 +188,35 @@ void Tensor::swap(Tensor &other) {
     _vals.swap(other._vals);
     std::swap(_total_size, other._total_size);
     _size.swap(other._size);
-    std::swap(dtype, other.dtype);
     std::swap(stored_strides, other.stored_strides);
     std::swap(_is_mutable, other._is_mutable);
 }
 
 Tensor &Tensor::operator=(const Tensor &t) {
+    if(t.is_null()){
+        this->nullify();
+        return *this;
+    }
     if (is_null()) {
         _vals = t._vals;
         _size = t._size;
         _total_size = t._total_size;
-        dtype = t.dtype;
         stored_strides = t.stored_strides;
         _is_mutable = t._is_mutable;
         return *this;
     }
     __NT_HANDLE_MUTABILITY__();
-    if (shape() == t.shape() && dtype == t.dtype) {
+    if (shape() == t.shape() && dtype() == t.dtype()) {
         return functional::set_(*this, t);
     }
-    if (dtype == DType::TensorObj && _total_size == 1) {
+    if (dtype() == DType::TensorObj && _total_size == 1) {
         *reinterpret_cast<Tensor *>(data_ptr()) = t;
         return *this;
     }
+
     _vals = t._vals;
     _size = t._size;
     _total_size = t._total_size;
-    dtype = t.dtype;
     stored_strides = t.stored_strides;
     return *this;
 }
@@ -214,21 +228,20 @@ Tensor &Tensor::operator=(Tensor &&t) {
     if(is_null()){
         _vals = std::move(t._vals);
         _size = std::move(t._size);
-        dtype = t.dtype;
         _total_size = t._total_size;
         stored_strides = std::move(t.stored_strides);
         _is_mutable = t._is_mutable;
         return *this;
     }
-    if (dtype == DType::TensorObj && this->is_sub_tensor() && _total_size == 1) {
+    if (dtype() == DType::TensorObj && this->is_sub_tensor() && _total_size == 1) {
         *reinterpret_cast<Tensor *>(data_ptr()) = std::move(t);
         return *this;
     }
     // __NT_HANDLE_NULL_TENSORS__(t);
     __NT_HANDLE_MUTABILITY__();
+    // std::cout << "operator=(&&)  doing vals equal"<<std::endl;
     _vals = std::move(t._vals);
     _size = std::move(t._size);
-    dtype = t.dtype;
     _total_size = t._total_size;
     stored_strides = std::move(t.stored_strides);
     return *this;
@@ -236,13 +249,15 @@ Tensor &Tensor::operator=(Tensor &&t) {
 
 Tensor &Tensor::operator++() { return functional::add_(*this, 1); }
 
-Tensor &Tensor::operator=(Scalar val) { return functional::fill_(*this, val); }
+Tensor &Tensor::operator=(Scalar val) {return functional::fill_(*this, val); }
+
+Tensor Tensor::operator%(Scalar val) const { return functional::remainder(*this, val); }
 
 Tensor &Tensor::operator+=(Scalar val) { return functional::add_(*this, val); }
 Tensor &Tensor::operator+=(const Tensor &val) {
     __NT_HANDLE_NULL_TENSORS__(val);
     __NT_HANDLE_MUTABILITY__();
-    if (val.numel() == 1 && val.dtype != DType::TensorObj) {
+    if (val.numel() == 1 && val.dtype() != DType::TensorObj) {
         return (*this) += val.toScalar();
     }
     return functional::add_(*this, val);
@@ -252,7 +267,7 @@ Tensor &Tensor::operator+=(const Tensor &val) {
 Tensor Tensor::operator+(Scalar val) const { return functional::add(*this, val); }
 Tensor Tensor::operator+(const Tensor &val) const {
     __NT_HANDLE_NULL_TENSORS__(val);
-    if (val.numel() == 1 && val.dtype != DType::TensorObj) {
+    if (val.numel() == 1 && val.dtype() != DType::TensorObj) {
         return (*this) + val.toScalar();
     }
     return functional::add(*this, val);
@@ -263,7 +278,7 @@ Tensor &Tensor::operator-=(Scalar val) { return functional::subtract_(*this, val
 Tensor &Tensor::operator-=(const Tensor &val) {
     __NT_HANDLE_NULL_TENSORS__(val);
     __NT_HANDLE_MUTABILITY__();
-    if (val.numel() == 1 && val.dtype != DType::TensorObj) {
+    if (val.numel() == 1 && val.dtype() != DType::TensorObj) {
         return (*this) -= val.toScalar();
     }
     return functional::subtract_(*this, val);
@@ -281,7 +296,7 @@ Tensor Tensor::operator*(Scalar val) const {return functional::multiply(*this, v
 
 Tensor Tensor::operator*(const Tensor &a) const {
     __NT_HANDLE_NULL_TENSORS__(a);
-    if (a.numel() == 1 && a.dtype != DType::TensorObj) {
+    if (a.numel() == 1 && a.dtype() != DType::TensorObj) {
         return (*this) * a.toScalar();
     }
     return functional::hadamard_multiply(*this, a);
@@ -293,7 +308,7 @@ Tensor &Tensor::operator*=(Scalar val) { return functional::multiply_(*this, val
 Tensor &Tensor::operator*=(const Tensor &a) {
     __NT_HANDLE_NULL_TENSORS__(a);
     __NT_HANDLE_MUTABILITY__();
-    if (a.numel() == 1 && a.dtype != DType::TensorObj) {
+    if (a.numel() == 1 && a.dtype() != DType::TensorObj) {
         return (*this) *= a.toScalar();
     }
     functional::hadamard_multiply_this(*this, a);
@@ -306,7 +321,7 @@ Tensor Tensor::operator/(Scalar val) const {return functional::divide(*this, val
 
 Tensor Tensor::operator/(const Tensor &val) const {
     __NT_HANDLE_NULL_TENSORS__(val);
-    if (val.numel() == 1 && val.dtype != DType::TensorObj) {
+    if (val.numel() == 1 && val.dtype() != DType::TensorObj) {
         return (*this) / val.toScalar();
     }
     return functional::divide(*this, val);
@@ -316,21 +331,17 @@ Tensor &Tensor::operator/=(Scalar val) {return functional::divide_(*this, val);}
 Tensor &Tensor::operator/=(const Tensor &val) {
     __NT_HANDLE_NULL_TENSORS__(val);
     __NT_HANDLE_MUTABILITY__();
-    if (val.numel() == 1 && val.dtype != DType::TensorObj) {
+    if (val.numel() == 1 && val.dtype() != DType::TensorObj) {
         return (*this) /= val.toScalar();
     }
     return functional::divide_(*this, val);
 }
 
 Tensor Tensor::operator-() const { return *this * -1; }
-Tensor operator+(Scalar s, const Tensor &t) { return t + s; }
-Tensor operator-(Scalar s, const Tensor &t) { return -t + s; }
-Tensor operator*(Scalar s, const Tensor &t) { return t * s; }
-Tensor operator/(Scalar s, const Tensor &t) {
-    Tensor a = t.inverse();
-    a *= s;
-    return a;
-}
+Tensor operator+(Scalar s, const Tensor &t) { return functional::add(s, t);      }
+Tensor operator-(Scalar s, const Tensor &t) { return functional::subtract(s, t); }
+Tensor operator*(Scalar s, const Tensor &t) { return functional::multiply(s, t); }
+Tensor operator/(Scalar s, const Tensor &t) { return functional::divide(s, t);   }
 
 Tensor Tensor::operator==(const Tensor &val) const {return functional::equal(*this, val);}
 Tensor Tensor::operator!=(const Tensor &val) const {return functional::not_equal(*this, val);}
@@ -372,31 +383,18 @@ template <typename T> T &Tensor::item() {
     return *(casted);
 }
 
-template float &Tensor::item<float>();
-template double &Tensor::item<double>();
-template int64_t &Tensor::item<int64_t>();
-template int32_t &Tensor::item<int32_t>();
-template uint32_t &Tensor::item<uint32_t>();
-template int16_t &Tensor::item<int16_t>();
-template uint16_t &Tensor::item<uint16_t>();
-template int8_t &Tensor::item<int8_t>();
-template uint8_t &Tensor::item<uint8_t>();
-template Tensor &Tensor::item<Tensor>();
-template uint_bool_t &Tensor::item<uint_bool_t>();
+#define X(type, dtype_enum_a, dtype_enum_b)\
+template type &Tensor::item<type>();\
+
+NT_GET_X_FLOATING_DTYPES_ 
+NT_GET_X_COMPLEX_DTYPES_
+NT_GET_X_SIGNED_INTEGER_DTYPES_
+NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+NT_GET_X_OTHER_DTYPES_
 template bool &Tensor::item<bool>();
-template complex_64 &Tensor::item<complex_64>();
-template complex_128 &Tensor::item<complex_128>();
-#ifdef __SIZEOF_INT128__
-template uint128_t &Tensor::item<uint128_t>();
-template int128_t &Tensor::item<int128_t>();
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-template float16_t &Tensor::item<float16_t>();
-template complex_32 &Tensor::item<complex_32>();
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template float128_t &Tensor::item<float128_t>();
-#endif
+
+#undef X
+
 
 template <typename T> const T &Tensor::item() const {
     assert(_total_size == 1);
@@ -404,31 +402,18 @@ template <typename T> const T &Tensor::item() const {
     return *(casted);
 }
 
-template const float &Tensor::item<float>() const;
-template const double &Tensor::item<double>() const;
-template const int64_t &Tensor::item<int64_t>() const;
-template const int32_t &Tensor::item<int32_t>() const;
-template const uint32_t &Tensor::item<uint32_t>() const;
-template const int16_t &Tensor::item<int16_t>() const;
-template const uint16_t &Tensor::item<uint16_t>() const;
-template const int8_t &Tensor::item<int8_t>() const;
-template const uint8_t &Tensor::item<uint8_t>() const;
-template const Tensor &Tensor::item<Tensor>() const;
-template const uint_bool_t &Tensor::item<uint_bool_t>() const;
+
+#define X(type, dtype_enum_a, dtype_enum_b)\
+template const type &Tensor::item<type>() const;\
+
+NT_GET_X_FLOATING_DTYPES_ 
+NT_GET_X_COMPLEX_DTYPES_
+NT_GET_X_SIGNED_INTEGER_DTYPES_
+NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+NT_GET_X_OTHER_DTYPES_
 template const bool &Tensor::item<bool>() const;
-template const complex_64 &Tensor::item<complex_64>() const;
-template const complex_128 &Tensor::item<complex_128>() const;
-#ifdef __SIZEOF_INT128__
-template const uint128_t &Tensor::item<uint128_t>() const;
-template const int128_t &Tensor::item<int128_t>() const;
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-template const float16_t &Tensor::item<float16_t>() const;
-template const complex_32 &Tensor::item<complex_32>() const;
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template const float128_t &Tensor::item<float128_t>() const;
-#endif
+
+#undef X
 
 
 
@@ -456,31 +441,20 @@ T& Tensor::item(const std::vector<size_value_t>& vec){
         }));
 }
 
-template float &Tensor::item<float>(const std::vector<Tensor::size_value_t> &);
-template double &Tensor::item<double>(const std::vector<Tensor::size_value_t> &);
-template int64_t &Tensor::item<int64_t>(const std::vector<Tensor::size_value_t> &);
-template int32_t &Tensor::item<int32_t>(const std::vector<Tensor::size_value_t> &);
-template uint32_t &Tensor::item<uint32_t>(const std::vector<Tensor::size_value_t> &);
-template int16_t &Tensor::item<int16_t>(const std::vector<Tensor::size_value_t> &);
-template uint16_t &Tensor::item<uint16_t>(const std::vector<Tensor::size_value_t> &);
-template int8_t &Tensor::item<int8_t>(const std::vector<Tensor::size_value_t> &);
-template uint8_t &Tensor::item<uint8_t>(const std::vector<Tensor::size_value_t> &);
-template Tensor &Tensor::item<Tensor>(const std::vector<Tensor::size_value_t> &);
-template uint_bool_t &Tensor::item<uint_bool_t>(const std::vector<Tensor::size_value_t> &);
+#define X(type, dtype_enum_a, dtype_enum_b)\
+template type &Tensor::item<type>(const std::vector<Tensor::size_value_t> &); \
+
+NT_GET_X_FLOATING_DTYPES_ 
+NT_GET_X_COMPLEX_DTYPES_
+NT_GET_X_SIGNED_INTEGER_DTYPES_
+NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+NT_GET_X_OTHER_DTYPES_
 template bool &Tensor::item<bool>(const std::vector<Tensor::size_value_t> &);
-template complex_64 &Tensor::item<complex_64>(const std::vector<Tensor::size_value_t> &);
-template complex_128 &Tensor::item<complex_128>(const std::vector<Tensor::size_value_t> &);
-#ifdef __SIZEOF_INT128__
-template uint128_t &Tensor::item<uint128_t>(const std::vector<Tensor::size_value_t> &);
-template int128_t &Tensor::item<int128_t>(const std::vector<Tensor::size_value_t> &);
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-template float16_t &Tensor::item<float16_t>(const std::vector<Tensor::size_value_t> &);
-template complex_32 &Tensor::item<complex_32>(const std::vector<Tensor::size_value_t> &);
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template float128_t &Tensor::item<float128_t>(const std::vector<Tensor::size_value_t> &);
-#endif
+
+#undef X
+
+
+
 
 template<typename T>
 const T& Tensor::item(const std::vector<size_value_t>& vec) const{
@@ -505,84 +479,37 @@ const T& Tensor::item(const std::vector<size_value_t>& vec) const{
         }));
 }
 
-template const float &Tensor::item<float>(const std::vector<Tensor::size_value_t> &) const;
-template const double &Tensor::item<double>(const std::vector<Tensor::size_value_t> &) const;
-template const int64_t &Tensor::item<int64_t>(const std::vector<Tensor::size_value_t> &) const;
-template const int32_t &Tensor::item<int32_t>(const std::vector<Tensor::size_value_t> &) const;
-template const uint32_t &Tensor::item<uint32_t>(const std::vector<Tensor::size_value_t> &) const;
-template const int16_t &Tensor::item<int16_t>(const std::vector<Tensor::size_value_t> &) const;
-template const uint16_t &Tensor::item<uint16_t>(const std::vector<Tensor::size_value_t> &) const;
-template const int8_t &Tensor::item<int8_t>(const std::vector<Tensor::size_value_t> &) const;
-template const uint8_t &Tensor::item<uint8_t>(const std::vector<Tensor::size_value_t> &) const;
-template const Tensor &Tensor::item<Tensor>(const std::vector<Tensor::size_value_t> &) const;
-template const uint_bool_t &Tensor::item<uint_bool_t>(const std::vector<Tensor::size_value_t> &) const;
+#define X(type, dtype_enum_a, dtype_enum_b)\
+template const type &Tensor::item<type>(const std::vector<Tensor::size_value_t> &) const; \
+
+NT_GET_X_FLOATING_DTYPES_ 
+NT_GET_X_COMPLEX_DTYPES_
+NT_GET_X_SIGNED_INTEGER_DTYPES_
+NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+NT_GET_X_OTHER_DTYPES_
 template const bool &Tensor::item<bool>(const std::vector<Tensor::size_value_t> &) const;
-template const complex_64 &Tensor::item<complex_64>(const std::vector<Tensor::size_value_t> &) const;
-template const complex_128 &Tensor::item<complex_128>(const std::vector<Tensor::size_value_t> &) const;
-#ifdef __SIZEOF_INT128__
-template const uint128_t &Tensor::item<uint128_t>(const std::vector<Tensor::size_value_t> &) const;
-template const int128_t &Tensor::item<int128_t>(const std::vector<Tensor::size_value_t> &) const;
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-template const float16_t &Tensor::item<float16_t>(const std::vector<Tensor::size_value_t> &) const;
-template const complex_32 &Tensor::item<complex_32>(const std::vector<Tensor::size_value_t> &) const;
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-template const float128_t &Tensor::item<float128_t>(const std::vector<Tensor::size_value_t> &) const;
-#endif
+
+#undef X
 
 Scalar Tensor::toScalar() const {
     __NT_HANDLE_NULL_TENSORS__();
-    switch (dtype) {
-    case DType::Integer:
-        return Scalar(reinterpret_cast<const int32_t *>(_vals.data_ptr())[0]);
-    case DType::Float:
-        return Scalar(reinterpret_cast<const float *>(_vals.data_ptr())[0]);
-    case DType::Double:
-        return Scalar(reinterpret_cast<const double *>(_vals.data_ptr())[0]);
-    case DType::Long:
-        return Scalar(reinterpret_cast<const uint32_t *>(_vals.data_ptr())[0]);
-    case DType::Complex64:
-        return Scalar(
-            reinterpret_cast<const complex_64 *>(_vals.data_ptr())[0]);
-    case DType::Complex128:
-        return Scalar(
-            reinterpret_cast<const complex_128 *>(_vals.data_ptr())[0]);
-    case DType::uint8:
-        return Scalar(reinterpret_cast<const uint8_t *>(_vals.data_ptr())[0]);
-    case DType::int8:
-        return Scalar(reinterpret_cast<const int8_t *>(_vals.data_ptr())[0]);
-    case DType::int16:
-        return Scalar(reinterpret_cast<const int16_t *>(_vals.data_ptr())[0]);
-    case DType::uint16:
-        return Scalar(reinterpret_cast<const uint16_t *>(_vals.data_ptr())[0]);
-    case DType::LongLong:
-        return Scalar(reinterpret_cast<const int64_t *>(_vals.data_ptr())[0]);
+    switch (dtype()) {
+#define X(type, dtype_enum_a, dtype_enum_b)\
+    case DType::dtype_enum_a: \
+        return Scalar(reinterpret_cast<const type *>(_vals.data_ptr())[0]);
+NT_GET_X_FLOATING_DTYPES_ 
+NT_GET_X_COMPLEX_DTYPES_
+NT_GET_X_SIGNED_INTEGER_DTYPES_
+NT_GET_X_UNSIGNED_INTEGER_DTYPES_
     case DType::Bool:
         return Scalar(
             reinterpret_cast<const uint_bool_t *>(_vals.data_ptr())[0]);
     case DType::TensorObj:
         return Scalar(0);
-#ifdef _128_FLOAT_SUPPORT_
-    case DType::Float128:
-        return Scalar(
-            reinterpret_cast<const float128_t *>(_vals.data_ptr())[0]);
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
-    case DType::Float16:
-        return Scalar(reinterpret_cast<const float16_t *>(_vals.data_ptr())[0]);
-    case DType::Complex32:
-        return Scalar(
-            reinterpret_cast<const complex_32 *>(_vals.data_ptr())[0]);
-#endif
-#ifdef __SIZEOF_INT128__
-    case DType::int128:
-        return Scalar(reinterpret_cast<const int128_t *>(_vals.data_ptr())[0]);
-    case DType::uint128:
-        return Scalar(reinterpret_cast<const uint128_t *>(_vals.data_ptr())[0]);
-#endif
+#undef X
+    default:
+        return Scalar();
     }
-    return Scalar();
 }
 
 const SizeRef &Tensor::shape() const { return _size; }
@@ -604,20 +531,22 @@ Tensor Tensor::index_except(int64_t dim, int64_t excluding_index) const { return
 // }
 //
 
-inline bool idx_is_total(const my_range &range, const SizeRef &shape,
+inline bool idx_is_total(const range_ &r, const SizeRef &shape,
                          const size_t idx) noexcept {
-    return range.begin == 0 && range.end == shape[idx];
+    return r.begin == 0 && r.end == shape[idx];
 }
 
-Tensor Tensor::operator[](std::vector<my_range> r) {return functional::op_range(*this, r); }
-const Tensor Tensor::operator[](std::vector<my_range> r) const {return functional::op_range(*this, r); }
+
+
+Tensor Tensor::operator[](std::vector<range_> r) {return functional::op_range(*this, r); }
+const Tensor Tensor::operator[](std::vector<range_> r) const {return functional::op_range(*this, r); }
 const Tensor Tensor::operator[](std::vector<size_value_t> xs) const {return functional::at(*this, std::move(xs));}
 Tensor Tensor::operator[](std::vector<size_value_t> xs) {return functional::at(*this, std::move(xs));}
 
 
 // this was the old way which was not nearly as efficient, but outlines how it works:
 /*
-Tensor Tensor::operator[](std::vector<my_range> r){
+Tensor Tensor::operator[](std::vector<range_> r){
         for(uint32_t i = 0; i < r.size(); ++i){
                 r[i].fix(shape()[i]);
         }
@@ -651,8 +580,8 @@ r[i].length();
 
 //
 
-Tensor Tensor::operator[](const my_range &x) { return nt::functional::op_range(*this, x);}
-const Tensor Tensor::operator[](const my_range &x) const { return nt::functional::op_range(*this, x); }
+Tensor Tensor::operator[](const range_ &x) { return nt::functional::op_range(*this, x);}
+const Tensor Tensor::operator[](const range_ &x) const { return nt::functional::op_range(*this, x); }
 
 void Tensor::print() const { std::cout << *this << std::endl; }
 
@@ -675,7 +604,7 @@ Tensor Tensor::view(SizeRef nv) const {
 Tensor Tensor::view_Tensors(SizeRef nv) const {
     __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
-        dtype == DType::TensorObj,
+        dtype() == DType::TensorObj,
         "Expected view_Tensors to be used on a tensor of tensors");
     Tensor outp = Tensor::makeNullTensorArray(numel());
     Tensor *outputIt = reinterpret_cast<Tensor *>(outp.data_ptr());
@@ -689,7 +618,7 @@ Tensor Tensor::view_Tensors(SizeRef nv) const {
 Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
     __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
-        dtype == DType::TensorObj,
+        dtype() == DType::TensorObj,
         "Expected view_Tensors to be used on a tensor of tensors");
     Tensor outp = Tensor::makeNullTensorArray(numel());
     size_value_t n = 1;
@@ -730,7 +659,7 @@ Tensor Tensor::view_Tensor_vector(std::vector<size_value_t> nv) const {
 Tensor Tensor::transpose_Tensors(size_value_t a, size_value_t b) const {
     __NT_HANDLE_NULL_TENSORS__();
     utils::THROW_EXCEPTION(
-        dtype == DType::TensorObj,
+        dtype() == DType::TensorObj,
         "Expected transpose_Tensors to be used on a tensor of tensors");
     Tensor outp = Tensor::makeNullTensorArray(numel());
     Tensor *outputIt = reinterpret_cast<Tensor *>(outp.data_ptr());
@@ -800,7 +729,7 @@ Tensor Tensor::transpose(size_value_t _a, size_value_t _b) const { return functi
 Tensor &Tensor::RowColSwap_Tensors() {
     __NT_HANDLE_NULL_TENSORS__();
     __NT_HANDLE_MUTABILITY__()
-    utils::THROW_EXCEPTION(dtype == DType::TensorObj,
+    utils::THROW_EXCEPTION(dtype() == DType::TensorObj,
                            "RowColSwap_Tensors is meant to be used on a tensor "
                            "that holds tensors");
     _vals.for_each<DType::TensorObj>([](auto &inp) { inp.RowColSwap(); });
@@ -870,7 +799,7 @@ Tensor Tensor::to_complex_from_imag() const { return functional::to_complex_from
 
 Tensor::Tensor(size_value_t i, const ArrayVoid &Arr, SizeRef &&_s)
     : _size({i}), _total_size(i), _vals(i, DType::TensorObj),
-      dtype(DType::TensorObj), stored_strides(nullptr), _is_mutable(true) {
+    stored_strides(nullptr), _is_mutable(true) {
     size_value_t count = 0;
     size_value_t inner = _s.multiply();
     Tensor *it = reinterpret_cast<Tensor *>(this->data_ptr());
@@ -883,26 +812,24 @@ Tensor::Tensor(size_value_t i, const ArrayVoid &Arr, SizeRef &&_s)
     }
 }
 
-Tensor::Tensor(ArrayVoid Arr, SizeRef _s, intrusive_ptr<size_value_t[]> strides)
+Tensor::Tensor(ArrayVoid Arr, SizeRef _s, intrusive_tracked_list<size_value_t> strides)
     : _size(std::move(_s)), _total_size(0), 
-      _vals(std::move(Arr)), dtype(DType::Float),
+      _vals(std::move(Arr)), 
       stored_strides(std::move(strides)), _is_mutable(true) {
     _total_size = _vals.Size();
-    dtype = _vals.dtype;
 }
 
 Tensor::Tensor(ArrayVoid Arr, SizeRef _s,
                const std::vector<size_value_t> &strides)
     : _size(std::move(_s)), _total_size(0), 
-      _vals(std::move(Arr)), dtype(DType::Float),
+      _vals(std::move(Arr)), 
       stored_strides(strides.size()), _is_mutable(true) {
     _total_size = _vals.Size();
-    dtype = _vals.dtype;
     for (size_t i = 0; i < strides.size(); ++i)
         stored_strides[i] = strides[i];
 }
 
-/*Tensor Tensor::operator[](std::vector<my_range> r){
+/*Tensor Tensor::operator[](std::vector<range_> r){
         for(uint32_t i = 0; i < r.size(); ++i){
                 r[i].fix(shape()[i]);
         }
@@ -942,7 +869,7 @@ r[i].length();
 }*/
 
 // this will be finished at a later point in time
-/*Tensor Tensor::split_axis(std::vector<my_range> ranges){*/
+/*Tensor Tensor::split_axis(std::vector<range_> ranges){*/
 /*	utils::THROW_EXCEPTION(ranges.size() <= dims(), "expeted to have at most
  * $ ranges but got $ ranges for split_axis on tensor shape $", dims(),
  * ranges.size(), shape());*/
@@ -1033,7 +960,7 @@ r[i].length();
 // the point of this function is to generate all ranges based on a singular
 // range
 
-void print_vec_ranges(std::vector<my_range>& current_ranges){
+void print_vec_ranges(std::vector<range_>& current_ranges){
     std::cout << '(';
     for(int i = 0; i < current_ranges.size()-1; ++i)
             std::cout << current_ranges[i] << ',';
@@ -1041,9 +968,9 @@ void print_vec_ranges(std::vector<my_range>& current_ranges){
 }
 
 //set instead of unordered set because the order does matter
-void generate_ranges(const std::vector<my_range> &ranges,
-                     std::vector<my_range> current_ranges, size_t idx,
-                     std::set<std::vector<my_range>> &result,
+void generate_ranges(const std::vector<range_> &ranges,
+                     std::vector<range_> current_ranges, size_t idx,
+                     std::set<std::vector<range_>> &result,
                      const SizeRef &shape) noexcept {
     if (idx >= ranges.size()) return;
     if (idx == (ranges.size() - 1)) {
@@ -1053,8 +980,8 @@ void generate_ranges(const std::vector<my_range> &ranges,
         }
         bool at_end = current_ranges[idx].end + ranges[idx].length() >= shape[idx];
         current_ranges[idx] =
-            at_end ? my_range(current_ranges[idx].end, shape[idx])
-                   : my_range(current_ranges[idx].end,
+            at_end ? range_(current_ranges[idx].end, shape[idx])
+                   : range_(current_ranges[idx].end,
                               current_ranges[idx].end + ranges[idx].length());
         // std::cout << "inserting "<<current_ranges<<std::endl;
         result.insert(current_ranges);
@@ -1066,14 +993,15 @@ void generate_ranges(const std::vector<my_range> &ranges,
     if (idx_is_total(ranges[idx], shape, idx)) {
         generate_ranges(ranges, current_ranges, idx + 1, result, shape);
     } else {
+        generate_ranges(ranges, current_ranges, idx + 1, result, shape);
         bool at_end = current_ranges[idx].end + ranges[idx].length() >= shape[idx];
+
         // std::cout << "current_ranges before add: ";
         // print_vec_ranges(current_ranges);
         current_ranges[idx] =
-            at_end ? my_range(current_ranges[idx].end, shape[idx])
-                   : my_range(current_ranges[idx].end,
+            at_end ? range_(current_ranges[idx].end, shape[idx])
+                   : range_(current_ranges[idx].end,
                               current_ranges[idx].end + ranges[idx].length());
-        
         // std::cout << "at end and generating range idx: "<<idx << " ranges size: "<<ranges.size()
         //         <<" shape: "<<shape<<std::endl;
         // std::cout << "current_ranges: ";
@@ -1087,7 +1015,7 @@ void generate_ranges(const std::vector<my_range> &ranges,
     }
 }
 
-Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
+Tensor Tensor::split_axis(std::vector<range_> ranges) const {
     __NT_HANDLE_NULL_TENSORS__();
     int64_t ranges_max_size = static_cast<int64_t>(ranges.size());
     utils::THROW_EXCEPTION(ranges_max_size <= dims(),
@@ -1095,8 +1023,8 @@ Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
                            "for split_axis on tensor shape $",
                            dims(), ranges.size(), shape());
     while (ranges_max_size < dims()) {
-        // Add a my_range(0, -1) to ranges
-        ranges.push_back(my_range(0, shape()[ranges.size()]));
+        // Add a range_(0, -1) to ranges
+        ranges.push_back(range);
         ranges_max_size = static_cast<int64_t>(ranges.size());
     }
     ranges_max_size = static_cast<int64_t>(ranges.size());
@@ -1107,8 +1035,8 @@ Tensor Tensor::split_axis(std::vector<my_range> ranges) const {
                 i, ranges[i]);
     }
 
-    std::set<std::vector<my_range>> result_ranges;
-    std::vector<my_range> current_ranges = ranges;
+    std::set<std::vector<range_>> result_ranges;
+    std::vector<range_> current_ranges = ranges;
     result_ranges.insert(ranges);
 
     generate_ranges(ranges, current_ranges, 0, result_ranges, shape());
@@ -1175,7 +1103,6 @@ Tensor Tensor::split_axis(size_value_t dim) const {
 	typedef typename SizeRef::ArrayRefInt::value_type m_size_t;
 	for(;begin != end; ++begin){
 		begin->_size = n2_size;
-		begin->dtype = dtype;
         begin->_is_mutable = this->_is_mutable;
 	}
 	return buckets.set_mutability(this->_is_mutable); 
@@ -1227,7 +1154,6 @@ Tensor Tensor::split_axis_1() const {
 	typedef typename SizeRef::ArrayRefInt::value_type m_size_t;
 	for(;begin != end; ++begin){
 		begin->_size = n2_size;
-		begin->dtype = dtype;
         begin->_is_mutable = this->_is_mutable;
 	}
 	return buckets.set_mutability(this->_is_mutable); 
@@ -1321,7 +1247,7 @@ void add_value_to_output_fold_function(
 
 /*     // Allocate the output tensor */
 /*     Tensor output_tensor = ::nt::functional::zeros(output_shape,
- * this->dtype); */
+ * this->dtype()); */
 
 /*     // Iterate over each element in the unfolded tensor and add its value to
  * the appropriate location in the output tensor */
@@ -1535,7 +1461,7 @@ void *Tensor::data_ptr_end() {
         is_contiguous(),
         "Can only find end of data pointer on contiguous tensor");
     return (void *)(reinterpret_cast<uint8_t *>(data_ptr()) +
-                    (_total_size * DTypeFuncs::size_of_dtype(dtype)));
+                    (_total_size * DTypeFuncs::size_of_dtype(dtype())));
 }
 
 const void *Tensor::data_ptr_end() const {
@@ -1544,7 +1470,7 @@ const void *Tensor::data_ptr_end() const {
         is_contiguous(),
         "Can only find end of data pointer on contiguous tensor");
     return (const void *)(reinterpret_cast<const uint8_t *>(data_ptr()) +
-                          (_total_size * DTypeFuncs::size_of_dtype(dtype)));
+                          (_total_size * DTypeFuncs::size_of_dtype(dtype())));
 }
 
 // share from a specific point in memory
@@ -1581,12 +1507,12 @@ Tensor &Tensor::fill_(Scalar val) {return functional::fill_(*this, val);}
 Tensor &Tensor::fill_(const Tensor &val) {
     __NT_HANDLE_NULL_TENSORS__();
     __NT_HANDLE_MUTABILITY__();
-    if (dtype != DType::TensorObj) {
+    if (dtype() != DType::TensorObj) {
         utils::THROW_EXCEPTION(
-            val.dtype == dtype,
+            val.dtype() == dtype(),
             "For filling in a tensor with another tensor, "
             "dtypes are expected to be equal but got $ and $",
-            val.dtype, dtype);
+            val.dtype(), dtype());
         utils::THROW_EXCEPTION(
             shape() == val.shape(),
             "For filling in a tensor with another tensor, "
@@ -1613,7 +1539,7 @@ CommaOperator Tensor::operator<<(Scalar s) {
     __NT_HANDLE_NULL_TENSORS__();
     __NT_HANDLE_MUTABILITY__();
     utils::throw_exception(is_contiguous(), "Must be contiguous to use comma operator");
-    CommaOperator out(data_ptr(), data_ptr_end(), dtype);
+    CommaOperator out(data_ptr(), data_ptr_end(), dtype());
     return out , s;
 }
 
@@ -1622,9 +1548,9 @@ std::string_view Tensor::sv() const {
     __NT_HANDLE_NULL_TENSORS__();
     __NT_HANDLE_MUTABILITY__();
     utils::THROW_EXCEPTION(
-        dtype == DType::uint8,
+        dtype() == DType::uint8,
         "\nRuntimeError: Expected DType for string_view to be uint8 but got $",
-        dtype);
+        dtype());
     utils::THROW_EXCEPTION(is_contiguous(),
                            "Can only convert contiguous tensor to string_view");
     return std::string_view(reinterpret_cast<const char *>(data_ptr()),
@@ -1706,7 +1632,7 @@ Tensor Tensor::sum(utils::optional_list list, bool keepdim) const { return funct
 
 Tensor Tensor::mean(utils::optional_list list, bool keepdim) const {
     __NT_HANDLE_NULL_TENSORS__();
-    if (dtype == DType::TensorObj) {
+    if (dtype() == DType::TensorObj) {
         Tensor outp(shape(), DType::TensorObj);
         _vals.transform_function<DType::TensorObj>(
             [&](const Tensor &output) -> Tensor {
@@ -1784,7 +1710,7 @@ Tensor Tensor::sum_as(const Tensor &t) const {
 
 
 result_types::max<Tensor, Tensor> Tensor::max(utils::optional_list list) const { return functional::max(*this, list); }
-result_types::max<Tensor, Tensor> Tensor::min(utils::optional_list list) const { return functional::max(*this, list); }
+result_types::max<Tensor, Tensor> Tensor::min(utils::optional_list list) const { return functional::min(*this, list); }
 
 
 Tensor Tensor::exp() const { return functional::exp(*this); }
@@ -1792,7 +1718,7 @@ Tensor &Tensor::exp_() {
     __NT_HANDLE_NULL_TENSORS__();
     __NT_HANDLE_MUTABILITY__();
     utils::THROW_EXCEPTION(
-        dtype != DType::Bool,
+        dtype() != DType::Bool,
         "\nRuntimeError: Tried running unsupported DType Bool "
         "with function exp_()");
     _vals.exp_();
@@ -1810,11 +1736,22 @@ Tensor &Tensor::pow_(Scalar i) {
     __NT_HANDLE_NULL_TENSORS__();
     __NT_HANDLE_MUTABILITY__();
     _vals.pow_(i);
-    dtype = _vals.dtype;
     return *this;
 }
 
 Tensor &Tensor::clip_(Scalar a, Scalar b) { return functional::clamp_(*this, a, b); }
+
+
+#define NT_F_INIT_SWITCH_(type, dtype_enum_a, dtype_enum_b)\
+        case DType::dtype_enum_a : {\
+            type* begin = reinterpret_cast<type *>(output.data_ptr());\
+            utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a){\
+                *begin = a.to<type>();\
+                ++begin;\
+            });\
+            break;\
+        }\
+
 
 template <std::size_t N>
 Tensor Tensor::FromInitializer(
@@ -1822,170 +1759,28 @@ Tensor Tensor::FromInitializer(
     SizeRef sz(utils::aquire_shape<Scalar, N>(v));
     Tensor output(sz, dt);
     switch (dt) {
-    case DType::Float: {
-        using value_type = float;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::Double: {
-        using value_type = double;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-#ifdef _HALF_FLOAT_SUPPORT_
-    case DType::Float16: {
-        using value_type = float16_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::Complex32: {
-        using value_type = complex_32;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-    case DType::Float128: {
-        using value_type = float128_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-#endif
-#ifdef __SIZEOF_INT128__
-    case DType::int128: {
-        using value_type = int128_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::uint128: {
-        using value_type = uint128_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-#endif
-    case DType::Complex64: {
-        using value_type = complex_64;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::Complex128: {
-        using value_type = complex_128;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::int8: {
-        using value_type = int8_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::uint8: {
-        using value_type = uint8_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::int16: {
-        using value_type = int16_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::uint16: {
-        using value_type = uint16_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::int32: {
-        using value_type = int32_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::uint32: {
-        using value_type = uint32_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::int64: {
-        using value_type = int64_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::Bool: {
-        using value_type = uint_bool_t;
-        value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
-        utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
-            *begin = a.to<value_type>();
-            ++begin;
-        });
-        break;
-    }
-    case DType::TensorObj:
-        break;
+NT_GET_DEFINE_FLOATING_DTYPES_(NT_F_INIT_SWITCH_) 
+NT_GET_DEFINE_COMPLEX_DTYPES_(NT_F_INIT_SWITCH_)
+NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_F_INIT_SWITCH_)
+NT_GET_DEFINE_UNSIGNED_INTEGER_DTYPES_(NT_F_INIT_SWITCH_)
+        case DType::Bool: {
+            using value_type = uint_bool_t;
+            value_type *begin = reinterpret_cast<value_type *>(output.data_ptr());
+            utils::flatten_func<Scalar, N>(v, [&begin](const Scalar &a) {
+                *begin = a.to<value_type>();
+                ++begin;
+            });
+            break;
+        }
+        case DType::TensorObj:
+            break;
+        default:
+            break;
     }
     return output;
 }
+
+#undef NT_F_INIT_SWITCH_ 
 
 template Tensor Tensor::FromInitializer<1ul>(
     utils::NestedInitializerLists_type<Scalar, 1ul>::type, DType);

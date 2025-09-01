@@ -5,16 +5,13 @@
 //if the gradient in negative, points move further (r increases)
 //if the gradient is positive, points move close (r decreases)
 //for |grad values| < 1 it is the opposite
-#ifndef __NT_TDA_NN_PH_LOSS_H__
-#define __NT_TDA_NN_PH_LOSS_H__
+#ifndef NT_TDA_NN_PH_LOSS_H__
+#define NT_TDA_NN_PH_LOSS_H__
 #include "../../nn/Loss.h"
-namespace nt{
-namespace tda{
-namespace loss{
+namespace nt::tda::loss{
 
-TensorGrad filtration_loss(const TensorGrad& output, const Tensor& target, Scalar epsilon = 1e-5);
-TensorGrad path_loss(const TensorGrad& output, const Tensor& wanted);
-}
-}
+NEUROTENSOR_API ScalarGrad filtration_loss(const TensorGrad& output, const Tensor& target, Scalar epsilon = 1e-5);
+NEUROTENSOR_API ScalarGrad path_loss(const TensorGrad& output, const Tensor& wanted);
+
 }
 #endif

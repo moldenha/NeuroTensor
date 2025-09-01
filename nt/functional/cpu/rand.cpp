@@ -35,7 +35,7 @@ namespace cpu{
 void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
     std::random_device rd;
 	std::minstd_rand gen(rd()); //minimal version
-	DType dt = output.dtype;
+	DType dt = output.dtype();
     if(DTypeFuncs::is_unsigned(dt) || DTypeFuncs::is_integer(dt)){
 		output.execute_function<WRAP_DTYPES<IntegerTypesL>>(
 			[&upper, &lower, &gen](auto begin, auto end){
@@ -114,7 +114,7 @@ void randint_(ArrayVoid& output, Scalar upper, Scalar lower){
 void rand_(ArrayVoid& output, Scalar upper, Scalar lower){
     std::random_device rd;
 	std::minstd_rand gen(rd()); //minimal version
-	DType dt = output.dtype;
+	DType dt = output.dtype();
     if(DTypeFuncs::is_unsigned(dt) || DTypeFuncs::is_integer(dt)){
 		output.execute_function<WRAP_DTYPES<IntegerTypesL>>(
 			[&upper, &lower, &gen](auto begin, auto end){

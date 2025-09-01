@@ -1,5 +1,5 @@
-#ifndef __NT_FUNCTIONAL_CPU_NORMALIZE_H__
-#define __NT_FUNCTIONAL_CPU_NORMALIZE_H__
+#ifndef NT_FUNCTIONAL_CPU_NORMALIZE_H__
+#define NT_FUNCTIONAL_CPU_NORMALIZE_H__
 
 #include "../../dtype/ArrayVoid.h"
 #include "../../dtype/Scalar.h"
@@ -9,7 +9,7 @@ namespace nt{
 namespace functional{
 namespace cpu{
 
-void xavier_uniform_(ArrayVoid& output, double bound);
+NEUROTENSOR_API void xavier_uniform_(ArrayVoid& output, double bound);
 
 }
 }

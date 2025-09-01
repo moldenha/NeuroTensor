@@ -1,6 +1,6 @@
 //this is a header file to just include all of the AI-related files
-#ifndef _NT_AI_H_
-#define _NT_AI_H_
+#ifndef NT_AI_H__
+#define NT_AI_H__
 
 #include "nn/TensorGrad.h"
 #include "nn/Layer.h"

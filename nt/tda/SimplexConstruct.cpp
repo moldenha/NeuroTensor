@@ -263,11 +263,11 @@ Tensor find_all_simplicies_indexes(int64_t simplicies_amt, const Tensor &points,
 
 Tensor from_index_simplex_to_point_simplex(const Tensor &indexes,
                                            const Tensor &points) {
-    if (indexes.dtype == DType::TensorObj || points.dtype == DType::TensorObj) {
-        utils::throw_exception(indexes.dtype == points.dtype,
+    if (indexes.dtype() == DType::TensorObj || points.dtype() == DType::TensorObj) {
+        utils::throw_exception(indexes.dtype() == points.dtype(),
                                "Expected if both tensors are dtype tensor they "
                                "are both but got indexes $ and points $",
-                               indexes.dtype, points.dtype);
+                               indexes.dtype(), points.dtype());
         utils::throw_exception(indexes.numel() == points.numel(),
                                "Expected if both tensors are dtype tensor they "
                                "are the sanem numel indexes $ and points $",
@@ -416,12 +416,12 @@ std::pair<Tensor, Tensor> find_all_simplicies(int64_t simplicies_amt, const int6
     utils::throw_exception(num_points > simplicies_amt,
                            "Cannot find $-simplex with only $ points", 
                            simplicies_amt-1, num_points);
-    utils::THROW_EXCEPTION(distance_matrix.dtype != nt::DType::TensorObj, 
+    utils::THROW_EXCEPTION(distance_matrix.dtype() != nt::DType::TensorObj, 
                            "INTERNAL LOGIC ERROR: Got batches of distance matrices but did not detect batches $", 
-                           distance_matrix.dtype);
-    utils::throw_exception(distance_matrix.dtype == nt::DType::Float32, 
+                           distance_matrix.dtype());
+    utils::throw_exception(distance_matrix.dtype() == nt::DType::Float32, 
                            "Expected distance matrix to be a dtype of float32 got $", 
-                           distance_matrix.dtype);
+                           distance_matrix.dtype());
     std::vector<int64_t> combinations =
             getCombinationsWithoutSelfContainment(num_points, simplicies_amt);
     utils::THROW_EXCEPTION(combinations.size() != 0,

@@ -8,7 +8,7 @@ namespace linalg{
 
 Tensor SVD(Tensor _t){
     return runEigenFunction(_t, [](auto& mat) -> Tensor{
-        using MatrixType = std::remove_cvref_t<decltype(mat)>;
+        using MatrixType = ::nt::type_traits::remove_cvref_t<decltype(mat)>;
         using ScalarType = typename MatrixType::Scalar;
         auto [S, U, V] = SVD_eigen<ScalarType>(mat);
         Tensor _S = fromEigen(S);

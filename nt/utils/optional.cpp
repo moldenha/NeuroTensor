@@ -89,18 +89,10 @@ optional_list::optional_list(optional_list&& op)
 	:list(std::move(op.list))
 {}
 
-optional_list::optional_list(const intrusive_ptr<intrusive_list<int64_t> >& it)
-	:list(it)
-{}
 
 optional_list::optional_list(intrusive_ptr<intrusive_list<int64_t> >&& it)
 	:list(it)
 {}
-
-optional_list::optional_list(std::initializer_list<int64_t> elements)
-	:list(make_intrusive<intrusive_list<int64_t> >(elements))
-{}
-
 
 optional_list::optional_list()
 	:list(nullptr)

@@ -1,5 +1,5 @@
-#ifndef _NT_MATMULT_H_
-#define _NT_MATMULT_H_
+#ifndef NT_MATMULT_H__
+#define NT_MATMULT_H__
 namespace nt{
 namespace functional{
 namespace cpu{

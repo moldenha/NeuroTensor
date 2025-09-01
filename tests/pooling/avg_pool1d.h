@@ -12,10 +12,10 @@ nt::Tensor avg_pool1d_ceil(nt::Tensor input, int64_t kernel_size, int64_t stride
     int64_t div_a = kernel_size;
     int64_t div_b = div_a-(count_include_pad ? mod : padding+mod);
     int64_t div_c = kernel_size - (count_include_pad ? 0 : padding);
-    Scalar num_a = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    Scalar num_c = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
-    if(DTypeFuncs::is_floating(input.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    Scalar num_c = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
+    if(DTypeFuncs::is_floating(input.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
         num_c = num_c.inverse();
@@ -24,7 +24,7 @@ nt::Tensor avg_pool1d_ceil(nt::Tensor input, int64_t kernel_size, int64_t stride
     Tensor div = functional::nums({out.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_c;
-    if(DTypeFuncs::is_floating(input.dtype) || DTypeFuncs::is_complex(input.dtype))
+    if(DTypeFuncs::is_floating(input.dtype()) || DTypeFuncs::is_complex(input.dtype()))
         out *= div;
     else
         out /= div;
@@ -35,7 +35,7 @@ nt::Tensor avg_pool1d_ceil(nt::Tensor input, int64_t kernel_size, int64_t stride
 
 nt::Tensor avg_pool1d(nt::Tensor input, int64_t kernel_size, int64_t stride = -1, int64_t padding = 0, bool ceil_mode = false, bool count_include_pad = true){
     using namespace nt;
-    // if(!DTypeFuncs::is_floating(input.dtype) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
+    // if(!DTypeFuncs::is_floating(input.dtype()) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
     if(stride == -1) stride = kernel_size;
     check_pool_args(input, -1, kernel_size, stride, padding);
     if(ceil_mode){
@@ -59,9 +59,9 @@ nt::Tensor avg_pool1d(nt::Tensor input, int64_t kernel_size, int64_t stride = -1
     Tensor out = strided.sum(-1, true);
     int64_t div_a = kernel_size;
     int64_t div_b = div_a-(padding);
-    Scalar num_a = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    if(DTypeFuncs::is_floating(input.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    if(DTypeFuncs::is_floating(input.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
     }
@@ -69,7 +69,7 @@ nt::Tensor avg_pool1d(nt::Tensor input, int64_t kernel_size, int64_t stride = -1
     Tensor div = functional::nums({out.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_b;
-    if(DTypeFuncs::is_floating(input.dtype) || DTypeFuncs::is_complex(input.dtype))
+    if(DTypeFuncs::is_floating(input.dtype()) || DTypeFuncs::is_complex(input.dtype()))
         out *= div;
     else
         out /= div;
@@ -83,7 +83,7 @@ nt::Tensor backward_avg_pool1d_ceil(nt::SizeRef in_shape, nt::Tensor output_grad
     if(padding > 0) in_shape = in_shape.redo_index(-1, in_shape[-1] + 2 * padding + mod);
     else in_shape = in_shape.redo_index(-1, in_shape[-1] + mod);
     if(stride == -1) stride = kernel_size;
-    Tensor grad = functional::zeros(in_shape, output_grad.dtype);
+    Tensor grad = functional::zeros(in_shape, output_grad.dtype());
     Tensor strided = grad.unfold(-1, kernel_size, stride);
     while(output_grad.dims() < strided.dims()){
         output_grad = output_grad.unsqueeze(-1);
@@ -92,10 +92,10 @@ nt::Tensor backward_avg_pool1d_ceil(nt::SizeRef in_shape, nt::Tensor output_grad
     int64_t div_a = kernel_size;
     int64_t div_b = div_a-(count_include_pad ? mod : padding+mod);
     int64_t div_c = kernel_size - (count_include_pad ? 0 : padding);
-    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    Scalar num_c = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
-    if(DTypeFuncs::is_floating(output_grad.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    Scalar num_c = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
+    if(DTypeFuncs::is_floating(output_grad.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
         num_c = num_c.inverse();
@@ -104,22 +104,22 @@ nt::Tensor backward_avg_pool1d_ceil(nt::SizeRef in_shape, nt::Tensor output_grad
     Tensor div = functional::nums({output_grad.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_c;
-    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype) || DTypeFuncs::is_complex(output_grad.dtype)) ? output_grad * div : output_grad / div;  
+    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype()) || DTypeFuncs::is_complex(output_grad.dtype())) ? output_grad * div : output_grad / div;  
     strided += dl_dp.expand_as(strided);
     if(padding > 0){
-        std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
+        std::vector<range_> ranges(grad.dims(), range_(0, -1));
         for(int64_t i = 0; i < ranges.size()-1; ++i){
             ranges[i].end = in_shape[i];
         }
-        ranges.back() = my_range(padding, in_shape[-1]-(padding+mod));
+        ranges.back() = range_(padding, in_shape[-1]-(padding+mod));
         return grad[std::move(ranges)].contiguous();
 
     }
-    std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
+    std::vector<range_> ranges(grad.dims(), range_(0, -1));
     for(int64_t i = 0; i < ranges.size()-1; ++i){
         ranges[i].end = in_shape[i];
     }
-    ranges.back() = my_range(0, in_shape[-1]-mod);
+    ranges.back() = range_(0, in_shape[-1]-mod);
     return grad[std::move(ranges)].contiguous();
 }
 
@@ -142,7 +142,7 @@ nt::Tensor backward_avg_pool1d(nt::SizeRef in_shape, nt::Tensor output_grad, int
     }
     if(padding > 0) in_shape = in_shape.redo_index(-1, in_shape[-1] + 2 * padding);
 
-    Tensor grad = functional::zeros(in_shape, output_grad.dtype);
+    Tensor grad = functional::zeros(in_shape, output_grad.dtype());
     Tensor strided = grad.unfold(-1, kernel_size, stride);
     while(output_grad.dims() < strided.dims()){
         output_grad = output_grad.unsqueeze(-1);
@@ -151,19 +151,19 @@ nt::Tensor backward_avg_pool1d(nt::SizeRef in_shape, nt::Tensor output_grad, int
     if(padding == 0 || count_include_pad == true){
         strided += (output_grad / kernel_size).expand_as(strided);
         if(padding == 0) return std::move(grad);
-        std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
+        std::vector<range_> ranges(grad.dims(), range_(0, -1));
         for(int64_t i = 0; i < ranges.size()-1; ++i){
             ranges[i].end = in_shape[i];
         }
-        ranges.back() = my_range(padding, in_shape[-1]-padding);
+        ranges.back() = range_(padding, in_shape[-1]-padding);
         return grad[std::move(ranges)].contiguous();
     }
 
     int64_t div_a = kernel_size;
     int64_t div_b = div_a-(padding);
-    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    if(DTypeFuncs::is_floating(output_grad.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    if(DTypeFuncs::is_floating(output_grad.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
     }
@@ -171,14 +171,14 @@ nt::Tensor backward_avg_pool1d(nt::SizeRef in_shape, nt::Tensor output_grad, int
     Tensor div = functional::nums({output_grad.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_b;
-    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype) || DTypeFuncs::is_complex(output_grad.dtype)) ? output_grad * div : output_grad / div;  
+    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype()) || DTypeFuncs::is_complex(output_grad.dtype())) ? output_grad * div : output_grad / div;  
     strided += dl_dp.expand_as(strided);
     if(padding > 0){
-        std::vector<my_range> ranges(grad.dims(), my_range(0, -1));
+        std::vector<range_> ranges(grad.dims(), range_(0, -1));
         for(int64_t i = 0; i < ranges.size()-1; ++i){
             ranges[i].end = in_shape[i];
         }
-        ranges.back() = my_range(padding, in_shape[-1]-(padding));
+        ranges.back() = range_(padding, in_shape[-1]-(padding));
         return grad[std::move(ranges)].contiguous();
     }
     return std::move(grad);

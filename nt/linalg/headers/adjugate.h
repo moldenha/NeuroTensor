@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_ADJUGATE_H_
-#define _NT_LINALG_ADJUGATE_H_
+#ifndef NT_LINALG_ADJUGATE_H__
+#define NT_LINALG_ADJUGATE_H__
 
 #include "../../Tensor.h"
 #include <functional>
@@ -10,7 +10,7 @@
 
 namespace nt {
 namespace linalg {
-Tensor adjugate(const Tensor&);
+NEUROTENSOR_API Tensor adjugate(const Tensor&);
 } // namespace linalg
 } // namespace nt
 

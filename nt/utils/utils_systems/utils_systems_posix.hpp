@@ -1,7 +1,7 @@
 #if (defined(__APPLE__) || defined(__linux__) || defined(__unix__)) && !defined(_WIN32)
 
-#ifndef __NT_UTILS_UTILS_SYSTEMS_POSIX_HPP__
-#define __NT_UTILS_UTILS_SYSTEMS_POSIX_HPP__
+#ifndef NT_UTILS_UTILS_SYSTEMS_POSIX_HPP__
+#define NT_UTILS_UTILS_SYSTEMS_POSIX_HPP__
 
 #include <sys/types.h>
 #include <signal.h>
@@ -74,5 +74,5 @@ bool isPipeReadable(int pipefd) {
 
 } //nt::utils::
 
-#endif // __NT_UTILS_UTILS_SYSTEMS_POSIX_HPP__ 
+#endif // NT_UTILS_UTILS_SYSTEMS_POSIX_HPP__ 
 #endif // (defined(__APPLE__) || defined(__linux__) || defined(__unix__)) && !defined(_WIN32)

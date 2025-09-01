@@ -35,7 +35,8 @@ Layer& Layer::eval(){
 	if(!overriden_eval){
 		//the eval function should handle how to handle what grad is tracked and what is not
 		for(auto& parameter : this->get_vars<TensorGrad>()){
-			parameter.eval();
+			// parameter.eval();
+            parameter.track_grad_(false);
 		}
 	}
 	for(auto& l : this->get_vars<Layer>()){
@@ -48,7 +49,8 @@ Layer& Layer::train(){
 	bool overriden_eval = reflect::detail::backward_module_function_overriden(this->ptr_);
 	this->is_eval = false;
 	for(auto& parameter : this->get_vars<TensorGrad>()){
-		parameter.train();
+		// parameter.train();
+		parameter.track_grad_(true);
 	}
 	for(auto& l : this->get_vars<Layer>()){
 		l.train();
@@ -98,7 +100,7 @@ TensorGrad Layer::_run_forward(std::vector<utils::any_ref> _vec){
 /* 	if(this->is_eval){ */
 /* 		bool overriden_eval = reflect::detail::backward_module_function_overriden(this->ptr_); */
 /* 		if(overriden_eval){ */
-/* 			return TensorGrad(this->ptr_->eval(_x.tensor)); */
+/* 			return TensorGrad(this->ptr_->eval(_x.detach())); */
 /* 		} */
 /* 		return this->ptr_->forward(_x); */
 /* 	} */
@@ -124,7 +126,7 @@ TensorGrad Layer::_run_forward(std::vector<utils::any_ref> _vec){
 /* void get_grad_from_parents(intrusive_ptr<TensorGrad>& tgs, intrusive_ptr<TensorGrad>& input, Tensor& grad){ */
 /* 	for(auto& parent : tgs->parents){ */
 /* 		//a way to determine if they occupy the same memory */
-/* 		if(parent->data_ptr() == input->data_ptr() && parent->shape() == input->shape() && parent->tensor.dtype == input->tensor.dtype && (parent->tensor.arr_void().get_bucket().intrusive_strides() == input->tensor.arr_void().get_bucket().intrusive_strides()) && (parent->tensor.arr_void().get_bucket().intrusive_device() == input->tensor.arr_void().get_bucket().intrusive_device())){ */
+/* 		if(parent->data_ptr() == input->data_ptr() && parent->shape() == input->shape() && parent->tensor.dtype() == input->tensor.dtype() && (parent->tensor.arr_void().get_bucket().intrusive_strides() == input->tensor.arr_void().get_bucket().intrusive_strides()) && (parent->tensor.arr_void().get_bucket().intrusive_device() == input->tensor.arr_void().get_bucket().intrusive_device())){ */
 /* 		//TODO: look into the function below */
 /* 		/1* if(parent->occupy_same_tensor_memory(*input)){ *1/ */
 /* 			/1* std::cout << "found true, checking other conditions:"<<std::endl; *1/ */

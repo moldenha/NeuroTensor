@@ -1,5 +1,5 @@
-#ifndef __NT_NN_SCALAR_GRAD_H__
-#define __NT_NN_SCALAR_GRAD_H__
+#ifndef NT_NN_SCALAR_GRAD_H__
+#define NT_NN_SCALAR_GRAD_H__
 
 namespace nt{
 class ScalarGrad;
@@ -15,7 +15,7 @@ namespace nt{
 
 //this is meant to hold a gradient and a scalar
 //any operation that happens to the scalar, also happens to the gradient
-class ScalarGrad{
+class NEUROTENSOR_API ScalarGrad{
     Scalar item;
     intrusive_ptr<TensorGrad> parent;
     public:
@@ -46,7 +46,7 @@ class ScalarGrad{
         inline ScalarGrad operator-() const {return ScalarGrad(-item, -grad, parent);}
         inline ScalarGrad inverse() const {return ScalarGrad(item.inverse(), grad.inverse(), parent);}
         
-        inline DType dtype() const {return grad.dtype;}
+        inline DType dtype() const {return grad.dtype();}
 
         ScalarGrad to(DType);
         void backward();

@@ -25,9 +25,9 @@ Conv1D::Conv1D(int64_t in_channels, int64_t out_channels, int64_t kernel_size,
         "Expected in channels to be divisible by groups");
     if(use_bias){
         this->register_parameter("Bias", Bias);
-        Bias.tensor.set_mutability(false);
+        Bias.detach().set_mutability(false);
     }
-    Weight.tensor.set_mutability(false);
+    Weight.detach().set_mutability(false);
 }
 
 TensorGrad Conv1D::forward(TensorGrad x) {

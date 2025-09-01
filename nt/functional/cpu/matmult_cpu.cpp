@@ -1,5 +1,5 @@
-#ifndef _NT_MATMULT_STD_CPP_
-#define _NT_MATMULT_STD_CPP_
+#ifndef NT_MATMULT_CPU_CPP__
+#define NT_MATMULT_CPU_CPP__
 
 #include <cstdint>
 
@@ -42,12 +42,34 @@
 #include <cmath>
 #include "../../dtype/ArrayVoid.hpp"
 #include "matmult/nt_matmult.h"
+#include "../../intrusive_ptr/intrusive_tracked_list.hpp"
 
 namespace nt{
 namespace functional{
 namespace cpu{
 
 void determine_transposes(const Tensor& a, const Tensor& b, bool& a_trans, bool& b_trans, const bool& trans_a, const bool& trans_b){
+    if(a.dtype() == DType::TensorObj){
+        const auto& a_rows = a[0].item<Tensor>().shape()[-2];
+        const auto& a_cols = a[0].item<Tensor>().shape()[-1];
+        const auto& b_rows = a[0].item<Tensor>().shape()[-2];
+        const auto& b_cols = a[0].item<Tensor>().shape()[-1];
+        a_trans = trans_a;
+        b_trans = trans_b;
+        if(!a_trans && !b_trans){
+            utils::THROW_EXCEPTION(b_rows == a_cols, "Expected dimensions -2 and -1 of shapes ($,$) to be equal for matrix multiplication", a.shape(), b.shape());
+        }
+        else if(a_trans && !b_trans){
+            utils::THROW_EXCEPTION(b_rows == a_rows, "Expected dimensions -2 and -1 of shapes ($,$) to be equal for matrix multiplication", a.shape().transpose(-1,-2), b.shape());
+        }
+        else if(a_trans && b_trans){
+            utils::THROW_EXCEPTION(b_cols == a_rows, "Expected dimensions -2 and -1 of shapes ($,$) to be equal for matrix multiplication", a.shape().transpose(-1,-2), b.shape().transpose(-1,-2));
+        }
+        else if(!a_trans && b_trans){
+            utils::THROW_EXCEPTION(b_cols == a_cols, "Expected dimensions -2 and -1 of shapes ($,$) to be equal for matrix multiplication", a.shape(), b.shape().transpose(-1,-2));
+        }
+        return;
+    }
 	const auto& a_rows = a.shape()[-2];
 	const auto& a_cols = a.shape()[-1];
 	const auto& b_rows = b.shape()[-2];
@@ -116,9 +138,9 @@ Tensor& matmult_std_single(const T* A, const T* B, Tensor& c, const SizeRef& o_a
                            "Got invalid shape for output tensor $ expected $", c.shape(), c_shape);
     utils::THROW_EXCEPTION(c.is_contiguous(),
                            "Expected output tensor for matrix multiplication to be contiguous");
-    utils::THROW_EXCEPTION(c.dtype == DTypeFuncs::type_to_dtype<T>,
+    utils::THROW_EXCEPTION(c.dtype() == DTypeFuncs::type_to_dtype<T>,
                            "Expected dtype $ for output matrix multiplication, C dtype inputted was $",
-                            DTypeFuncs::type_to_dtype<T>, c.dtype);
+                            DTypeFuncs::type_to_dtype<T>, c.dtype());
 	T* C = reinterpret_cast<T*>(c.data_ptr());
 
 	const int64_t& m = a_shape[-2]; // Number of rows in A
@@ -132,12 +154,12 @@ Tensor& matmult_std_single(const T* A, const T* B, Tensor& c, const SizeRef& o_a
 
 
 template<typename T>
-intrusive_ptr<T[]> convert_to_intrusive_bucketed(const Tensor& t){
+intrusive_tracked_list<T> convert_to_intrusive_bucketed(const Tensor& t){
 	constexpr DType dt = DTypeFuncs::type_to_dtype<T>;
-	utils::THROW_EXCEPTION(t.dtype == dt, "Expected to convert tensor of dtype $ but got $ to contiguous intrusive_ptr", dt, t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == dt, "Expected to convert tensor of dtype $ but got $ to contiguous intrusive_ptr", dt, t.dtype());
 	void** strides = t.arr_void().stride_begin();
 	const int64_t& stride_size = t.arr_void().get_bucket().stride_amt();
-	intrusive_ptr<T[]> output = intrusive_ptr<T[]>::make_aligned(t.numel(), 64);
+	intrusive_tracked_list<T> output = intrusive_tracked_list<T>::make_aligned(t.numel(), 64);
 	T* begin = output.get();
 	for(uint64_t i = 0; i < stride_size; ++i){
 		const T* sBegin = reinterpret_cast<const T*>(strides[i]);
@@ -166,13 +188,13 @@ constexpr DType get_convert_to_intrusive_strided_dtype(){
 }
 
 template<typename T>
-intrusive_ptr<T[]> convert_to_intrusive_strided(const Tensor& t){
+intrusive_tracked_list<T> convert_to_intrusive_strided(const Tensor& t){
 	constexpr DType dt = get_convert_to_intrusive_strided_dtype<T>();
 
-	utils::THROW_EXCEPTION(t.dtype == dt, "Expected to convert tensor of dtype $ but got $ to contiguous intrusive_ptr", dt, t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == dt, "Expected to convert tensor of dtype $ but got $ to contiguous intrusive_ptr", dt, t.dtype());
 	return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<dt> > >(
 			[&](auto begin, auto end){
-				intrusive_ptr<T[]> intrusive_t = intrusive_ptr<T[]>::make_aligned(t.numel(), 64);
+				intrusive_tracked_list<T> intrusive_t = intrusive_tracked_list<T>::make_aligned(t.numel(), 64);
 				std::copy(begin, end, intrusive_t.get());
 				return std::move(intrusive_t);
 			});
@@ -216,7 +238,7 @@ Tensor make_contiguous_look(const Tensor& t, const int64_t&& last_change){
 	const Tensor* begin = reinterpret_cast<const Tensor*>(split.data_ptr());
 	const Tensor* end = begin + split.numel();
 	Tensor* o_begin = reinterpret_cast<Tensor*>(output.data_ptr());
-	const int64_t check_bytes = o_begin->numel() * DTypeFuncs::size_of_dtype(o_begin->dtype);
+	const int64_t check_bytes = o_begin->numel() * DTypeFuncs::size_of_dtype(o_begin->dtype());
 	for(;begin != end; ++begin, ++o_begin){
 		if(begin->arr_void().get_bucket().force_contig_size() != t.numel()
 				|| !begin->arr_void().get_bucket().can_force_contiguity_bytes(check_bytes)){
@@ -252,12 +274,12 @@ Tensor handle_dim2_matmult_std(const Tensor& a, const Tensor& b, bool trans_a, b
 		}
 		//this is if it is bucketed or strided
 		//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-		intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+		intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 		const T* B = intrusive_B.get();
 		return matmult_std_single<T>(A, B, a.shape(), b.shape(), transpose_a, transpose_b);
 	}
 	if(iterator_type_a == 2){ //bucketed
-		intrusive_ptr<T[]> intrusive_A = convert_to_intrusive_bucketed<T>(a);
+		intrusive_tracked_list<T> intrusive_A = convert_to_intrusive_bucketed<T>(a);
 		const T* A = intrusive_A.get();
 		if(iterator_type_b == 1){
 			const T* B = b.arr_void().get_bucket().cbegin<1, T>();
@@ -273,7 +295,7 @@ Tensor handle_dim2_matmult_std(const Tensor& a, const Tensor& b, bool trans_a, b
 		}
 		//this is if it is bucketed or strided
 		//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-		intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+		intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 		const T* B = intrusive_B.get();
 		return matmult_std_single<T>(A, B, a.shape(), b.shape(), transpose_a, transpose_b);
 	}
@@ -295,11 +317,11 @@ Tensor handle_dim2_matmult_std(const Tensor& a, const Tensor& b, bool trans_a, b
 		}
 		//this is if it is bucketed or strided
 		//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-		intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+		intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 		const T* B = intrusive_B.get();
 		return matmult_std_single<T>(A, B, contiguous_a.shape(), b.shape(), transpose_a, transpose_b);
 	}
-	intrusive_ptr<T[]> intrusive_A = convert_to_intrusive_strided<T>(a);
+	intrusive_tracked_list<T> intrusive_A = convert_to_intrusive_strided<T>(a);
 	const T* A = intrusive_A.get();
 	if(iterator_type_b == 1){
 		const T* B = b.arr_void().get_bucket().cbegin<1, T>();
@@ -315,7 +337,7 @@ Tensor handle_dim2_matmult_std(const Tensor& a, const Tensor& b, bool trans_a, b
 	}
 	//this is if it is bucketed or strided
 	//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-	intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+	intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 	const T* B = intrusive_B.get();
 	return matmult_std_single<T>(A, B, a.shape(), b.shape(), transpose_a, transpose_b);
 }
@@ -344,12 +366,12 @@ Tensor& handle_dim2_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, boo
 		}
 		//this is if it is bucketed or strided
 		//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-		intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+		intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 		const T* B = intrusive_B.get();
 		return matmult_std_single<T>(A, B, c, a.shape(), b.shape(), transpose_a, transpose_b);
 	}
 	if(iterator_type_a == 2){ //bucketed
-		intrusive_ptr<T[]> intrusive_A = convert_to_intrusive_bucketed<T>(a);
+		intrusive_tracked_list<T> intrusive_A = convert_to_intrusive_bucketed<T>(a);
 		const T* A = intrusive_A.get();
 		if(iterator_type_b == 1){
 			const T* B = b.arr_void().get_bucket().cbegin<1, T>();
@@ -365,7 +387,7 @@ Tensor& handle_dim2_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, boo
 		}
 		//this is if it is bucketed or strided
 		//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-		intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+		intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 		const T* B = intrusive_B.get();
 		return matmult_std_single<T>(A, B, c, a.shape(), b.shape(), transpose_a, transpose_b);
 	}
@@ -387,11 +409,11 @@ Tensor& handle_dim2_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, boo
 		}
 		//this is if it is bucketed or strided
 		//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-		intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+		intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 		const T* B = intrusive_B.get();
 		return matmult_std_single<T>(A, B, c, contiguous_a.shape(), b.shape(), transpose_a, transpose_b);
 	}
-	intrusive_ptr<T[]> intrusive_A = convert_to_intrusive_strided<T>(a);
+	intrusive_tracked_list<T> intrusive_A = convert_to_intrusive_strided<T>(a);
 	const T* A = intrusive_A.get();
 	if(iterator_type_b == 1){
 		const T* B = b.arr_void().get_bucket().cbegin<1, T>();
@@ -407,7 +429,7 @@ Tensor& handle_dim2_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, boo
 	}
 	//this is if it is bucketed or strided
 	//normally if it were bucketed, it would see if there is any possible way to seperate it into matricies, otherwise just this:
-	intrusive_ptr<T[]> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
+	intrusive_tracked_list<T> intrusive_B = (iterator_type_b == 3) ? convert_to_intrusive_strided<T>(b) : convert_to_intrusive_bucketed<T>(b);
 	const T* B = intrusive_B.get();
 	return matmult_std_single<T>(A, B, c, a.shape(), b.shape(), transpose_a, transpose_b);
 }
@@ -511,15 +533,76 @@ void return_split_tensor(const Tensor& t, BoolIterator transpose, Tensor& out_t)
 }
 
 Tensor return_split_tensor_of_tensors(const Tensor& t, std::vector<bool>& transpose){
-	Tensor out = Tensor::makeNullTensorArray(t.numel());
-	const Tensor* begin = reinterpret_cast<const Tensor*>(t.data_ptr());
-	const Tensor* end = begin + t.numel();
-	Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
-	auto t_begin = transpose.begin();
-	for(;begin != end; ++begin, ++begin_o, ++t_begin){
-		return_split_tensor(*begin, *t_begin, *begin_o);
-	}
-	return std::move(out);
+    SizeRef ref_shape = t[0].item<Tensor>().shape();
+    int64_t total = t.numel();
+	Tensor out = Tensor::makeNullTensorArray(total);
+    t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
+        [&](auto begin, auto end){
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        auto t_begin = transpose.begin();
+        for(;begin != end; ++begin, ++t_begin, ++begin_o){
+            utils::throw_exception(begin->shape() == ref_shape,
+                                   "Error, matrix multiplication of tensors of tensors does not currently support tensors of different shapes"
+                                   "expected shape $ got $", ref_shape, begin->shape());
+            *begin_o = begin->contiguous().split_axis(-3);
+        }
+    });
+    return std::move(out);
+}
+
+
+// used by n_n_subT
+Tensor return_split_tensor_of_tensors_n_n(const Tensor& t){
+    SizeRef ref_shape = t[0].item<Tensor>().shape();
+    int64_t total = t.numel() * (t[0].item<Tensor>().numel() / (ref_shape[-1] * ref_shape[-2]));
+	Tensor out = Tensor::makeNullTensorArray(total);
+    t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
+        [&](auto begin, auto end){
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        for(;begin != end; ++begin){
+            utils::throw_exception(begin->shape() == ref_shape,
+                                   "Error, matrix multiplication of tensors of tensors does not currently support tensors of different shapes"
+                                   "expected shape $ got $", ref_shape, begin->shape());
+            Tensor split = begin->contiguous().split_axis(-3);
+            Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
+            Tensor* s_end = reinterpret_cast<Tensor*>(split.data_ptr_end());
+            for(;s_begin != s_end; ++s_begin, ++begin_o){
+                *begin_o = *s_begin;
+            }
+        }
+    });
+    return std::move(out);
+}
+
+// the following just takes the shape of the bigger tensor and then repeats based off that
+// easier this way to keep it in a consolidated place
+Tensor return_split_tensor_of_tensors_repeat(const Tensor& t, const SizeRef& bigger_shape){
+    SizeRef ref_shape = t[0].item<Tensor>().shape();
+    int64_t bigger_numel = bigger_shape.multiply() / (bigger_shape[-1] * bigger_shape[-2]);
+    int64_t smaller_numel = ref_shape.multiply() / (ref_shape[-1] * ref_shape[-2]);
+    int64_t total = t.numel() * bigger_numel;
+    utils::throw_exception(bigger_numel % smaller_numel == 0, "Error, expected bigger shape to contain smaller shape but got $ and $", ref_shape, bigger_shape);
+    int64_t repeat = bigger_numel / smaller_numel;
+	Tensor out = Tensor::makeNullTensorArray(total);
+    t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(
+        [&](auto begin, auto end){
+        Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
+        for(;begin != end; ++begin){
+            utils::throw_exception(begin->shape() == ref_shape,
+                                   "Error, matrix multiplication of tensors of tensors does not currently support tensors of different shapes"
+                                   "expected shape $ got $", ref_shape, begin->shape());
+            Tensor split = begin->contiguous().split_axis(-3);
+            Tensor* s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
+            Tensor* s_end = reinterpret_cast<Tensor*>(split.data_ptr_end());
+            for(int64_t r = 0; r < repeat; ++r){
+                s_begin = reinterpret_cast<Tensor*>(split.data_ptr());
+                for(;s_begin != s_end; ++s_begin, ++begin_o){
+                    *begin_o = *s_begin;
+                }
+            }
+        }
+    });
+    return std::move(out);
 }
 
 
@@ -573,8 +656,9 @@ template<typename T,
 	DType DT = DTypeFuncs::type_to_dtype<T>,
 	DType outDT = DTypeFuncs::type_to_dtype<outT>>
 Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_a, const bool transpose_b){
-	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == b.dtype() && a.dtype() == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype(), b.dtype());
 	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
+    utils::THROW_EXCEPTION(a.is_contiguous() && b.is_contiguous(), "Error, Expected tensors_of_tensors to get contiguous tensor objects");
     
     NT_VLA(const T*, A_array, a.numel());
     NT_VLA(const T*, B_array, a.numel());
@@ -636,7 +720,7 @@ Tensor handle_tensors_of_tensors_std(Tensor& a, Tensor& b, const bool transpose_
 			*begin_b = begin_b->contiguous();
 		}
 		utils::THROW_EXCEPTION(begin->dims() == begin_b->dims() && begin->dims() == 2, "Expected tensors to only contain matricies but got dims $ and $", begin->dims(), begin_b->dims());
-		utils::THROW_EXCEPTION(begin->dtype == begin_b->dtype && begin->dtype == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, begin->dtype, begin_b->dtype);
+		utils::THROW_EXCEPTION(begin->dtype() == begin_b->dtype() && begin->dtype() == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, begin->dtype(), begin_b->dtype());
 		utils::THROW_EXCEPTION(begin->shape() == begin_shape, "Expected all shapes inside of tensors to match but got $ and $", begin->shape(), begin_shape);
 		utils::THROW_EXCEPTION(begin_b->shape() == begin_b_shape, "Expected all shapes inside of tensors to match but got $ and $", begin_b->shape(), begin_b_shape);
 		A_array[counter] = begin->arr_void().get_bucket().begin<1, T>();
@@ -673,8 +757,9 @@ template<typename T,
 	DType DT = DTypeFuncs::type_to_dtype<T>,
 	DType outDT = DTypeFuncs::type_to_dtype<outT>>
 Tensor& handle_tensors_of_tensors_std(Tensor& a, Tensor& b, Tensor& c, const bool transpose_a, const bool transpose_b){
-	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == b.dtype() && a.dtype() == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype(), b.dtype());
 	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
+    utils::THROW_EXCEPTION(a.is_contiguous() && b.is_contiguous(), "Error, Expected tensors_of_tensors to get contiguous tensor objects");
 	
     NT_VLA(const T*, A_array, a.numel());
     NT_VLA(const T*, B_array, a.numel());
@@ -726,9 +811,9 @@ Tensor& handle_tensors_of_tensors_std(Tensor& a, Tensor& b, Tensor& c, const boo
                            "Got invalid shape for output tensor $ expected $", c.shape(), c_shape);
     utils::THROW_EXCEPTION(c.is_contiguous(),
                            "Expected output tensor for matrix multiplication to be contiguous");
-    utils::THROW_EXCEPTION(c.dtype == outDT,
+    utils::THROW_EXCEPTION(c.dtype() == outDT,
                            "Expected dtype $ for output matrix multiplication, C dtype inputted was $",
-                            DTypeFuncs::type_to_dtype<T>, c.dtype);
+                            DTypeFuncs::type_to_dtype<T>, c.dtype());
 
 	//Tensor tensor_C = zeros(std::move(c_shape), outDT); 
 	outT* C = reinterpret_cast<outT*>(c.data_ptr());
@@ -746,7 +831,7 @@ Tensor& handle_tensors_of_tensors_std(Tensor& a, Tensor& b, Tensor& c, const boo
 			*begin_b = begin_b->contiguous();
 		}
 		utils::THROW_EXCEPTION(begin->dims() == begin_b->dims() && begin->dims() == 2, "Expected tensors to only contain matricies but got dims $ and $", begin->dims(), begin_b->dims());
-		utils::THROW_EXCEPTION(begin->dtype == begin_b->dtype && begin->dtype == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, begin->dtype, begin_b->dtype);
+		utils::THROW_EXCEPTION(begin->dtype() == begin_b->dtype() && begin->dtype() == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, begin->dtype(), begin_b->dtype());
 		utils::THROW_EXCEPTION(begin->shape() == begin_shape, "Expected all shapes inside of tensors to match but got $ and $", begin->shape(), begin_shape);
 		utils::THROW_EXCEPTION(begin_b->shape() == begin_b_shape, "Expected all shapes inside of tensors to match but got $ and $", begin_b->shape(), begin_b_shape);
 		A_array[counter] = begin->arr_void().get_bucket().begin<1, T>();
@@ -780,25 +865,24 @@ Tensor handle_dim_n_k_matmult_std(const Tensor& a, const Tensor& b, bool trans_a
 	
 	constexpr DType in_dtype = DTypeFuncs::type_to_dtype<T>;
 	utils::THROW_EXCEPTION(a.dims() > b.dims(), "Expected to have larger tensor in terms of dims as a but got $ and $", a.dims(), b.dims());
-	utils::THROW_EXCEPTION(a.dtype == in_dtype && b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == in_dtype && b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype(), b.dtype());
 	int64_t start = a.dims()-b.dims();
 	for(int64_t i = start; i < a.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(a.shape()[i] == b.shape()[i-start], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", a.shape(), b.shape());
 	}
-	
+	auto out_shape = trans_a ? a.shape().transpose(-1, -2) : a.shape().clone();
+    out_shape = out_shape.redo_index(-1, trans_b ? b.shape()[-2] : b.shape()[-1]);
 	bool transpose_a, transpose_b;
 	determine_transposes(a, b, transpose_a, transpose_b, trans_a, trans_b);
 
-	auto bigger_shape_vec = a.shape().arr();
+
 
 	Tensor bigger = return_split_tensor(a, transpose_a);
 	Tensor smaller = return_split_tensor(b, transpose_b);
 	utils::THROW_EXCEPTION(bigger.numel() % smaller.numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger.numel(), smaller.numel());
 	smaller = smaller.repeat_(bigger.numel() / smaller.numel());
 	Tensor output = handle_tensors_of_tensors_std<T>(bigger, smaller, transpose_a, transpose_b);
-	bigger_shape_vec[-1] = output.shape()[-1];
-	bigger_shape_vec[-2] = output.shape()[-2];
-	return output.view(SizeRef(std::move(bigger_shape_vec)));
+	return output.view(out_shape);
 }
 
 
@@ -807,7 +891,7 @@ Tensor& handle_dim_n_k_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, 
 	
 	constexpr DType in_dtype = DTypeFuncs::type_to_dtype<T>;
 	utils::THROW_EXCEPTION(a.dims() > b.dims(), "Expected to have larger tensor in terms of dims as a but got $ and $", a.dims(), b.dims());
-	utils::THROW_EXCEPTION(a.dtype == in_dtype && b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == in_dtype && b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype(), b.dtype());
 	int64_t start = a.dims()-b.dims();
 	for(int64_t i = start; i < a.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(a.shape()[i] == b.shape()[i-start], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", a.shape(), b.shape());
@@ -826,10 +910,11 @@ Tensor& handle_dim_n_k_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, 
 }
 
 template<typename T>
-Tensor handle_dim_k_n_matmult_std(Tensor a, Tensor b, bool trans_a, bool trans_b){
+Tensor handle_dim_k_n_matmult_std(const Tensor& a, const Tensor& b, bool trans_a, bool trans_b){
 	constexpr DType in_dtype = DTypeFuncs::type_to_dtype<T>;
+    utils::THROW_EXCEPTION(a.dtype() != DType::TensorObj && b.dtype() != DType::TensorObj, "INTERNAL MATMULT ERROR");
 	utils::THROW_EXCEPTION(b.dims() > a.dims(), "Expected to have larger tensor in terms of dims as a but got $ > $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(a.dtype == in_dtype && b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == in_dtype && b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype(), b.dtype());
 	int64_t start = b.dims()-a.dims();
 	for(int64_t i = start; i < b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(a.shape()[i-start] == b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", a.shape(), b.shape());
@@ -837,22 +922,18 @@ Tensor handle_dim_k_n_matmult_std(Tensor a, Tensor b, bool trans_a, bool trans_b
 	
 	bool transpose_a, transpose_b;
 	determine_transposes(a, b, transpose_a, transpose_b, trans_a, trans_b);
-    utils::THROW_EXCEPTION(!transpose_a && !transpose_b, "Transposing a and b are not currently supported for tensors of tensors, run transpose_Tensors(-1, -2).clone(), and then run matrix multiplication over the tensors");
-    //otherwise there is a seg fault
-    if(transpose_a){a = a.transpose_Tensors(-1,-2).clone();}
-    if(transpose_b){b = b.transpose_Tensors(-1,-2).clone();}
+    //utils::THROW_EXCEPTION(!transpose_a && !transpose_b, "Transposing a and b are not currently supported for tensors of tensors, run transpose_Tensors(-1, -2).clone(), and then run matrix multiplication over the tensors");
+    ////otherwise there is a seg fault
     
-	
-	auto bigger_shape_vec = b.shape().arr();
+	auto output_shape = trans_b ? b.shape().transpose(-1, -2) : b.shape().clone();
+    output_shape = output_shape.redo_index(-2, trans_a ? a.shape()[-1] : a.shape()[-2]);
 
 	Tensor bigger = return_split_tensor(b, transpose_b);
 	Tensor smaller = return_split_tensor(a, transpose_a);
 	utils::THROW_EXCEPTION(bigger.numel() % smaller.numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger.numel(), smaller.numel());
 	smaller = smaller.repeat_(bigger.numel() / smaller.numel());
 	Tensor output = handle_tensors_of_tensors_std<T>(smaller, bigger, transpose_a, transpose_b);
-	bigger_shape_vec[-1] = output.shape()[-1];
-	bigger_shape_vec[-2] = output.shape()[-2];
-	return output.view(SizeRef(std::move(bigger_shape_vec)));
+	return output.view(output_shape);
 }
 
 
@@ -860,7 +941,7 @@ template<typename T>
 Tensor& handle_dim_k_n_matmult_std(Tensor a, Tensor b, Tensor& c, bool trans_a, bool trans_b){
 	constexpr DType in_dtype = DTypeFuncs::type_to_dtype<T>;
 	utils::THROW_EXCEPTION(b.dims() > a.dims(), "Expected to have larger tensor in terms of dims as a but got $ > $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(a.dtype == in_dtype && b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == in_dtype && b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype(), b.dtype());
 	int64_t start = b.dims()-a.dims();
 	for(int64_t i = start; i < b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(a.shape()[i-start] == b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", a.shape(), b.shape());
@@ -870,8 +951,6 @@ Tensor& handle_dim_k_n_matmult_std(Tensor a, Tensor b, Tensor& c, bool trans_a, 
 	determine_transposes(a, b, transpose_a, transpose_b, trans_a, trans_b);
     utils::THROW_EXCEPTION(!transpose_a && !transpose_b, "Transposing a and b are not currently supported for tensors of tensors, run transpose_Tensors(-1, -2).clone(), and then run matrix multiplication over the tensors");
     //otherwise there is a seg fault
-    if(transpose_a){a = a.transpose_Tensors(-1,-2).clone();}
-    if(transpose_b){b = b.transpose_Tensors(-1,-2).clone();}
     
 	
 	// auto bigger_shape_vec = b.shape().arr();
@@ -887,22 +966,22 @@ template<typename T>
 Tensor handle_dim_n_n_matmult_std(const Tensor& a, const Tensor& b, bool trans_a, bool trans_b){
 	constexpr DType in_dtype = DTypeFuncs::type_to_dtype<T>;
 	utils::THROW_EXCEPTION(b.dims() == a.dims(), "Expected to have same tensor dims as a but got $ != $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(a.dtype == in_dtype && b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == in_dtype && b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype(), b.dtype());
 	int64_t start = b.dims()-a.dims();
 	for(int64_t i = start; i < b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(a.shape()[i-start] == b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", a.shape(), b.shape());
 	}
 	
-	auto bigger_shape_vec = a.shape().arr();
+    auto out_shape = trans_a ? a.shape().transpose(-1, -2) : a.shape().clone();
+    out_shape = out_shape.redo_index(-1, trans_b ? b.shape()[-2] : b.shape()[-1]);
+	
 	bool transpose_a, transpose_b;
 	determine_transposes(a, b, transpose_a, transpose_b, trans_a, trans_b);
 	Tensor A = return_split_tensor(a, transpose_a);
 	Tensor B = return_split_tensor(b, transpose_b);
 	utils::THROW_EXCEPTION(A.numel() == B.numel(), "Expected there to be the same number of matricies but got $ and  $ as the amount of matricies", A.numel(), B.numel());
 	Tensor output = handle_tensors_of_tensors_std<T>(A, B, transpose_a, transpose_b);
-	bigger_shape_vec[-1] = output.shape()[-1];
-	bigger_shape_vec[-2] = output.shape()[-2];
-	return output.view(SizeRef(std::move(bigger_shape_vec)));
+	return output.view(out_shape);
 
 }
 
@@ -910,7 +989,7 @@ template<typename T>
 Tensor& handle_dim_n_n_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, bool trans_a, bool trans_b){
 	constexpr DType in_dtype = DTypeFuncs::type_to_dtype<T>;
 	utils::THROW_EXCEPTION(b.dims() == a.dims(), "Expected to have same tensor dims as a but got $ != $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(a.dtype == in_dtype && b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype, b.dtype);
+	utils::THROW_EXCEPTION(a.dtype() == in_dtype && b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, a.dtype(), b.dtype());
 	int64_t start = b.dims()-a.dims();
 	for(int64_t i = start; i < b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(a.shape()[i-start] == b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", a.shape(), b.shape());
@@ -925,227 +1004,234 @@ Tensor& handle_dim_n_n_matmult_std(const Tensor& a, const Tensor& b, Tensor& c, 
 	return handle_tensors_of_tensors_std<T>(A, B, c, transpose_a, transpose_b);
 }
 
-//a and be are tensors of tensors of tensors of type T
-template<typename T,
-	typename outT = T,
-	DType DT = DTypeFuncs::type_to_dtype<T>,
-	DType outDT = DTypeFuncs::type_to_dtype<outT>>
-Tensor handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, const bool transpose_a, const bool transpose_b){
-	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
-	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
+////a and be are tensors of tensors of tensors of type T
+//template<typename T,
+//	typename outT = T,
+//	DType DT = DTypeFuncs::type_to_dtype<T>,
+//	DType outDT = DTypeFuncs::type_to_dtype<outT>>
+//Tensor handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, const bool transpose_a, const bool transpose_b){
+//	utils::THROW_EXCEPTION(a.dtype() == b.dtype() && a.dtype() == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype(), b.dtype());
+//	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
+//    utils::THROW_EXCEPTION(a.is_contiguous() && b.is_contiguous(), "Error, tensors of tensors expects contiguous tensors");
+//    std::cout << "handling tensor of tensors transpose_a: "<<std::boolalpha << transpose_a << ',' << transpose_b << std::noboolalpha << std::endl;
 
-    NT_VLA(const T*, A_array, a.numel() * a[0].item<Tensor>().numel()); 
-    NT_VLA(const T*, B_array, a.numel() * a[0].item<Tensor>().numel()); 
-    NT_VLA(outT*, C_array, a.numel() * a[0].item<Tensor>().numel()); 
-    // const T** A_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
-    // const T** B_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
-    // outT** C_array = new T*[a.numel() * a[0].item<Tensor>().numel()];
+//    NT_VLA(const T*, A_array, a.numel() * a[0].item<Tensor>().numel()); 
+//    NT_VLA(const T*, B_array, a.numel() * a[0].item<Tensor>().numel()); 
+//    NT_VLA(outT*, C_array, a.numel() * a[0].item<Tensor>().numel()); 
+//    // const T** A_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+//    // const T** B_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+//    // outT** C_array = new T*[a.numel() * a[0].item<Tensor>().numel()];
 
-	// const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
-	// const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
-	// outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
+//	// const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
+//	// const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
+//	// outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
 
 
-	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
-	Tensor* end = begin + a.numel();
-	Tensor* begin_b = reinterpret_cast<Tensor*>(b.data_ptr());
+//	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
+//	Tensor* end = begin + a.numel();
+//	Tensor* begin_b = reinterpret_cast<Tensor*>(b.data_ptr());
 	
-	SizeRef a_shape = (transpose_a) ? (*begin)[0].item<Tensor>().shape().transpose(-1,-2) :(*begin)[0].item<Tensor>().shape().clone();
-	SizeRef b_shape = (transpose_b) ? (*begin_b)[0].item<Tensor>().shape().transpose(-1,-2) : (*begin_b)[0].item<Tensor>().shape().clone();
-	/* SizeRef a_shape = begin->shape(); */
-	/* SizeRef b_shape = begin_b->shape(); */
+//	SizeRef a_shape = (transpose_a) ? (*begin)[0].item<Tensor>().shape().transpose(-1,-2) :(*begin)[0].item<Tensor>().shape().clone();
+//	SizeRef b_shape = (transpose_b) ? (*begin_b)[0].item<Tensor>().shape().transpose(-1,-2) : (*begin_b)[0].item<Tensor>().shape().clone();
+//    std::cout << "shapes: "<<a_shape<<',' << b_shape<<std::endl;
+//    std::cout << "total num: "<<a.numel() * a[0].item<Tensor>().numel() << std::endl;
+//	/* SizeRef a_shape = begin->shape(); */
+//	/* SizeRef b_shape = begin_b->shape(); */
 
-	SizeRef begin_shape = (*begin)[0].item<Tensor>().shape();
-	SizeRef begin_b_shape = (*begin_b)[0].item<Tensor>().shape();
-	const int64_t batch_size = a.numel() * begin->numel();
-	const int64_t& M = begin_shape[-2]; // Number of rows in A
-	const int64_t& N = (transpose_a && transpose_b) ? b_shape[-1] : begin_b_shape[-1]; // Number of columns in B
-	const int64_t& K = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]; // Number of columns in A and rows in B
+//	SizeRef begin_shape = (*begin)[0].item<Tensor>().shape();
+//	SizeRef begin_b_shape = (*begin_b)[0].item<Tensor>().shape();
+//	const int64_t batch_size = a.numel() * begin->numel();
+//	const int64_t& M = begin_shape[-2]; // Number of rows in A
+//	const int64_t& N = (transpose_a && transpose_b) ? b_shape[-1] : begin_b_shape[-1]; // Number of columns in B
+//	const int64_t& K = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]; // Number of columns in A and rows in B
+//    std::cout << "M: "<<M<<" N: "<<N<<" K: "<<K<<std::endl;	
+//	//on transposed_b, what it generally should be for a (6,4,5) * (6,2,5) (where (6,2,5)->(6,5,2) for a transpose)
+//	//int m = 4, n = 5, k = 2;
+//	//m = begin_shape[-2]
+//	//n = begin_b_shape[-1]
+//	//k = b_shape[-1] or begin_b_shape[-2]
+//	//
+//	//on transposed_a what it should generally be for a (6,4,2) * (6,4,5) after transpose: ((6,2,4) * (6,4,5))
+//	//int m = 4, n = 5, k = 2;
+//	//m = begin_shape[-2]
+//	//n = begin_b_shape[-1]
+//	//k = a_shape[-2] or begin_shape[-1]
+//	//
+//	//k = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]
+
+//	std::vector<typename Tensor::size_value_t> vec = {batch_size, a_shape[-2], b_shape[-1]};
+//	SizeRef c_shape(std::move(vec));
+//	Tensor tensor_C = zeros(std::move(c_shape), outDT); 
+//	outT* C = reinterpret_cast<outT*>(tensor_C.data_ptr());
+//	const int64_t c_matrix_size = tensor_C.shape()[-1] * tensor_C.shape()[-2];
+//    std::cout <<"batch_size: "<<batch_size<<',' << c_matrix_size << std::endl;
 	
-	//on transposed_b, what it generally should be for a (6,4,5) * (6,2,5) (where (6,2,5)->(6,5,2) for a transpose)
-	//int m = 4, n = 5, k = 2;
-	//m = begin_shape[-2]
-	//n = begin_b_shape[-1]
-	//k = b_shape[-1] or begin_b_shape[-2]
-	//
-	//on transposed_a what it should generally be for a (6,4,2) * (6,4,5) after transpose: ((6,2,4) * (6,4,5))
-	//int m = 4, n = 5, k = 2;
-	//m = begin_shape[-2]
-	//n = begin_b_shape[-1]
-	//k = a_shape[-2] or begin_shape[-1]
-	//
-	//k = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]
+//	int64_t counter = 0;
+//	for(;begin != end; ++begin, ++begin_b){
+//		//now the second nested for loop for the inner tensors
+//		Tensor* sub_begin = reinterpret_cast<Tensor*>(begin->data_ptr());
+//		Tensor* sub_end = sub_begin + begin->numel();
+//		Tensor* sub_begin_b = reinterpret_cast<Tensor*>(begin_b->data_ptr());
+//		for(;sub_begin != sub_end; ++sub_begin, ++sub_begin_b, ++counter){
+//			//just going to make them contiguous, too much work to try and split them all up
+//			//at this point they should all be contiguous anyways
+//			//so it's just more of a final check to make sure
+//            if(!sub_begin->is_contiguous()){
+//				*sub_begin = sub_begin->contiguous();
+//			}
+//			if(!sub_begin_b->is_contiguous()){
+//				*sub_begin_b = sub_begin_b->contiguous();
+//			}
+//			utils::THROW_EXCEPTION(sub_begin->dims() == sub_begin_b->dims() && sub_begin->dims() == 2, "Expected tensors to only contain matricies but got dims $ and $", sub_begin->dims(), sub_begin_b->dims());
+//			utils::THROW_EXCEPTION(sub_begin->dtype() == sub_begin_b->dtype() && sub_begin->dtype() == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, sub_begin->dtype(), sub_begin_b->dtype());
+//			utils::THROW_EXCEPTION(sub_begin->shape() == begin_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin->shape(), begin_shape);
+//			utils::THROW_EXCEPTION(sub_begin_b->shape() == begin_b_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin_b->shape(), begin_b_shape);
+//			A_array[counter] = sub_begin->arr_void().get_bucket().begin<1, T>();
+//			B_array[counter] = sub_begin_b->arr_void().get_bucket().begin<1, T>();
+//			C_array[counter] = C + (counter * c_matrix_size);	
+//		}
 
-	std::vector<typename Tensor::size_value_t> vec = {batch_size, a_shape[-2], b_shape[-1]};
-	SizeRef c_shape(std::move(vec));
-	Tensor tensor_C = zeros(std::move(c_shape), outDT); 
-	outT* C = reinterpret_cast<outT*>(tensor_C.data_ptr());
-	const int64_t c_matrix_size = tensor_C.shape()[-1] * tensor_C.shape()[-2];
+//	}
+//	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, M, K, K, N, transpose_a, transpose_b);
+//	/* int64_t group_count; */
+//	/* int64_t* group_size; */
+
+//	/* std::cout << "going to calculate optimal group size..."<<std::endl; */
+//	/* calculate_optimal_group_std(M, K, N, batch_size, group_count, group_size); */
+//	/* std::cout << "calculated"<<std::endl; */
 	
-	int64_t counter = 0;
-	for(;begin != end; ++begin, ++begin_b){
-		//now the second nested for loop for the inner tensors
-		Tensor* sub_begin = reinterpret_cast<Tensor*>(begin->data_ptr());
-		Tensor* sub_end = sub_begin + begin->numel();
-		Tensor* sub_begin_b = reinterpret_cast<Tensor*>(begin_b->data_ptr());
-		for(;sub_begin != sub_end; ++sub_begin, ++sub_begin_b, ++counter){
-			//just going to make them contiguous, too much work to try and split them all up
-			//at this point they should all be contiguous anyways
-			//so it's just more of a final check to make sure
-            if(!sub_begin->is_contiguous()){
-				*sub_begin = sub_begin->contiguous();
-			}
-			if(!sub_begin_b->is_contiguous()){
-				*sub_begin_b = sub_begin_b->contiguous();
-			}
-			utils::THROW_EXCEPTION(sub_begin->dims() == sub_begin_b->dims() && sub_begin->dims() == 2, "Expected tensors to only contain matricies but got dims $ and $", sub_begin->dims(), sub_begin_b->dims());
-			utils::THROW_EXCEPTION(sub_begin->dtype == sub_begin_b->dtype && sub_begin->dtype == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, sub_begin->dtype, sub_begin_b->dtype);
-			utils::THROW_EXCEPTION(sub_begin->shape() == begin_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin->shape(), begin_shape);
-			utils::THROW_EXCEPTION(sub_begin_b->shape() == begin_b_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin_b->shape(), begin_b_shape);
-			A_array[counter] = sub_begin->arr_void().get_bucket().begin<1, T>();
-			B_array[counter] = sub_begin_b->arr_void().get_bucket().begin<1, T>();
-			C_array[counter] = C + (counter * c_matrix_size);	
-		}
-
-	}
-	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, M, K, K, N, transpose_a, transpose_b);
-	/* int64_t group_count; */
-	/* int64_t* group_size; */
-
-	/* std::cout << "going to calculate optimal group size..."<<std::endl; */
-	/* calculate_optimal_group_std(M, K, N, batch_size, group_count, group_size); */
-	/* std::cout << "calculated"<<std::endl; */
-	
-/* void batched_matrix_multiplication_typed(const bool& transpose_a, const bool& transpose_b, const T* A, const T* B, T* C, int64_t A_rows, int64_t B_cols, int64_t A_cols, const int64_t& group_count, const int64_t* group_sizes) noexcept { */
+///* void batched_matrix_multiplication_typed(const bool& transpose_a, const bool& transpose_b, const T* A, const T* B, T* C, int64_t A_rows, int64_t B_cols, int64_t A_cols, const int64_t& group_count, const int64_t* group_sizes) noexcept { */
 
 
-	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
-    NT_VLA_DEALC(A_array);
-    NT_VLA_DEALC(B_array);
-    NT_VLA_DEALC(C_array);
+//	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
+//    NT_VLA_DEALC(A_array);
+//    NT_VLA_DEALC(B_array);
+//    NT_VLA_DEALC(C_array);
     
-	/* delete[] group_size; */
-	return std::move(tensor_C);
+//	/* delete[] group_size; */
+//	return std::move(tensor_C);
 
 	
-}
+//}
 
 
-//a and be are tensors of tensors of tensors of type T
-template<typename T,
-	typename outT = T,
-	DType DT = DTypeFuncs::type_to_dtype<T>,
-	DType outDT = DTypeFuncs::type_to_dtype<outT>>
-Tensor& handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, Tensor& c, const bool transpose_a, const bool transpose_b){
-	utils::THROW_EXCEPTION(a.dtype == b.dtype && a.dtype == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype, b.dtype);
-	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
+////a and be are tensors of tensors of tensors of type T
+//template<typename T,
+//	typename outT = T,
+//	DType DT = DTypeFuncs::type_to_dtype<T>,
+//	DType outDT = DTypeFuncs::type_to_dtype<outT>>
+//Tensor& handle_tensors_of_tensors_std_subT(Tensor& a, Tensor& b, Tensor& c, const bool transpose_a, const bool transpose_b){
+//	utils::THROW_EXCEPTION(a.dtype() == b.dtype() && a.dtype() == DType::TensorObj, "Expected dtypes to be TensorObj but got $ and $", a.dtype(), b.dtype());
+//	utils::THROW_EXCEPTION(a.numel() == b.numel(), "Expected tensor a and tensor b to have the same numel but got $ and $", a.numel(), b.numel());
+//    utils::THROW_EXCEPTION(a.is_contiguous() && b.is_contiguous(), "Error, Expected tensors_of_tensors to get contiguous tensor objects");
+
     
-    NT_VLA(const T*, A_array, a.numel() * a[0].item<Tensor>().numel()); 
-    NT_VLA(const T*, B_array, a.numel() * a[0].item<Tensor>().numel()); 
-    NT_VLA(outT*, C_array, a.numel() * a[0].item<Tensor>().numel()); 
+//    NT_VLA(const T*, A_array, a.numel() * a[0].item<Tensor>().numel()); 
+//    NT_VLA(const T*, B_array, a.numel() * a[0].item<Tensor>().numel()); 
+//    NT_VLA(outT*, C_array, a.numel() * a[0].item<Tensor>().numel()); 
 
-    // const T** A_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
-    // const T** B_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
-    // outT** C_array = new T*[a.numel() * a[0].item<Tensor>().numel()];
+//    // const T** A_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+//    // const T** B_array = new const T*[a.numel() * a[0].item<Tensor>().numel()];
+//    // outT** C_array = new T*[a.numel() * a[0].item<Tensor>().numel()];
 
-	// const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
-	// const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
-	// outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
+//	// const T* A_array[a.numel() * a[0].item<Tensor>().numel()];
+//	// const T* B_array[a.numel() * a[0].item<Tensor>().numel()];
+//	// outT* C_array[a.numel() * a[0].item<Tensor>().numel()];
 
 
-	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
-	Tensor* end = begin + a.numel();
-	Tensor* begin_b = reinterpret_cast<Tensor*>(b.data_ptr());
+//	Tensor* begin = reinterpret_cast<Tensor*>(a.data_ptr());
+//	Tensor* end = begin + a.numel();
+//	Tensor* begin_b = reinterpret_cast<Tensor*>(b.data_ptr());
 	
-	SizeRef a_shape = (transpose_a) ? (*begin)[0].item<Tensor>().shape().transpose(-1,-2) :(*begin)[0].item<Tensor>().shape().clone();
-	SizeRef b_shape = (transpose_b) ? (*begin_b)[0].item<Tensor>().shape().transpose(-1,-2) : (*begin_b)[0].item<Tensor>().shape().clone();
-	/* SizeRef a_shape = begin->shape(); */
-	/* SizeRef b_shape = begin_b->shape(); */
+//	SizeRef a_shape = (transpose_a) ? (*begin)[0].item<Tensor>().shape().transpose(-1,-2) :(*begin)[0].item<Tensor>().shape().clone();
+//	SizeRef b_shape = (transpose_b) ? (*begin_b)[0].item<Tensor>().shape().transpose(-1,-2) : (*begin_b)[0].item<Tensor>().shape().clone();
+//	/* SizeRef a_shape = begin->shape(); */
+//	/* SizeRef b_shape = begin_b->shape(); */
 
-	SizeRef begin_shape = (*begin)[0].item<Tensor>().shape();
-	SizeRef begin_b_shape = (*begin_b)[0].item<Tensor>().shape();
-	const int64_t batch_size = a.numel() * begin->numel();
-	const int64_t& M = begin_shape[-2]; // Number of rows in A
-	const int64_t& N = (transpose_a && transpose_b) ? b_shape[-1] : begin_b_shape[-1]; // Number of columns in B
-	const int64_t& K = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]; // Number of columns in A and rows in B
+//	SizeRef begin_shape = (*begin)[0].item<Tensor>().shape();
+//	SizeRef begin_b_shape = (*begin_b)[0].item<Tensor>().shape();
+//	const int64_t batch_size = a.numel() * begin->numel();
+//	const int64_t& M = begin_shape[-2]; // Number of rows in A
+//	const int64_t& N = (transpose_a && transpose_b) ? b_shape[-1] : begin_b_shape[-1]; // Number of columns in B
+//	const int64_t& K = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]; // Number of columns in A and rows in B
 	
-	//on transposed_b, what it generally should be for a (6,4,5) * (6,2,5) (where (6,2,5)->(6,5,2) for a transpose)
-	//int m = 4, n = 5, k = 2;
-	//m = begin_shape[-2]
-	//n = begin_b_shape[-1]
-	//k = b_shape[-1] or begin_b_shape[-2]
-	//
-	//on transposed_a what it should generally be for a (6,4,2) * (6,4,5) after transpose: ((6,2,4) * (6,4,5))
-	//int m = 4, n = 5, k = 2;
-	//m = begin_shape[-2]
-	//n = begin_b_shape[-1]
-	//k = a_shape[-2] or begin_shape[-1]
-	//
-	//k = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]
+//	//on transposed_b, what it generally should be for a (6,4,5) * (6,2,5) (where (6,2,5)->(6,5,2) for a transpose)
+//	//int m = 4, n = 5, k = 2;
+//	//m = begin_shape[-2]
+//	//n = begin_b_shape[-1]
+//	//k = b_shape[-1] or begin_b_shape[-2]
+//	//
+//	//on transposed_a what it should generally be for a (6,4,2) * (6,4,5) after transpose: ((6,2,4) * (6,4,5))
+//	//int m = 4, n = 5, k = 2;
+//	//m = begin_shape[-2]
+//	//n = begin_b_shape[-1]
+//	//k = a_shape[-2] or begin_shape[-1]
+//	//
+//	//k = (transpose_a) ? a_shape[-2] : (transpose_b) ? b_shape[-1] : begin_shape[-1]
 
-	std::vector<typename Tensor::size_value_t> vec = {batch_size, a_shape[-2], b_shape[-1]};
-	SizeRef c_shape(std::move(vec));
-    utils::THROW_EXCEPTION(c.dims() == 3,
-                           "When multiplying tensors of tensors, the output is expected to be batched matrices, but got"
-                           "a shape of $", c.shape());
-    utils::THROW_EXCEPTION(c_shape.multiply() == c.numel(),
-                           "Expected the number of elements in c to be $ but got $ for shape $",
-                           c_shape.multiply(), c.numel(), c.shape());
-    utils::THROW_EXCEPTION(c_shape[-1] == c.shape()[-1] && c_shape[-2] == c.shape()[-2],
-                           "Expected the matrix shape of C to be {$, $}, but got {$, $}", 
-                           c_shape[-2], c_shape[-1], c.shape()[-2], c.shape()[-1]);
-    utils::THROW_EXCEPTION(c.dtype == outDT,
-                           "Expected dtype of out tensor from matmult to be $ but got $", outDT, c.dtype);
-	//Tensor tensor_C = zeros(std::move(c_shape), outDT); 
-	outT* C = reinterpret_cast<outT*>(c.data_ptr());
-	const int64_t c_matrix_size = c.shape()[-1] * c.shape()[-2];
+//	std::vector<typename Tensor::size_value_t> vec = {batch_size, a_shape[-2], b_shape[-1]};
+//	SizeRef c_shape(std::move(vec));
+//    utils::THROW_EXCEPTION(c.dims() == 3,
+//                           "When multiplying tensors of tensors, the output is expected to be batched matrices, but got"
+//                           "a shape of $", c.shape());
+//    utils::THROW_EXCEPTION(c_shape.multiply() == c.numel(),
+//                           "Expected the number of elements in c to be $ but got $ for shape $",
+//                           c_shape.multiply(), c.numel(), c.shape());
+//    utils::THROW_EXCEPTION(c_shape[-1] == c.shape()[-1] && c_shape[-2] == c.shape()[-2],
+//                           "Expected the matrix shape of C to be {$, $}, but got {$, $}", 
+//                           c_shape[-2], c_shape[-1], c.shape()[-2], c.shape()[-1]);
+//    utils::THROW_EXCEPTION(c.dtype() == outDT,
+//                           "Expected dtype of out tensor from matmult to be $ but got $", outDT, c.dtype());
+//	//Tensor tensor_C = zeros(std::move(c_shape), outDT); 
+//	outT* C = reinterpret_cast<outT*>(c.data_ptr());
+//	const int64_t c_matrix_size = c.shape()[-1] * c.shape()[-2];
 	
-	int64_t counter = 0;
-	for(;begin != end; ++begin, ++begin_b){
-		//now the second nested for loop for the inner tensors
-		Tensor* sub_begin = reinterpret_cast<Tensor*>(begin->data_ptr());
-		Tensor* sub_end = sub_begin + begin->numel();
-		Tensor* sub_begin_b = reinterpret_cast<Tensor*>(begin_b->data_ptr());
-		for(;sub_begin != sub_end; ++sub_begin, ++sub_begin_b, ++counter){
-			//just going to make them contiguous, too much work to try and split them all up
-			//at this point they should all be contiguous anyways
-			//so it's just more of a final check to make sure
-            if(!sub_begin->is_contiguous()){
-				*sub_begin = sub_begin->contiguous();
-			}
-			if(!sub_begin_b->is_contiguous()){
-				*sub_begin_b = sub_begin_b->contiguous();
-			}
-			utils::THROW_EXCEPTION(sub_begin->dims() == sub_begin_b->dims() && sub_begin->dims() == 2, "Expected tensors to only contain matricies but got dims $ and $", sub_begin->dims(), sub_begin_b->dims());
-			utils::THROW_EXCEPTION(sub_begin->dtype == sub_begin_b->dtype && sub_begin->dtype == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, sub_begin->dtype, sub_begin_b->dtype);
-			utils::THROW_EXCEPTION(sub_begin->shape() == begin_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin->shape(), begin_shape);
-			utils::THROW_EXCEPTION(sub_begin_b->shape() == begin_b_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin_b->shape(), begin_b_shape);
-			A_array[counter] = sub_begin->arr_void().get_bucket().begin<1, T>();
-			B_array[counter] = sub_begin_b->arr_void().get_bucket().begin<1, T>();
-			C_array[counter] = C + (counter * c_matrix_size);	
-		}
+//	int64_t counter = 0;
+//	for(;begin != end; ++begin, ++begin_b){
+//		//now the second nested for loop for the inner tensors
+//		Tensor* sub_begin = reinterpret_cast<Tensor*>(begin->data_ptr());
+//		Tensor* sub_end = sub_begin + begin->numel();
+//		Tensor* sub_begin_b = reinterpret_cast<Tensor*>(begin_b->data_ptr());
+//		for(;sub_begin != sub_end; ++sub_begin, ++sub_begin_b, ++counter){
+//			//just going to make them contiguous, too much work to try and split them all up
+//			//at this point they should all be contiguous anyways
+//			//so it's just more of a final check to make sure
+//            if(!sub_begin->is_contiguous()){
+//				*sub_begin = sub_begin->contiguous();
+//			}
+//			if(!sub_begin_b->is_contiguous()){
+//				*sub_begin_b = sub_begin_b->contiguous();
+//			}
+//			utils::THROW_EXCEPTION(sub_begin->dims() == sub_begin_b->dims() && sub_begin->dims() == 2, "Expected tensors to only contain matricies but got dims $ and $", sub_begin->dims(), sub_begin_b->dims());
+//			utils::THROW_EXCEPTION(sub_begin->dtype() == sub_begin_b->dtype() && sub_begin->dtype() == DT, "Expected both dtypes to be $ but got $ and $ for tensors of tensors", DT, sub_begin->dtype(), sub_begin_b->dtype());
+//			utils::THROW_EXCEPTION(sub_begin->shape() == begin_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin->shape(), begin_shape);
+//			utils::THROW_EXCEPTION(sub_begin_b->shape() == begin_b_shape, "Expected all shapes inside of tensors to match but got $ and $", sub_begin_b->shape(), begin_b_shape);
+//			A_array[counter] = sub_begin->arr_void().get_bucket().begin<1, T>();
+//			B_array[counter] = sub_begin_b->arr_void().get_bucket().begin<1, T>();
+//			C_array[counter] = C + (counter * c_matrix_size);	
+//		}
 
-	}
-	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, M, K, K, N, transpose_a, transpose_b);
-	/* int64_t group_count; */
-	/* int64_t* group_size; */
+//	}
+//	nt_matmult_batch<T>(A_array, B_array, C_array, batch_size, M, K, K, N, transpose_a, transpose_b);
+//	/* int64_t group_count; */
+//	/* int64_t* group_size; */
 
-	/* std::cout << "going to calculate optimal group size..."<<std::endl; */
-	/* calculate_optimal_group_std(M, K, N, batch_size, group_count, group_size); */
-	/* std::cout << "calculated"<<std::endl; */
+//	/* std::cout << "going to calculate optimal group size..."<<std::endl; */
+//	/* calculate_optimal_group_std(M, K, N, batch_size, group_count, group_size); */
+//	/* std::cout << "calculated"<<std::endl; */
 	
-/* void batched_matrix_multiplication_typed(const bool& transpose_a, const bool& transpose_b, const T* A, const T* B, T* C, int64_t A_rows, int64_t B_cols, int64_t A_cols, const int64_t& group_count, const int64_t* group_sizes) noexcept { */
+///* void batched_matrix_multiplication_typed(const bool& transpose_a, const bool& transpose_b, const T* A, const T* B, T* C, int64_t A_rows, int64_t B_cols, int64_t A_cols, const int64_t& group_count, const int64_t* group_sizes) noexcept { */
 
 
-	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
+//	/* batched_matrix_multiplication_typed<T>(transpose_a, transpose_b, A_array, B_array, C_array, M, N, K, group_count, group_size); */
 
-	/* delete[] group_size; */
-    NT_VLA_DEALC(A_array);
-    NT_VLA_DEALC(B_array);
-    NT_VLA_DEALC(C_array);
+//	/* delete[] group_size; */
+//    NT_VLA_DEALC(A_array);
+//    NT_VLA_DEALC(B_array);
+//    NT_VLA_DEALC(C_array);
 
-	return c;
-}
+//	return c;
+//}
 
 
 
@@ -1157,7 +1243,7 @@ Tensor handle_dim_n_k_subT_matmult_std(const Tensor& a, const Tensor& b, bool tr
 	const Tensor& temp_a = a[0].item<Tensor>();
 	const Tensor& temp_b = b[0].item<Tensor>();
 	utils::THROW_EXCEPTION(temp_b.dims() < temp_a.dims(), "Expected to have larger tensor in terms of dims as a but got $ < $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(temp_a.dtype == in_dtype && temp_b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype, temp_b.dtype);
+	utils::THROW_EXCEPTION(temp_a.dtype() == in_dtype && temp_b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype(), temp_b.dtype());
 	int64_t start = temp_a.dims()-temp_b.dims();
 	for(int64_t i = start; i < temp_a.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(temp_b.shape()[i-start] == temp_a.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", temp_a.shape(), temp_b.shape());
@@ -1165,30 +1251,32 @@ Tensor handle_dim_n_k_subT_matmult_std(const Tensor& a, const Tensor& b, bool tr
 	
 	bool transpose_a, transpose_b;
 	determine_transposes(temp_a, temp_b, transpose_a, transpose_b, trans_a, trans_b);
-	std::vector<bool> n_transpose_a(a.numel(), transpose_a);
-	std::vector<bool> n_transpose_b(b.numel(), transpose_b);
-	Tensor bigger = return_split_tensor_of_tensors(a, n_transpose_a);
-	Tensor smaller = return_split_tensor_of_tensors(b, n_transpose_b);
+	// std::vector<bool> n_transpose_a(a.numel(), transpose_a);
+	// std::vector<bool> n_transpose_b(b.numel(), transpose_b);
+	Tensor bigger = return_split_tensor_of_tensors_n_n(a);
+    Tensor smaller = return_split_tensor_of_tensors_repeat(b, temp_a.shape());
+	// Tensor smaller = return_split_tensor_of_tensors(b, n_transpose_b);
 
-	const bool transpose_a_get = n_transpose_a[0];
-	const bool transpose_b_get = n_transpose_b[0];
-	std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::THROW_EXCEPTION(transpose_a_get == t, "Memory error with transposes a");});
-	std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::THROW_EXCEPTION(transpose_b_get == t, "Memory error with transposes b");});
+	// const bool transpose_a_get = n_transpose_a[0];
+	// const bool transpose_b_get = n_transpose_b[0];
+	// std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::THROW_EXCEPTION(transpose_a_get == t, "Memory error with transposes a");});
+	// std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::THROW_EXCEPTION(transpose_b_get == t, "Memory error with transposes b");});
 	
-	auto bigger_shape_vec = temp_a.shape().arr();
+	auto bigger_shape_vec = temp_a.shape().Vec();
 	bigger_shape_vec[0] *= a.numel();
+    utils::THROW_EXCEPTION(bigger.numel() == smaller.numel(), "Error, expected smaller numel to be equal to bigger numel after split $ != $", bigger.numel(), smaller.numel());
 
-	Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
-	Tensor* bigger_end = bigger_begin + bigger.numel();
-	Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
-	for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
-		utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
-		*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel());
+	// Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
+	// Tensor* bigger_end = bigger_begin + bigger.numel();
+	// Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
+	// for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
+	// 	utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
+	// 	*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel()).contiguous();
 	
-	}
-	Tensor output = handle_tensors_of_tensors_std_subT<T>(bigger, smaller, transpose_a_get, transpose_b_get);
-	bigger_shape_vec[-1] = output.shape()[-1];
-	bigger_shape_vec[-2] = output.shape()[-2];
+	// }
+	Tensor output = handle_tensors_of_tensors_std<T>(bigger, smaller, transpose_a, transpose_b);
+	bigger_shape_vec.back() = output.shape()[-1];
+	bigger_shape_vec[bigger_shape_vec.size()-2] = output.shape()[-2];
 	return output.view(SizeRef(std::move(bigger_shape_vec)));
 }
 
@@ -1199,7 +1287,7 @@ Tensor& handle_dim_n_k_subT_matmult_std(const Tensor& a, const Tensor& b, Tensor
 	const Tensor& temp_a = a[0].item<Tensor>();
 	const Tensor& temp_b = b[0].item<Tensor>();
 	utils::THROW_EXCEPTION(temp_b.dims() < temp_a.dims(), "Expected to have larger tensor in terms of dims as a but got $ < $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(temp_a.dtype == in_dtype && temp_b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype, temp_b.dtype);
+	utils::THROW_EXCEPTION(temp_a.dtype() == in_dtype && temp_b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype(), temp_b.dtype());
 	int64_t start = temp_a.dims()-temp_b.dims();
 	for(int64_t i = start; i < temp_a.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(temp_b.shape()[i-start] == temp_a.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", temp_a.shape(), temp_b.shape());
@@ -1207,28 +1295,32 @@ Tensor& handle_dim_n_k_subT_matmult_std(const Tensor& a, const Tensor& b, Tensor
 	
 	bool transpose_a, transpose_b;
 	determine_transposes(temp_a, temp_b, transpose_a, transpose_b, trans_a, trans_b);
-	std::vector<bool> n_transpose_a(a.numel(), transpose_a);
-	std::vector<bool> n_transpose_b(b.numel(), transpose_b);
-	Tensor bigger = return_split_tensor_of_tensors(a, n_transpose_a);
-	Tensor smaller = return_split_tensor_of_tensors(b, n_transpose_b);
+	Tensor bigger = return_split_tensor_of_tensors_n_n(a);
+    Tensor smaller = return_split_tensor_of_tensors_repeat(b, temp_a.shape());
+    utils::THROW_EXCEPTION(bigger.numel() == smaller.numel(), "Error, expected smaller numel to be equal to bigger numel after split $ != $", bigger.numel(), smaller.numel());
 
-	const bool transpose_a_get = n_transpose_a[0];
-	const bool transpose_b_get = n_transpose_b[0];
-	std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::THROW_EXCEPTION(transpose_a_get == t, "Memory error with transposes a");});
-	std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::THROW_EXCEPTION(transpose_b_get == t, "Memory error with transposes b");});
-	
-	auto bigger_shape_vec = temp_a.shape().arr();
-	bigger_shape_vec[0] *= a.numel();
+	// std::vector<bool> n_transpose_a(a.numel(), transpose_a);
+	// std::vector<bool> n_transpose_b(b.numel(), transpose_b);
+	// Tensor bigger = return_split_tensor_of_tensors(a, n_transpose_a);
+	// Tensor smaller = return_split_tensor_of_tensors(b, n_transpose_b);
 
-	Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
-	Tensor* bigger_end = bigger_begin + bigger.numel();
-	Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
-	for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
-		utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
-		*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel());
+	// const bool transpose_a_get = n_transpose_a[0];
+	// const bool transpose_b_get = n_transpose_b[0];
+	// std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::THROW_EXCEPTION(transpose_a_get == t, "Memory error with transposes a");});
+	// std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::THROW_EXCEPTION(transpose_b_get == t, "Memory error with transposes b");});
 	
-	}
-	Tensor& output = handle_tensors_of_tensors_std_subT<T>(bigger, smaller, c, transpose_a_get, transpose_b_get);
+	// auto bigger_shape_vec = temp_a.shape().Vec();
+	// bigger_shape_vec[0] *= a.numel();
+
+	// Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
+	// Tensor* bigger_end = bigger_begin + bigger.numel();
+	// Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
+	// for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
+	// 	utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
+	// 	*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel()).contiguous();
+	
+	// }
+	Tensor& output = handle_tensors_of_tensors_std<T>(bigger, smaller, c, transpose_a, transpose_b);
     return output;
 	// bigger_shape_vec[-1] = output.shape()[-1];
 	// bigger_shape_vec[-2] = output.shape()[-2];
@@ -1241,7 +1333,7 @@ Tensor handle_dim_k_n_subT_matmult_std(const Tensor& a, const Tensor& b, bool tr
 	const Tensor& temp_a = a[0].item<Tensor>();
 	const Tensor& temp_b = b[0].item<Tensor>();
 	utils::THROW_EXCEPTION(temp_b.dims() > temp_a.dims(), "Expected to have larger tensor in terms of dims as a but got $ > $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(temp_a.dtype == in_dtype && temp_b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype, temp_b.dtype);
+	utils::THROW_EXCEPTION(temp_a.dtype() == in_dtype && temp_b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype(), temp_b.dtype());
 	int64_t start = temp_b.dims()-temp_a.dims();
 	for(int64_t i = start; i < temp_b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(temp_a.shape()[i-start] == temp_b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", temp_a.shape(), temp_b.shape());
@@ -1249,29 +1341,30 @@ Tensor handle_dim_k_n_subT_matmult_std(const Tensor& a, const Tensor& b, bool tr
 	
 	bool transpose_a, transpose_b;
 	determine_transposes(temp_a, temp_b, transpose_a, transpose_b, trans_a, trans_b);
-	std::vector<bool> n_transpose_a(a.numel(), transpose_a);
-	std::vector<bool> n_transpose_b(b.numel(), transpose_b);
-	Tensor smaller = return_split_tensor_of_tensors(a, n_transpose_a);
-	Tensor bigger = return_split_tensor_of_tensors(b, n_transpose_b);
-	const bool transpose_a_get = n_transpose_a[0];
-	const bool transpose_b_get = n_transpose_b[0];
-	std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
-	std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
+	// std::vector<bool> n_transpose_a(a.numel(), transpose_a);
+	// std::vector<bool> n_transpose_b(b.numel(), transpose_b);
+	Tensor smaller = return_split_tensor_of_tensors_repeat(a, temp_b.shape());
+	Tensor bigger = return_split_tensor_of_tensors_n_n(b);
+	// const bool transpose_a_get = n_transpose_a[0];
+	// const bool transpose_b_get = n_transpose_b[0];
+	// std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
+	// std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
+    utils::THROW_EXCEPTION(bigger.numel() == smaller.numel(), "Error, expected smaller numel to be equal to bigger numel after split $ != $", bigger.numel(), smaller.numel());
 	
-	auto bigger_shape_vec = temp_b.shape().arr();
+	auto bigger_shape_vec = temp_b.shape().Vec();
 	bigger_shape_vec[0] *= b.numel();
 
-	Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
-	Tensor* bigger_end = bigger_begin + bigger.numel();
-	Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
-	for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
-		utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
-		*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel());
-	
-	}
-	Tensor output = handle_tensors_of_tensors_std_subT<T>(smaller, bigger, transpose_a, transpose_b);
-	bigger_shape_vec[-1] = output.shape()[-1];
-	bigger_shape_vec[-2] = output.shape()[-2];
+	// Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
+	// Tensor* bigger_end = bigger_begin + bigger.numel();
+	// Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
+	// for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
+	// 	utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
+	// 	*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel()).contiguous();
+	// }
+
+	Tensor output = handle_tensors_of_tensors_std<T>(smaller, bigger, transpose_a, transpose_b);
+	bigger_shape_vec.back() = output.shape()[-1];
+	bigger_shape_vec[bigger_shape_vec.size()-2] = output.shape()[-2];
 	return output.view(SizeRef(std::move(bigger_shape_vec)));
 }
 
@@ -1283,7 +1376,7 @@ Tensor& handle_dim_k_n_subT_matmult_std(const Tensor& a, const Tensor& b, Tensor
 	const Tensor& temp_a = a[0].item<Tensor>();
 	const Tensor& temp_b = b[0].item<Tensor>();
 	utils::THROW_EXCEPTION(temp_b.dims() > temp_a.dims(), "Expected to have larger tensor in terms of dims as a but got $ > $", b.dims(), a.dims());
-	utils::THROW_EXCEPTION(temp_a.dtype == in_dtype && temp_b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype, temp_b.dtype);
+	utils::THROW_EXCEPTION(temp_a.dtype() == in_dtype && temp_b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype(), temp_b.dtype());
 	int64_t start = temp_b.dims()-temp_a.dims();
 	for(int64_t i = start; i < temp_b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(temp_a.shape()[i-start] == temp_b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match", temp_a.shape(), temp_b.shape());
@@ -1291,27 +1384,29 @@ Tensor& handle_dim_k_n_subT_matmult_std(const Tensor& a, const Tensor& b, Tensor
 	
 	bool transpose_a, transpose_b;
 	determine_transposes(temp_a, temp_b, transpose_a, transpose_b, trans_a, trans_b);
-	std::vector<bool> n_transpose_a(a.numel(), transpose_a);
-	std::vector<bool> n_transpose_b(b.numel(), transpose_b);
-	Tensor smaller = return_split_tensor_of_tensors(a, n_transpose_a);
-	Tensor bigger = return_split_tensor_of_tensors(b, n_transpose_b);
-	const bool transpose_a_get = n_transpose_a[0];
-	const bool transpose_b_get = n_transpose_b[0];
-	std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
-	std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
+	// std::vector<bool> n_transpose_a(a.numel(), transpose_a);
+	// std::vector<bool> n_transpose_b(b.numel(), transpose_b);
+	Tensor smaller = return_split_tensor_of_tensors_repeat(a, temp_b.shape());
+	Tensor bigger = return_split_tensor_of_tensors_n_n(b);
+    utils::THROW_EXCEPTION(bigger.numel() == smaller.numel(), "Error, expected smaller numel to be equal to bigger numel after split $ != $", bigger.numel(), smaller.numel());
+	// Tensor smaller = return_split_tensor_of_tensors(a, n_transpose_a);
+	// Tensor bigger = return_split_tensor_of_tensors(b, n_transpose_b);
+	// const bool transpose_a_get = n_transpose_a[0];
+	// const bool transpose_b_get = n_transpose_b[0];
+	// std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
+	// std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
 	
-	auto bigger_shape_vec = temp_b.shape().arr();
-	bigger_shape_vec[0] *= b.numel();
+	// auto bigger_shape_vec = temp_b.shape().arr();
+	// bigger_shape_vec[0] *= b.numel();
 
-	Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
-	Tensor* bigger_end = bigger_begin + bigger.numel();
-	Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
-	for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
-		utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
-		*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel());
-	
-	}
-	Tensor& output = handle_tensors_of_tensors_std_subT<T>(smaller, bigger,c, transpose_a, transpose_b);
+	// Tensor* bigger_begin = reinterpret_cast<Tensor*>(bigger.data_ptr());
+	// Tensor* bigger_end = bigger_begin + bigger.numel();
+	// Tensor* smaller_begin = reinterpret_cast<Tensor*>(smaller.data_ptr());
+	// for(;bigger_begin != bigger_end; ++bigger_begin, ++smaller_begin){
+	// 	utils::THROW_EXCEPTION(bigger_begin->numel() % smaller_begin->numel() == 0, "Expected there to be a fraction of arrays in the tensors but got $ and  $ as the amount of matricies", bigger_begin->numel(), smaller_begin->numel());
+	// 	*smaller_begin = smaller_begin->repeat_(bigger_begin->numel() / smaller_begin->numel()).contiguous();
+	// }
+	Tensor& output = handle_tensors_of_tensors_std<T>(smaller, bigger,c, transpose_a, transpose_b);
     return output;
 	// bigger_shape_vec[-1] = output.shape()[-1];
 	// bigger_shape_vec[-2] = output.shape()[-2];
@@ -1325,30 +1420,31 @@ Tensor handle_dim_n_n_subT_matmult_std(const Tensor& a, const Tensor& b, bool tr
 	const Tensor& temp_a = a[0].item<Tensor>();
 	const Tensor& temp_b = b[0].item<Tensor>();
 	utils::THROW_EXCEPTION(temp_b.dims() == temp_a.dims(), "Expected to have same tensor dims as a but got $ != $", temp_b.dims(), temp_a.dims());
-	utils::THROW_EXCEPTION(temp_a.dtype == in_dtype && temp_b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype, temp_b.dtype);
+	utils::THROW_EXCEPTION(temp_a.dtype() == in_dtype && temp_b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype(), temp_b.dtype());
 	int64_t start = temp_b.dims()-temp_a.dims();
 	for(int64_t i = start; i < temp_b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(temp_a.shape()[i-start] == temp_b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match at ($) and ($)", temp_a.shape(), temp_b.shape(), temp_a.shape()[i-start], temp_b.shape()[i]);
 	}
 	
-	auto bigger_shape_vec = temp_a.shape().arr();
+	auto bigger_shape_vec = temp_a.shape().Vec();
 	bigger_shape_vec[0] *= a.numel();
 	bool transpose_a, transpose_b;
 	determine_transposes(temp_a, temp_b, transpose_a, transpose_b, trans_a, trans_b);
 	std::vector<bool> n_transpose_a(a.numel(), transpose_a);
 	std::vector<bool> n_transpose_b(b.numel(), transpose_b);
-	Tensor A = return_split_tensor_of_tensors(a, n_transpose_a);
-	Tensor B = return_split_tensor_of_tensors(b, n_transpose_b);
-	const bool transpose_a_get = n_transpose_a[0];
-	const bool transpose_b_get = n_transpose_b[0];
-	std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
-	std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
+	Tensor A = return_split_tensor_of_tensors_n_n(a);
+	Tensor B = return_split_tensor_of_tensors_n_n(b);
+	// const bool transpose_a_get = n_transpose_a[0];
+	// const bool transpose_b_get = n_transpose_b[0];
+	// std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
+	// std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
 
 	utils::THROW_EXCEPTION(A.numel() == B.numel(), "Expected there to be the same number of matricies but got $ and  $ as the amount of matricies", A.numel(), B.numel());
-	Tensor output = handle_tensors_of_tensors_std_subT<T>(A, B, transpose_a_get, transpose_b_get);
-	bigger_shape_vec[-1] = output.shape()[-1];
-	bigger_shape_vec[-2] = output.shape()[-2];
-	return output.view(SizeRef(std::move(bigger_shape_vec)));
+	Tensor output = handle_tensors_of_tensors_std<T>(A, B, trans_a, trans_b);
+    bigger_shape_vec.back() = output.shape()[-1];
+    bigger_shape_vec[bigger_shape_vec.size()-2] = output.shape()[-2];
+    Tensor final_output = output.view(SizeRef(bigger_shape_vec));
+	return std::move(final_output);
 
 }
 
@@ -1360,27 +1456,27 @@ Tensor& handle_dim_n_n_subT_matmult_std(const Tensor& a, const Tensor& b, Tensor
 	const Tensor& temp_a = a[0].item<Tensor>();
 	const Tensor& temp_b = b[0].item<Tensor>();
 	utils::THROW_EXCEPTION(temp_b.dims() == temp_a.dims(), "Expected to have same tensor dims as a but got $ != $", temp_b.dims(), temp_a.dims());
-	utils::THROW_EXCEPTION(temp_a.dtype == in_dtype && temp_b.dtype == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype, temp_b.dtype);
+	utils::THROW_EXCEPTION(temp_a.dtype() == in_dtype && temp_b.dtype() == in_dtype, "Expected both tensors to have the dtype $ but got $ and $", in_dtype, temp_a.dtype(), temp_b.dtype());
 	int64_t start = temp_b.dims()-temp_a.dims();
 	for(int64_t i = start; i < temp_b.dims() - 2; ++i){
 		utils::THROW_EXCEPTION(temp_a.shape()[i-start] == temp_b.shape()[i], "Cannot multiply tensors of shapes $ and $, outter dimensions do not match at ($) and ($)", temp_a.shape(), temp_b.shape(), temp_a.shape()[i-start], temp_b.shape()[i]);
 	}
 	
-	auto bigger_shape_vec = temp_a.shape().arr();
+	auto bigger_shape_vec = temp_a.shape().Vec();
 	bigger_shape_vec[0] *= a.numel();
 	bool transpose_a, transpose_b;
 	determine_transposes(temp_a, temp_b, transpose_a, transpose_b, trans_a, trans_b);
 	std::vector<bool> n_transpose_a(a.numel(), transpose_a);
 	std::vector<bool> n_transpose_b(b.numel(), transpose_b);
-	Tensor A = return_split_tensor_of_tensors(a, n_transpose_a);
-	Tensor B = return_split_tensor_of_tensors(b, n_transpose_b);
-	const bool transpose_a_get = n_transpose_a[0];
-	const bool transpose_b_get = n_transpose_b[0];
-	std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
-	std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
+	Tensor A = return_split_tensor_of_tensors_n_n(a);
+	Tensor B = return_split_tensor_of_tensors_n_n(b);
+	// const bool transpose_a_get = n_transpose_a[0];
+	// const bool transpose_b_get = n_transpose_b[0];
+	// std::for_each(n_transpose_a.cbegin(), n_transpose_a.cend(), [&transpose_a_get](const bool& t){utils::throw_exception(transpose_a_get == t, "Memory error with transposes a");});
+	// std::for_each(n_transpose_b.cbegin(), n_transpose_b.cend(), [&transpose_b_get](const bool& t){utils::throw_exception(transpose_b_get == t, "Memory error with transposes b");});
 
 	utils::THROW_EXCEPTION(A.numel() == B.numel(), "Expected there to be the same number of matricies but got $ and  $ as the amount of matricies", A.numel(), B.numel());
-	Tensor& output = handle_tensors_of_tensors_std_subT<T>(A, B,c, transpose_a_get, transpose_b_get);
+	Tensor& output = handle_tensors_of_tensors_std<T>(A, B,c, trans_a, trans_b);
 	return output;
     // bigger_shape_vec[-1] = output.shape()[-1];
 	// bigger_shape_vec[-2] = output.shape()[-2];
@@ -1388,7 +1484,7 @@ Tensor& handle_dim_n_n_subT_matmult_std(const Tensor& a, const Tensor& b, Tensor
 
 }
 DType subT_check(const Tensor& a, const Tensor& b){
-	utils::throw_exception(a.dtype == b.dtype, "Expected both tensors to be dtype Tensor but got $ and $", a.dtype, b.dtype);
+	utils::throw_exception(a.dtype() == b.dtype(), "Expected both tensors to be dtype Tensor but got $ and $", a.dtype(), b.dtype());
 	utils::throw_exception(a.is_contiguous() && b.is_contiguous(), "Expected both tensor of tensors to be contiguous");
 	utils::throw_exception(a.numel() == b.numel(), "Expected both tensors to have the same number of sub-tensors, going to have these multiplied in a list-like fashion, but got $ and $ tensors", a.numel(), b.numel());
 	utils::throw_exception(a.dims() == 1 && b.dims() == a.dims(), "Expected both tensor of tensors to have dimensions of 1, but got $ and $ tensors", a.dims(), b.dims());
@@ -1396,20 +1492,20 @@ DType subT_check(const Tensor& a, const Tensor& b){
 	const Tensor* begin = reinterpret_cast<const Tensor*>(a.data_ptr());
 	const Tensor* end = begin + a.numel();
 	const SizeRef& s = begin->shape();
-	const DType dt = begin->dtype;
+	const DType dt = begin->dtype();
 	++begin;
 	for(;begin != end; ++begin){
 		utils::throw_exception(s == begin->shape(), "Expected all tensors in list of tensors to have the same shape, but a has a tensor of shape $ and $", s, begin->shape());
-		utils::throw_exception(dt == begin->dtype, "Expected all tensors in list of tensors to have the same dtype, but a has a tensor of dtype $ and $", dt, begin->dtype);
+		utils::throw_exception(dt == begin->dtype(), "Expected all tensors in list of tensors to have the same dtype, but a has a tensor of dtype $ and $", dt, begin->dtype());
 	}
 	begin = reinterpret_cast<const Tensor*>(b.data_ptr());
 	end = begin + a.numel();
 	const SizeRef &n_s = begin->shape();
-	utils::throw_exception(dt == begin->dtype, "Expected all tensors in list of tensors to have the same dtype ($), but b has a tensor of dtype $", dt, begin->dtype);
+	utils::throw_exception(dt == begin->dtype(), "Expected all tensors in list of tensors to have the same dtype ($), but b has a tensor of dtype $", dt, begin->dtype());
 	++begin;
 	for(;begin != end; ++begin){
 		utils::throw_exception(n_s == begin->shape(), "Expected all tensors in list of tensors to have the same shape, but a has b tensor of shape $ and $", n_s, begin->shape());
-		utils::throw_exception(dt == begin->dtype, "Expected all tensors in list of tensors to have the same dtype ($), but a has b tensor of dtype $", dt, begin->dtype);
+		utils::throw_exception(dt == begin->dtype(), "Expected all tensors in list of tensors to have the same dtype ($), but a has b tensor of dtype $", dt, begin->dtype());
 	}
 
 	return dt;
@@ -1435,7 +1531,7 @@ Tensor handle_tensor_tensor_matrix_multiplication_std(const Tensor& a, const Ten
 		return handle_dim_n_n_subT_matmult_std<type_t>(a,b,trans_a,trans_b);
 	}
 	else{
-		utils::THROW_EXCEPTION(a.dtype != DType::Bool, "Expected dtype to be numerical, but got dtype $", a.dtype);
+		utils::THROW_EXCEPTION(a.dtype() != DType::Bool, "Expected dtype to be numerical, but got dtype $", a.dtype());
 		return Tensor();
 	}	
 }
@@ -1456,14 +1552,14 @@ Tensor& handle_tensor_tensor_matrix_multiplication_std(const Tensor& a, const Te
 		return handle_dim_n_n_subT_matmult_std<type_t>(a,b,c,trans_a,trans_b);
 	}
 	else{
-		utils::THROW_EXCEPTION(a.dtype != DType::Bool, "Expected dtype to be numerical, but got dtype $", a.dtype);
+		utils::THROW_EXCEPTION(a.dtype() != DType::Bool, "Expected dtype to be numerical, but got dtype $", a.dtype());
 		return c;
 	}	
 }
 
 template<DType dt = DType::Integer>
 Tensor handle_matrix_multiplication_std(const Tensor& a, const Tensor& b, bool trans_a, bool trans_b){
-	if(dt != a.dtype){return handle_matrix_multiplication_std<DTypeFuncs::next_dtype_it<dt> >(a, b, trans_a, trans_b);}
+	if(dt != a.dtype()){return handle_matrix_multiplication_std<DTypeFuncs::next_dtype_it<dt> >(a, b, trans_a, trans_b);}
 	if constexpr (!(dt == DType::TensorObj || dt == DType::Bool)){
 		using type_t = DTypeFuncs::dtype_to_type_t<dt>;
 		if(a.dims() == 2 && a.dims() == b.dims())
@@ -1480,7 +1576,7 @@ Tensor handle_matrix_multiplication_std(const Tensor& a, const Tensor& b, bool t
 		
 	}
 	else{
-		utils::THROW_EXCEPTION(a.dtype == DType::Bool, "Expected dtype to be numerical, or tensors, but got dtype $", a.dtype);
+		utils::THROW_EXCEPTION(a.dtype() == DType::Bool, "Expected dtype to be numerical, or tensors, but got dtype $", a.dtype());
 		return Tensor();
 	}
 
@@ -1491,7 +1587,7 @@ Tensor handle_matrix_multiplication_std(const Tensor& a, const Tensor& b, bool t
 
 template<DType dt = DType::Integer>
 Tensor& handle_matrix_multiplication_std(const Tensor& a, const Tensor& b, Tensor& c, bool trans_a, bool trans_b){
-	if(dt != a.dtype){return handle_matrix_multiplication_std<DTypeFuncs::next_dtype_it<dt> >(a, b, c, trans_a, trans_b);}
+	if(dt != a.dtype()){return handle_matrix_multiplication_std<DTypeFuncs::next_dtype_it<dt> >(a, b, c, trans_a, trans_b);}
 	if constexpr (!(dt == DType::TensorObj || dt == DType::Bool)){
 		using type_t = DTypeFuncs::dtype_to_type_t<dt>;
 		if(a.dims() == 2 && a.dims() == b.dims())
@@ -1508,7 +1604,7 @@ Tensor& handle_matrix_multiplication_std(const Tensor& a, const Tensor& b, Tenso
 		
 	}
 	else{
-		utils::THROW_EXCEPTION(a.dtype != DType::Bool, "Expected dtype to be numerical, or tensors, but got dtype $", a.dtype);
+		utils::THROW_EXCEPTION(a.dtype() != DType::Bool, "Expected dtype to be numerical, or tensors, but got dtype $", a.dtype());
 		return c;
 	}
 

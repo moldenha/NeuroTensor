@@ -1,5 +1,5 @@
-#ifndef _NT_TENSOR_GET_H_
-#define _NT_TENSOR_GET_H_
+#ifndef NT_TENSOR_GET_H__
+#define NT_TENSOR_GET_H__
 //this is a specialization to split a tensor into a tuple of tensors
 
 #include "../Tensor.h"
@@ -25,7 +25,7 @@ inline utils::repeat_types_t<Tensor, sizeof...(Indices)> get_index_tensor_ncast(
 
 template<size_t N>
 inline utils::repeat_types_t<Tensor, N> get(Tensor a){
-	if(a.dtype == DType::TensorObj){
+	if(a.dtype() == DType::TensorObj){
 		utils::throw_exception(a.numel() == N,
 				"Trying to get $ tensors with get function, but holds $ tensors",
 				N, a.numel());

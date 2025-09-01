@@ -1,24 +1,24 @@
-#ifndef _NT_SIMPLEX_RADI_FUNCTIONS_H_
-#define _NT_SIMPLEX_RADI_FUNCTIONS_H_
+#ifndef NT_SIMPLEX_RADI_FUNCTIONS_H__
+#define NT_SIMPLEX_RADI_FUNCTIONS_H__
 #include "../Tensor.h"
 #include "BasisOverlapping.h"
 
 namespace nt {
 namespace tda {
 
-Tensor compute_circumradii(const Tensor &simplicies);
-Tensor compute_circumradii(const Tensor &index_simplicies,
+NEUROTENSOR_API Tensor compute_circumradii(const Tensor &simplicies);
+NEUROTENSOR_API Tensor compute_circumradii(const Tensor &index_simplicies,
                            const Tensor &points);
-Tensor compute_point_radii(Tensor simplicies);
-Tensor compute_point_radii(const Tensor &index_simplicies,
+NEUROTENSOR_API Tensor compute_point_radii(Tensor simplicies);
+NEUROTENSOR_API Tensor compute_point_radii(const Tensor &index_simplicies,
                            const Tensor &points);
-Tensor compute_point_radii(const Tensor &index_simplicies,
+NEUROTENSOR_API Tensor compute_point_radii(const Tensor &index_simplicies,
                            const BasisOverlapping &balls, int64_t batch);
-std::pair<Tensor, Tensor> compute_point_grad_radii(const Tensor& index_simplicies,
+NEUROTENSOR_API std::pair<Tensor, Tensor> compute_point_grad_radii(const Tensor& index_simplicies,
                                                const Tensor& distances);
-void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi, Tensor& grad_indexes);
-void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi);
-std::set<double> get_radi_set(const Tensor &simplex_radi, int64_t batch = 0);
+NEUROTENSOR_API void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi, Tensor& grad_indexes);
+NEUROTENSOR_API void sort_simplex_on_radi(Tensor &simplicies, Tensor &simplex_radi);
+NEUROTENSOR_API std::set<double> get_radi_set(const Tensor &simplex_radi, int64_t batch = 0);
 
 
 

@@ -1,6 +1,8 @@
-#ifndef ARRAY_VOID_H
-#define ARRAY_VOID_H
+#ifndef NT_ARRAY_VOID_H__
+#define NT_ARRAY_VOID_H__
 #include "ranges.h"
+
+
 namespace nt {
 class ArrayVoid;
 template<typename First, typename... Rest>
@@ -37,14 +39,18 @@ struct IsFirstVectorArrayVoid<std::vector<std::reference_wrapper<const ArrayVoid
 #include <type_traits>
 #include <functional>
 #include <cstddef>
+#include "../utils/api_macro.h"
+#include "compatible/DTypeDeclareMacros.h"
+
 
 namespace nt{
 
-class ArrayVoid{
+class NEUROTENSOR_API ArrayVoid{
 	friend class Bucket;
 	Bucket bucket;
 	uint64_t size;
-	
+
+
 	/* void unique_strides(bool pre_order=true); */
 	/* intrusive_ptr<void*> make_unique_strides(bool pre_order=true) const; */
 	/* intrusive_ptr<void*> make_unique_strides(std::size_t start, std::size_t end, bool copy=true) const; */
@@ -70,9 +76,8 @@ class ArrayVoid{
 		}
 		return Bucket::cat(buckets);
 	}
+public:
 
-	public:
-		DType dtype;
 		ArrayVoid(int64_t, DType);
 		ArrayVoid(int64_t, DType, void*, DeleterFnPtr);
 #ifdef USE_PARALLEL
@@ -84,6 +89,7 @@ class ArrayVoid{
 		ArrayVoid(ArrayVoid&&);
 		ArrayVoid(std::nullptr_t);
 		inline Bucket& get_bucket() {return bucket;}
+        inline const DType& dtype() const noexcept {return bucket.dtype;}
 		inline const DeviceType& device_type() const noexcept {return bucket.device_type();}
 		inline const Bucket& get_bucket() const {return bucket;}
 		inline void nullify() {size = 0; bucket.nullify();}
@@ -106,31 +112,30 @@ class ArrayVoid{
 		inline bool is_null() const {return bucket.is_null();}
 		ArrayVoid& operator=(Scalar);
 		ArrayVoid& fill_(Scalar);
-		/* std::shared_ptr<void> share_part(uint32_t) const; */ //not used anymore
 		ArrayVoid share_array(uint64_t) const;
 		ArrayVoid share_array(uint64_t, uint64_t) const;
 		inline ArrayVoid force_contiguity(int64_t n_size=-1) const {return ArrayVoid(bucket.force_contiguity(n_size == -1 ? size : n_size));}
-		inline ArrayVoid bucket_all_indices() const {return ArrayVoid(bucket.bucket_all_indices(), size, dtype);}
+		inline ArrayVoid bucket_all_indices() const {return ArrayVoid(bucket.bucket_all_indices(), size, dtype());}
 		inline ArrayVoid force_contiguity_and_bucket() const {
 			Bucket b = bucket.force_contiguity_and_bucket();
 			int64_t n_size = b.size();
-			return ArrayVoid(std::move(b), n_size, dtype);
+			return ArrayVoid(std::move(b), n_size, dtype());
 		}
 		inline ArrayVoid bound_force_contiguity_bucket() const {
 			Bucket b = bucket.bound_force_contiguity_bucket();
 			int64_t n_size = b.size();
-			return ArrayVoid(std::move(b), n_size, dtype);
+			return ArrayVoid(std::move(b), n_size, dtype());
 		}
 
 		ArrayVoid change_stride(const std::vector<std::pair<uint64_t, uint64_t> >&) const;
 		ArrayVoid change_stride(const std::vector<uint64_t>&) const;
-		ArrayVoid range(std::vector<my_range>) const;
+		ArrayVoid range(std::vector<range_>) const;
 		inline bool is_contiguous() const {return bucket.is_contiguous();}
 		inline ArrayVoid contiguous() const {return ArrayVoid(bucket.contiguous());}
 		inline ArrayVoid clone() const {return ArrayVoid(bucket.clone());}
 		/* template<DType dt = DType::Integer> */
 		/* ArrayVoid copy_strides(bool copy=true) const; */ 
-		inline ArrayVoid new_strides(uint64_t nsize) const{return ArrayVoid(bucket.new_stride_size(nsize), nsize, dtype);}
+		inline ArrayVoid new_strides(uint64_t nsize) const{return ArrayVoid(bucket.new_stride_size(nsize), nsize, dtype());}
 		ArrayVoid copy_strides(bool copy=false) const;
 #ifdef USE_PARALLEL
 		ArrayVoid shared_memory() const; // this is going to use shmem to create a shared memory version of ArrayVoid so that the memory can be shared across multiple processes, making functions like Queue possible, enacting a shared-memory version of the pointers.
@@ -208,32 +213,18 @@ class ArrayVoid{
 		inline int64_t use_count() const {return bucket.use_count();}
 		ArrayVoid& iota(Scalar);
 		void copy(ArrayVoid&, unsigned long long i=0) const;
-		ArrayVoid uint32() const;
-		ArrayVoid int32() const;
-		ArrayVoid Double() const;
-		ArrayVoid Float() const;
-		ArrayVoid cfloat() const;
-		ArrayVoid cdouble() const;
-		ArrayVoid tensorobj() const;
-		ArrayVoid uint8() const;
-		ArrayVoid int8() const;
-		ArrayVoid uint16() const;
-		ArrayVoid int16() const;
-		ArrayVoid int64() const;
-		ArrayVoid Bool() const;
+
+#define X(type, dtype_enum_a, dtype_enum_b)\
+        ArrayVoid dtype_enum_a() const;
+NT_GET_X_FLOATING_DTYPES_ 
+NT_GET_X_COMPLEX_DTYPES_
+NT_GET_X_SIGNED_INTEGER_DTYPES_
+NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+NT_GET_X_OTHER_DTYPES_
+#undef X
+
 		ArrayVoid to(DType) const;
 		ArrayVoid to(DeviceType) const;
-#ifdef _HALF_FLOAT_SUPPORT_
-		ArrayVoid Float16() const;
-		ArrayVoid Complex32() const;
-#endif
-#ifdef _128_FLOAT_SUPPORT_
-		ArrayVoid Float128() const;
-#endif
-#ifdef __SIZEOF_INT128__
-		ArrayVoid Int128() const;
-		ArrayVoid UInt128() const;
-#endif
 		ArrayVoid exp() const;
 		ArrayVoid& exp_();
 		ArrayVoid& complex_();

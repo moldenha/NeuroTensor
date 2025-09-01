@@ -1,5 +1,5 @@
 #include "Boundaries.h"
-#include "../convert/std_convert.h"
+#include "../convert/Convert.h"
 #include "../functional/functional.h"
 #include <unordered_map>
 #include <unordered_set>
@@ -45,19 +45,13 @@ template <typename T> struct NumericVectorHash {
                             std::hash<float>{}(*begin ? float(1) : float(0)) +
                             0x9e3779b9 + (hash << 6) + (hash >> 2);
                     }
-#ifdef __SIZEOF_INT128__
                     else if constexpr (std::is_same_v<uint128_t, T>) {
-                        hash ^=
-                            std::hash<int64_t>{}(
-                                convert::convert<int64_t, uint128_t>(*begin)) +
+                        hash ^= std::hash<uint128_t>{}(*begin) +
                             0x9e3779b9 + (hash << 6) + (hash >> 2);
                     } else if constexpr (std::is_same_v<int128_t, T>) {
-                        hash ^=
-                            std::hash<int64_t>{}(
-                                convert::convert<int64_t, int128_t>(*begin)) +
+                        hash ^= std::hash<int128_t>{}(*begin) +
                             0x9e3779b9 + (hash << 6) + (hash >> 2);
                     }
-#endif
                     else {
                         hash ^= std::hash<T>{}(*begin) + 0x9e3779b9 +
                                 (hash << 6) + (hash >> 2);
@@ -73,7 +67,7 @@ template <typename T> struct NumericVectorEqual {
         if (a.is_null() || b.is_null()) {
             return false;
         }
-        if (a.numel() != b.numel() || a.dtype != b.dtype) {
+        if (a.numel() != b.numel() || a.dtype() != b.dtype()) {
             return false;
         }
         const ArrayVoid &arr_v = b.arr_void();
@@ -124,7 +118,7 @@ template <typename T = int64_t> struct TensorSkipEqual {
         if (a.is_null() || b.is_null()) {
             return false;
         }
-        if (a.numel() != b.numel() || a.dtype != b.dtype) {
+        if (a.numel() != b.numel() || a.dtype() != b.dtype()) {
             return false;
         }
         const ArrayVoid &arr_v = b.arr_void();
@@ -178,11 +172,11 @@ SparseTensor compute_boundary_matrix_index(const Tensor &s_kp1,
         "verticies, point dim but got $ for simplex complex k",
         s_k.dims());
     utils::throw_exception(
-        s_kp1.dtype == DType::int64,
-        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype);
+        s_kp1.dtype() == DType::int64,
+        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype());
     utils::throw_exception(
-        s_k.dtype == DType::int64,
-        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype);
+        s_k.dtype() == DType::int64,
+        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype());
     const int64_t &B_kp1 = s_kp1.shape()[0]; // Batches
     const int64_t Kp1 = s_kp1.shape()[1];    // K+1 verticies
 
@@ -283,11 +277,11 @@ SparseMatrix compute_boundary_sparse_matrix_index(const Tensor &s_kp1,
         "verticies, point dim but got $ for simplex complex k",
         s_k.dims());
     utils::throw_exception(
-        s_kp1.dtype == DType::int64,
-        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype);
+        s_kp1.dtype() == DType::int64,
+        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype());
     utils::throw_exception(
-        s_k.dtype == DType::int64,
-        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype);
+        s_k.dtype() == DType::int64,
+        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype());
     const int64_t &B_kp1 = s_kp1.shape()[0]; // Batches
     const int64_t Kp1 = s_kp1.shape()[1];    // K+1 verticies
 
@@ -449,11 +443,11 @@ std::tuple<
         "verticies, point dim but got $ for simplex complex k",
         s_k.dims());
     utils::throw_exception(
-        s_kp1.dtype == DType::int64,
-        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype);
+        s_kp1.dtype() == DType::int64,
+        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype());
     utils::throw_exception(
-        s_k.dtype == DType::int64,
-        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype);
+        s_k.dtype() == DType::int64,
+        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype());
     const int64_t &B_kp1 = s_kp1.shape()[0]; // Batches
     const int64_t Kp1 = s_kp1.shape()[1];    // K+1 verticies
 
@@ -586,11 +580,11 @@ SparseTensor compute_boundary_matrix(const Tensor &s_kp1, const Tensor &s_k) {
         "verticies, point dim but got $ for simplex complex k",
         s_k.dims());
     utils::throw_exception(
-        s_kp1.dtype == DType::int64,
-        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype);
+        s_kp1.dtype() == DType::int64,
+        "Expected simplicies (k+1) dtype to be int64 but got $", s_kp1.dtype());
     utils::throw_exception(
-        s_k.dtype == DType::int64,
-        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype);
+        s_k.dtype() == DType::int64,
+        "Expected simplicies (k) dtype to be int64 but got $", s_k.dtype());
     const int64_t &B_kp1 = s_kp1.shape()[0]; // Batches
     const int64_t Kp1 = s_kp1.shape()[1];    // K+1 verticies
     const int64_t &D = s_kp1.shape()[2];     // Dims

@@ -17,8 +17,8 @@ Tensor zeros(SizeRef inp, DType dt){
 
 Tensor zeros_like(const Tensor& t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-	if(t.dtype != DType::TensorObj){
-		return zeros(t.shape(), t.dtype);
+	if(t.dtype() != DType::TensorObj){
+		return zeros(t.shape(), t.dtype());
 	}
     for(const auto& _t : t)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
@@ -41,8 +41,8 @@ Tensor ones(SizeRef inp, DType dt){
 
 Tensor ones_like(const Tensor& t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-	if(t.dtype != DType::TensorObj){
-		return ones(t.shape(), t.dtype);
+	if(t.dtype() != DType::TensorObj){
+		return ones(t.shape(), t.dtype());
 	}
     for(const auto& _t : t)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
@@ -55,16 +55,16 @@ Tensor ones_like(const Tensor& t){
 	return std::move(out);
 }
 
-Tensor nums(SizeRef inp, const Scalar k, DType dt){
+Tensor nums(SizeRef inp, Scalar k, DType dt){
 	Tensor output(std::move(inp), dt);
 	output.arr_void().fill_(k);
 	return std::move(output);
 }
 
-Tensor nums_like(const Tensor& t, const Scalar k){
+Tensor nums_like(const Tensor& t, Scalar k){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-	if(t.dtype != DType::TensorObj){
-		return nums(t.shape(), k, t.dtype);
+	if(t.dtype() != DType::TensorObj){
+		return nums(t.shape(), k, t.dtype());
 	}
     for(const auto& _t : t)
         _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
@@ -92,7 +92,7 @@ Tensor arange(SizeRef total_size, DType dt, Scalar start){
 Tensor& fill_diagonal_(Tensor& t, Scalar c){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     check_mutability(t);
-    if(t.dims() < 2 && t.dtype == DType::TensorObj){
+    if(t.dims() < 2 && t.dtype() == DType::TensorObj){
         t.arr_void().for_each<DType::TensorObj>([&c](auto& inp){fill_diagonal_(inp, c);});
         return t;
     }
@@ -100,7 +100,7 @@ Tensor& fill_diagonal_(Tensor& t, Scalar c){
     const int64_t& rows = t.shape()[-2];
     const int64_t& cols = t.shape()[-1];
     const int64_t batches = t.numel() / (rows * cols);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         t.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
         [&c, &rows, &cols, &batches](auto begin, auto end){
             int64_t min_rows = std::min(rows, cols);
@@ -122,9 +122,14 @@ Tensor& fill_diagonal_(Tensor& t, Scalar c){
 
 
 Tensor& fill_(Tensor& t, Scalar s){
-    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    // _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    // No reason to not allow null tensors to be set by a scalar
+    // operations like t[t < 0] = 0 happen in ReLU
+    // and if there are no values less than 0, it should not throw an exception
+    if(t.is_null())
+        return t;
     check_mutability(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         t.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
         [&s](auto begin, auto end){
             for(;begin != end; ++begin)
@@ -138,18 +143,23 @@ Tensor& fill_(Tensor& t, Scalar s){
 }
 
 Tensor& set_(Tensor& t, const Tensor& s){
+    if(t.is_null()){
+        _NT_FUNCTIONAL_ALWAYS_CHECK_(s);
+        t = s;
+        return t;
+    }
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t, s);
     check_mutability(t);
-    utils::THROW_EXCEPTION(t.dtype == s.dtype, "Expected dtype of $ but got $ for set_ function",
-                       t.dtype, s.dtype);
+    utils::THROW_EXCEPTION(t.dtype() == s.dtype(), "Expected dtype of $ but got $ for set_ function",
+                       t.dtype(), s.dtype());
     utils::THROW_EXCEPTION(t.shape() == s.shape(),
                            "Expected shape to be $ but got shape $ for set_ function", s.shape(),
                            t.shape());
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         t.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
         [&s](auto begin, auto end, auto begin2){
             for(;begin != end; ++begin, ++begin2){
-                if(begin->dtype == begin2->dtype && begin->shape() == begin2->shape()){
+                if(begin->dtype() == begin2->dtype() && begin->shape() == begin2->shape()){
                     set_(*begin, *begin2);
                 }else{
                     *begin = *begin2;

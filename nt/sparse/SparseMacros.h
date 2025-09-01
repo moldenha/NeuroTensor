@@ -1,5 +1,5 @@
-#ifndef __NT_SPARSE_MACROS_H__
-#define __NT_SPARSE_MACROS_H__
+#ifndef NT_SPARSE_MACROS_H__
+#define NT_SPARSE_MACROS_H__
 #include "../utils/numargs_macro.h"
 
 #if defined(__GNUC__)
@@ -61,33 +61,48 @@ NT_SUPPRESS_VA_ARGS_WARNING_PUSH
         _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::int8, func, data, __VA_ARGS__)  \
     break;																		\
 	}                                                                          \
-    case DType::Byte: {                                                        \
-        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::Byte, func, data, __VA_ARGS__)  \
+    case DType::uint8: {                                                        \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::uint8, func, data, __VA_ARGS__)  \
     break;																		\
 	}                                                                          \
-    case DType::Short: {                                                       \
-        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::Short, func, data, __VA_ARGS__) \
+    case DType::int16: {                                                       \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::int16, func, data, __VA_ARGS__) \
     break;																		\
 	}                                                                          \
-    case DType::UnsignedShort: {                                               \
-        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::UnsignedShort, func, data,      \
+    case DType::uint16: {                                               \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::uint16, func, data,      \
                                         __VA_ARGS__)                           \
     break;																		\
 	}                                                                          \
-    case DType::Long: {                                                        \
-        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::Long, func, data, __VA_ARGS__)  \
+    case DType::uint32: {                                                        \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::uint32, func, data, __VA_ARGS__)  \
     break;																		\
 	}                                                                          \
-    case DType::Integer: {                                                     \
-        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::Integer, func, data,            \
+    case DType::int32: {                                                     \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::int32, func, data,            \
                                         __VA_ARGS__)                           \
     break;																		\
 	}                                                                          \
-    case DType::LongLong: {                                                    \
-        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::LongLong, func, data,           \
+    case DType::int64: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::int64, func, data,           \
                                         __VA_ARGS__)                           \
     break;																		\
 	}                                                                          \
+    case DType::int128: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::int128, func, data,           \
+                                        __VA_ARGS__)                           \
+    break;																		\
+	} \
+    case DType::uint128: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::uint128, func, data,           \
+                                        __VA_ARGS__)                           \
+    break;																		\
+	} \
+    case DType::Float128: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::Float128, func, data,           \
+                                        __VA_ARGS__)                           \
+    break;																		\
+	} \
     case DType::Bool: {                                                        \
         _NT_SPARSE_RUN_SINGLE_FUNCTION_(DType::Bool, func, data, __VA_ARGS__)  \
     break;																		\
@@ -143,33 +158,48 @@ NT_SUPPRESS_VA_ARGS_WARNING_PUSH
                                               __VA_ARGS__)                     \
     break;																		\
 	}                                                                          \
-    case DType::Byte: {                                                        \
-        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::Byte, func, data,         \
+    case DType::uint8: {                                                        \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::uint8, func, data,         \
                                               __VA_ARGS__)                     \
     break;																		\
 	}                                                                          \
-    case DType::Short: {                                                       \
-        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::Short, func, data,        \
+    case DType::int16: {                                                       \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::int16, func, data,        \
                                               __VA_ARGS__)                     \
     break;																		\
 	}                                                                          \
-    case DType::UnsignedShort: {                                               \
-        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::UnsignedShort, func,      \
+    case DType::uint16: {                                               \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::uint16, func,      \
                                               data, __VA_ARGS__)               \
     break;																		\
 	}                                                                          \
-    case DType::Long: {                                                        \
-        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::Long, func, data,         \
+    case DType::uint32: {                                                        \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::uint32, func, data,         \
                                               __VA_ARGS__)                     \
     break;																		\
 	}                                                                          \
-    case DType::Integer: {                                                     \
-        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::Integer, func, data,      \
+    case DType::int32: {                                                     \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::int32, func, data,      \
                                               __VA_ARGS__)                     \
     break;																		\
 	}                                                                          \
-    case DType::LongLong: {                                                    \
-        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::LongLong, func, data,     \
+    case DType::int64: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::int64, func, data,     \
+                                              __VA_ARGS__)                     \
+    break;																		\
+	}                                                                          \
+    case DType::int128: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::int128, func, data,     \
+                                              __VA_ARGS__)                     \
+    break;																		\
+	}                                                                          \
+    case DType::uint128: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::uint128, func, data,     \
+                                              __VA_ARGS__)                     \
+    break;																		\
+	}                                                                          \
+    case DType::Float128: {                                                    \
+        _NT_SPARSE_RUN_SINGLE_CONST_FUNCTION_(DType::Float128, func, data,     \
                                               __VA_ARGS__)                     \
     break;																		\
 	}                                                                          \

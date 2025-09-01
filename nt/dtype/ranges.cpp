@@ -2,51 +2,40 @@
 #include "../utils/utils.h"
 
 namespace nt{
-namespace literals{
-my_range operator ""_r(unsigned long long i){
-	if(i == INT64_MAX)
-		return my_range();
-	return my_range(i);
-}
+
+range_& range_::fix(int64_t s){
+    end = (end < 0) ? (end + (s+1)) : end;
+    begin = (begin < 0) ? (begin + (s+1)) : begin;
+    if(end < begin)
+        std::swap(begin, end);
+    utils::throw_exception(begin <= s && end <= s, "Runtime Error: Expected end and begin range to be less than $ but instead got {$,$}", s, begin, end);
+    return *this;
 }
 
-std::ostream& operator<<(std::ostream& out, const my_range& v){
+std::ostream& operator<<(std::ostream& out, const range_& v){
 	out <<"{"<<v.begin<<","<<v.end<<"}";
 	return out;
 }
 
-my_range::my_range()
-	:begin(0),end(-1){}
-
-my_range::my_range(const int64_t& v) //this is just a single index
-	:begin(v),end(v+1){}
-
-my_range::my_range(const int64_t& v, const int64_t &v2)
-	:begin(v),end(v2){}
-my_range& my_range::operator+=(const int64_t& v){begin += v; end += v; return *this;}
-
-my_range& my_range::operator-=(const int64_t& v){begin -= v; end -= v; return *this;}
-
-my_range& my_range::operator+(const int64_t& v){end = v; return *this;}
-
-my_range& my_range::operator-(const int64_t& v){end = (-1*v); return *this;}
-
-bool my_range::operator==(const my_range& a) const { return a.begin == begin && a.end == end;}
-bool my_range::operator<(const my_range& a) const { return a.begin < begin && a.end < end; }
-bool my_range::operator>(const my_range& a) const { return a.begin > begin && a.end > end; }
-bool my_range::operator<=(const my_range& a) const { return a.begin <= begin && a.end <= end; }
-bool my_range::operator>=(const my_range& a) const { return a.begin >= begin && a.end >= end; }
-
-void my_range::fix(size_t s){
-	end = end < 0 ? (end + s): end;
-	begin = begin < 0 ? (begin + s): begin;
-	if(end < begin)
-		std::swap(begin, end);
-	utils::throw_exception(begin <= s && end <= s, "Runtime Error: Expected end and begin range to be less than $ but instead got $:$", s, begin, end);
+std::ostream& operator<<(std::ostream& out, const std::vector<range_>& v){
+	if(v.size() == 0)
+		return out << "[]"<<std::endl;
+	out << "[";
+	for(uint32_t i = 0; i < v.size() - 1; ++i)
+		out << v[i].begin << ':' << v[i].end << ',';
+	out << v.back().begin << ':' << v.back().end << ']';
+	return out;
 }
-const int64_t my_range::length() const {return end - begin;}
 
-
+std::ostream& operator<<(std::ostream& out, const std::vector<std::vector<range_> >& v){
+	if(v.size() == 0)
+		return out << "{}"<<std::endl;
+	out << '{';
+	for(uint32_t i = 0; i < v.size()-1; ++i)
+		out << v[i] << ',';
+	out << v.back() << '}';
+	return out;
+}
 
 
 }

@@ -81,7 +81,7 @@ namespace functional {
 namespace cpu {
 
 void _exp(const ArrayVoid& a, ArrayVoid& out){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run exp on bool data type");
     }
     out = a.clone();
@@ -91,7 +91,7 @@ void _exp(const ArrayVoid& a, ArrayVoid& out){
 }
 
 void _log(const ArrayVoid& a, ArrayVoid& out){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run log on bool data type");
     }
     out = a.clone();
@@ -101,7 +101,7 @@ void _log(const ArrayVoid& a, ArrayVoid& out){
 }
 
 void _exp_(ArrayVoid& a){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run exp on bool data type");
     }
     a.execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
@@ -110,7 +110,7 @@ void _exp_(ArrayVoid& a){
 
 }
 void _log_(ArrayVoid& a){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run log on bool data type");
     }
     a.execute_function_chunk<WRAP_DTYPES<NumberTypesL> >([](auto begin, auto end){
@@ -121,7 +121,7 @@ void _log_(ArrayVoid& a){
 
 
 Scalar _accumulate(const ArrayVoid& a, Scalar initial){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run accumulate on bool data type");
     }
     return a.cexecute_function<WRAP_DTYPES<NumberTypesL> >([&initial](auto begin, auto end) -> Scalar{
@@ -132,7 +132,7 @@ Scalar _accumulate(const ArrayVoid& a, Scalar initial){
 }
 
 void _sum_every(const ArrayVoid& a, ArrayVoid& out, int64_t size){
-    if(a.dtype == DType::Bool){
+    if(a.dtype() == DType::Bool){
         throw std::logic_error("Cannot run log on bool data type");
     }
     if(a.Size() % size != 0){

@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_INDEPENDENT_H_
-#define _NT_LINALG_INDEPENDENT_H_
+#ifndef NT_LINALG_INDEPENDENT_H__
+#define NT_LINALG_INDEPENDENT_H__
 
 #include "../../Tensor.h"
 #include <Eigen/Dense>
@@ -14,9 +14,9 @@ namespace nt {
 namespace linalg {
 
 //this is a function to find independent rows 
-Tensor indp_rows(const Tensor&, const Tensor&);
+NEUROTENSOR_API Tensor indp_rows(const Tensor&, const Tensor&);
 //this is a function to find independent columns 
-Tensor indp_cols(const Tensor&, const Tensor&);
+NEUROTENSOR_API Tensor indp_cols(const Tensor&, const Tensor&);
 
 
 } // namespace linalg

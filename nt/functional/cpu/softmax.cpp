@@ -177,6 +177,68 @@ inline void Dsoftmax(T softmax_output, T softmax_output_end,
 }
 
 
+template<typename base_type>
+NT_ALWAYS_INLINE simde_type<base_type> gumbel_clamp(const simde_type<base_type>& u){
+    static simde_type<base_type> min_v = SimdTraits<base_type>::set1(base_type(-3));
+    static simde_type<base_type> max_v = SimdTraits<base_type>::set1(base_type(3));
+    return SimdTraits<base_type>::min(SimdTraits<base_type>::max(u, min_v), max_v);
+}
+
+template<typename T>
+NT_ALWAYS_INLINE T gumbel_clamp_r(const T& u){
+    return std::clamp(u, T(-3), T(3));
+}
+
+
+template<typename base_type>
+NT_ALWAYS_INLINE simde_type<base_type> sample_gumbel_noise(const simde_type<base_type>& u){
+    static simde_type<base_type> simd_scalar = SimdTraits<base_type>::set1(base_type(1e-10));
+    return gumbel_clamp<base_type>( SimdTraits<base_type>::negative(SimdTraits<base_type>::log(SimdTraits<base_type>::add(
+        SimdTraits<base_type>::negative(
+            SimdTraits<base_type>::log(SimdTraits<base_type>::add(u, simd_scalar))
+        ), simd_scalar)
+    ) ) );
+}
+
+template<typename T>
+NT_ALWAYS_INLINE T sample_gumbel_noise_r(const T& u){
+    return gumbel_clamp_r(-std::log(-std::log(u + T(1e-10)) + T(1e-10)));
+}
+
+
+
+// begin is the input logits
+// begin2 is the random uniform noise
+template<typename T, typename U, typename O>
+inline void gumbel_algorithm(T begin, T end, U begin2, O out, utils::IteratorBaseType_t<T> tau){
+	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, 
+    utils::IteratorBaseType_t<U> > && 
+    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, 
+    "Expected to get base types the same for simde optimized routes");
+	using base_type = utils::IteratorBaseType_t<T>;
+	if constexpr (simde_svml_supported_v<base_type>){
+        simde_type<base_type> simd_tau = SimdTraits<base_type>::set1(tau);
+		static constexpr size_t pack_size = pack_size_v<base_type>;
+		for(; begin + pack_size <= end; begin += pack_size, begin2 += pack_size, out += pack_size){
+			simde_type<base_type> a = it_loadu(begin);
+			simde_type<base_type> b = it_loadu(begin2);
+            simde_type<base_type> noise = sample_gumbel_noise<base_type>(b);
+			simde_type<base_type> c = SimdTraits<base_type>::divide(SimdTraits<base_type>::add(a, noise), simd_tau);
+			it_storeu(out, c);
+		}
+        for(;begin != end; ++begin, ++begin2, ++out){
+            base_type noise = sample_gumbel_noise_r(*begin2);
+            *out = (*begin + noise) / tau;
+        }
+	}
+	else{
+        for(;begin != end; ++begin, ++begin2, ++out){
+            base_type noise = sample_gumbel_noise_r(*begin2);
+            *out = (*begin + noise) / tau;
+        }
+	}
+}
+
 
 } // namespace mp
 } // namespace nt
@@ -200,8 +262,17 @@ void _softmax_stable(ArrayVoid& in, ArrayVoid& out, Scalar max){
 
 }
 
+void _gumbel_algorithm_(ArrayVoid& in_o, ArrayVoid& noise, Scalar tau){
+    in_o.execute_function<WRAP_DTYPES<NumberTypesL> >([&tau](auto begin, auto end, auto begin2){
+        using base_type = utils::IteratorBaseType_t<decltype(begin)>;
+        mp::gumbel_algorithm(begin, end, begin2, begin, tau.to<base_type>());
+    }, noise); 
+}
+
+
+
 void _dsoftmax(const ArrayVoid& softmax_output, const ArrayVoid& dL_dY, ArrayVoid& out){
-    if(softmax_output.dtype != dL_dY.dtype && softmax_output.dtype != out.dtype){
+    if(softmax_output.dtype() != dL_dY.dtype() && softmax_output.dtype() != out.dtype()){
         throw std::invalid_argument("got different dtypes for softmax derivative");
     }
     if(!out.is_contiguous()){
@@ -223,6 +294,7 @@ void _dsoftmax(const ArrayVoid& softmax_output, const ArrayVoid& dL_dY, ArrayVoi
         
     }, dL_dY);
 }
+
 
 
 } // namespace cpu

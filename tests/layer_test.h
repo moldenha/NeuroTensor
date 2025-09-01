@@ -31,7 +31,7 @@ class CustomLayer : public nt::Module{
 			out = b1(out);
 			std::cout << "checking for null parameter..."<<std::endl;
 			if(parameter.is_null()){
-				parameter = nt::functional::zeros({x.shape()[-2], 1}, x.tensor.dtype);
+				parameter = nt::functional::zeros({x.shape()[-2], 1}, x.detach().dtype());
 			}
 			return out + parameter;
 		}

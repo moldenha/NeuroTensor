@@ -1,17 +1,17 @@
-#ifndef _NT_UTILS_OPTIONAL_STRING_H_
-#define _NT_UTILS_OPTIONAL_STRING_H_
+#ifndef NT_UTILS_OPTIONAL_STRING_H__
+#define NT_UTILS_OPTIONAL_STRING_H__
 
 #include <string>
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include <initializer_list>
 #include "optional_except.h"
 #include "type_traits.h"
-
+#include "api_macro.h"
 
 namespace nt{
 namespace utils{
 
-class intrusive_string: public intrusive_ptr_target{
+class NEUROTENSOR_API intrusive_string: public intrusive_ptr_target{
 	public:
 		std::string value;
 		intrusive_string() = default;
@@ -22,7 +22,7 @@ class intrusive_string: public intrusive_ptr_target{
 };
 
 
-class optional_string{
+class NEUROTENSOR_API optional_string{
 	intrusive_ptr<intrusive_string> str;
 	public:
 		optional_string(const optional_string&);
@@ -81,7 +81,7 @@ class optional_string{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, std::string&>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, std::string&>>{};
 		}
 
 		template<class F>
@@ -89,7 +89,7 @@ class optional_string{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, const std::string&>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, const std::string&>>{};
 		}
 
 		template<class F>
@@ -97,7 +97,7 @@ class optional_string{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, std::string>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, std::string>>{};
 		}
 
 		inline void swap(optional_string& op) noexcept {op.str.swap(str);}

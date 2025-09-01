@@ -13,7 +13,7 @@ namespace functional{
 Tensor cat_0_dim(const Tensor& _a, const Tensor& _b){
 	_NT_FUNCTIONAL_ALWAYS_CHECK_(_a, _b);
     ::nt::utils::THROW_EXCEPTION(_a.dims() == _b.dims(), "\nDims must be equal $ != $", _a.dims(), _b.dims());
-	::nt::utils::THROW_EXCEPTION(_a.dtype == _b.dtype, "\nDTypes must be equal $ != $", _a.dtype, _b.dtype);
+	::nt::utils::THROW_EXCEPTION(_a.dtype() == _b.dtype(), "\nDTypes must be equal $ != $", _a.dtype(), _b.dtype());
 	for(typename SizeRef::value_type i = 1; i < _a.dims(); ++i)
 		utils::THROW_EXCEPTION(_a.shape()[i] == _b.shape()[i],
 				"\nRuntimeError: Sizes of tensors must match except in dimension 0. Expected size $ but got size $ for second tensor.", _a.shape()[i], _b.shape()[i]);
@@ -39,7 +39,7 @@ Tensor cat(std::vector<Tensor> t){
 
 	typename SizeRef::value_type last_dim = 0;
 	for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
-		exception_dtypes(t[i-1].dtype, t[i].dtype);
+		exception_dtypes(t[i-1].dtype(), t[i].dtype());
 		utils::THROW_EXCEPTION(t[i-1].dims() == t[i].dims(), "Runtime Error: Expected all tensors to have $ dims but got $ instead", t[i-1].dims(), t[i].dims());
 		for(typename SizeRef::value_type j = 1; j < t[i].dims(); ++j){
 			utils::THROW_EXCEPTION(t[i].shape()[j] == t[i-1].shape()[j],
@@ -67,8 +67,8 @@ Tensor cat(const Tensor& t){
         _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
         is_mutable_ = is_mutable_ && _t.is_mutable();
     }
-	utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
-			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == DType::TensorObj,
+			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype());
 	const typename SizeRef::value_type& num = t.numel();
 	return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&num, &is_mutable_](auto begin, auto end) -> Tensor{
 		auto begin_cpy = begin;
@@ -103,8 +103,8 @@ Tensor cat_unordered(const Tensor& t){
         is_mutable_ = is_mutable_ && _t.is_mutable();
     }
 
-	utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
-			"In order to concatenate a single tensor, it must hold multiple tensors, but got type $", t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == DType::TensorObj,
+			"In order to concatenate a single tensor, it must hold multiple tensors, but got type $", t.dtype());
 	std::vector<ArrayVoid> arrVds;
 	arrVds.reserve(t.numel());
 	for(const auto& tensor : t){
@@ -212,8 +212,8 @@ Tensor cat(std::vector<Tensor> t, int64_t dim){
 
 Tensor cat(const Tensor& t, int64_t dim){
 
-	utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
-			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == DType::TensorObj,
+			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype());
     if(dim == 0){
         return cat(t);
     }
@@ -266,7 +266,7 @@ Tensor stack(std::vector<std::reference_wrapper<Tensor> > t, int64_t dim){
 		utils::THROW_EXCEPTION(t[i-1].get().shape() == t[i].get().shape(),
 				"Runtime Error: Expected all Tensors to have same shape of $ but instead got $", 
 				t[i-1].get().shape(), t[i].get().shape());
-		exception_dtypes(t[i-1].get().dtype, t[i].get().dtype);
+		exception_dtypes(t[i-1].get().dtype(), t[i].get().dtype());
 	}
 	std::vector<typename SizeRef::value_type> vec = t[0].get().shape().Vec();
 	dim = dim < 0 ? dim + t[0].get().dims() : dim;
@@ -287,12 +287,12 @@ Tensor stack(const Tensor& t, int64_t dim){
         _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
         is_mutable_ = is_mutable_ && _t.is_mutable();
     }
-	utils::THROW_EXCEPTION(t.dtype == DType::TensorObj,
-			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == DType::TensorObj,
+			"In order to concatenate a tensor, it must hold multiple tensors, but got type $", t.dtype());
 	return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&dim, &is_mutable_](auto begin, auto end){
 		auto begin_cpy = begin;
 		const SizeRef& original_shape = begin_cpy->shape();
-		DType out_dtype = begin_cpy->dtype;
+		DType out_dtype = begin_cpy->dtype();
         const Tensor& t = *begin;
 		for(;begin_cpy != end; ++begin_cpy){
 			utils::THROW_EXCEPTION(!begin_cpy->is_null(),
@@ -300,7 +300,7 @@ Tensor stack(const Tensor& t, int64_t dim){
 			utils::THROW_EXCEPTION(original_shape == begin_cpy->shape(),
 				"Runtime Error: Expected all Tensors to have same shape of $ but instead got $",
 				original_shape, begin_cpy->shape());
-			exception_dtypes(out_dtype, begin_cpy->dtype);
+			exception_dtypes(out_dtype, begin_cpy->dtype());
 		}
 		std::vector<typename SizeRef::value_type> vec = original_shape.Vec();
 		dim = dim < 0 ? dim + t.dims() : dim;
@@ -326,7 +326,7 @@ Tensor stack(std::vector<std::reference_wrapper<Tensor> > t){
     }
 	bool are_same = true;
 	for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
-		if(t[i-1].get().shape() != t[i].get().shape() || t[i-1].get().dtype != t[i].get().dtype){
+		if(t[i-1].get().shape() != t[i].get().shape() || t[i-1].get().dtype() != t[i].get().dtype()){
 			are_same = false;
 			break;
 		}
@@ -335,7 +335,7 @@ Tensor stack(std::vector<std::reference_wrapper<Tensor> > t){
 		std::vector<typename SizeRef::value_type> vec = t[0].get().shape().Vec();
 		vec.insert(vec.begin(), t.size());
 		SizeRef a(std::move(vec));
-		Tensor output(std::move(a), t[0].get().dtype);
+		Tensor output(std::move(a), t[0].get().dtype());
 		for(typename SizeRef::value_type i = 0; i < t.size(); ++i)
 			output[i] = t[i].get();
 		return output.set_mutability(is_mutable_);
@@ -356,7 +356,7 @@ Tensor stack(std::vector<Tensor> t){
     }
 	bool are_same = true;
 	for(typename SizeRef::value_type i = 1; i < t.size(); ++i){
-		if(t[i-1].shape() != t[i].shape() || t[i-1].dtype != t[i].dtype){
+		if(t[i-1].shape() != t[i].shape() || t[i-1].dtype() != t[i].dtype()){
 			are_same = false;
 			break;
 		}
@@ -365,7 +365,7 @@ Tensor stack(std::vector<Tensor> t){
 		std::vector<typename SizeRef::value_type> vec = t[0].shape().Vec();
 		vec.insert(vec.begin(), t.size());
 		SizeRef a(std::move(vec));
-		Tensor output(std::move(a), t[0].dtype);
+		Tensor output(std::move(a), t[0].dtype());
 		for(typename SizeRef::value_type i = 0; i < t.size(); ++i)
 			output[i] = t[i];
 		return output.set_mutability(is_mutable_);
@@ -390,7 +390,7 @@ Tensor stack(std::vector<Tensor> t, int64_t dim){
 		utils::THROW_EXCEPTION(t[i-1].shape() == t[i].shape(),
 				"Runtime Error: Expected all Tensors to have same shape of $ but instead got $",
 				t[i-1].shape(), t[i].shape());
-		exception_dtypes(t[i-1].dtype, t[i].dtype);
+		exception_dtypes(t[i-1].dtype(), t[i].dtype());
 	}
 	std::vector<typename SizeRef::value_type> vec = t[0].shape().Vec();
 	dim = dim < 0 ? dim + t[0].dims() : dim;

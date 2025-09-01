@@ -1,7 +1,6 @@
-// This is a header file that ensures that nt::uint128_t is included
-// Currently, the suport of nt::int128_t is platform-dependent
-#ifndef _NT_TYPES_BIT_128_INTEGER_ENSURE_H_
-#define _NT_TYPES_BIT_128_INTEGER_ENSURE_H_
+// This is a header file that ensures that nt::uint128_t and nt::int128_t is included
+#ifndef NT_TYPES_BIT_128_INTEGER_ENSURE_H__
+#define NT_TYPES_BIT_128_INTEGER_ENSURE_H__
 
 #ifdef __SIZEOF_INT128__
 namespace nt{
@@ -34,11 +33,20 @@ using int128_t = boost::multiprecision::int128_t;
 namespace std{
 template<>
 struct hash<::nt::uint128_t>{
-    std::size_t operator()(const ::nt::uint128_t& x) const {
+    NT_ALWAYS_INLINE std::size_t operator()(const ::nt::uint128_t& x) const {
         return std::hash<uint64_t>()(static_cast<uint64_t>(x)) ^
                std::hash<uint64_t>()(static_cast<uint64_t>(x >> 64));
     }
 };
+
+template<>
+struct hash<::nt::int128_t>{
+    NT_ALWAYS_INLINE std::size_t operator()(const ::nt::int128_t& s) const noexcept{
+        return std::hash<int64_t>()(int64_t(x)) ^
+               std::hash<int64_t>()(int64_t(x >> 64));
+    }
+};
+
 }
 #endif // __SIZEOF_INT128__ 
 

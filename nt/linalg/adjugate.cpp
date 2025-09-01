@@ -55,7 +55,7 @@ inline value_t cofactor(iterator mat, int64_t n, int64_t r, int64_t c){
     //row + col odd -> negative
     char sign = ((r + c) & 1) == 0 ? 1 : -1;
 
-    value_t* minor_mat = new value_t[(n-1) * (n-1)];
+    value_t* minor_mat = MetaNewArr(value_t, (n-1) * (n-1));
     
     int64_t minor_i = 0;
     int64_t minor_j = 0;
@@ -83,7 +83,7 @@ inline value_t cofactor(iterator mat, int64_t n, int64_t r, int64_t c){
     }
     
     value_t minor_det = _nt_sub_ptr_determinant_<value_t, value_t*>(minor_mat, n-1);
-    delete[] minor_mat;
+    MetaFreeArr<value_t>(minor_mat);
     minor_det *= value_t((r + c) % 2 == 0 ? 1 : -1);
     return minor_det;
 }
@@ -100,18 +100,18 @@ void _nt_adjugate_square_matrix_(iterator it, value_t* out, int64_t n){
 }
 
 Tensor adjugate(const Tensor& mat){
-    if(mat.dtype == DType::TensorObj){
+    if(mat.dtype() == DType::TensorObj){
         std::vector<Tensor> out;
         out.reserve(mat.numel());
         mat.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&out](auto begin, auto end){for(;begin != end; ++begin){out.emplace_back(adjugate(*begin));}});
         return ::nt::functional::vectorize(std::move(out));
     }
-    utils::throw_exception(mat.dtype != DType::Bool, "Cannot take adjugation of tensor with type bool but got $", mat.dtype);
+    utils::throw_exception(mat.dtype() != DType::Bool, "Cannot take adjugation of tensor with type bool but got $", mat.dtype());
     utils::throw_exception(mat.dims() >= 2, "Can only take the adjugation of a tensor with dims greater than or equal to 2, but got $", mat.dims());
     utils::throw_exception(mat.shape()[-1] == mat.shape()[-2], "Can only take the adjugation of square matricies, but got last 2 dims to be {$, $}", mat.shape()[-2], mat.shape()[-1]);
     if(mat.shape()[-1] == 1){return mat;}
     if(mat.dims() == 2){
-        Tensor out(mat.shape(), mat.dtype);
+        Tensor out(mat.shape(), mat.dtype());
         int64_t n = mat.shape()[-1];
         mat.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>([&out, &n](auto begin, auto end){
             using value_t = utils::IteratorBaseType_t<decltype(begin)>;
@@ -120,7 +120,7 @@ Tensor adjugate(const Tensor& mat){
         });
         return std::move(out);
     }
-    Tensor out(mat.shape(), mat.dtype);
+    Tensor out(mat.shape(), mat.dtype());
     int64_t n = mat.shape().back();
     mat.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL>>([&out, &n](auto begin, auto end){
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;

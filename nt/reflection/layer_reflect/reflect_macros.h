@@ -1,5 +1,5 @@
-#ifndef _NT_REFLECT_LAYER_MACROS_H_
-#define _NT_REFLECT_LAYER_MACROS_H_
+#ifndef NT_REFLECT_LAYER_MACROS_H__
+#define NT_REFLECT_LAYER_MACROS_H__
 //this is a libaray for the macros related to reflection
 #include "../../utils/type_traits.h"
 //#include "tie_structure.hpp"
@@ -116,7 +116,7 @@ public:                                                                     \
    60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,41, \
    40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21, \
    20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1))
-#define _NT_NUMARGS_(...) GLUE(_VAR_COUNT_EMPTY_, IS_EMPTY(__VA_ARGS__))(__VA_ARGS__)
+#define NT_NUMARGS_(...) GLUE(_VAR_COUNT_EMPTY_, IS_EMPTY(__VA_ARGS__))(__VA_ARGS__)
 
 
 
@@ -397,7 +397,7 @@ R class_vector_argument_func(std::vector<nt::utils::any_ref> _vec, T *obj, R(T::
 template <typename R, typename ... Types>
 inline R _nt_run_vector_arg_through_func_(std::vector<std::any> _vec, R(*f)(Types ...)){
 	int i = 0;
-	return f((std::any_cast<std::rvalue_wrapper<Types>>(_vec[i++])())...);
+	return f((std::any_cast<::nt::type_traits::rvalue_wrapper<Types>>(_vec[i++])())...);
 }
 _NT_MAKE_IS_CLASS_FUNCTION_(forward)
 _NT_MAKE_IS_CLASS_FUNCTION_(eval)
@@ -424,7 +424,6 @@ inline TensorGrad run_forward_expression_(T* dynamic_ptr, std::vector<utils::any
             ::nt::TensorGrad _x = _vec[0].cast<::nt::TensorGrad>(); 
             std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorGrad>)> back_func(std::bind(&T::backward, dynamic_ptr, std::placeholders::_1, std::placeholders::_2)); 
             ::nt::TensorGrad output = ::nt::reflect::detail::class_vector_argument_func(std::move(_vec), dynamic_ptr, &T::forward); 
-            output.children->clear(); 
             ::nt::TensorGrad::redefine_tracking(output, _x, back_func); 
             return std::move(output); 
         }else{ 
@@ -486,14 +485,14 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 				std::type_index(typeid(Derived)),\
 				std::function<bool(::nt::Module*)>([](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }), \
 				std::function<::nt::reflect::detail::custom_any_iterator(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_iterator {\
-					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_iterator();}\
+					if constexpr (NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_iterator();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
 						return ::nt::reflect::detail::custom_any_iterator(_NT_CLS_TO_ITERATOR_(dynamic_ptr, Derived, __VA_ARGS__));\
 					}\
                 }), \
 				std::function<::nt::reflect::detail::custom_any_map(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_map{\
-					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_map();}\
+					if constexpr (NT_NUMARGS_(__VA_ARGS__) == 0){return ::nt::reflect::detail::custom_any_map();}\
 					else{\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
 						return _NT_CLS_TO_MAP_(dynamic_ptr, Derived, __VA_ARGS__);\
@@ -535,7 +534,7 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 				std::type_index(typeid(Derived)),\
 				std::function<bool(::nt::Module*)>([](::nt::Module* ptr) { return dynamic_cast<Derived*>(ptr) != nullptr; }),\
 				std::function<::nt::reflect::detail::custom_any_iterator(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_iterator {\
-					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0) {\
+					if constexpr (NT_NUMARGS_(__VA_ARGS__) == 0) {\
 						return ::nt::reflect::detail::custom_any_iterator();\
 					} else {\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\
@@ -545,7 +544,7 @@ inline std::function<void(const ::nt::Tensor&, ::nt::intrusive_ptr<::nt::TensorG
 					}\
                 }),\
 				std::function<::nt::reflect::detail::custom_any_map(::nt::Module*)>([](::nt::Module* ptr) -> ::nt::reflect::detail::custom_any_map {\
-					if constexpr (_NT_NUMARGS_(__VA_ARGS__) == 0) {\
+					if constexpr (NT_NUMARGS_(__VA_ARGS__) == 0) {\
 						return ::nt::reflect::detail::custom_any_map();\
 					} else {\
 						Derived* dynamic_ptr = dynamic_cast<Derived*>(ptr);\

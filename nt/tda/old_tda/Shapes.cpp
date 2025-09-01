@@ -222,7 +222,7 @@ void shape_2d::merge_shape(shape_2d&& sh){
 
 
 void fillPointsInSimplex(Tensor& matrix, size_t rows, size_t cols, const Simplex2d& simplex, Scalar& value) {
-    utils::throw_exception(matrix.dtype == DType::uint8, "Expected tensor to have dtype of uint8 but got $",matrix.dtype);
+    utils::throw_exception(matrix.dtype() == DType::uint8, "Expected tensor to have dtype of uint8 but got $",matrix.dtype());
     utils::throw_exception(matrix.dims() == 2, "Expected tensor to have at most 2 dimensions but got $", matrix.dims());
     // Helper lambda function to check if a point is inside the simplex
     auto isInsideSimplex = [&](int64_t x, int64_t y) {

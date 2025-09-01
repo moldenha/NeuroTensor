@@ -1,5 +1,5 @@
-#ifndef __NT_FUNCTIONAL_TENSOR_FILES_PRINT_H__
-#define __NT_FUNCTIONAL_TENSOR_FILES_PRINT_H__
+#ifndef NT_FUNCTIONAL_TENSOR_FILES_PRINT_H__
+#define NT_FUNCTIONAL_TENSOR_FILES_PRINT_H__
 
 #include <iostream>
 #include <ostream>
@@ -8,8 +8,8 @@
 namespace nt{
 namespace functional{
 
-std::ostream& print(std::ostream&, const Tensor&);
-void print(const Tensor&);
+NEUROTENSOR_API std::ostream& print(std::ostream&, const Tensor&);
+NEUROTENSOR_API void print(const Tensor&);
 
 }
 }

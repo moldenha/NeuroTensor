@@ -1,6 +1,7 @@
-#ifndef _NT_SIMDE_TRAITS_AVX2_H_
-#define _NT_SIMDE_TRAITS_AVX2_H_
+#ifndef NT_SIMDE_TRAITS_AVX2_H__
+#define NT_SIMDE_TRAITS_AVX2_H__
 #include "../../types/Types.h"
+#include "../../utils/always_inline_macro.h"
 #include <simde/x86/avx.h>
 #include <simde/x86/fma.h>  // only for FMA if supported
 #include <cstddef>
@@ -8,6 +9,9 @@
 #include <type_traits>
 #include <simde/x86/avx2.h>
 #include "simde_traits_avx.h"
+
+
+#define NT_MP_AVX2_CONCAT(a, b) a##b
 
 namespace nt{
 namespace mp{
@@ -145,6 +149,31 @@ struct SimdTraits_avx2;
 #define join_m128i(lo, hi) simde_mm256_inserti128_si256(simde_mm256_castsi128_si256(lo),(hi),1)
 //float avx2
 //for sum functions, is adapted from https://stackoverflow.com/questions/13219146/how-to-sum-m256-horizontally
+#define NT_FLOAT_COMPARE_OPS(type)\
+    inline static constexpr auto less_than_equal = [](const Type& a, const Type& b) noexcept -> Type {return SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_LE_OQ);};\
+    inline static constexpr auto compare_equal = [](const Type& a, const Type& b) noexcept -> Type {return SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_EQ_OQ);};\
+    inline static constexpr auto compare_not_equal = [](const Type& a, const Type& b) noexcept -> Type {return SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_NEQ_UQ);};\
+    inline static constexpr auto store_compare_equal = [](const Type& a, const Type& b, bool* out_bool){\
+        int mask = SimdTraits_avx2<type>::move_mask(SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_EQ_OQ));\
+        for (int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i) {\
+            out_bool[i] = (mask >> i) & 1;\
+        }\
+    };\
+    inline static constexpr auto store_compare_not_equal = [](const Type& a, const Type& b, bool* out_bool){\
+        int mask = SimdTraits_avx2<type>::move_mask(SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_NEQ_UQ));\
+        for (int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i) {\
+            out_bool[i] = (mask >> i) & 1;\
+        }\
+    };\
+    inline static constexpr auto store_compare_less_than_equal = [](const Type& a, const Type& b, bool* out_bool){\
+        int mask = SimdTraits_avx2<type>::move_mask(SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_LE_OQ));\
+        for (int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i) {\
+            out_bool[i] = (mask >> i) & 1;\
+        }\
+    };\
+
+
+
 template <>
 struct SimdTraits_avx2<float> {
 	using Type = simde__m256;
@@ -187,14 +216,29 @@ struct SimdTraits_avx2<float> {
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
 	static constexpr auto log = simde_mm256_log_ps;
+    
+    // svml round functions
+    static constexpr auto round = simde_mm256_round_ps;
+    static constexpr auto floor = simde_mm256_floor_ps;
+    static constexpr auto ceil = simde_mm256_ceil_ps;
 
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
 	static constexpr auto add = simde_mm256_add_ps;
 	static constexpr auto multiply = simde_mm256_mul_ps;
+    static constexpr auto compare = simde_mm256_cmp_ps;
+    static constexpr auto move_mask = simde_mm256_movemask_ps;
+    NT_FLOAT_COMPARE_OPS(float);
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
 	};
+
+    inline static constexpr auto remainder(const Type& a, const Type& b){
+        return subtract(a, multiply(floor(divide(a, b)), b));
+    }
+    inline static constexpr auto fmod(const Type& a, const Type& b){
+        return subtract(a, multiply(round(divide(a, b), SIMDE_MM_FROUND_TO_ZERO), b));
+    }
 	/* inline static constexpr auto modulo = [](const Type& divisor_c, const Type& dividend_c) noexcept -> Type{ */
 	/* 	/1* static constexpr auto modulo = simde_mm_rem_epi64; *1/ */
 	/* 	simde__m256i divisor = simde_mm256_cvtps_epi32(divisor_c); */
@@ -239,6 +283,9 @@ struct SimdTraits_avx2<float> {
 #endif
 
 	};
+
+    static constexpr auto min = simde_mm256_min_ps;
+    static constexpr auto max = simde_mm256_max_ps;
 };
 
 
@@ -292,12 +339,28 @@ struct SimdTraits_avx2<double> {
 	inline static constexpr auto sech = [](const Type& a) noexcept -> Type { return reciprical(cosh(a));};
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
 	static constexpr auto log = simde_mm256_log_pd;
+
+    // svml round functions
+    static constexpr auto round = simde_mm256_round_pd;
+    static constexpr auto floor = simde_mm256_floor_pd;
+    static constexpr auto ceil = simde_mm256_ceil_pd;
+
+    inline static constexpr auto remainder(const Type& a, const Type& b){
+        return subtract(a, multiply(floor(divide(a, b)), b));
+    }
+    inline static constexpr auto fmod(const Type& a, const Type& b){
+        return subtract(a, multiply(round(divide(a, b), SIMDE_MM_FROUND_TO_ZERO), b));
+    }
 	/* inline static constexpr auto modulo = [](const Type& divisor_c, const Type& dividend_c) noexcept -> Type{ */
 	/* 	/1* static constexpr auto modulo = simde_mm_rem_epi64; *1/ */
 	/* 	simde__m256i divisor = simde_mm256_cvtpd_epi64(divisor_c); */
 	/* 	simde__m256i dividend = simde_mm256_cvtpd_epi64(dividend_c); */
 	/* 	return simde_mm256_cvtepi64_pd(simde_mm256_rem_epi64(divisor, dividend)); */
 	/* } */
+
+    static constexpr auto compare = simde_mm256_cmp_pd;
+    static constexpr auto move_mask = simde_mm256_movemask_pd;
+    NT_FLOAT_COMPARE_OPS(double);
 
 	static constexpr auto fmsub = simde_mm256_fmsub_pd;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
@@ -315,8 +378,40 @@ struct SimdTraits_avx2<double> {
 		simde__m128d high64 = simde_mm_unpackhi_pd(low, low);
 		return simde_mm_cvtsd_f64(simde_mm_add_sd(low, high64));
 	};
+    static constexpr auto min = simde_mm256_min_pd;
+    static constexpr auto max = simde_mm256_max_pd;
 };
 
+
+
+//example use: NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int32_t, epi32) 
+#define NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(type, code)\
+    static constexpr auto compare_equal = NT_MP_AVX2_CONCAT(simde_mm256_cmpeq_, code);\
+    static constexpr auto compare_greater_than = NT_MP_AVX2_CONCAT(simde_mm256_cmpgt_, code);\
+    inline static constexpr auto store_compare_equal = [](const Type& a, const Type& b, bool* out) noexcept {\
+        type vals[SimdTraits_avx2<type>::pack_size];\
+        simde_mm256_storeu_si256((simde__m256i*)vals, SimdTraits_avx2<type>::compare_equal(a, b));\
+        for(int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i){\
+            out[i] = (vals[i] == -1);\
+        }\
+    };\
+    inline static constexpr auto store_compare_not_equal = [](const Type& a, const Type& b, bool* out) noexcept {\
+        type vals[SimdTraits_avx2<type>::pack_size];\
+        simde_mm256_storeu_si256((simde__m256i*)vals, SimdTraits_avx2<type>::compare_equal(a, b));\
+        for(int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i){\
+            out[i] = (vals[i] != -1);\
+        }\
+    };\
+    inline static constexpr auto store_compare_less_than_equal = [](const Type& a, const Type& b, bool* out) noexcept {\
+        auto eq_mask = SimdTraits_avx2<type>::compare_equal(a, b); \
+        auto lt_mask = SimdTraits_avx2<type>::compare_greater_than(b, a);\
+        auto le_mask = simde_mm256_or_si256(eq_mask, lt_mask);\
+        type vals[SimdTraits_avx2<type>::pack_size];\
+        simde_mm256_storeu_si256((simde__m256i*)vals, le_mask);\
+        for(int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i){\
+            out[i] = (vals[i] == -1);\
+        }\
+    };\
 
 //int32 avx2
 template <>
@@ -336,6 +431,9 @@ struct SimdTraits_avx2<int32_t> {
     static constexpr auto multiply = simde_mm256_mullo_epi32;
     static constexpr auto divide = simde_mm256_div_epi32;
     static constexpr auto subtract = simde_mm256_sub_epi32;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi32;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int32_t, epi32)
+ 
     inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 	return subtract(zero(), a);
     };
@@ -353,6 +451,9 @@ struct SimdTraits_avx2<int32_t> {
 	simde__m128i sum64 = simde_mm_hadd_epi32(sum128, sum128);
 	return simde_mm_extract_epi32(sum64, 0) + simde_mm_extract_epi32(sum64, 1);
     };
+    
+    static constexpr auto min = simde_mm256_min_epi32;
+    static constexpr auto max = simde_mm256_max_epi32;
 
 };
 
@@ -375,6 +476,7 @@ struct SimdTraits_avx2<uint32_t> {
     static constexpr auto multiply = simde_mm256_mullo_epi32;
     static constexpr auto divide = simde_mm256_div_epu32;
     static constexpr auto subtract = simde_mm256_sub_epi32;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int32_t, epi32);
     /* static constexpr auto modulo = simde_mm256_rem_epu32; */
     inline static constexpr auto broadcast = [](const uint32_t* arr) -> Type {return SimdTraits_avx2<uint32_t>::set1(*arr);};
     inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
@@ -388,7 +490,11 @@ struct SimdTraits_avx2<uint32_t> {
 	simde__m128i sum64 = simde_mm_hadd_epi32(sum128, sum128);
 	return simde_mm_extract_epi32(sum64, 0) + simde_mm_extract_epi32(sum64, 1);
     };
+    static constexpr auto min = simde_mm256_min_epu32;
+    static constexpr auto max = simde_mm256_max_epu32;
+
 };
+
 
 template <>
 struct SimdTraits_avx2<int64_t> {
@@ -406,22 +512,24 @@ struct SimdTraits_avx2<int64_t> {
     static constexpr auto add = simde_mm256_add_epi64;
     static constexpr auto divide = simde_mm256_div_epi64;
     static constexpr auto subtract = simde_mm256_sub_epi64;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi64;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int64_t, epi64)
     inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 	return subtract(zero(), a);
     };
 
     //gotten from https://stackoverflow.com/questions/76436053/simd-intrinsics-avx-tried-to-use-mm256-mullo-epi64-but-got-0xc000001d-illega
+    //mull64 haswell
     inline static constexpr auto multiply = [](const Type& a, const Type& b) -> Type{
-	    simde__m256i bswap   = simde_mm256_shuffle_epi32(b,0xB1);
-	    simde__m256i prodlh  = simde_mm256_mullo_epi32(a,bswap);
+        alignas(32) int64_t a_vals[4], b_vals[4], result[4];
+        simde_mm256_store_si256(reinterpret_cast<simde__m256i*>(a_vals), a);
+        simde_mm256_store_si256(reinterpret_cast<simde__m256i*>(b_vals), b);
+        result[0] = a_vals[0] * b_vals[0];
+        result[1] = a_vals[1] * b_vals[1];
+        result[2] = a_vals[2] * b_vals[2];
+        result[3] = a_vals[3] * b_vals[3];
 
-	    simde__m256i prodlh2 = simde_mm256_srli_epi64(prodlh, 32);
-	    simde__m256i prodlh3 = simde_mm256_add_epi32(prodlh2, prodlh);
-	    simde__m256i prodlh4 = simde_mm256_and_si256(prodlh3, simde_mm256_set1_epi64x(0x00000000FFFFFFFF));
-
-	    simde__m256i prodll  = simde_mm256_mul_epu32(a,b);
-	    simde__m256i prod    = simde_mm256_add_epi64(prodll,prodlh4);
-	    return  prod;
+        return simde_mm256_load_si256(reinterpret_cast<const simde__m256i*>(result));
     };
 
     /* static constexpr auto modulo = simde_mm256_rem_epi64; */
@@ -433,6 +541,14 @@ struct SimdTraits_avx2<int64_t> {
     inline static constexpr auto sum = [](const Type& x) -> int64_t {
 	simde__m128i sum128 = simde_mm_add_epi64(simde_mm256_extracti128_si256(x, 0), simde_mm256_extracti128_si256(x, 1));
 	return simde_mm_extract_epi64(sum128, 0) + simde_mm_extract_epi64(sum128, 1);
+    };
+    inline static constexpr auto min = [](const Type& a, const Type& b) noexcept -> Type{
+        __m256i mask = _mm256_cmpgt_epi64(a, b);
+        return _mm256_blendv_epi8(a, b, mask);
+    };
+    inline static constexpr auto max = [](const Type& a, const Type& b) noexcept -> Type{
+        __m256i mask = _mm256_cmpgt_epi64(a, b);
+        return _mm256_blendv_epi8(b, a, mask);
     };
 
 };
@@ -451,6 +567,8 @@ struct SimdTraits_avx2<uint64_t> {
     static constexpr auto store_masked = simde_mm256_maskstore_epi64;
     static constexpr auto zero = simde_mm256_setzero_si256;
     static constexpr auto add = simde_mm_add_epi64;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi64;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int64_t, epi64)
     inline static constexpr auto multiply = [](const Type& a, const Type& b) noexcept -> Type{
 	    simde__m256i bswap   = simde_mm256_shuffle_epi32(b,0xB1);
 	    simde__m256i prodlh  = simde_mm256_mullo_epi32(a,bswap);
@@ -476,6 +594,15 @@ struct SimdTraits_avx2<uint64_t> {
 	simde__m128i sum128 = simde_mm_add_epi64(simde_mm256_extracti128_si256(x, 0), simde_mm256_extracti128_si256(x, 1));
 	return (uint64_t)simde_mm_extract_epi64(sum128, 0) + (uint64_t)simde_mm_extract_epi64(sum128, 1);
     };
+    inline static constexpr auto min = [](const Type& a, const Type& b) noexcept -> Type{
+        __m256i mask = _mm256_cmpgt_epi64(a, b);
+        return _mm256_blendv_epi8(a, b, mask);
+    };
+    inline static constexpr auto max = [](const Type& a, const Type& b) noexcept -> Type{
+        __m256i mask = _mm256_cmpgt_epi64(a, b);
+        return _mm256_blendv_epi8(b, a, mask);
+    };
+
 };
 
 template <>
@@ -517,6 +644,8 @@ struct SimdTraits_avx2<int8_t> {
 
     static constexpr auto zero = simde_mm256_setzero_si256;
     static constexpr auto add = simde_mm256_add_epi8;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi8;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int8_t, epi8)
     //https://github.com/lemire/vectorclass/blob/master/vectori256.h#L284
     inline static constexpr auto multiply = [](simde__m256i a, simde__m256i b) noexcept -> Type{
 	simde__m256i aodd = simde_mm256_srli_epi16(a,8);
@@ -549,6 +678,9 @@ struct SimdTraits_avx2<int8_t> {
 	int8_t  sum6 = (int8_t)_mm_cvtsi128_si32(sum5); //truncate
 	return sum6;
     };
+    static constexpr auto min = simde_mm256_min_epi8;
+    static constexpr auto max = simde_mm256_max_epi8;
+
 };
 
 
@@ -571,6 +703,8 @@ struct SimdTraits_avx2<uint8_t> {
     static constexpr auto store = simde_mm256_store_si256;
     static constexpr auto storeu = simde_mm256_storeu_si256;
     static constexpr auto store_masked = SimdTraits_avx2<int8_t>::store_masked;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi8;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int8_t, epi8)
     /* inline static constexpr auto store_masked = [](uint8_t* data, const simde__m256i& mask_data, const Type& vector) noexcept { */
 	/* SimdTraits_avx2<int8_t>::store_masked(reinterpret_cast<int8_t*>(data), mask_data, vector); */
 	/* /1* simde__m256i data_vector = simde_mm256_loadu_si256(reinterpret_cast<const simde__m256i*>(data)); *1/ */
@@ -604,6 +738,8 @@ struct SimdTraits_avx2<uint8_t> {
     };
 
     static constexpr auto sum = SimdTraits_avx2<int8_t>::sum;
+    static constexpr auto min = simde_mm256_min_epu8;
+    static constexpr auto max = simde_mm256_max_epu8;
 
 };
 
@@ -637,6 +773,8 @@ struct SimdTraits_avx2<int16_t> {
     static constexpr auto set1 = simde_mm256_set1_epi16;
     static constexpr auto store = simde_mm256_store_si256;
     static constexpr auto storeu = simde_mm256_storeu_si256;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi16;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int16_t, epi16)
     inline static constexpr auto store_masked = [](int16_t* data, const simde__m256i& mask_data, const Type& vector) noexcept {
 	//pretty much have to do this to avoid segmentation faults
 	int16_t values_arr[pack_size];
@@ -689,6 +827,8 @@ struct SimdTraits_avx2<int16_t> {
 	return SimdTraits_avx2<int16_t>::sum_avx(lo8) + SimdTraits_avx2<int16_t>::sum_avx(hi8);
     };
 
+    static constexpr auto min = simde_mm256_min_epi16;
+    static constexpr auto max = simde_mm256_max_epi16;
 
 };
 
@@ -715,6 +855,8 @@ struct SimdTraits_avx2<uint16_t> {
     static constexpr auto multiply = simde_mm256_mullo_epi16;
     static constexpr auto divide = simde_mm256_div_epu16;
     static constexpr auto subtract = simde_mm256_sub_epi16;
+    // static constexpr auto compare_equal = simde_mm256_cmpeq_epi16;
+    NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL(int16_t, epi16)
     /* static constexpr auto modulo = simde_mm256_rem_epu16; */
     inline static constexpr auto broadcast = [](const uint16_t* arr) -> Type {return simde_mm256_set1_epi16(*arr);};
     inline static constexpr auto fmsub = [](const Type& a, const Type& b, Type& c){return subtract(c, multiply(a, b));};
@@ -737,18 +879,42 @@ struct SimdTraits_avx2<uint16_t> {
 	simde__m128i hi8 = simde_mm256_extracti128_si256(vector, 1);
 	return SimdTraits_avx2<uint16_t>::sum_avx(lo8) + SimdTraits_avx2<uint16_t>::sum_avx(hi8);
     };
-
+    
+    static constexpr auto min = simde_mm256_min_epu16;
+    static constexpr auto max = simde_mm256_max_epu16;
 
 };
 
 
+#undef NT_INTEGER_SIMDE_AVX256_STORE_COMPARE_EQUAL
 
-
+#define NT_COMPLEX_COMPARE_OPS(type)\
+    inline static constexpr auto less_than_equal = [](const Type& a, const Type& b) noexcept -> Type {return SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_LE_OQ);};\
+    inline static constexpr auto compare_equal = [](const Type& a, const Type& b) noexcept -> Type {return SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_EQ_OQ);};\
+    inline static constexpr auto compare_not_equal = [](const Type& a, const Type& b) noexcept -> Type {return SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_NEQ_UQ);};\
+    inline static constexpr auto store_compare_equal = [](const Type& a, const Type& b, bool* out_bool){\
+        int mask = SimdTraits_avx2<type>::move_mask(SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_EQ_OQ));\
+        for(int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i){\
+            out_bool[i] = ((mask >> (i * 2)) & 1) && ((mask >> (i * 2 + 1)) & 1);\
+        }\
+    };\
+    inline static constexpr auto store_compare_not_equal = [](const Type& a, const Type& b, bool* out_bool){\
+        int mask = SimdTraits_avx2<type>::move_mask(SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_NEQ_UQ));\
+        for(int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i){\
+            out_bool[i] = ((mask >> (i * 2)) & 1) || ((mask >> (i * 2 + 1)) & 1);\
+        }\
+    };\
+    inline static constexpr auto store_compare_less_than_equal = [](const Type& a, const Type& b, bool* out_bool){\
+        int mask = SimdTraits_avx2<type>::move_mask(SimdTraits_avx2<type>::compare(a, b, SIMDE_CMP_LE_OQ));\
+        for(int i = 0; i < SimdTraits_avx2<type>::pack_size; ++i){\
+            out_bool[i] = ((mask >> (i * 2)) & 1) && ((mask >> (i * 2 + 1)) & 1);\
+        }\
+    };\
 
 template <>
 struct SimdTraits_avx2<complex_64> {
 using Type = simde__m256;
-	static constexpr size_t pack_size = 4;  // AVX2 can handle 8 floats
+	static constexpr size_t pack_size = 4;  // AVX2 can handle 8 floats -> 4 complex floats
 	inline static constexpr auto load = [](const complex_64* arr) noexcept -> Type {
 	    return simde_mm256_load_ps(reinterpret_cast<const float*>(arr));
 	};
@@ -801,6 +967,12 @@ using Type = simde__m256;
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
 	static constexpr auto log = simde_mm256_log_ps;
 
+    // svml round functions
+    static constexpr auto round = simde_mm256_round_ps;
+    static constexpr auto floor = simde_mm256_floor_ps;
+    static constexpr auto ceil = simde_mm256_ceil_ps;
+
+
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
 	static constexpr auto add = simde_mm256_add_ps;
@@ -809,8 +981,18 @@ using Type = simde__m256;
 		return subtract(zero(), a);
 	};
 
-	/* static constexpr auto modulo = SimdTraits_avx2<float>::modulo; */
-	static constexpr auto fmsub = simde_mm256_fmsub_ps;
+    inline static constexpr auto remainder(const Type& a, const Type& b){
+        return subtract(a, multiply(floor(divide(a, b)), b));
+    }
+    inline static constexpr auto fmod(const Type& a, const Type& b){
+        return subtract(a, multiply(round(divide(a, b), SIMDE_MM_FROUND_TO_ZERO), b));
+    }
+
+    static constexpr auto compare = simde_mm256_cmp_ps;
+    static constexpr auto move_mask = simde_mm256_movemask_ps;
+    NT_COMPLEX_COMPARE_OPS(complex_64);
+
+    static constexpr auto fmsub = simde_mm256_fmsub_ps;
     inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){ //same
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
 		c = simde_mm256_fmadd_ps(a, b, c);
@@ -837,6 +1019,9 @@ using Type = simde__m256;
 		return result[0];
 
 	};
+    static constexpr auto min = simde_mm256_min_ps;
+    static constexpr auto max = simde_mm256_max_ps;
+
 };
 
 
@@ -900,6 +1085,23 @@ struct SimdTraits_avx2<complex_128> {
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
 	static constexpr auto log = simde_mm256_log_pd;
 
+    // svml round functions
+    static constexpr auto round = simde_mm256_round_pd;
+    static constexpr auto floor = simde_mm256_floor_pd;
+    static constexpr auto ceil = simde_mm256_ceil_pd;
+
+
+    inline static constexpr auto remainder(const Type& a, const Type& b){
+        return subtract(a, multiply(floor(divide(a, b)), b));
+    }
+    inline static constexpr auto fmod(const Type& a, const Type& b){
+        return subtract(a, multiply(round(divide(a, b), SIMDE_MM_FROUND_TO_ZERO), b));
+    }
+
+    static constexpr auto compare = simde_mm256_cmp_pd;
+    static constexpr auto move_mask = simde_mm256_movemask_pd;
+    NT_COMPLEX_COMPARE_OPS(complex_128);
+
 
 	static constexpr auto fmsub = simde_mm256_fmsub_pd;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c){
@@ -918,6 +1120,9 @@ struct SimdTraits_avx2<complex_128> {
 		simde_mm_storeu_pd(reinterpret_cast<double*>(&out), low);
 		return out;
 	};
+    static constexpr auto min = simde_mm256_min_pd;
+    static constexpr auto max = simde_mm256_max_pd;
+
 };
 
 
@@ -995,6 +1200,12 @@ struct SimdTraits_avx2<float16_t>{
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
 	static constexpr auto log = simde_mm256_log_ps;
 
+    // svml round functions
+    static constexpr auto round = simde_mm256_round_ps;
+    static constexpr auto floor = simde_mm256_floor_ps;
+    static constexpr auto ceil = simde_mm256_ceil_ps;
+
+
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
 	static constexpr auto add = simde_mm256_add_ps;
@@ -1002,8 +1213,19 @@ struct SimdTraits_avx2<float16_t>{
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
 	};
+
+    inline static constexpr auto remainder(const Type& a, const Type& b){
+        return subtract(a, multiply(floor(divide(a, b)), b));
+    }
+    inline static constexpr auto fmod(const Type& a, const Type& b){
+        return subtract(a, multiply(round(divide(a, b), SIMDE_MM_FROUND_TO_ZERO), b));
+    }
 	/* static constexpr auto modulo = SimdTraits_avx2<float>::modulo; */
-	inline static constexpr auto broadcast = [](const float16_t* a) noexcept -> Type {return SimdTraits_avx2<float16_t>::set1(*a);};
+    static constexpr auto compare = simde_mm256_cmp_ps;
+    static constexpr auto move_mask = simde_mm256_movemask_ps;
+    NT_FLOAT_COMPARE_OPS(float16_t);
+
+    inline static constexpr auto broadcast = [](const float16_t* a) noexcept -> Type {return SimdTraits_avx2<float16_t>::set1(*a);};
 	static constexpr auto fmsub = simde_mm256_fmsub_ps;
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c) noexcept {
 #if defined(__FMA__) || defined(SIMDE_X86_FMA)
@@ -1040,6 +1262,10 @@ struct SimdTraits_avx2<float16_t>{
 
 #endif
 	};
+
+    static constexpr auto min = simde_mm256_min_ps;
+    static constexpr auto max = simde_mm256_max_ps;
+
 
 };
 
@@ -1109,6 +1335,12 @@ struct SimdTraits_avx2<complex_32>{
 	inline static constexpr auto sec = [](const Type& a) noexcept -> Type { return reciprical(cos(a));};
 	static constexpr auto log = simde_mm256_log_ps;
 
+    // svml round functions
+    static constexpr auto round = simde_mm256_round_ps;
+    static constexpr auto floor = simde_mm256_floor_ps;
+    static constexpr auto ceil = simde_mm256_ceil_ps;
+
+
 	static constexpr auto subtract = simde_mm256_sub_ps;
 	static constexpr auto divide = simde_mm256_div_ps;
 	static constexpr auto add = simde_mm256_add_ps;
@@ -1116,6 +1348,19 @@ struct SimdTraits_avx2<complex_32>{
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
 	};
+
+    inline static constexpr auto remainder(const Type& a, const Type& b){
+        return subtract(a, multiply(floor(divide(a, b)), b));
+    }
+    inline static constexpr auto fmod(const Type& a, const Type& b){
+        return subtract(a, multiply(round(divide(a, b), SIMDE_MM_FROUND_TO_ZERO), b));
+    }
+    
+    static constexpr auto compare = simde_mm256_cmp_ps;
+    static constexpr auto move_mask = simde_mm256_movemask_ps;
+    NT_COMPLEX_COMPARE_OPS(complex_32);
+
+
 	/* static constexpr auto modulo = SimdTraits_avx2<float16_t>::modulo; */
 	inline static constexpr auto broadcast = [](const complex_32* a) noexcept -> Type {return set1(*a);};
 	static constexpr auto fmsub = simde_mm256_fmsub_ps;
@@ -1149,12 +1394,15 @@ struct SimdTraits_avx2<complex_32>{
 		return complex_32(_NT_FLOAT32_TO_FLOAT16_(result[0]), _NT_FLOAT32_TO_FLOAT16_(result[1]));
 #endif
 	};
+    static constexpr auto min = simde_mm256_min_ps;
+    static constexpr auto max = simde_mm256_max_ps;
 
 };
 
 
 
-
+#undef NT_FLOAT_COMPARE_OPS
+#undef NT_COMPLEX_COMPARE_OPS
 
 using mask_type_avx2 = simde__m256i;
 template<typename T>
@@ -1199,7 +1447,7 @@ alignas(64) static const int32_t mask_data_32_avx2[32] = {
 
 
 template<typename T, size_t N>
-inline constexpr mask_type_avx2 Kgenerate_mask_avx2() noexcept {
+NT_ALWAYS_INLINE constexpr mask_type_avx2 Kgenerate_mask_avx2() noexcept {
 	constexpr size_t pack_size = pack_size_avx2_v<T>;
 	static_assert(N <= pack_size, "N cannot exceed the number of elements in the SIMD register.");
 	if constexpr (std::is_same_v<T, complex_64>){ //special case to handle complex numbers
@@ -1229,7 +1477,7 @@ inline constexpr mask_type_avx2 Kgenerate_mask_avx2() noexcept {
 }
 
 template<typename T>
-inline constexpr mask_type_avx2 generate_mask_avx2(size_t N) {
+NT_ALWAYS_INLINE constexpr mask_type_avx2 generate_mask_avx2(size_t N) {
 	constexpr size_t pack_size = pack_size_avx2_v<T>;
 	if constexpr (std::is_same_v<T, complex_64>){ //special case to handle complex numbers
 		return SimdTraits_avx2<int32_t>::loadu(reinterpret_cast<const mask_type_avx2*>(&mask_data_32_avx2[16-(N*2)]));
@@ -1259,5 +1507,7 @@ inline constexpr mask_type_avx2 generate_mask_avx2(size_t N) {
 
 }} // nt::mp::
 
+
+#undef NT_MP_AVX2_CONCAT 
 
 #endif // _NT_SIMDE_TRAITS_AVX2_H

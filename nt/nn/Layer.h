@@ -1,5 +1,5 @@
-//as the Module class becomes more advanced, and is starting to be able to replace
-//this class, this will become depreceated
+//as the Module class NEUROTENSOR_API becomes more advanced, and is starting to be able to replace
+//this class NEUROTENSOR_API, this will become depreceated
 //more built as a way to hold onto the pointers
 
 #ifndef _NT_LAYER_H_
@@ -25,7 +25,7 @@
 
 namespace nt {
 
-class Layer {
+class NEUROTENSOR_API Layer {
     intrusive_ptr<Module> ptr_;
     /* intrusive_ptr<LayerGraph> MyGraph, ParentGraph; */
     std::type_index type_;
@@ -124,7 +124,7 @@ class Layer {
     void update();
 
     // the idea is that each connecting gradient will have its gradient tracker
-    // in place so if you notice, back in the LayerGraph class, everywhere where
+    // in place so if you notice, back in the LayerGraph class NEUROTENSOR_API, everywhere where
     // a new node is made, and an input is set, that tensor grad does not have a
     // gradient graph associated with it but the output does
     /* TensorGrad forward(TensorGrad _x); */

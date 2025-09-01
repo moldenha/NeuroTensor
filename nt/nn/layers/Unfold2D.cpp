@@ -14,7 +14,7 @@ Unfold2D::Unfold2D(utils::my_tuple kernel_size, utils::my_tuple dilation,
       stride(stride), transpose_out(transpose_out) {}
 
 TensorGrad Unfold2D::forward(TensorGrad x) {
-    return functional::unfold(x, kernel_size, dilation, padding, stride,
+    return functional::unfold2d(x, kernel_size, dilation, padding, stride,
                               transpose_out);
 }
 

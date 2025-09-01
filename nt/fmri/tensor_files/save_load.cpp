@@ -95,7 +95,7 @@ void save_nifti(const std::string& filename, const Tensor& tensor) {
     nim->dim[7] = nim->nw;
 
     // Set datatype based on Tensor's DType
-    switch (tensor.dtype) {
+    switch (tensor.dtype()) {
         case DType::uint8: nim->datatype = NIFTI_TYPE_UINT8; break;
         case DType::int16:  nim->datatype = NIFTI_TYPE_INT16; break;
         case DType::int32:  nim->datatype = NIFTI_TYPE_INT32; break;
@@ -106,11 +106,11 @@ void save_nifti(const std::string& filename, const Tensor& tensor) {
         case DType::Complex128: nim->datatype = NIFTI_TYPE_COMPLEX128; break;
         default:
             nifti_image_free(nim);
-            utils::throw_exception(false, "Unsupported Tensor DType $", tensor.dtype);
+            utils::throw_exception(false, "Unsupported Tensor DType $", tensor.dtype());
     }
 
     // Allocate memory for data
-    nim->nbyper = DTypeFuncs::size_of_dtype(tensor.dtype);
+    nim->nbyper = DTypeFuncs::size_of_dtype(tensor.dtype());
     nim->nvox = tensor.numel();
     nim->data = std::malloc(nim->nbyper * nim->nvox);
     if (!nim->data) {

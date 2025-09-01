@@ -347,6 +347,23 @@ void transpose_last_manual(const std::uintptr_t* _in, std::uintptr_t* _out, cons
 
 }
 
+void transpose_last_manual(const Tensor* _in, Tensor* _out, const int64_t in_rows, const int64_t in_cols, const int64_t batches){
+    const int64_t mat_size = in_rows * in_cols;
+    tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, in_rows * in_cols),
+    [&](const tbb::blocked_range2d<int64_t>& range){
+    const Tensor* in = _in + (mat_size * range.rows().begin());
+    Tensor* out = _out + (mat_size * range.rows().begin());
+    for(int64_t b = range.rows().begin(); b != range.rows().end(); ++b, in += mat_size, out += mat_size){
+        for(int64_t n = range.cols().begin(); n != range.cols().end(); n++) {
+            int64_t i = n/in_rows;
+            int64_t j = n%in_rows;
+            out[n] = in[in_cols*j + i];
+        }
+    }
+    });
+
+}
+
 
 #ifdef _MSC_VER
 void transpose_last_manual_MSVC(void** _in, void** _out, const int64_t in_rows, const int64_t in_cols, const int64_t batches){
@@ -540,6 +557,50 @@ void transpose_any_manual(void** _in, void** _out,
 }
 
 
+void transpose_any_manual(const Tensor* _in, Tensor* _out, 
+                            int64_t axis0, int64_t axis1, 
+                            std::vector<int64_t> shape){
+    int64_t ndim = shape.size();
+    axis0 = axis0 < 0 ? axis0 + ndim : axis0;
+    axis1 = axis1 < 0 ? axis1 + ndim : axis1;
+    if(axis0 > axis1) std::swap(axis0, axis1);
+    
+    //ensure axis0 < axis1
+    int64_t total_size = 1;
+    for(int64_t i = 0; i < ndim; ++i)
+        total_size *= shape[i];
+
+    
+    std::vector<int64_t> strides(ndim-axis0);
+    for(int64_t i = axis0; i < ndim; ++i){
+        strides[i-axis0] = 1;
+        for(int64_t j = i+1; j < ndim; ++j)
+            strides[i-axis0] *= shape[j];
+    }
+    int64_t batches = 1;
+    for(int64_t i = 0; i < axis0; ++i)
+        batches *= shape[i];
+
+    std::swap(strides[0], strides[axis1-axis0]);
+    std::vector<int64_t> n_shape(ndim-axis0);
+    std::copy(shape.begin()+axis0, shape.end(), n_shape.begin());
+    std::swap(n_shape[0], n_shape[axis1-axis0]);
+    int64_t total_inner = total_size / batches;
+
+    tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
+    [&](const tbb::blocked_range2d<int64_t>& range){
+    const Tensor* in = &_in[(range.rows().begin() * total_inner)];
+    Tensor* out = &_out[(range.rows().begin() * total_inner)];
+    for(int64_t b = range.rows().begin(); b < range.rows().end(); ++b){
+        for(int64_t i = range.cols().begin(); i < range.cols().end(); ++i){
+            int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
+            out[i] = in[index];
+        }
+        in += total_inner;
+        out += total_inner;
+    }});
+}
+
 
 void transpose_row_col(void** _in, void** _out, std::vector<int64_t> shape){
     const int64_t in_rows = shape[shape.size()-2];
@@ -564,6 +625,20 @@ void transpose_row_col(void** _in, void** _out, std::vector<int64_t> shape){
 #endif
 }
 
+
+void transpose_row_col(const Tensor* _in, Tensor* _out, std::vector<int64_t> shape){
+    const int64_t in_rows = shape[shape.size()-2];
+    const int64_t in_cols = shape[shape.size()-1];
+    int64_t batches = 1;
+    int64_t shape_size_two = static_cast<int64_t>(shape.size()-2);
+    for(int64_t b = 0; b < shape_size_two; ++b){
+        batches *= shape[b];
+    }
+    transpose_last_manual(_in, _out, in_rows, in_cols, batches);
+}
+    
+
+
 void transpose(void** _in, void** _out, 
                int64_t axis0, int64_t axis1, 
                 std::vector<int64_t> shape){
@@ -577,6 +652,23 @@ void transpose(void** _in, void** _out,
         return;
     }
     transpose_any_manual(_in, _out, axis0, axis1, std::move(shape));
+}
+
+
+void transpose(const Tensor* _in, Tensor* _out, int64_t axis0, int64_t axis1,
+               std::vector<int64_t> shape){
+    
+    int64_t ndim = shape.size();
+    axis0 = axis0 < 0 ? axis0 + ndim : axis0;
+    axis1 = axis1 < 0 ? axis1 + ndim : axis1;
+    if(axis0 > axis1) std::swap(axis0, axis1);
+    //makes axis0 < axis1
+    if(axis0 == ndim-2 && axis1 == ndim-1){
+        transpose_row_col(_in, _out, std::move(shape));
+        return;
+    }
+    transpose_any_manual(_in, _out, axis0, axis1, std::move(shape));
+
 }
 
 
@@ -669,6 +761,71 @@ void permute(void** _in, void** _out,
 #endif
 }
 
+
+void permute(const Tensor* _in, Tensor* _out, 
+                            std::vector<int64_t> Perm, 
+                            std::vector<int64_t> shape){
+    using size_value_t = int64_t;
+    int64_t ndim = shape.size();
+    
+    if(Perm.size() > shape.size()){
+        throw std::invalid_argument("Got invalid size for the number of permutations");
+    }
+
+
+    int64_t total_size = 1;
+    for(int64_t i = 0; i < ndim; ++i)
+        total_size *= shape[i];
+
+    
+    std::vector<int64_t> strides(ndim);
+    for(int64_t i = 0; i < ndim; ++i){
+        strides[i] = 1;
+        for(int64_t j = i+1; j < ndim; ++j)
+            strides[i] *= shape[j];
+    }
+    
+    std::vector<int64_t> n_shape(ndim);
+    // std::copy(shape.begin(), shape.end(), n_shape.begin());
+
+    std::vector<int64_t> n_stride(ndim);
+    for(uint32_t i = 0; i < Perm.size(); ++i){
+        n_shape[i] = shape[Perm[i]];
+        n_stride[i] = strides[Perm[i]];
+    }
+    std::copy(n_stride.begin(), n_stride.end(), strides.begin());
+    int64_t min_dim = ndim;
+    for(uint32_t i = 0; i < Perm.size(); ++i){
+        if(Perm[i] == i) continue;
+        min_dim = std::min<size_value_t>(min_dim, Perm[i]);
+        min_dim = std::min<size_value_t>(min_dim, i);
+    }
+
+    int64_t batches = 1;
+    for(int64_t i = 0; i < min_dim; ++i)
+        batches *= shape[i];
+
+    if(min_dim != 0){
+        n_shape.erase(n_shape.begin(), n_shape.begin()+min_dim);
+        strides.erase(strides.begin(), strides.begin()+min_dim);
+    }
+
+    int64_t total_inner = total_size / batches;
+    tbb::parallel_for(tbb::blocked_range2d<int64_t>(0, batches, 0, total_inner),
+    [&](const tbb::blocked_range2d<int64_t>& range){
+    const Tensor* in = &_in[(total_inner * range.rows().begin())];
+    Tensor* out = &_out[(total_inner * range.rows().begin())];
+    for(int64_t b = range.rows().begin(); b != range.rows().end(); ++b){
+        for(int64_t i = range.cols().begin(); i !=  range.cols().end(); ++i){
+            int64_t index = unravel_and_compute(i, total_inner, n_shape, strides);
+            out[i] = in[index];
+            // std::cout << "out["<<i<<"] = in["<<index<<']'<<std::endl;
+        }
+        in += total_inner;
+        out += total_inner;
+    }});
+}
+
 SizeRef squeeze_and_adjust_transpose(std::vector<Tensor::size_value_t> size_vec, Tensor::size_value_t& a, Tensor::size_value_t& b){
     //a < b
     for(int32_t i = static_cast<int32_t>(size_vec.size()-1); i >= 0; --i){
@@ -681,6 +838,7 @@ SizeRef squeeze_and_adjust_transpose(std::vector<Tensor::size_value_t> size_vec,
     size_vec.erase(std::remove(size_vec.begin(), size_vec.end(), 1), size_vec.end());
     return SizeRef(std::move(size_vec));
 }
+
 
 Tensor transpose(const Tensor& _this, Tensor::size_value_t _a, Tensor::size_value_t _b){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(_this);
@@ -712,6 +870,16 @@ Tensor transpose(const Tensor& _this, Tensor::size_value_t _a, Tensor::size_valu
     
     std::vector<size_value_t> cur_strides = _this.getChangedStrides();
     std::swap(cur_strides[_a + 1], cur_strides[_b + 1]);
+    if(_this.dtype() == DType::TensorObj){
+        Tensor self = _this.contiguous();
+        Tensor out(self.shape(), DType::TensorObj); // now by default makes a null tensor array
+        const Tensor* _in = reinterpret_cast<const Tensor*>(self.data_ptr());
+        Tensor* _out=  reinterpret_cast<Tensor*>(out.data_ptr());
+        transpose(_in, _out, _a, _b, _this.shape().Vec());
+        out.set_mutability(_this.is_mutable());
+        out.set_stored_strides(cur_strides);
+        return std::move(out);
+    }
     ArrayVoid in_vals = _this.arr_void().get_bucket().is_strided()
                                      ? _this.arr_void()
                                      : _this.arr_void().bucket_all_indices();
@@ -729,6 +897,7 @@ Tensor& row_col_swap_(Tensor& _this){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(_this);
     check_mutability(_this);
     Tensor transposed = transpose(_this, -1, -2);
+    // std::cout << "transposed: "<<transposed<<std::endl;
     std::swap(_this, transposed);
     return _this;
 }
@@ -768,6 +937,16 @@ Tensor permute(const Tensor& _this, std::vector<Tensor::size_value_t> Perm){
         out_strides[i] = cur_strides[Perm[i]];
     }
 
+    if(_this.dtype() == DType::TensorObj){
+        Tensor self = _this.contiguous();
+        Tensor out(self.shape(), DType::TensorObj); // now by default makes a null tensor array
+        const Tensor* _in = reinterpret_cast<const Tensor*>(self.data_ptr());
+        Tensor* _out=  reinterpret_cast<Tensor*>(out.data_ptr());
+        permute(_in, _out, std::move(Perm), shape);
+        out.set_mutability(_this.is_mutable());
+        out.set_stored_strides(out_strides);
+        return std::move(out);
+    }
     ArrayVoid in_vals = _this.arr_void().get_bucket().is_strided()
                                      ? _this.arr_void()
                                      : _this.arr_void().bucket_all_indices();

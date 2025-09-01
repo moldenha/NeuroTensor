@@ -1,5 +1,5 @@
-#ifndef _NT_MATMULT_SIMDE_TRAITS_H_
-#define _NT_MATMULT_SIMDE_TRAITS_H_
+#ifndef NT_MATMULT_SIMDE_TRAITS_H__
+#define NT_MATMULT_SIMDE_TRAITS_H__
 //types fully working:
 //float
 //double
@@ -27,7 +27,6 @@
 #include "nt_matmult_macros.h"
 #include "../../../mp/simde_traits.h"
 
-
 namespace nt{
 namespace functional{
 namespace cpu{
@@ -38,19 +37,19 @@ inline static constexpr size_t tile_size_v = mp::pack_size_v<T> * 2;
 //differs from original one
 //this fills the Indices * 2 + 1 with zeros
 template<typename T, size_t... Indices>
-inline constexpr void load_c_elements_masked_zero(
+NT_MATMULT_ALWAYS_INLINE constexpr void load_c_elements_masked_zero(
 		T* C, const size_t& src_c_cols, mp::mask_type& mask, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 	if constexpr (std::is_unsigned<T>::value){
 		((arr[Indices * 2] = mp::SimdTraits<T>::load_masked(reinterpret_cast<std::make_signed_t<T>*>(&C[src_c_cols * Indices]), mask)), ...);
 	}else{
-		((arr[Indices * 2] = mp::SimdTraits<T>::load_masked(&C[src_c_cols * Indices], mask)), ...);
+        ((arr[Indices * 2] = mp::SimdTraits<T>::load_masked(&C[src_c_cols * Indices], mask)), ...);
 	}
 	((arr[Indices * 2 + 1] = mp::SimdTraits<T>::zero()), ...);
 }
 
 template<typename T, size_t ADDITION, size_t skip, size_t... Indices>
-inline constexpr std::array<mp::simde_type<T>, sizeof...(Indices)> load_threaded_row_elements_skip (
+NT_MATMULT_ALWAYS_INLINE constexpr std::array<mp::simde_type<T>, sizeof...(Indices)> load_threaded_row_elements_skip (
     const T* A, std::index_sequence<Indices...>
 ) noexcept {
     
@@ -64,7 +63,7 @@ inline constexpr std::array<mp::simde_type<T>, sizeof...(Indices)> load_threaded
 }
 
 template<typename T, size_t... Indices>
-inline constexpr void load_c_elements_masked(
+NT_MATMULT_ALWAYS_INLINE constexpr void load_c_elements_masked(
 		T* C, const size_t& src_c_cols, mp::mask_type& mask, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 	if constexpr (std::is_unsigned<T>::value){
@@ -75,7 +74,7 @@ inline constexpr void load_c_elements_masked(
 }
 
 template<typename T, size_t... Indices>
-inline constexpr void load_c_elements_masked_2(
+NT_MATMULT_ALWAYS_INLINE constexpr void load_c_elements_masked_2(
 		T* C, const size_t& src_c_cols, mp::mask_type& mask, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 	if constexpr (std::is_integral<T>::value || std::is_unsigned<T>::value){
@@ -91,7 +90,7 @@ inline constexpr void load_c_elements_masked_2(
 }
 
 template<typename T, size_t per_row, size_t... Indices>
-inline constexpr void load_c_elements_2(
+NT_MATMULT_ALWAYS_INLINE constexpr void load_c_elements_2(
 		T* C, size_t src_c_cols, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 	if constexpr (std::is_integral<T>::value || std::is_unsigned<T>::value){
@@ -103,7 +102,7 @@ inline constexpr void load_c_elements_2(
 }
 
 template<typename T, size_t start, size_t... Indices>
-inline constexpr void zero_c_elements_masked(
+NT_MATMULT_ALWAYS_INLINE constexpr void zero_c_elements_masked(
 		mp::simde_type<T>* arr, std::index_sequence<Indices...>) noexcept{
 	((arr[Indices+start] = mp::SimdTraits<T>::zero()), ...);
 }
@@ -158,7 +157,7 @@ inline constexpr void zero_c_elements_masked(
 
 
 template<typename T, size_t... Indices>
-inline constexpr void store_c_elements_masked(
+NT_MATMULT_ALWAYS_INLINE constexpr void store_c_elements_masked(
 		T* C, const size_t& src_c_cols, mp::mask_type& mask, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 
@@ -174,7 +173,7 @@ inline constexpr void store_c_elements_masked(
 }
 
 template<typename T, size_t... Indices>
-inline constexpr void store_c_elements_masked_2(
+NT_MATMULT_ALWAYS_INLINE constexpr void store_c_elements_masked_2(
 		T* C, const size_t& src_c_cols, mp::mask_type& mask, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 	if constexpr(std::is_integral<T>::value || std::is_unsigned<T>::value){
@@ -190,7 +189,7 @@ inline constexpr void store_c_elements_masked_2(
 }
 
 template<typename T, size_t per_row, size_t... Indices>
-inline constexpr void store_c_elements (
+NT_MATMULT_ALWAYS_INLINE constexpr void store_c_elements (
 		T* C, const size_t& src_c_cols, mp::simde_type<T>* rowCs, std::index_sequence<Indices...>
 ) noexcept {
 	if constexpr (std::is_integral<T>::value || std::is_unsigned<T>::value){
@@ -203,7 +202,7 @@ inline constexpr void store_c_elements (
 
 
 template<typename T, size_t... Indices>
-inline constexpr void store_c_elements_masked_double(
+NT_MATMULT_ALWAYS_INLINE constexpr void store_c_elements_masked_double(
 		T* C, const size_t& src_c_cols, mp::mask_type& mask, mp::simde_type<T>* arr, std::index_sequence<Indices...>
 ) noexcept {
 
@@ -213,7 +212,7 @@ inline constexpr void store_c_elements_masked_double(
 	if constexpr (std::is_unsigned<T>::value){
 	(mp::SimdTraits<T>::store_masked(reinterpret_cast<std::make_signed_t<T>*>(&C[src_c_cols * Indices]), mask, arr[Indices*2]), ...);
 	}else{
-	(mp::SimdTraits<T>::store_masked(&C[src_c_cols * Indices], mask, arr[Indices*2]), ...);
+        (mp::SimdTraits<T>::store_masked(&C[src_c_cols * Indices], mask, arr[Indices*2]), ...);
 	}
 	/* } */
 }
@@ -257,28 +256,28 @@ inline constexpr void store_c_elements_masked_double(
 
 
 template<typename T>
-inline constexpr void fused_product_2(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, mp::simde_type<T>& C1, const mp::simde_type<T>& B0, const mp::simde_type<T>& B1) noexcept{
+NT_MATMULT_ALWAYS_INLINE constexpr void fused_product_2(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, mp::simde_type<T>& C1, const mp::simde_type<T>& B0, const mp::simde_type<T>& B1) noexcept{
 	aVec = mp::SimdTraits<T>::broadcast(A);
 	mp::SimdTraits<T>::fmadd(aVec, B0, C0);
 	mp::SimdTraits<T>::fmadd(aVec, B1, C1);
 }
 
 template<typename T>
-inline constexpr void fused_product_1(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, const mp::simde_type<T>& B0) noexcept{
+NT_MATMULT_ALWAYS_INLINE constexpr void fused_product_1(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, const mp::simde_type<T>& B0) noexcept{
 	aVec = mp::SimdTraits<T>::broadcast(A);
 	mp::SimdTraits<T>::fmadd(aVec, B0, C0);
 
 }
 
 template<typename T, size_t total_row_elements, size_t... colIndices>
-inline constexpr void second_loop_direct_2(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, mp::simde_type<T>& C1,
+NT_MATMULT_ALWAYS_INLINE constexpr void second_loop_direct_2(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, mp::simde_type<T>& C1,
 		const std::array<mp::simde_type<T>, total_row_elements>& rowBs,
 		std::index_sequence<colIndices...>) noexcept{
 	(fused_product_2(aVec, A + colIndices, C0, C1, rowBs[colIndices * 2], rowBs[colIndices * 2 + 1]), ...);
 }
 
 template<typename T, size_t total_row_elements, size_t... colIndices>
-inline constexpr void second_loop_direct_1(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, 
+NT_MATMULT_ALWAYS_INLINE constexpr void second_loop_direct_1(mp::simde_type<T>& aVec, const T* A, mp::simde_type<T>& C0, 
 		const std::array<mp::simde_type<T>, total_row_elements>& rowBs,
 		std::index_sequence<colIndices...>) noexcept{
 	(fused_product_1(aVec, A + colIndices, C0, rowBs[colIndices]), ...);

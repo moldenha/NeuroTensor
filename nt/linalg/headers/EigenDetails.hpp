@@ -1,5 +1,5 @@
-#ifndef _NT_EIGEN_DETAILS_HPP_
-#define _NT_EIGEN_DETAILS_HPP_
+#ifndef NT_EIGEN_DETAILS_HPP__
+#define NT_EIGEN_DETAILS_HPP__
 
 #include <Eigen/Dense>
 #include <complex>

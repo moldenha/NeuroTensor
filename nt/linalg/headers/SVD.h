@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_SVD_H_
-#define _NT_LINALG_SVD_H_
+#ifndef NT_LINALG_SVD_H__
+#define NT_LINALG_SVD_H__
 
 #include "../../Tensor.h"
 #include "EigenDetails.hpp"
@@ -13,7 +13,7 @@
 
 namespace nt {
 namespace linalg {
-Tensor SVD(Tensor);
+NEUROTENSOR_API Tensor SVD(Tensor);
 template<typename T>
 std::tuple<Eigen::Matrix<detail::from_complex_eigen_t<T>, Eigen::Dynamic, 1>,
         Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>,

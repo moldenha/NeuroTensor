@@ -41,6 +41,14 @@
 
 #define _NT_MATMULT_NTHREADS_ 21
 
+#ifdef _MSC_VER
+    #define NT_MATMULT_ALWAYS_INLINE __forceinline
+#elif defined(__GNUC__) || defined(__clang__)
+    #define NT_MATMULT_ALWAYS_INLINE inline __attribute__((always_inline))
+#else
+    #define NT_MATMULT_ALWAYS_INLINE inline 
+    //otherwise default to just inline
+#endif
 
 //just easier to have in one place so I don't have to modify 16 files in case the matmult function is ever decided to be changed
 

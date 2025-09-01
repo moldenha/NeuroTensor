@@ -1,12 +1,11 @@
-#ifndef _NT_MY_TYPES_H_
-#define _NT_MY_TYPES_H_
+#ifndef NT_TYPES_H__
+#define NT_TYPES_H__
 
 namespace nt{
 template<typename T>
 class my_complex;
 }
 
-//#if defined(_HALF_FLOAT_SUPPORT_) && defined(_128_FLOAT_SUPPORT_) && defined(__SIZEOF_INT128__)
 //silence depreciation warnings for certain needed headers
 #ifdef _MSC_VER
 #ifndef _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
@@ -31,7 +30,7 @@ class my_complex;
 #include "float16.h"
 #include "float128.h"
 #include "bit_128_integer.h"
-
+#include "../utils/api_macro.h"
 
 
 namespace nt{
@@ -75,7 +74,7 @@ inline my_complex<T> operator OP (const U& ele) const {return *this OP static_ca
 
 
 template<typename T>
-class my_complex{
+class NEUROTENSOR_API my_complex{
 		T re, im;
 		template <std::size_t Index, typename U>
 		friend constexpr U get_complex(const my_complex<U>& obj) noexcept;
@@ -391,7 +390,7 @@ inline constexpr T&& get_complex(my_complex<T>&& c) noexcept {
 }
 
 
-struct uint_bool_t{
+struct NEUROTENSOR_API uint_bool_t{
 	uint8_t value : 1;
 	uint_bool_t();
 	uint_bool_t(const bool& val);
@@ -402,9 +401,9 @@ struct uint_bool_t{
 	inline uint_bool_t& operator=(const uint_bool_t &val){value = val.value; return *this;}
 	inline uint_bool_t& operator=(uint_bool_t&& val){value = val.value; return *this;}
     inline operator bool() const {return value == 1;}
-	friend bool operator==(const uint_bool_t& a, const uint_bool_t& b);	
-	friend bool operator==(const bool& a, const uint_bool_t& b);	
-	friend bool operator==(const uint_bool_t& a, const bool& b);	
+	NEUROTENSOR_API friend bool operator==(const uint_bool_t& a, const uint_bool_t& b);	
+	NEUROTENSOR_API friend bool operator==(const bool& a, const uint_bool_t& b);	
+	NEUROTENSOR_API friend bool operator==(const uint_bool_t& a, const bool& b);	
 };
 
 
@@ -505,8 +504,9 @@ inline nt::my_complex<T> pow(nt::my_complex<T> __x, U __y){
 	}
 }
 
-
+#undef _NT_DEFINE_STL_FUNC_CFP16_ROUTE_
+#undef _NT_DEFINE_STL_FUNC_FP16_ROUTE_ 
 }
 
 
-#endif // _NT_MY_TYPES_H_
+#endif // NT_MY_TYPES_H__

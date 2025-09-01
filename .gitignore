@@ -53,3 +53,6 @@ main
 
 #outfiles
 *.out
+
+#used to determine the named arguments to define
+determine_named_arguments.py

@@ -43,7 +43,7 @@ SparseMatrix::from_sortedX(std::vector<int64_t> x, std::vector<int64_t> y,
     // std::memcpy(mem, values.data_ptr(), bytes);
 
     int64_t bytes = sizeof(T) * values.size();
-    T *memory = (T*)std::malloc(bytes);
+    T *memory = (T*)MetaMalloc(bytes);
     std::vector<int64_t> col_indices;
     if(sort_y){
         T *begin = memory;
@@ -98,17 +98,11 @@ _NT_DEFINE_SORTED_X_SPARSE_(uint_bool_t)
 _NT_DEFINE_SORTED_X_SPARSE_(bool)
 _NT_DEFINE_SORTED_X_SPARSE_(complex_64)
 _NT_DEFINE_SORTED_X_SPARSE_(complex_128)
-#ifdef __SIZEOF_INT128__
 _NT_DEFINE_SORTED_X_SPARSE_(uint128_t)
 _NT_DEFINE_SORTED_X_SPARSE_(int128_t)
-#endif
-#ifdef _HALF_FLOAT_SUPPORT_
 _NT_DEFINE_SORTED_X_SPARSE_(float16_t)
 _NT_DEFINE_SORTED_X_SPARSE_(complex_32)
-#endif
-#ifdef _128_FLOAT_SUPPORT_
 _NT_DEFINE_SORTED_X_SPARSE_(float128_t)
-#endif
 
 #undef _NT_DEFINE_SORTED_X_SPARSE_
 
@@ -282,7 +276,7 @@ SparseMatrix SparseMatrix::transpose() const{
     std::vector<int64_t> trans_cols;
     size_t dtype_size = DTypeFuncs::size_of_dtype(_dtype);
     int64_t bytes = dtype_size * this->data->Size(); 
-    void* memory = std::malloc(bytes);
+    void* memory = MetaMalloc(bytes);
     
     _NT_SPARSE_RUN_CONST_FUNCTION_(_dtype, perform_transpose, this->data, rows, cols, trans_rows, trans_cols, memory, this->cols);
     
@@ -313,7 +307,7 @@ void perform_extract_cols(Iterator begin, Iterator end, const intrusive_ptr<spar
     int64_t max_size = row_ptrs[max_row+1];
     n_col_indices.reserve(max_size);
     using value_t = std::remove_const_t<typename Iterator::value_type>;
-    value_t* out_mem = (value_t*)std::malloc(sizeof(value_t) * (max_size));
+    value_t* out_mem = (value_t*)MetaMalloc(sizeof(value_t) * (max_size));
     value_t* mem_cpy = out_mem;
     int64_t cntr = 0;
     // int64_t last_row = 0;

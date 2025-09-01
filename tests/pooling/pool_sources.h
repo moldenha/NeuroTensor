@@ -62,7 +62,7 @@ inline void assert_dilation(const nt::utils::my_n_tuple<3>& dilation){
 
 inline nt::Tensor unpad(const nt::Tensor& t, std::vector<nt::Tensor::size_value_t> vec){
     using namespace nt;
-    std::vector<my_range> ranges(t.dims(), my_range(0, -1));
+    std::vector<range_> ranges(t.dims(), range_(0, -1));
     utils::throw_exception((vec.size()/2) <= ranges.size(),
                            "Cannot unpad greater than the dimensions of the tensor");
     auto in_shape = t.shape();

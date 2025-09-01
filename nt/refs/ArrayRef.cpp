@@ -17,14 +17,15 @@
 #include "../utils/type_traits.h"
 
 namespace nt{
+
 template<typename T>
 ArrayRef<T>::ArrayRef()
-	:_vals(nullptr), _total_size(0), _empty(true)
+	:_vals(nullptr, ArrayRefDeleteNothing<T>), _total_size(0), _empty(true)
 {}
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const ArrayRef<T> &Arr)
-	:_vals(new T[Arr._total_size]), _total_size(Arr._total_size), _empty(Arr._empty)
+	:_vals(MetaNewArr(T, Arr._total_size), MetaFreeArr<T>), _total_size(Arr._total_size), _empty(Arr._empty)
 {
 	if(Arr._empty)
 		_vals.reset(nullptr);
@@ -37,30 +38,15 @@ ArrayRef<T>::ArrayRef(ArrayRef<T>&& Arr)
 	:_vals(std::move(Arr._vals)), _total_size(std::exchange(Arr._total_size, 0)), _empty(std::exchange(Arr._empty, true))
 {}
 
-/* // Constructor for general types */
-/* template<typename T> */
-/* template<typename U, std::enable_if_t<!std::is_same_v<U, std::nullptr_t>, bool>> */
-/* ArrayRef<T>::ArrayRef(const U& OneEle) */
-/*     : _vals(new T[1]), _total_size(1), _empty(false) { */
-/*     _vals[0] = OneEle; */
-/* } */
-
-/* // Constructor for nullptr type */
-/* template<typename T> */
-/* template<typename U, std::enable_if_t<std::is_same_v<U, std::nullptr_t>, bool>> */
-/* ArrayRef<T>::ArrayRef(const U& OneEle) */
-/*     : _vals(nullptr), _total_size(0), _empty(true) {} */
-
-
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const T *data, size_t length)
-	:_vals(new T[length]), _total_size(length), _empty(false)
+	:_vals(MetaNewArr(T, length), MetaFreeArr<T>), _total_size(length), _empty(false)
 {std::copy(data, data + length, _vals.get());}
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const std::vector<T> &Vec)
-	:_vals(new T[Vec.size()]), _total_size(Vec.size()), _empty(Vec.size() == 0 ? true : false)
+	:_vals(MetaNewArr(T, Vec.size()), MetaFreeArr<T>), _total_size(Vec.size()), _empty(Vec.size() == 0 ? true : false)
 {
 	if(!_empty){std::copy(Vec.cbegin(), Vec.cend(), _vals.get());}
 	else{_vals.reset(nullptr);}
@@ -69,7 +55,7 @@ ArrayRef<T>::ArrayRef(const std::vector<T> &Vec)
 template<typename T>
 template<size_t N>
 ArrayRef<T>::ArrayRef(const std::array<T, N> &Arr)
-	:_vals(new T[static_cast<uint64_t>(N)]), _total_size(N), _empty(N == 0 ? true : false)
+	:_vals(MetaNewArr(T, static_cast<int64_t>(N)), MetaFreeArr<T>), _total_size(N), _empty(N == 0 ? true : false)
 {
 	if(!_empty){std::copy(Arr.cbegin(), Arr.cend(), _vals.get());}
 	else{_vals.reset(nullptr);}
@@ -78,7 +64,7 @@ ArrayRef<T>::ArrayRef(const std::array<T, N> &Arr)
 template<typename T>
 template<size_t N>
 ArrayRef<T>::ArrayRef(const T (&Arr)[N])
-	:_vals(new T[static_cast<uint64_t>(N)]), _total_size(N), _empty(N == 0 ? true : false)
+	:_vals(MetaNewArr(T, static_cast<int64_t>(N)), MetaFreeArr<T>), _total_size(N), _empty(N == 0 ? true : false)
 {
 	if(!_empty){std::copy(&Arr[0], &Arr[N-1], _vals.get());}
 	else{_vals.reset(nullptr);}
@@ -86,12 +72,12 @@ ArrayRef<T>::ArrayRef(const T (&Arr)[N])
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const std::initializer_list<T> &Vec)
-	:_vals(new T[Vec.size()]), _total_size(Vec.size()), _empty(Vec.size() == 0 ? true : false)
+	:_vals(MetaNewArr(T, Vec.size()), MetaFreeArr<T>), _total_size(Vec.size()), _empty(Vec.size() == 0 ? true : false)
 {std::copy(Vec.begin(), Vec.end(), _vals.get());}
 
 template<typename T>
-ArrayRef<T>::ArrayRef(const std::unique_ptr<T[]>& vals, size_t ts)
-	:_vals(new T[ts]),
+ArrayRef<T>::ArrayRef(const std::unique_ptr<T[], void(*)(T*)>& vals, size_t ts)
+	:_vals(MetaNewArr(T, ts), MetaFreeArr<T>),
 	_total_size(ts),
 	_empty(ts == 0)
 {
@@ -100,7 +86,7 @@ ArrayRef<T>::ArrayRef(const std::unique_ptr<T[]>& vals, size_t ts)
 }
 
 template<typename T>
-ArrayRef<T>::ArrayRef(std::unique_ptr<T[]>&& vals, size_t ts)
+ArrayRef<T>::ArrayRef(std::unique_ptr<T[], void(*)(T*)>&& vals, size_t ts)
 	:_vals(std::move(vals)),
 	_total_size(ts),
 	_empty(ts == 0)
@@ -114,7 +100,7 @@ ArrayRef<T>& ArrayRef<T>::operator=(const ArrayRef<T>& Arr){
 		_empty = Arr._empty;
 		return *this;
 	}
-	_vals = std::make_unique<T[]>(Arr._total_size);
+	_vals = std::unique_ptr<T[], void(*)(T*)>(MetaNewArr(T, Arr._total_size), MetaFreeArr<T>);
 	std::copy(Arr._vals.get(), Arr._vals.get() + Arr._total_size, _vals.get());
 	_total_size = Arr._total_size;
 	_empty = Arr._empty;

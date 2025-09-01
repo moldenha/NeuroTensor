@@ -8,14 +8,14 @@ namespace cpu{
 template<typename T>
 inline const T* data_ptr_end(const ArrayVoid& in){
     return (const T *)(reinterpret_cast<const uint8_t *>(in.data_ptr()) +
-                    (in.Size() * DTypeFuncs::size_of_dtype(in.dtype)));
+                    (in.Size() * DTypeFuncs::size_of_dtype(in.dtype())));
 }
 
 void _to_complex_from_real(const ArrayVoid& in, ArrayVoid& output){
     if(!output.is_contiguous()){
         throw std::invalid_argument("Expected output from nt::functional::cpu::_to_complex_from_real to be contiguous");
     }
-    DType dtype = in.dtype;
+    DType dtype = in.dtype();
     if (dtype == DType::Double) {
         complex_128 *start = reinterpret_cast<complex_128 *>(output.data_ptr());
         uint32_t type = in.get_bucket().iterator_type();
@@ -105,7 +105,7 @@ void _to_complex_from_imag(const ArrayVoid& in, ArrayVoid& output){
     if(!output.is_contiguous()){
         throw std::invalid_argument("Expected output from nt::functional::cpu::_to_complex_from_imag to be contiguous");
     }
-    DType dtype = in.dtype;
+    DType dtype = in.dtype();
     if (dtype == DType::Double) {
         complex_128 *start = reinterpret_cast<complex_128 *>(output.data_ptr());
         uint32_t type = in.get_bucket().iterator_type();

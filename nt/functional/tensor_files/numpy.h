@@ -1,12 +1,12 @@
-#ifndef _NT_NUMPY_CONVERSION_H_
-#define _NT_NUMPY_CONVERSION_H_
+#ifndef NT_FUNCTIONAL_TENSOR_FILES_NUMPY_CONVERSION_H__
+#define NT_FUNCTIONAL_TENSOR_FILES_NUMPY_CONVERSION_H__
 #include "../../Tensor.h"
 #include <string>
 
 namespace nt {
 namespace functional {
-Tensor from_numpy(std::string);
-void to_numpy(const Tensor &, std::string);
+NEUROTENSOR_API Tensor from_numpy(std::string);
+NEUROTENSOR_API void to_numpy(const Tensor &, std::string);
 
 } // namespace functional
 } // namespace nt

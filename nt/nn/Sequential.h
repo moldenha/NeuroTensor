@@ -12,7 +12,7 @@
 namespace nt {
 namespace layers {
 
-class Sequential : public Module{
+class NEUROTENSOR_API Sequential : public Module{
     std::vector<Layer> layers;
     std::vector<Layer> to_vec() { return {}; }
     template <typename T, typename... Args>

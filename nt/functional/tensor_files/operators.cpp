@@ -35,10 +35,10 @@ namespace functional{
 //basically, for all functions, the shape out is the same as a in no matter if b has to be expanded or summed to fit into a.
 Tensor functional_operator_out(const Tensor& _a, const Tensor& _b, const functional_operator_num op){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(_a, _b);
-	exception_dtypes(_a.dtype, _b.dtype);
+	exception_dtypes(_a.dtype(), _b.dtype());
 	if(_a.shape() == _b.shape()){
-		Tensor output(_a.shape(), _a.dtype);
-        if(_a.dtype == DType::TensorObj){
+		Tensor output(_a.shape(), _a.dtype());
+        if(_a.dtype() == DType::TensorObj){
             switch(op){
                case functional_operator_num::Multiply:{
                     _a.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end, auto begin2, void* out_p){
@@ -122,9 +122,9 @@ void functional_operator_this(Tensor& _a, const Tensor& _b, const functional_ope
     _NT_FUNCTIONAL_ALWAYS_CHECK_(_a, _b);
     utils::throw_exception(_a.is_mutable(),
                            "Can only perform operation that alters a tensor if the tensor is mutable");
-	exception_dtypes(_a.dtype, _b.dtype);
+	exception_dtypes(_a.dtype(), _b.dtype());
 	if(_a.shape() == _b.shape()){
-        if(_a.dtype == DType::TensorObj){
+        if(_a.dtype() == DType::TensorObj){
             switch(op){
                case functional_operator_num::Multiply:{
                     _a.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end, auto begin2){
@@ -258,7 +258,7 @@ Tensor& divide_(Tensor &a, const Tensor &b){
 #define _NT_OPERATOR_TENSOR_SCALAR_(name, under_name, integer)\
 Tensor name(const Tensor& a, Scalar s){\
     _NT_FUNCTIONAL_ALWAYS_CHECK_(a);\
-    if(a.dtype == DType::TensorObj){\
+    if(a.dtype() == DType::TensorObj){\
         Tensor output = Tensor::makeNullTensorArray(a.numel());\
         a.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(\
         [&s, &output](auto begin, auto end){\
@@ -269,15 +269,32 @@ Tensor name(const Tensor& a, Scalar s){\
         });\
         return output.view(a.shape());\
     }\
-    Tensor out(a.shape(), a.dtype);\
+    Tensor out(a.shape(), a.dtype());\
     cpu::_operator_mdsa_scalar(a.arr_void(), out.arr_void(), s, integer);\
+    return std::move(out);\
+}\
+Tensor name(Scalar s, const Tensor& a){\
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a);\
+    if(a.dtype() == DType::TensorObj){\
+        Tensor output = Tensor::makeNullTensorArray(a.numel());\
+        a.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(\
+        [&s, &output](auto begin, auto end){\
+            Tensor* o_begin = reinterpret_cast<Tensor*>(output.data_ptr());\
+            for(;begin != end; ++begin, ++o_begin){\
+                *o_begin = name(s, *begin);\
+            }\
+        });\
+        return output.view(a.shape());\
+    }\
+    Tensor out(a.shape(), a.dtype());\
+    cpu::_operator_mdsa_scalar_first(a.arr_void(), out.arr_void(), s, integer);\
     return std::move(out);\
 }\
 \
 Tensor& under_name(Tensor& a, Scalar s){\
     _NT_FUNCTIONAL_ALWAYS_CHECK_(a);\
     check_mutability(a);\
-    if(a.dtype == DType::TensorObj){\
+    if(a.dtype() == DType::TensorObj){\
         a.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(\
         [&s](auto begin, auto end){\
             for(;begin != end; ++begin){\
@@ -302,15 +319,193 @@ Tensor dot(const Tensor& a, const Tensor& b, utils::optional_list dim, bool keep
     return sum(c, dim, keepdim);
 }
 
+Tensor& fmod_(Tensor& t, Scalar num){
+    cpu::_fmod_(t.arr_void(), num);
+    return t;
+}
+
+
+Tensor fmod(const Tensor& t, const Tensor& other){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t, other);
+    utils::throw_exception(t.dtype() == other.dtype() && t.dtype() != DType::TensorObj,
+                           "Error got invalid dtypes for fmod of 2 twnsors $ and $", t.dtype(), other.dtype());
+    // if(t.dtype() == DType::TensorObj){
+    //     Tensor out = Tensor::makeNullTensorArray(t.numel());
+    //     Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+    //     t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+    //     [&o_begin, &num](auto begin, auto end){
+    //         for(;begin != end; ++begin, ++o_begin)
+    //             *o_begin = fmod(*begin, num);
+    //     });
+    //     return std::move(out);
+    // }
+    Tensor output = t.clone();
+    cpu::_fmod_array_(output.arr_void(), other.arr_void());
+    return std::move(output);
+}
+
+Tensor fmod(const Tensor& t, Scalar num){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    if(t.dtype() == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+        [&o_begin, &num](auto begin, auto end){
+            for(;begin != end; ++begin, ++o_begin)
+                *o_begin = fmod(*begin, num);
+        });
+        return std::move(out);
+    }
+    Tensor output = t.clone();
+    fmod_(output, num);
+    return std::move(output);
+}
+
+Tensor fmod(Scalar num, const Tensor& t){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    if(t.dtype() == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+        [&o_begin, &num](auto begin, auto end){
+            for(;begin != end; ++begin, ++o_begin)
+                *o_begin = fmod(num, *begin);
+        });
+        return std::move(out);
+    }
+    Tensor output = t.clone();
+    cpu::_fmod_first_scalar_(output.arr_void(), num);
+    return std::move(output);
+}
+
+Tensor fmod_b_backward(const Tensor& a, const Tensor& b, const Tensor& grad){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, b, grad);
+    utils::throw_exception(a.dtype() == b.dtype() && a.dtype() == grad.dtype(),
+                           "Modulo backward expects all dtypes to match");
+    utils::throw_exception(DTypeFuncs::is_floating(a.dtype()) || DTypeFuncs::is_complex(a.dtype()),
+                           "Modulo backward can only happen on floating dtypes but got $", grad.dtype());
+    utils::throw_exception(a.shape() == b.shape() && a.shape() == grad.shape(),
+                           "Expected all shapes to match for fmod backward");
+    Tensor output(a.shape(), a.dtype());
+    cpu::_fmod_backward(a.arr_void(), b.arr_void(), grad.arr_void(), output.arr_void());
+    return std::move(output);
+}
+
+
+
+Tensor fmod_b_backward(const Scalar& a, const Tensor& b, const Tensor& grad){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(b, grad);
+    utils::throw_exception(b.dtype() == grad.dtype(),
+                           "Modulo backward expects all dtypes to match");
+    utils::throw_exception(DTypeFuncs::is_floating(b.dtype()) || DTypeFuncs::is_complex(b.dtype()),
+                           "Modulo backward can only happen on floating dtypes but got $", grad.dtype());
+    utils::throw_exception(b.shape() == grad.shape(),
+                           "Expected all shapes to match for fmod backward");
+    Tensor output(b.shape(), b.dtype());
+    cpu::_fmod_backward(a, b.arr_void(), grad.arr_void(), output.arr_void());
+    return std::move(output);
+
+}
+
+
+Tensor& remainder_(Tensor& t, Scalar num){
+    cpu::_remainder_(t.arr_void(), num);
+    return t;
+}
+
+
+Tensor remainder(const Tensor& t, const Tensor& other){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t, other);
+    utils::throw_exception(t.dtype() == other.dtype() && t.dtype() != DType::TensorObj,
+                           "Error got invalid dtypes for remainder of 2 twnsors $ and $", t.dtype(), other.dtype());
+    // if(t.dtype() == DType::TensorObj){
+    //     Tensor out = Tensor::makeNullTensorArray(t.numel());
+    //     Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+    //     t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+    //     [&o_begin, &num](auto begin, auto end){
+    //         for(;begin != end; ++begin, ++o_begin)
+    //             *o_begin = remainder(*begin, num);
+    //     });
+    //     return std::move(out);
+    // }
+    Tensor output = t.clone();
+    cpu::_remainder_array_(output.arr_void(), other.arr_void());
+    return std::move(output);
+}
+
+Tensor remainder(const Tensor& t, Scalar num){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    if(t.dtype() == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+        [&o_begin, &num](auto begin, auto end){
+            for(;begin != end; ++begin, ++o_begin)
+                *o_begin = remainder(*begin, num);
+        });
+        return std::move(out);
+    }
+    Tensor output = t.clone();
+    remainder_(output, num);
+    return std::move(output);
+}
+
+Tensor remainder(Scalar num, const Tensor& t){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
+    if(t.dtype() == DType::TensorObj){
+        Tensor out = Tensor::makeNullTensorArray(t.numel());
+        Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+        t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+        [&o_begin, &num](auto begin, auto end){
+            for(;begin != end; ++begin, ++o_begin)
+                *o_begin = remainder(num, *begin);
+        });
+        return std::move(out);
+    }
+    Tensor output = t.clone();
+    cpu::_remainder_first_scalar_(output.arr_void(), num);
+    return std::move(output);
+}
+
+Tensor remainder_b_backward(const Tensor& a, const Tensor& b, const Tensor& grad){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(a, b, grad);
+    utils::throw_exception(a.dtype() == b.dtype() && a.dtype() == grad.dtype(),
+                           "Modulo backward expects all dtypes to match");
+    utils::throw_exception(DTypeFuncs::is_floating(a.dtype()) || DTypeFuncs::is_complex(a.dtype()),
+                           "Modulo backward can only happen on floating dtypes but got $", grad.dtype());
+    utils::throw_exception(a.shape() == b.shape() && a.shape() == grad.shape(),
+                           "Expected all shapes to match for remainder backward");
+    Tensor output(a.shape(), a.dtype());
+    cpu::_remainder_backward(a.arr_void(), b.arr_void(), grad.arr_void(), output.arr_void());
+    return std::move(output);
+}
+
+
+
+Tensor remainder_b_backward(const Scalar& a, const Tensor& b, const Tensor& grad){
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(b, grad);
+    utils::throw_exception(b.dtype() == grad.dtype(),
+                           "Modulo backward expects all dtypes to match");
+    utils::throw_exception(DTypeFuncs::is_floating(b.dtype()) || DTypeFuncs::is_complex(b.dtype()),
+                           "Modulo backward can only happen on floating dtypes but got $", grad.dtype());
+    utils::throw_exception(b.shape() == grad.shape(),
+                           "Expected all shapes to match for remainder backward");
+    Tensor output(b.shape(), b.dtype());
+    cpu::_remainder_backward(a, b.arr_void(), grad.arr_void(), output.arr_void());
+    return std::move(output);
+
+}
+
+
 Tensor& inverse_(Tensor& t){
+    check_mutability(t);
     cpu::_inverse_(t.arr_void());
-    t.dtype = t.arr_void().dtype;
     return t;
 }
 
 Tensor inverse(const Tensor& t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(t.numel());
         Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
         t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
@@ -320,37 +515,25 @@ Tensor inverse(const Tensor& t){
         });
         return std::move(out);
     }
-    if(DTypeFuncs::is_complex(t.dtype) || DTypeFuncs::is_floating(t.dtype)){
+    if(DTypeFuncs::is_complex(t.dtype()) || DTypeFuncs::is_floating(t.dtype())){
         Tensor output = t.clone();
         inverse_(output);
         return std::move(output);
     }
-    if(t.dtype == DType::LongLong){
+    if(t.dtype() == DType::int64){
         Tensor output = t.to(DType::Double);
         inverse_(output);
         return std::move(output);
 	}
-#ifdef __SIZEOF_INT128__
-	if(t.dtype == DType::int128 || t.dtype == DType::uint128){
-#ifdef _128_FLOAT_SUPPORT_
+	if(t.dtype() == DType::int128 || t.dtype() == DType::uint128){
         Tensor output = t.to(DType::Float128);
-#else
-		Tensor output = to.to(DType::Double);
-#endif
         inverse_(output);
         return std::move(output);
 	}
-#endif
-    if(t.dtype == DType::Integer || t.dtype == DType::Long || t.dtype == DType::uint8 || t.dtype == DType::int8 || t.dtype == DType::uint16 || t.dtype == DType::int16){
-		if(t.dtype == DType::int64){
-            Tensor output = t.to(DType::Float64);
-            inverse_(output);
-            return std::move(output);
-		}else{
-            Tensor output = t.to(DType::Float32);
-            inverse_(output);
-            return std::move(output);
-		}
+    if(t.dtype() == DType::int32 || t.dtype() == DType::uint32 || t.dtype() == DType::uint8 || t.dtype() == DType::int8 || t.dtype() == DType::uint16 || t.dtype() == DType::int16){
+        Tensor output = t.to(DType::Float32);
+        inverse_(output);
+        return std::move(output);
 	}
     Tensor output = t.clone();
     inverse_(output);

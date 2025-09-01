@@ -1,9 +1,9 @@
 // this is a friend class to TensorGrad that holds the functional functions
 // dedicated to tensorgrad this is meant to re-create the functional.h that is
-// dedicated to the Tensor class
+// dedicated to the Tensor class NEUROTENSOR_API
 
-#ifndef _NT_TENSORGAD_FUNCTIONAL_H_
-#define _NT_TENSORGAD_FUNCTIONAL_H_
+#ifndef NT_TENSORGAD_FUNCTIONAL_H__
+#define NT_TENSORGAD_FUNCTIONAL_H__
 
 
 
@@ -22,6 +22,18 @@ inline TensorGrad matmult(const Tensor &a, const TensorGrad &b, bool transpose_a
 
 inline TensorGrad matmult(const TensorGrad &a, const Tensor &b, bool transpose_a = false, bool transpose_b = false) {
     return TensorGrad_Functional_Class::matmult(a, b, transpose_a, transpose_b);
+}
+
+inline TensorGrad& matmult(const TensorGrad &a, const TensorGrad &b, TensorGrad& out, bool transpose_a = false, bool transpose_b = false) {
+    return TensorGrad_Functional_Class::matmult(a, b, out, transpose_a, transpose_b);
+}
+
+inline TensorGrad& matmult(const Tensor &a, const TensorGrad &b, TensorGrad& out, bool transpose_a = false, bool transpose_b = false) {
+    return TensorGrad_Functional_Class::matmult(a, b, out, transpose_a, transpose_b);
+}
+
+inline TensorGrad& matmult(const TensorGrad &a, const Tensor &b, TensorGrad& out, bool transpose_a = false, bool transpose_b = false) {
+    return TensorGrad_Functional_Class::matmult(a, b, out, transpose_a, transpose_b);
 }
 
 inline TensorGrad linear(const TensorGrad& input, const TensorGrad& weight, const TensorGrad& bias, bool transpose_a = false, bool transpose_b = false){
@@ -54,12 +66,12 @@ unfold1d(const TensorGrad &a, Tensor::size_value_t kernel_size,
         a, kernel_size, dilation, padding, stride, transpose_out);
 }
 
-inline TensorGrad unfold(const TensorGrad &a, utils::my_tuple kernel_size,
+inline TensorGrad unfold2d(const TensorGrad &a, utils::my_tuple kernel_size,
                          utils::my_tuple dilation = 1,
                          utils::my_tuple padding = 0,
                          utils::my_tuple stride = 1,
                          bool transpose_out = true) {
-    return TensorGrad_Functional_Class::unfold(a, kernel_size, dilation,
+    return TensorGrad_Functional_Class::unfold2d(a, kernel_size, dilation,
                                                padding, stride, transpose_out);
 }
 
@@ -71,14 +83,51 @@ unfold3d(const TensorGrad &a, utils::my_n_tuple<3> kernel_size,
         a, kernel_size, dilation, padding, stride, transpose_out);
 }
 
-inline TensorGrad fold(const TensorGrad &a, utils::my_tuple output_size,
+inline TensorGrad unfoldnd(const TensorGrad &a, int64_t dim, utils::optional_list kernel_size,
+                           utils::optional_list dilation = 1, utils::optional_list padding = 0,
+                           utils::optional_list stride = 1, bool transpose_out = true, bool test_mode = false){
+    return TensorGrad_Functional_Class::unfoldnd(a, dim, kernel_size, dilation, padding, stride, transpose_out, test_mode);
+}
+
+inline TensorGrad fold1d(const TensorGrad &a, Tensor::size_value_t output_size,
+                          Tensor::size_value_t kernel_size, Tensor::size_value_t dilation=1,
+                          Tensor::size_value_t padding=0, Tensor::size_value_t stride=1){
+    
+    return TensorGrad_Functional_Class::fold1d(a, output_size, kernel_size,
+                                             dilation, padding, stride);
+    
+}
+
+
+inline TensorGrad fold2d(const TensorGrad &a, utils::my_tuple output_size,
                        utils::my_tuple kernel_size,
                        utils::my_tuple dilation = 1,
                        utils::my_tuple padding = 0,
                        utils::my_tuple stride = 1) {
-    return TensorGrad_Functional_Class::fold(a, output_size, kernel_size,
+    return TensorGrad_Functional_Class::fold2d(a, output_size, kernel_size,
                                              dilation, padding, stride);
 }
+
+inline TensorGrad fold3d(const TensorGrad &a, utils::my_n_tuple<3> output_size, 
+                         utils::my_n_tuple<3> kernel_size,
+                         utils::my_n_tuple<3> dilation = 1,
+                         utils::my_n_tuple<3> padding = 0, 
+                         utils::my_n_tuple<3> stride = 1){
+    return TensorGrad_Functional_Class::fold3d(a, output_size, kernel_size,
+                                             dilation, padding, stride);
+    
+}
+inline TensorGrad foldnd(const TensorGrad &a, int64_t dim, utils::optional_list output_size, 
+                         utils::optional_list kernel_size,
+                         utils::optional_list dilation = 1, 
+                         utils::optional_list padding = 0, 
+                         utils::optional_list stride = 1,
+                         bool test_mode = false){
+    return TensorGrad_Functional_Class::foldnd(a, dim, output_size, kernel_size,
+                                             dilation, padding, stride, test_mode);
+
+}
+
 
 inline TensorGrad conv1d(const TensorGrad &image, const TensorGrad &kernel,
                          int64_t stride = 1, int64_t padding = 0,
@@ -141,6 +190,27 @@ inline TensorGrad conv3d(const TensorGrad &image, const Tensor &kernel,
                          utils::my_n_tuple<3> stride = 1, utils::my_n_tuple<3> padding = 0,
                          utils::my_n_tuple<3> dilation = 1, int64_t groups = 1) {
     return TensorGrad_Functional_Class::conv3d(image, kernel, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad convnd(const TensorGrad &image, const TensorGrad &kernel, int64_t dim,
+                         utils::optional_list stride = 1, utils::optional_list padding = 0,
+                         utils::optional_list dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::convnd(image, kernel, dim, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad convnd(const Tensor &image, const TensorGrad &kernel, int64_t dim,
+                         utils::optional_list stride = 1, utils::optional_list padding = 0,
+                         utils::optional_list dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::convnd(image, kernel, dim, stride,
+                                                   padding, dilation, groups);
+}
+
+inline TensorGrad convnd(const TensorGrad &image, const Tensor &kernel, int64_t dim,
+                         utils::optional_list stride = 1, utils::optional_list padding = 0,
+                         utils::optional_list dilation = 1, int64_t groups = 1) {
+    return TensorGrad_Functional_Class::convnd(image, kernel, dim, stride,
                                                    padding, dilation, groups);
 }
 
@@ -220,24 +290,26 @@ inline TensorGrad conv_transpose3d(const TensorGrad &image, const Tensor &kernel
 
 
 
-inline TensorGrad sigmoid(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::sigmoid(a);
-}
+
 
 inline TensorGrad clamp(const TensorGrad &a,
-                        std::optional<int64_t> min = std::nullopt,
-                        std::optional<int64_t> max = std::nullopt) {
+                        std::optional<Scalar> min = std::nullopt,
+                        std::optional<Scalar> max = std::nullopt) {
     return TensorGrad_Functional_Class::clamp(a, min, max);
 }
 
-inline TensorGrad relu(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::relu(a);
+inline TensorGrad& clamp_(TensorGrad &a,
+                        std::optional<Scalar> min = std::nullopt,
+                        std::optional<Scalar> max = std::nullopt) {
+    return TensorGrad_Functional_Class::clamp_(a, min, max);
 }
 
 inline TensorGrad var(const TensorGrad &a, utils::optional_list dim = nullptr,
                       int64_t correction = 1, bool keepdim = false) {
     return TensorGrad_Functional_Class::var(a, dim, correction, keepdim);
 }
+
+//activation_functions.cpp
 
 inline TensorGrad sqrt(const TensorGrad &a) {
     return TensorGrad_Functional_Class::sqrt(a);
@@ -253,106 +325,9 @@ inline TensorGrad silu(const TensorGrad &a) {
 inline TensorGrad gelu(const TensorGrad &a) {
     return TensorGrad_Functional_Class::gelu(a);
 }
-inline TensorGrad tanh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::tanh(a);
-}
-inline TensorGrad tan(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::tan(a);
-}
-inline TensorGrad sinh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::sinh(a);
-}
-inline TensorGrad sin(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::sin(a);
-}
-inline TensorGrad cosh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::cosh(a);
-}
-inline TensorGrad cos(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::cos(a);
-}
-inline TensorGrad atanh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::atanh(a);
-}
-inline TensorGrad atan(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::atan(a);
-}
-inline TensorGrad asinh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::asinh(a);
-}
-inline TensorGrad asin(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::asin(a);
-}
-inline TensorGrad acosh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::acosh(a);
-}
-inline TensorGrad acos(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::acos(a);
-}
-inline TensorGrad cotanh(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::cotanh(a);
-}
-inline TensorGrad cotan(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::cotan(a);
-}
-inline TensorGrad csch(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::csch(a);
-}
-inline TensorGrad csc(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::csc(a);
-}
-inline TensorGrad sech(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::sech(a);
-}
-inline TensorGrad sec(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::sec(a);
-}
 
-
-inline TensorGrad cat(std::vector<TensorGrad> tgs, int64_t dim = 0) {
-    return TensorGrad_Functional_Class::cat(std::move(tgs), dim);
-}
-
-inline TensorGrad cat(TensorGrad tg, int64_t dim = 0) {
-    return TensorGrad_Functional_Class::cat(std::move(tg), dim);
-}
-
-inline TensorGrad chunk(TensorGrad input, typename Tensor::size_value_t chunks,
-                        int64_t dim = 0) {
-    return TensorGrad_Functional_Class::chunk(std::move(input), chunks, dim);
-}
-
-
-inline TensorGrad split(TensorGrad input, typename Tensor::size_value_t split_size, int64_t dim){
-    return TensorGrad_Functional_Class::split(std::move(input), split_size, dim);
-}
-
-
-inline TensorGrad split(TensorGrad input, std::vector<typename Tensor::size_value_t> split_sections, int64_t dim){
-    return TensorGrad_Functional_Class::split(std::move(input), std::move(split_sections), dim);
-    
-}
-
-inline TensorGrad stack(TensorGrad input, int64_t dim){
-    return TensorGrad_Functional_Class::stack(std::move(input), dim);
-}
-
-inline TensorGrad stack(std::vector<TensorGrad> input, int64_t dim){
-    return TensorGrad_Functional_Class::stack(std::move(input), dim);
-}
-
-
-inline TensorGrad log(const TensorGrad &a) {
-    return TensorGrad_Functional_Class::log(a);
-}
-
-
-inline TensorGrad logsumexp(const TensorGrad &a, utils::optional_list list = nullptr, bool keepdim = false) {
-    return TensorGrad_Functional_Class::logsumexp(a, list, keepdim);
-}
-
-inline TensorGrad dropout(const TensorGrad &input, double p) {
-    return TensorGrad_Functional_Class::dropout(input, p);
+inline TensorGrad pow(const TensorGrad& x, Scalar exponent){
+    return TensorGrad_Functional_Class::pow(x, exponent);
 }
 
 inline TensorGrad abs(const TensorGrad &input){
@@ -363,13 +338,127 @@ inline TensorGrad softplus(const TensorGrad &input, Scalar beta=1.0, Scalar thre
     return TensorGrad_Functional_Class::softplus(input, beta, threshold);
 }
 
-//by default is stable
-inline TensorGrad softmax(const TensorGrad& input){
-    return TensorGrad_Functional_Class::softmax(input, true);
+inline TensorGrad sigmoid(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::sigmoid(a);
+}
+inline TensorGrad relu(const TensorGrad &a) {
+    return TensorGrad_Functional_Class::relu(a);
 }
 
-inline TensorGrad softmax(const TensorGrad& input, typename SizeRef::value_type dim){
-    return TensorGrad_Functional_Class::softmax(input, dim, true);
+
+inline TensorGrad& sqrt_(TensorGrad &a) {
+    return TensorGrad_Functional_Class::sqrt_(a);
+}
+
+inline TensorGrad& invsqrt_(TensorGrad &a) {
+    return TensorGrad_Functional_Class::invsqrt_(a);
+}
+
+inline TensorGrad& silu_(TensorGrad &a) {
+    return TensorGrad_Functional_Class::silu_(a);
+}
+inline TensorGrad& gelu_(TensorGrad &a) {
+    return TensorGrad_Functional_Class::gelu_(a);
+}
+
+inline TensorGrad& pow_(TensorGrad& x, Scalar exponent){
+    return TensorGrad_Functional_Class::pow_(x, exponent);
+}
+
+inline TensorGrad& abs_(TensorGrad &input){
+    return TensorGrad_Functional_Class::abs_(input);
+}
+
+inline TensorGrad& softplus_(TensorGrad &input, Scalar beta=1.0, Scalar threshold=20.0){
+    return TensorGrad_Functional_Class::softplus_(input, beta, threshold);
+}
+
+inline TensorGrad& sigmoid_(TensorGrad &a) {
+    return TensorGrad_Functional_Class::sigmoid_(a);
+}
+
+inline TensorGrad& relu_(TensorGrad &a) {
+    return TensorGrad_Functional_Class::relu_(a);
+}
+
+inline TensorGrad cat(std::vector<TensorGrad> tgs, int64_t dim = 0) {
+    return TensorGrad_Functional_Class::cat(std::move(tgs), dim);
+}
+
+inline TensorGrad cat(TensorGrad tg, int64_t dim = 0) {
+    return TensorGrad_Functional_Class::cat(std::move(tg), dim);
+}
+
+
+
+inline TensorGrad stack(TensorGrad input, int64_t dim){
+    return TensorGrad_Functional_Class::stack(std::move(input), dim);
+}
+
+inline TensorGrad stack(std::vector<TensorGrad> input, int64_t dim){
+    return TensorGrad_Functional_Class::stack(std::move(input), dim);
+}
+
+inline TensorGrad real(const TensorGrad& tg){return TensorGrad_Functional_Class::real(tg);}
+inline TensorGrad imag(const TensorGrad& tg){return TensorGrad_Functional_Class::imag(tg);}
+inline TensorGrad to_complex_from_real(const TensorGrad& tg){return TensorGrad_Functional_Class::to_complex_from_real(tg);} 
+inline TensorGrad to_complex_from_imag(const TensorGrad& tg){return TensorGrad_Functional_Class::to_complex_from_imag(tg);}
+inline TensorGrad to(const TensorGrad& tg, DType dt){return TensorGrad_Functional_Class::to(tg, dt);}
+
+inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a){
+    return TensorGrad_Functional_Class::dilate(tg, a);
+}
+inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
+    return TensorGrad_Functional_Class::dilate(tg, a, b);
+}
+inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
+    return TensorGrad_Functional_Class::dilate(tg, a, b, c);
+}
+inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a){
+    return TensorGrad_Functional_Class::undilate(tg, a);
+}
+inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
+    return TensorGrad_Functional_Class::undilate(tg, a, b);
+}
+inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
+    return TensorGrad_Functional_Class::undilate(tg, a, b, c);
+}
+inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a){
+    return TensorGrad_Functional_Class::undilate_(tg, a);
+}
+inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
+    return TensorGrad_Functional_Class::undilate_(tg, a, b);
+}
+inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
+    return TensorGrad_Functional_Class::undilate_(tg, a, b, c);
+}
+
+inline TensorGrad zeros_like(const TensorGrad& tg){ return TensorGrad_Functional_Class::zeros_like(tg); }
+inline TensorGrad ones_like(const TensorGrad& tg){ return TensorGrad_Functional_Class::ones_like(tg); }
+inline TensorGrad nums_like(const TensorGrad& tg, Scalar s){ return TensorGrad_Functional_Class::nums_like(tg, s); }
+inline TensorGrad& fill_diagonal_(TensorGrad& tg, Scalar s){ return TensorGrad_Functional_Class::fill_diagonal_(tg, s); }
+inline TensorGrad& fill_(TensorGrad& tg, Scalar s){ return TensorGrad_Functional_Class::fill_(tg, s); }
+inline TensorGrad& set_(TensorGrad& tg, const Tensor& t){ return TensorGrad_Functional_Class::set_(tg, t); }
+inline TensorGrad& set_(TensorGrad& tg, const TensorGrad& t){ return TensorGrad_Functional_Class::set_(tg, t); }
+
+inline TensorGrad dropout(const TensorGrad &input, double p) {
+    return TensorGrad_Functional_Class::dropout(input, p);
+}
+
+inline TensorGrad dropout2d(const TensorGrad &input, double p) {
+    return TensorGrad_Functional_Class::dropout(input, p);
+}
+
+inline TensorGrad dropout3d(const TensorGrad &input, double p) {
+    return TensorGrad_Functional_Class::dropout(input, p);
+}
+
+//by default is stable
+inline TensorGrad softmax(const TensorGrad& input, std::optional<int64_t> dim = std::nullopt, bool stable = true){
+    if(dim.has_value()){
+        return TensorGrad_Functional_Class::softmax(input, dim.value(), stable);
+    }
+    return TensorGrad_Functional_Class::softmax(input, stable);
 }
 
 
@@ -381,8 +470,8 @@ inline TensorGrad softmax_unstable(const TensorGrad& input, typename SizeRef::va
     return TensorGrad_Functional_Class::softmax(input, dim, false);
 }
 
-inline TensorGrad gumbel_softmax(const TensorGrad& input, Scalar tau, bool hard, bool stable = true){
-    return TensorGrad_Functional_Class::gumbel_softmax(input, tau, hard, stable);
+inline TensorGrad gumbel_softmax(const TensorGrad& input, Scalar tau, bool hard, int64_t dim = -1, bool stable = true){
+    return TensorGrad_Functional_Class::gumbel_softmax(input, tau, hard, dim, stable);
 }
 
 inline TensorGrad symmetric_bilinear(const TensorGrad& input, const TensorGrad& W1, const TensorGrad& W2){
@@ -509,20 +598,388 @@ inline TensorGrad adaptive_max_pool3d(TensorGrad x, utils::my_n_tuple<3> out_sha
 
 //Fractional Max Pooling
 inline TensorGrad fractional_max_pool2d(TensorGrad input, utils::my_tuple kernel_size, utils::my_tuple output_size = -1, 
-                                 std::variant<double, std::tuple<double, double>> output_ratio = double(-1.0), bool return_indices = false){
+                                 utils::tuple_or_var<double, 2> output_ratio = double(-1.0), bool return_indices = false){
     return TensorGrad_Functional_Class::fractional_max_pool2d(input, kernel_size, output_size, 
                          output_ratio, return_indices); 
 }
 inline TensorGrad fractional_max_pool3d(TensorGrad input, utils::my_n_tuple<3> kernel_size, utils::my_n_tuple<3> output_size = -1, 
-                                 std::variant<double, std::tuple<double, double, double>> output_ratio = double(-1.0), bool return_indices = false){
+                                 utils::tuple_or_var<double, 3> output_ratio = double(-1.0), bool return_indices = false){
     return TensorGrad_Functional_Class::fractional_max_pool3d(input, kernel_size, output_size, 
                          output_ratio, return_indices);
 }
 
 
+//flip.cpp
+inline TensorGrad flip(const TensorGrad& input, utils::optional_list list = nullptr){return TensorGrad_Functional_Class::flip(input, list);}
+inline TensorGrad flip_view(const TensorGrad& input, utils::optional_list list){return TensorGrad_Functional_Class::flip_view(input, list);}
+
+// Fused.cpp
+//returns c + (a * b);
+inline TensorGrad fused_multiply_add(const TensorGrad& c, const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const Tensor& c, const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const Tensor& c, const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const Tensor& c, const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const TensorGrad& c, const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const TensorGrad& c, const Tensor& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const TensorGrad& c, const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+
+inline TensorGrad fused_multiply_add(const TensorGrad& c, const TensorGrad& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const TensorGrad& c, const Tensor& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+inline TensorGrad fused_multiply_add(const Tensor& c, const TensorGrad& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_add(c, a, b);} 
+//returns c += (a * b);
+inline TensorGrad& fused_multiply_add_(TensorGrad& c, const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_add_(c, a, b);} 
+inline TensorGrad& fused_multiply_add_(TensorGrad& c, const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_add_(c, a, b);} 
+inline TensorGrad& fused_multiply_add_(TensorGrad& c, const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_add_(c, a, b);} 
+inline TensorGrad& fused_multiply_add_(TensorGrad& c, const Tensor& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_add_(c, a, b);} 
+
+inline TensorGrad& fused_multiply_add_(TensorGrad& c, const TensorGrad& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_add_(c, a, b);} 
+inline TensorGrad& fused_multiply_add_(TensorGrad& c, const Tensor& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_add_(c, a, b);} 
+
+//returns c - (a * b);
+inline TensorGrad fused_multiply_subtract(const TensorGrad& c, const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const Tensor& c, const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const Tensor& c, const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const Tensor& c, const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const TensorGrad& c, const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const TensorGrad& c, const Tensor& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const TensorGrad& c, const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+
+inline TensorGrad fused_multiply_subtract(const TensorGrad& c, const TensorGrad& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const TensorGrad& c, const Tensor& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+inline TensorGrad fused_multiply_subtract(const Tensor& c, const TensorGrad& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b);} 
+
+//returns c -= (a * b);
+inline TensorGrad& fused_multiply_subtract_(TensorGrad& c, const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_subtract_(c, a, b);} 
+inline TensorGrad& fused_multiply_subtract_(TensorGrad& c, const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::fused_multiply_subtract_(c, a, b);} 
+inline TensorGrad& fused_multiply_subtract_(TensorGrad& c, const Tensor& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_subtract_(c, a, b);} 
+inline TensorGrad& fused_multiply_subtract_(TensorGrad& c, const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::fused_multiply_subtract_(c, a, b);} 
+
+inline TensorGrad& fused_multiply_subtract_(TensorGrad& c, const TensorGrad& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_subtract_(c, a, b);} 
+inline TensorGrad& fused_multiply_subtract_(TensorGrad& c, const Tensor& a, Scalar b){return TensorGrad_Functional_Class::fused_multiply_subtract_(c, a, b);} 
+
+//Index.cpp
+inline TensorGrad at(const TensorGrad& input, Tensor::size_value_t index){return TensorGrad_Functional_Class::at(input, index);}
+inline TensorGrad at(const TensorGrad& input, const Tensor& index){return TensorGrad_Functional_Class::at(input, index);}
+inline TensorGrad at(const TensorGrad& input, const TensorGrad& index){return TensorGrad_Functional_Class::at(input, index);}
+inline Tensor at(const Tensor& input, const TensorGrad& index){return TensorGrad_Functional_Class::at(input, index);}
+inline TensorGrad at(const TensorGrad& input, std::vector<Tensor::size_value_t> index){return TensorGrad_Functional_Class::at(input, std::move(index));}
+inline TensorGrad at_tensor_split(const TensorGrad & input, const TensorGrad & index, Tensor::size_value_t splitting){return TensorGrad_Functional_Class::at_tensor_split(input, index, splitting);} 
+inline TensorGrad at_tensor_split(const TensorGrad & input, const Tensor & index, Tensor::size_value_t splitting){return TensorGrad_Functional_Class::at_tensor_split(input, index, splitting);} 
+inline TensorGrad &at_tensor_split(const TensorGrad & input, const TensorGrad & index, Tensor::size_value_t splitting,
+                    TensorGrad & output){return TensorGrad_Functional_Class::at_tensor_split(input, index, splitting, output);} 
+inline TensorGrad &at_tensor_split(const TensorGrad & input, const Tensor & index, Tensor::size_value_t splitting,
+                    TensorGrad & output){return TensorGrad_Functional_Class::at_tensor_split(input, index, splitting, output);} 
+inline TensorGrad index_except(const TensorGrad & input, int64_t dim, Tensor::size_value_t index){return TensorGrad_Functional_Class::index_except(input, dim, index);} 
+inline TensorGrad index_select(const TensorGrad & input, int64_t dim, const Tensor& index){return TensorGrad_Functional_Class::index_select(input, dim, index);} 
+inline TensorGrad index_select(const TensorGrad & input, int64_t dim, const TensorGrad& index){return TensorGrad_Functional_Class::index_select(input, dim, index);} 
+inline TensorGrad select(const TensorGrad& input, Tensor::size_value_t dim, Tensor::size_value_t index){return TensorGrad_Functional_Class::select(input, dim, index);} 
+
+//min_max.cpp
+inline result_types::max<TensorGrad, Tensor> max(const TensorGrad& input, utils::optional_list dim = nullptr, bool keepdim = false){
+    return TensorGrad_Functional_Class::max(input, dim, keepdim);
+}
+inline result_types::max<TensorGrad, Tensor> min(const TensorGrad& input, utils::optional_list dim = nullptr, bool keepdim = false){
+    return TensorGrad_Functional_Class::min(input, dim, keepdim);
+}
+inline TensorGrad maximum(const std::vector<TensorGrad>& tgs, const std::vector<Tensor>& ts = {}, const std::vector<Scalar>& scalars = {}){
+    return TensorGrad_Functional_Class::maximum(tgs, ts, scalars);
+}
+inline TensorGrad minimum(const std::vector<TensorGrad>& tgs, const std::vector<Tensor>& ts = {}, const std::vector<Scalar>& scalars = {}){
+    return TensorGrad_Functional_Class::minimum(tgs, ts, scalars);
+    
+}
+
+
+//operators.cpp
+
+
+inline TensorGrad add(const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::add(a, b);}\
+inline TensorGrad add(const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::add(a, b);}\
+inline TensorGrad add(const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::add(a, b);}\
+inline TensorGrad add(const TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::add(a, b);}\
+inline TensorGrad add(const Scalar& a, const TensorGrad& b){return TensorGrad_Functional_Class::add(a, b);}\
+inline TensorGrad& add_(TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::add_(a, b);}\
+inline TensorGrad& add_(TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::add_(a, b);}\
+inline Tensor& add_(Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::add_(a, b);}\
+inline TensorGrad& add_(TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::add_(a, b);}\
+
+
+inline TensorGrad multiply(const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::multiply(a, b);}\
+inline TensorGrad multiply(const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::multiply(a, b);}\
+inline TensorGrad multiply(const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::multiply(a, b);}\
+inline TensorGrad multiply(const TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::multiply(a, b);}\
+inline TensorGrad multiply(const Scalar& a, const TensorGrad& b){return TensorGrad_Functional_Class::multiply(a, b);}\
+inline TensorGrad& multiply_(TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::multiply_(a, b);}\
+inline TensorGrad& multiply_(TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::multiply_(a, b);}\
+inline Tensor& multiply_(Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::multiply_(a, b);}\
+inline TensorGrad& multiply_(TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::multiply_(a, b);}\
+
+inline TensorGrad subtract(const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::subtract(a, b);}\
+inline TensorGrad subtract(const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::subtract(a, b);}\
+inline TensorGrad subtract(const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::subtract(a, b);}\
+inline TensorGrad subtract(const TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::subtract(a, b);}\
+inline TensorGrad subtract(const Scalar& a, const TensorGrad& b){return TensorGrad_Functional_Class::subtract(a, b);}\
+inline TensorGrad& subtract_(TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::subtract_(a, b);}\
+inline TensorGrad& subtract_(TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::subtract_(a, b);}\
+inline Tensor& subtract_(Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::subtract_(a, b);}\
+inline TensorGrad& subtract_(TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::subtract_(a, b);}\
+
+inline TensorGrad divide(const TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::divide(a, b);}\
+inline TensorGrad divide(const TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::divide(a, b);}\
+inline TensorGrad divide(const Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::divide(a, b);}\
+inline TensorGrad divide(const TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::divide(a, b);}\
+inline TensorGrad divide(const Scalar& a, const TensorGrad& b){return TensorGrad_Functional_Class::divide(a, b);}\
+inline TensorGrad& divide_(TensorGrad& a, const TensorGrad& b){return TensorGrad_Functional_Class::divide_(a, b);}\
+inline TensorGrad& divide_(TensorGrad& a, const Tensor& b){return TensorGrad_Functional_Class::divide_(a, b);}\
+inline Tensor& divide_(Tensor& a, const TensorGrad& b){return TensorGrad_Functional_Class::divide_(a, b);}\
+inline TensorGrad& divide_(TensorGrad& a, const Scalar& b){return TensorGrad_Functional_Class::divide_(a, b);}\
+
+
+inline TensorGrad fmod(const TensorGrad& input, const TensorGrad& other){return TensorGrad_Functional_Class::fmod(input, other);}
+inline TensorGrad fmod(const TensorGrad& input, const Tensor& other){return TensorGrad_Functional_Class::fmod(input, other);}
+inline TensorGrad fmod(const Tensor& input, const TensorGrad& other){return TensorGrad_Functional_Class::fmod(input, other);}
+inline TensorGrad fmod(const TensorGrad& input, const Scalar& other){return TensorGrad_Functional_Class::fmod(input, other);}
+inline TensorGrad fmod(const Scalar& input, const TensorGrad& other){return TensorGrad_Functional_Class::fmod(input, other);}
+
+
+inline TensorGrad remainder(const TensorGrad& input, const TensorGrad& other){return TensorGrad_Functional_Class::remainder(input, other);}
+inline TensorGrad remainder(const TensorGrad& input, const Tensor& other){return TensorGrad_Functional_Class::remainder(input, other);}
+inline TensorGrad remainder(const Tensor& input, const TensorGrad& other){return TensorGrad_Functional_Class::remainder(input, other);}
+inline TensorGrad remainder(const TensorGrad& input, const Scalar& other){return TensorGrad_Functional_Class::remainder(input, other);}
+inline TensorGrad remainder(const Scalar& input, const TensorGrad& other){return TensorGrad_Functional_Class::remainder(input, other);}
+
+inline TensorGrad inverse(const TensorGrad& input){return TensorGrad_Functional_Class::inverse(input);}
+inline TensorGrad& inverse_(TensorGrad& input){return TensorGrad_Functional_Class::inverse_(input);}
+
+
+//padding.cpp
+inline TensorGrad pad(const TensorGrad& input, std::vector<Tensor::size_value_t> padding, const char* mode = "constant", Scalar value = 0){
+    return TensorGrad_Functional_Class::pad(input, std::move(padding), mode, value);
+}
+inline TensorGrad unpad(const TensorGrad& input, std::vector<Tensor::size_value_t> padding, bool no_contiguous = false){
+    return TensorGrad_Functional_Class::unpad(input, std::move(padding), no_contiguous);
+}
+
+
+
+//repeat.cpp
+inline TensorGrad repeat_(const TensorGrad& input, Tensor::size_value_t dim, Tensor::size_value_t amt){
+    return TensorGrad_Functional_Class::repeat_(input, dim, amt);
+}
+inline TensorGrad repeat_(const TensorGrad& input, Tensor::size_value_t amt){
+    return TensorGrad_Functional_Class::repeat_(input, amt);
+}
+inline TensorGrad expand(const TensorGrad& input, SizeRef size){
+    return TensorGrad_Functional_Class::expand(input, size);
+}
+inline TensorGrad expand_as(const TensorGrad& a, const TensorGrad& b){
+    return TensorGrad_Functional_Class::expand_as(a, b);
+}
+inline TensorGrad expand_as(const TensorGrad& a, const Tensor& b){
+    return TensorGrad_Functional_Class::expand_as(a, b);
+}
+inline Tensor expand_as(const Tensor& a, const TensorGrad& b){
+    return TensorGrad_Functional_Class::expand_as(a, b);
+}
+
+inline TensorGrad round(const TensorGrad& input){
+    return TensorGrad_Functional_Class::round(input); 
+}
+inline TensorGrad trunc(const TensorGrad& input){
+    return TensorGrad_Functional_Class::trunc(input); 
+}
+inline TensorGrad floor(const TensorGrad& input){
+    return TensorGrad_Functional_Class::floor(input); 
+}
+inline TensorGrad ceil(const TensorGrad& input){
+    return TensorGrad_Functional_Class::ceil(input); 
+}
+
+
+
+//sort.cpp
+inline TensorGrad sort(const TensorGrad& input, const Tensor::size_value_t dim = -1,
+        bool descending = false, bool return_sorted = true,
+        bool return_indices = true){
+    return TensorGrad_Functional_Class::sort(input, dim, descending, return_sorted, return_indices);
+}
+
+inline TensorGrad coordsort(const TensorGrad& input, const Tensor::size_value_t dim = -2, bool descending = false, 
+                                                bool return_sorted = true, bool return_indices = true){
+    return TensorGrad_Functional_Class::coordsort(input, dim, descending, return_sorted, return_indices);
+
+}
+
+inline TensorGrad split(const TensorGrad& input, int64_t dim, utils::optional_list splitting = nullptr){
+    return TensorGrad_Functional_Class::split(input, dim, splitting); 
+}
+inline TensorGrad chunk(const TensorGrad& input, const Tensor::size_value_t chunks, int64_t dim = 0){
+    return TensorGrad_Functional_Class::chunk(input, chunks, dim); 
+}
+
+inline TensorGrad diagonal(const TensorGrad& input, bool keep_dims = false){
+    return TensorGrad_Functional_Class::diagonal(input, keep_dims);
+}
+inline TensorGrad as_strided(const TensorGrad &input, const SizeRef n_size, SizeRef n_stride,
+                  const int64_t storage_offset = 0, bool whole_tensor = false){
+    return TensorGrad_Functional_Class::as_strided(input, n_size, n_stride, storage_offset, whole_tensor);
+}
+   
+inline TensorGrad log(const TensorGrad &input){
+    return TensorGrad_Functional_Class::log(input); 
+}
+inline TensorGrad& log_(TensorGrad& input){
+    return TensorGrad_Functional_Class::log_(input); 
+}
+inline TensorGrad exp(const TensorGrad &input){
+    return TensorGrad_Functional_Class::exp(input); 
+}
+inline TensorGrad& exp_(TensorGrad& input){
+    return TensorGrad_Functional_Class::exp_(input); 
+}
+inline TensorGrad sum(const TensorGrad &input,
+                            utils::optional_list list = nullptr,
+                            bool keepdim = true){
+    return TensorGrad_Functional_Class::sum(input, list, keepdim);
+}
+inline TensorGrad logsumexp(const TensorGrad &input,
+                            utils::optional_list list = nullptr,
+                            bool keepdim = true){
+    return TensorGrad_Functional_Class::logsumexp(input, list, keepdim);
+}
+
+inline TensorGrad transpose(const TensorGrad& input, Tensor::size_value_t a, Tensor::size_value_t b){
+    return TensorGrad_Functional_Class::transpose(input, a, b);
+}
+inline TensorGrad permute(const TensorGrad& input, std::vector<Tensor::size_value_t> permutations){
+    return TensorGrad_Functional_Class::permute(input, std::move(permutations));
+}
+inline TensorGrad& row_col_swap_(TensorGrad& input){
+    return TensorGrad_Functional_Class::row_col_swap_(input);
+}
+
+//trig.cpp
+inline TensorGrad tan(const TensorGrad &input){
+    return TensorGrad_Functional_Class::tan(input); 
+}
+inline TensorGrad tanh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::tanh(input); 
+}
+inline TensorGrad atan(const TensorGrad &input){
+    return TensorGrad_Functional_Class::atan(input); 
+}
+inline TensorGrad atanh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::atanh(input); 
+}
+inline TensorGrad cotan(const TensorGrad &input){
+    return TensorGrad_Functional_Class::cotan(input); 
+}
+inline TensorGrad cotanh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::cotanh(input); 
+}
+
+inline TensorGrad sin(const TensorGrad &input){
+    return TensorGrad_Functional_Class::sin(input); 
+}
+inline TensorGrad sinh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::sinh(input); 
+}
+inline TensorGrad asin(const TensorGrad &input){
+    return TensorGrad_Functional_Class::asin(input); 
+}
+inline TensorGrad asinh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::asinh(input); 
+}
+inline TensorGrad csc(const TensorGrad &input){
+    return TensorGrad_Functional_Class::csc(input); 
+}
+inline TensorGrad csch(const TensorGrad &input){
+    return TensorGrad_Functional_Class::csch(input); 
+}
+
+inline TensorGrad cos(const TensorGrad &input){
+    return TensorGrad_Functional_Class::cos(input); 
+}
+inline TensorGrad cosh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::cosh(input); 
+}
+inline TensorGrad acos(const TensorGrad &input){
+    return TensorGrad_Functional_Class::acos(input); 
+}
+inline TensorGrad acosh(const TensorGrad &input){
+    return TensorGrad_Functional_Class::acosh(input); 
+}
+inline TensorGrad sec(const TensorGrad &input){
+    return TensorGrad_Functional_Class::sec(input); 
+}
+inline TensorGrad sech(const TensorGrad &input){
+    return TensorGrad_Functional_Class::sech(input); 
+}
+
+
+inline TensorGrad& tan_(TensorGrad &input){
+    return TensorGrad_Functional_Class::tan_(input); 
+}
+inline TensorGrad& tanh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::tanh_(input); 
+}
+inline TensorGrad& atan_(TensorGrad &input){
+    return TensorGrad_Functional_Class::atan_(input); 
+}
+inline TensorGrad& atanh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::atanh_(input); 
+}
+inline TensorGrad& cotan_(TensorGrad &input){
+    return TensorGrad_Functional_Class::cotan_(input); 
+}
+inline TensorGrad& cotanh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::cotanh_(input); 
+}
+
+inline TensorGrad& sin_(TensorGrad &input){
+    return TensorGrad_Functional_Class::sin_(input); 
+}
+inline TensorGrad& sinh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::sinh_(input); 
+}
+inline TensorGrad& asin_(TensorGrad &input){
+    return TensorGrad_Functional_Class::asin_(input); 
+}
+inline TensorGrad& asinh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::asinh_(input); 
+}
+inline TensorGrad& csc_(TensorGrad &input){
+    return TensorGrad_Functional_Class::csc_(input); 
+}
+inline TensorGrad& csch_(TensorGrad &input){
+    return TensorGrad_Functional_Class::csch_(input); 
+}
+
+inline TensorGrad& cos_(TensorGrad &input){
+    return TensorGrad_Functional_Class::cos_(input); 
+}
+inline TensorGrad& cosh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::cosh_(input); 
+}
+inline TensorGrad& acos_(TensorGrad &input){
+    return TensorGrad_Functional_Class::acos_(input); 
+}
+inline TensorGrad& acosh_(TensorGrad &input){
+    return TensorGrad_Functional_Class::acosh_(input); 
+}
+inline TensorGrad& sec_(TensorGrad &input){
+    return TensorGrad_Functional_Class::sec_(input); 
+}
+inline TensorGrad& sech_(TensorGrad &input){
+    return TensorGrad_Functional_Class::sech_(input); 
+}
+
+inline TensorGrad unique(const TensorGrad& input, int64_t dim, bool return_sorted = true, bool return_indice = true){
+    return TensorGrad_Functional_Class::unique(input, dim, return_sorted, return_indice);
+}
 } // namespace functional
 } // namespace nt
 
 #include "functional/functional_list.h"
 
-#endif // _NT_TENSORGAD_FUNCTIONAL_H_
+#endif // NT_TENSORGAD_FUNCTIONAL_H__

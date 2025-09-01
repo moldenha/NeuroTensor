@@ -27,12 +27,12 @@ Tensor pad(const Tensor& t, std::vector<Tensor::size_value_t> p, const char* mod
         }
     }
     
-    Tensor output(SizeRef(std::move(n_shape)), t.dtype);
+    Tensor output(SizeRef(std::move(n_shape)), t.dtype());
     output = value;
-    std::vector<nt::my_range> ranges(t.dims(), my_range(0, -1));
-    for(int64_t i = 0; i < ranges.size(); ++i){
-        ranges[i].end = output.shape()[i];
-    }
+    std::vector<nt::range_> ranges(t.dims(), range);
+    // for(int64_t i = 0; i < ranges.size(); ++i){
+    //     ranges[i].end = output.shape()[i];
+    // }
     {
         auto p_begin = p.crbegin();
         auto p_end = p.crend();
@@ -51,7 +51,7 @@ Tensor pad(const Tensor& t, std::vector<Tensor::size_value_t> p, const char* mod
 Tensor unpad(const Tensor& t, std::vector<Tensor::size_value_t> vec, bool no_contiguous){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     using size_value_t = Tensor::size_value_t;
-    std::vector<my_range> ranges(t.dims(), my_range(0, -1));
+    std::vector<range_> ranges(t.dims(), range);
     utils::throw_exception((vec.size()/2) <= ranges.size(),
                            "Cannot unpad greater than the dimensions of the tensor");
     auto in_shape = t.shape();

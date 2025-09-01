@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_QR_H_
-#define _NT_LINALG_QR_H_
+#ifndef NT_LINALG_QR_H__
+#define NT_LINALG_QR_H__
 
 #include "../../Tensor.h"
 #include <functional>
@@ -12,7 +12,7 @@
 
 namespace nt {
 namespace linalg {
-Tensor QR(Tensor);
+NEUROTENSOR_API Tensor QR(Tensor);
 template<typename T>
 std::tuple<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>, 
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> 

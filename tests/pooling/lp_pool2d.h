@@ -6,7 +6,7 @@
 
 nt::Tensor lp_pool2d(nt::Tensor input, nt::Scalar power, nt::utils::my_tuple kernel_size, nt::utils::my_tuple stride = -1, bool ceil_mode = false){
     using namespace nt;
-    // if(!DTypeFuncs::is_floating(input.dtype) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
+    // if(!DTypeFuncs::is_floating(input.dtype()) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
     if(stride == -1) stride = kernel_size;
     utils::my_tuple padding = 0;
     check_pool_args(input, -1, kernel_size[1], stride[1], padding[1]);
@@ -82,12 +82,12 @@ nt::Tensor backward_lp_pool2d(nt::Tensor input, nt::Tensor output_grad,
 
     Scalar one(complex_64(1,1));
 
-    // Tensor grad = functional::zeros(in_shape, output_grad.dtype);
+    // Tensor grad = functional::zeros(in_shape, output_grad.dtype());
     // Tensor strided = grad.unfold(-2, kernel_size[0], stride[0]);
     // strided = strided.unfold(-2, kernel_size[1], stride[1]).flatten(-2, -1);
 
     if(power.isEqual(one)){
-        Tensor grad = functional::zeros(in_shape, output_grad.dtype);
+        Tensor grad = functional::zeros(in_shape, output_grad.dtype());
         Tensor strided = grad.unfold(-2, kernel_size[0], stride[0]);
         strided = strided.unfold(-2, kernel_size[1], stride[1]).flatten(-2, -1);
         while(output_grad.dims() < strided.dims()){

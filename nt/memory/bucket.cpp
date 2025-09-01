@@ -25,7 +25,7 @@ namespace nt{
 //granted the above is mainly if the dtype you are getting is DType::TensorObj
 //However, it is still a dtype and an important one at that, so it must be accounted for
 
-Bucket::Bucket(nt::intrusive_ptr<DeviceHolder> buckets, nt::intrusive_ptr<void*[]> strides, int64_t strideS, int64_t bS, bool blocked, DType dt)
+Bucket::Bucket(nt::intrusive_ptr<DeviceHolder> buckets, nt::intrusive_tracked_list<void*> strides, int64_t strideS, int64_t bS, bool blocked, DType dt)
 	:buckets_(buckets),
 	strides_(strides),
 	stride_size(strideS),
@@ -68,7 +68,7 @@ Bucket Bucket::blocked_strides_clone_tensor() const {
 	nt::intrusive_ptr<DeviceHolder> nData = make_intrusive<DeviceHolder>(1);
 	(*nData)[0] = make_device(dCPU);
 	(*nData)[0]->allocate_memory(DType::TensorObj, nsize);
-	nt::intrusive_ptr<void*[]> nStrides(2);
+	nt::intrusive_tracked_list<void*> nStrides(2);
 	nStrides[0] = (*nData)[0]->get_memory();
 	nStrides[1] = reinterpret_cast<Tensor*>((*nData)[0]->get_memory()) + nsize;
 	Tensor* begin = reinterpret_cast<Tensor*>((*nData)[0]->get_memory());
@@ -101,7 +101,7 @@ Bucket Bucket::strided_clone_tensor() const {
 	nt::intrusive_ptr<DeviceHolder> nData = make_intrusive<DeviceHolder>(1);
 	(*nData)[0] = make_device(dCPU);
 	(*nData)[0]->allocate_memory(DType::TensorObj, nsize);
-	nt::intrusive_ptr<void*[]> nStrides(2);
+	nt::intrusive_tracked_list<void*> nStrides(2);
 	nStrides[0] = (*nData)[0].get();
 	nStrides[2] = reinterpret_cast<Tensor*>( (*nData)[0]->get_memory()) + nsize;
 	Tensor* begin = reinterpret_cast<Tensor*>( (*nData)[0]->get_memory());
@@ -393,7 +393,7 @@ Bucket Bucket::force_contiguity_and_bucket() const{
 			}
 			utils::THROW_EXCEPTION(end > begin, "Cannot force contiguity");
 			int64_t n_size = (end - begin) / d_size;
-			intrusive_ptr<void*[]> nStrides(n_size);
+			intrusive_tracked_list<void*> nStrides(n_size);
 			void** o_begin = nStrides.get();
 			for(;begin < end; begin += d_size, ++o_begin)
 				*o_begin = begin;
@@ -430,7 +430,7 @@ Bucket Bucket::force_contiguity_and_bucket() const{
 		}
 		n_size /= d_size;
 		//now create the strides;
-		intrusive_ptr<void*[]> nStrides(n_size);
+		intrusive_tracked_list<void*> nStrides(n_size);
 		//now bucket all the strides
 		void** n_begin = nStrides.get();
 		for(int64_t i = 0; i < bs; ++i){
@@ -462,7 +462,7 @@ Bucket Bucket::force_contiguity_and_bucket() const{
 		}
 		size_t d_size = DTypeFuncs::size_of_dtype(dtype);
 		int64_t n_size = (end - begin) / d_size;
-		intrusive_ptr<void*[]> nStrides(n_size);
+		intrusive_tracked_list<void*> nStrides(n_size);
 		void** o_begin = nStrides.get();
 		for(;begin != end; begin += d_size, ++o_begin)
 			*o_begin = begin;	
@@ -495,7 +495,7 @@ Bucket Bucket::force_contiguity_and_bucket() const{
 		n_size += (blocks[i].second - blocks[i].first) + d_size;
 	}
 	n_size /= d_size;
-	intrusive_ptr<void*[]> nStrides(n_size);
+	intrusive_tracked_list<void*> nStrides(n_size);
 	void** n_begin = nStrides.get();
 	for(int64_t i = 0; i < bs; ++i){
 		uint8_t* begin = blocks[i].first;
@@ -573,7 +573,7 @@ Bucket Bucket::bound_force_contiguity_bucket() const{
 	//last bucket
 	n_size += blocks[1] - cpy_last_bucket_f;
 	n_size /= d_size;
-	intrusive_ptr<void*[]> nStrides(n_size);
+	intrusive_tracked_list<void*> nStrides(n_size);
 	void** o_begin = nStrides.get();
 
 	//do the first bucket:
@@ -621,7 +621,7 @@ Bucket Bucket::force_contiguity(int64_t n_size) const{
 	/* intrusive_ptr<intrusive_ptr<void>> nData(1); */ //it used to be a new data would be made
 							   //however, with the device adaptation, the same intrusive_ptr is just coppied over
 							   //which is much less memory-intensive and faster than the old version
-	intrusive_ptr<void*[]> nStrides(2);
+	intrusive_tracked_list<void*> nStrides(2);
 	//get difference between current strides at 0:
 	
 	/* uint64_t start = (reinterpret_cast<const uint8_t*>(strides_[0]) - reinterpret_cast<const uint8_t*>((*buckets_)[0].get())); */
@@ -738,7 +738,7 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
         // std::cout << "contiguous new bounds"<<std::endl;
 		/* nt::intrusive_ptr<nt::intrusive_ptr<void>> nData(1); */
 		/* nData[0] = (*buckets_)[0] + (start * dtype_s); */
-		nt::intrusive_ptr<void*[]> nStrides(2);
+		nt::intrusive_tracked_list<void*> nStrides(2);
 		nStrides[0] = reinterpret_cast<uint8_t*>(*(stride_begin())) + (start * dtype_s);
 		nStrides[1] = reinterpret_cast<uint8_t*>(*(stride_begin())) + (end   * dtype_s);
 		return Bucket(buckets_, std::move(nStrides), 2, 1, true, dtype);
@@ -774,7 +774,7 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
 	if(ntSize >= end){
 		/* nt::intrusive_ptr<nt::intrusive_ptr<void>> nData(1); */
 		/* nData[0] = (*buckets_)[checked_begin] + (start * dtype_s); */
-		nt::intrusive_ptr<void*[]> nStrides(2);
+		nt::intrusive_tracked_list<void*> nStrides(2);
 		nStrides[0] = reinterpret_cast<uint8_t*>(*(stride_begin() + checked_begin)) + (start * dtype_s);
 		nStrides[1] = reinterpret_cast<uint8_t*>(*(stride_begin() + checked_begin)) + (end   * dtype_s);
         return Bucket(buckets_, std::move(nStrides), 2, 1, true, dtype);
@@ -790,7 +790,7 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
     // std::cout << "ntSize: "<<ntSize<<std::endl;
 	checked_end = (checked_end == stride_size) ? stride_size : checked_end+2;
     if(ntSize == end){
-        nt::intrusive_ptr<void*[]> nStrides(checked_end - checked_begin);
+        nt::intrusive_tracked_list<void*> nStrides(checked_end - checked_begin);
         const int64_t num_buckets = (checked_end-checked_begin) / 2;
         nStrides[0] = reinterpret_cast<uint8_t*>(*(stride_begin() + 0 + checked_begin)) + (start * dtype_s);
         nStrides[1] = reinterpret_cast<uint8_t*>(*(stride_begin() + 1 + checked_begin));
@@ -807,7 +807,7 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
     //similar to how start was used in the first stride
 	uint64_t nstride_size = checked_end - checked_begin;
 	nt::utils::THROW_EXCEPTION(nstride_size > 0, "nBS was 0 for new_bounds");
-	nt::intrusive_ptr<void*[]> nStrides(nstride_size);
+	nt::intrusive_tracked_list<void*> nStrides(nstride_size);
 	start *= dtype_s;
 	end *= dtype_s;
 	/* nData[0] = (*buckets_)[checked_begin] + start; */
@@ -843,16 +843,372 @@ Bucket Bucket::new_bounds(uint64_t start, uint64_t end) const{
 
 Bucket Bucket::makeNullBucket(DType dt, int64_t stride_size){
 	intrusive_ptr<DeviceHolder> nData;
-	intrusive_ptr<void*[]> nStrides(stride_size);
+	intrusive_tracked_list<void*> nStrides(stride_size);
 	return Bucket(std::move(nData), std::move(nStrides), stride_size, 0, false, dt);
 }
 
 Bucket Bucket::makeCopyBucket(DType dt, const intrusive_ptr<DeviceHolder>& bucks, bool blocked, int64_t bS, int64_t stride_size){
-	return Bucket(bucks, intrusive_ptr<void*[]>(stride_size), stride_size, bS, blocked, dt);
+	return Bucket(bucks, intrusive_tracked_list<void*>(stride_size), stride_size, bS, blocked, dt);
 }
 
-//this assumes all the data is just a contiguous dataset
+#ifndef USE_PARALLEL
+template<>
+Bucket Bucket::range_contiguous_<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    int64_t msize = this->size();
+    for(const auto& pair : ranges){
+        utils::THROW_EXCEPTION(pair.first < pair.second && pair.second <= msize,
+                               "Pair {$, $} is not valid for a numel of $", 
+                               pair.first, pair.second, msize);
+    }
+	const int64_t dtype_s = static_cast<int64_t>(DTypeFuncs::size_of_dtype(this->dtype));
+    int64_t out_stride_size = ranges.size();
+    Bucket out(this->buckets_, intrusive_tracked_list<void*>(out_stride_size * 2), out_stride_size * 2,
+               this->bs, true, this->dtype);
+    int64_t counter = 0;
+    for(const auto& pair : ranges){
+        out.strides_[counter] = reinterpret_cast<uint8_t*>(*this->stride_begin()) + (pair.first * dtype_s);
+        ++counter;
+        out.strides_[counter] = reinterpret_cast<uint8_t*>(*this->stride_begin()) + (pair.second * dtype_s);
+    }
+    return std::move(out);
+}
 
+#else
+template<>
+Bucket Bucket::range_contiguous_<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    int64_t msize = this->size();
+    for(const auto& pair : ranges){
+        utils::THROW_EXCEPTION(pair.first < pair.second && pair.second <= msize,
+                               "Pair {$, $} is not valid for a numel of $", 
+                               pair.first, pair.second, msize);
+    }
+	const int64_t dtype_s = static_cast<int64_t>(DTypeFuncs::size_of_dtype(this->dtype));
+    int64_t out_stride_size = static_cast<int64_t>(ranges.size());
+    Bucket out(this->buckets_, intrusive_tracked_list<void*>(out_stride_size * 2), out_stride_size * 2,
+               this->bs, true, this->dtype);
+    // int64_t counter = 0;
+    tbb::parallel_for(utils::calculateGrainSize1D(0, out_stride_size), [&](const auto range){
+    for(int64_t i = range.begin(); i != range.end(); ++i){
+        int64_t counter = i * 2;
+        const auto& pair = ranges[i];
+        out.strides_[counter] = reinterpret_cast<uint8_t*>(*this->stride_begin()) + (pair.first * dtype_s);
+        ++counter;
+        out.strides_[counter] = reinterpret_cast<uint8_t*>(*this->stride_begin()) + (pair.second * dtype_s);
+    }
+    });
+    return std::move(out);
+}
+
+#endif
+
+template<>
+Tensor Bucket::range_contiguous_<Tensor>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    ArrayVoid out(this->range_contiguous_<Bucket>(std::move(ranges)));
+    SizeRef ref({out.Size()});
+    return Tensor(std::move(out), std::move(ref));
+}
+
+#ifndef USE_PARALLEL
+template<>
+Bucket Bucket::range_strided_<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    int64_t msize = this->size();
+    int64_t out_stride_size = 0;
+    for(const auto& pair : ranges){
+        utils::THROW_EXCEPTION(pair.first < pair.second && pair.second <= msize,
+                               "Pair {$, $} is not valid for a numel of $", 
+                               pair.first, pair.second, msize);
+        out_stride_size += (pair.second - pair.first);
+    }
+	const int64_t dtype_s = static_cast<int64_t>(DTypeFuncs::size_of_dtype(this->dtype));
+    Bucket out(this->buckets_, intrusive_tracked_list<void*>(out_stride_size), out_stride_size,
+               this->bs, false, this->dtype);
+    int64_t counter = 0;
+    for(const auto& pair : ranges){
+        int64_t count = (pair.second - pair.first);
+        std::copy(this->strides_.get() + pair.first,
+                  this->strides_.get() + pair.second,
+                  out.strides_.get() + counter);
+        counter += count;
+    }
+    return std::move(out);
+}
+#else
+
+template<>
+Bucket Bucket::range_strided_<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    int64_t msize = this->size();
+    int64_t out_stride_size = 0;
+    for(const auto& pair : ranges){
+        utils::THROW_EXCEPTION(pair.first < pair.second && pair.second <= msize,
+                               "Pair {$, $} is not valid for a numel of $", 
+                               pair.first, pair.second, msize);
+        out_stride_size += (pair.second - pair.first);
+    }
+	const int64_t dtype_s = static_cast<int64_t>(DTypeFuncs::size_of_dtype(this->dtype));
+    Bucket out(this->buckets_, intrusive_tracked_list<void*>(out_stride_size), out_stride_size,
+               this->bs, false, this->dtype);
+    tbb::parallel_for(utils::calculateGrainSize1D(0, ranges.size()), [&](const auto range){
+    int64_t counter = 0;
+    for(int64_t i = 0; i < range.begin(); ++i){
+        counter += (ranges[i].second - ranges[i].first);
+    }
+    for(int64_t i = range.begin(); i != range.end(); ++i){
+        const auto& pair = ranges[i];
+        int64_t count = (pair.second - pair.first);
+        std::copy(this->strides_.get() + pair.first,
+                  this->strides_.get() + pair.second,
+                  out.strides_.get() + counter);
+        counter += count;
+    }
+    });
+    return std::move(out);
+}
+
+
+#endif
+
+template<>
+Tensor Bucket::range_strided_<Tensor>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    ArrayVoid out(this->range_strided_<Bucket>(std::move(ranges)));
+    SizeRef ref({out.Size()});
+    return Tensor(std::move(out), std::move(ref));
+}
+
+#ifndef USE_PARALLEL
+
+template<>
+Bucket Bucket::range_bucketed_<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    int64_t msize = this->size();
+    for(const auto& pair : ranges){
+        utils::THROW_EXCEPTION(pair.first < pair.second && pair.second <= msize,
+                               "Pair {$, $} is not valid for a numel of $", 
+                               pair.first, pair.second, msize);
+        
+    }
+
+    // make all the vectors
+    std::vector<
+        intrusive_tracked_list<void*>
+            > ptrs(ranges.size(), intrusive_tracked_list<void*>(nullptr));
+	const int64_t dtype_s = static_cast<int64_t>(DTypeFuncs::size_of_dtype(this->dtype));
+    std::vector<int64_t> ptr_sizes(ranges.size(), 0);
+    for(int64_t i = 0; i < ranges.size(); ++i){
+        const auto& pair = ranges[i];
+        int64_t start = 0;
+        int64_t current = pair.first * dtype_s;
+        int64_t current_e = pair.second * dtype_s;
+        for(; start < this->stride_size; ++start){
+            uint8_t* begin = reinterpret_cast<uint8_t*>(strides_[start]);
+            ++start;
+            uint8_t* end = reinterpret_cast<uint8_t*>(strides_[start]);
+            std::ptrdiff_t cur_size = end - begin; 
+            if(cur_size < current){current -= cur_size; current_e -= cur_size; continue;}
+            if(cur_size > current_e){
+                ptr_sizes[i] = 2;
+                ptrs[i] = intrusive_tracked_list<void*>(2);
+                ptrs[i][0] = begin + current;
+                ptrs[i][1] = begin + current_e;
+                break;
+            }
+            if(cur_size == current_e){
+                ptr_sizes[i] = 2;
+                ptrs[i] = intrusive_tracked_list<void*>(2);
+                ptrs[i][0] = begin + current;
+                ptrs[i][1] = end;
+                break;
+            }
+            if(cur_size == current){
+                current_e -= current;
+                current = 0;
+                start += 2;
+            }
+            --start;
+            break;
+        }
+        if(ptr_sizes[i] == 2) continue;
+        int64_t stop = start;
+        if(current != 0){
+            current_e -= current;
+            stop += 2;
+        }
+        for(; stop < this->stride_size; ++stop){
+            uint8_t* begin = reinterpret_cast<uint8_t*>(strides_[stop]);
+            ++stop;
+            uint8_t* end = reinterpret_cast<uint8_t*>(strides_[stop]);
+            std::ptrdiff_t cur_size = end - begin; 
+            if(cur_size < current_e){current_e -= cur_size; continue;}
+            ++stop;
+            if(cur_size > current_e){
+                ptr_sizes[i] = (stop - start);
+                ptrs[i] = intrusive_tracked_list<void*>(stop - start);
+                ptrs[i][0] = reinterpret_cast<uint8_t*>(strides_[start]) + current;
+                ptrs[i][1] = reinterpret_cast<uint8_t*>(strides_[start+1]);
+                for(int64_t j = 2; j < ptr_sizes[i]-1; ++j){
+                    ptrs[i][j] = strides_[start+j];
+                }
+                ptrs[i][ptr_sizes[i]-1] = begin + current_e;
+                break;
+            }
+            if(cur_size == current_e){
+                ptr_sizes[i] = (stop - start);
+                ptrs[i] = intrusive_tracked_list<void*>(stop - start);
+                ptrs[i][0] = reinterpret_cast<uint8_t*>(strides_[start]) + current;
+                ptrs[i][1] = reinterpret_cast<uint8_t*>(strides_[start+1]);
+                for(int64_t j = 2; j < ptr_sizes[i]-1; ++j){
+                    ptrs[i][j] = strides_[start+j];
+                }
+                ptrs[i][ptr_sizes[i]-1] = end;
+                break;
+            }
+            break;
+ 
+        }
+        utils::THROW_EXCEPTION(ptr_sizes[i] != 0, "Error, ranges not set");
+    }
+    
+    // accumulate all the buckets into 1
+    int64_t out_stride_size = std::accumulate(ptr_sizes.cbegin(), ptr_sizes.cend(), 0);
+    Bucket out(this->buckets_, intrusive_tracked_list<void*>(out_stride_size), out_stride_size,
+               this->bs, true, this->dtype);
+    void** cur = std::copy(ptrs[0].get(), ptrs[0].get() + ptr_sizes[0], out.strides_.get());
+    for(size_t i = 1; i < ranges.size(); ++i){
+        cur = std::copy(ptrs[i].get(), ptrs[i].get() + ptr_sizes[i], cur);
+    }
+    return std::move(out);
+}
+
+#else
+
+
+template<>
+Bucket Bucket::range_bucketed_<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    int64_t msize = this->size();
+    for(const auto& pair : ranges){
+        utils::THROW_EXCEPTION(pair.first < pair.second && pair.second <= msize,
+                               "Pair {$, $} is not valid for a numel of $", 
+                               pair.first, pair.second, msize);
+        
+    }
+
+    // make all the vectors
+    std::vector<
+        intrusive_tracked_list<void*>
+            > ptrs(ranges.size(), intrusive_tracked_list<void*>(nullptr));
+	const int64_t dtype_s = static_cast<int64_t>(DTypeFuncs::size_of_dtype(this->dtype));
+    std::vector<int64_t> ptr_sizes(ranges.size(), 0);
+    tbb::parallel_for(utils::calculateGrainSize1D(0, ranges.size()), [&](const auto range){
+    for(int64_t i = range.begin(); i < range.end(); ++i){
+        const auto& pair = ranges[i];
+        int64_t start = 0;
+        int64_t current = pair.first * dtype_s;
+        int64_t current_e = pair.second * dtype_s;
+        for(; start < this->stride_size; ++start){
+            uint8_t* begin = reinterpret_cast<uint8_t*>(strides_[start]);
+            ++start;
+            uint8_t* end = reinterpret_cast<uint8_t*>(strides_[start]);
+            std::ptrdiff_t cur_size = end - begin; 
+            if(cur_size < current){current -= cur_size; current_e -= cur_size; continue;}
+            if(cur_size > current_e){
+                ptr_sizes[i] = 2;
+                ptrs[i] = intrusive_tracked_list<void*>(2);
+                ptrs[i][0] = begin + current;
+                ptrs[i][1] = begin + current_e;
+                break;
+            }
+            if(cur_size == current_e){
+                ptr_sizes[i] = 2;
+                ptrs[i] = intrusive_tracked_list<void*>(2);
+                ptrs[i][0] = begin + current;
+                ptrs[i][1] = end;
+                break;
+            }
+            if(cur_size == current){
+                current_e -= current;
+                current = 0;
+                start += 2;
+            }
+            --start;
+            break;
+        }
+        if(ptr_sizes[i] == 2) continue;
+        int64_t stop = start;
+        if(current != 0){
+            current_e -= current;
+            stop += 2;
+        }
+        for(; stop < this->stride_size; ++stop){
+            uint8_t* begin = reinterpret_cast<uint8_t*>(strides_[stop]);
+            ++stop;
+            uint8_t* end = reinterpret_cast<uint8_t*>(strides_[stop]);
+            std::ptrdiff_t cur_size = end - begin;
+            if(cur_size < current_e){current_e -= cur_size; continue;}
+            ++stop;
+            if(cur_size > current_e){
+                ptr_sizes[i] = (stop - start);
+                ptrs[i] = intrusive_tracked_list<void*>(stop - start);
+                ptrs[i][0] = reinterpret_cast<uint8_t*>(strides_[start]) + current;
+                ptrs[i][1] = reinterpret_cast<uint8_t*>(strides_[start+1]);
+                for(int64_t j = 2; j < ptr_sizes[i]-1; ++j){
+                    ptrs[i][j] = strides_[start+j];
+                }
+                ptrs[i][ptr_sizes[i]-1] = begin + current_e;
+                break;
+            }
+            if(cur_size == current_e){
+                ptr_sizes[i] = (stop - start);
+                ptrs[i] = intrusive_tracked_list<void*>(stop - start);
+                ptrs[i][0] = reinterpret_cast<uint8_t*>(strides_[start]) + current;
+                ptrs[i][1] = reinterpret_cast<uint8_t*>(strides_[start+1]);
+                for(int64_t j = 2; j < ptr_sizes[i]-1; ++j){
+                    ptrs[i][j] = strides_[start+j];
+                }
+                ptrs[i][ptr_sizes[i]-1] = end;
+                break;
+            }
+            break;
+ 
+        }
+        utils::THROW_EXCEPTION(ptr_sizes[i] != 0, "Error, ranges not set");
+    }
+    });
+    // accumulate all the buckets into 1
+    int64_t out_stride_size = std::accumulate(ptr_sizes.cbegin(), ptr_sizes.cend(), 0);
+    Bucket out(this->buckets_, intrusive_tracked_list<void*>(out_stride_size), out_stride_size,
+               this->bs, true, this->dtype);
+    void** cur = std::copy(ptrs[0].get(), ptrs[0].get() + ptr_sizes[0], out.strides_.get());
+    for(size_t i = 1; i < ranges.size(); ++i){
+        cur = std::copy(ptrs[i].get(), ptrs[i].get() + ptr_sizes[i], cur);
+    }
+    return std::move(out);
+}
+
+
+#endif
+
+template<>
+Tensor Bucket::range_bucketed_<Tensor>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+    ArrayVoid out(this->range_bucketed_<Bucket>(std::move(ranges)));
+    SizeRef ref({out.Size()});
+    return Tensor(std::move(out), std::move(ref));
+}
+
+template <>
+Bucket Bucket::range<Bucket>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+	if(!strides_blocked){return range_strided_<Bucket>(std::move(ranges));}
+	if(is_contiguous()){return range_contiguous_<Bucket>(std::move(ranges));}
+	return range_bucketed_<Bucket>(std::move(ranges));
+}
+
+template <>
+Tensor Bucket::range<Tensor>(std::vector<std::pair<int64_t, int64_t>> ranges) const {
+	if(!strides_blocked){
+        return this->range_strided_<Tensor>(std::move(ranges));
+    }
+	if(is_contiguous()){return this->range_contiguous_<Tensor>(std::move(ranges));}
+	return this->range_bucketed_<Tensor>(std::move(ranges));
+}
+
+//this assumes all the data is just a contiguous string of elements
 template <>
 std::vector<Bucket> Bucket::split_contiguous_<std::vector<Bucket>>(uint64_t splitting) const{
 	int64_t msize = size();
@@ -862,7 +1218,7 @@ std::vector<Bucket> Bucket::split_contiguous_<std::vector<Bucket>>(uint64_t spli
 	uint64_t div = msize / splitting;
 	uint64_t remainder = msize % splitting;
 	bool r = remainder > 0;
-	std::vector<Bucket > fb( (r) ? div + 1 : div, makeCopyBucket(dtype, buckets_, true, bs, 2));
+	std::vector<Bucket > fb( (r) ? div + 1 : div, makeCopyBucket(/*dt = */ dtype, /*buckets = */ this->buckets_, /*blocked = */ true, /*bucket size=*/ bs, 2));
 	
 	const std::size_t dtype_s = DTypeFuncs::size_of_dtype(dtype);
 	uint64_t current = 0;
@@ -909,15 +1265,13 @@ Tensor Bucket::split_contiguous_<Tensor>(uint64_t splitting) const{
 
 	for(uint64_t i = 0; i < div; ++i, ++begin){
 		begin->_vals.bucket.buckets_ = buckets_;
-		begin->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+		begin->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 		begin->_vals.bucket.strides_[0] = reinterpret_cast<uint8_t*>(*stride_begin())                + current;
 		begin->_vals.bucket.strides_[1] = reinterpret_cast<uint8_t*>(begin->_vals.bucket.strides_[0]) + adding;
 
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = 2;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = true;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = splitting;
 		begin->_vals.size = splitting;
@@ -926,15 +1280,13 @@ Tensor Bucket::split_contiguous_<Tensor>(uint64_t splitting) const{
 	if(r){
 		
 		begin->_vals.bucket.buckets_ = buckets_;
-		begin->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+		begin->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 		begin->_vals.bucket.strides_[0] = reinterpret_cast<uint8_t*>(*stride_begin())                + current;
 		begin->_vals.bucket.strides_[1] = *stride_end();
 
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = 2;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = true;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = remainder;
 		begin->_vals.size = remainder;
@@ -950,10 +1302,8 @@ Tensor Bucket::split_contiguous_<Tensor>(uint64_t splitting) const{
 		Tensor output = Tensor::makeNullTensorArray(1);
 		Tensor& t = output.item<Tensor>();
 		t._vals.bucket = *this;
-		t._vals.dtype = dtype;
 		t._vals.size = size();
 		t._total_size = size();
-		t.dtype = dtype;
 		t._size = SizeRef({t._total_size});
 		return output;
 	}
@@ -970,15 +1320,13 @@ Tensor Bucket::split_contiguous_<Tensor>(uint64_t splitting) const{
 	Tensor* end = begin + (range.end() - range.begin());
 	for(;begin != end; ++begin){
 		begin->_vals.bucket.buckets_ = buckets_;
-		begin->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+		begin->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 		begin->_vals.bucket.strides_[0] = reinterpret_cast<uint8_t*>(*stride_begin())                + current;
 		begin->_vals.bucket.strides_[1] = reinterpret_cast<uint8_t*>(begin->_vals.bucket.strides_[0]) + adding;
 
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = 2;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = true;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = splitting;
 		begin->_vals.size = splitting;
@@ -988,15 +1336,13 @@ Tensor Bucket::split_contiguous_<Tensor>(uint64_t splitting) const{
 	if(r){
 		Tensor* begin = reinterpret_cast<Tensor*>(array.data_ptr()) + div;
 		begin->_vals.bucket.buckets_ = buckets_;
-		begin->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+		begin->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 		begin->_vals.bucket.strides_[0] = reinterpret_cast<uint8_t*>(*stride_begin()) + (div * splitting);
 		begin->_vals.bucket.strides_[1] = *stride_end();
 
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = 2;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = true;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = remainder;
 		begin->_vals.size = remainder;
@@ -1054,10 +1400,8 @@ Tensor Bucket::split_strided_<Tensor>(uint64_t splitting) const{
 		Tensor output = Tensor::makeNullTensorArray(1);
 		Tensor& t = output.item<Tensor>();
 		t._vals.bucket = *this;
-		t._vals.dtype = dtype;
 		t._vals.size = size();
 		t._total_size = size();
-		t.dtype = dtype;
 		t._size = SizeRef({t._total_size});
 		return output;
 	}
@@ -1075,8 +1419,6 @@ Tensor Bucket::split_strided_<Tensor>(uint64_t splitting) const{
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = splitting;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = false;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = splitting;
 		begin->_vals.size = splitting;
@@ -1091,8 +1433,6 @@ Tensor Bucket::split_strided_<Tensor>(uint64_t splitting) const{
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = end_size;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = false;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = end_size; 
 		begin->_vals.size = end_size;
@@ -1111,10 +1451,8 @@ Tensor Bucket::split_strided_<Tensor>(uint64_t splitting) const{
 		Tensor output = Tensor::makeNullTensorArray(1);
 		Tensor& t = output.item<Tensor>();
 		t._vals.bucket = *this;
-		t._vals.dtype = dtype;
 		t._vals.size = size();
 		t._total_size = size();
-		t.dtype = dtype;
 		t._size = SizeRef({t._total_size});
 		return output;
 	}
@@ -1134,8 +1472,6 @@ Tensor Bucket::split_strided_<Tensor>(uint64_t splitting) const{
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = splitting;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = false;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = splitting;
 		begin->_vals.size = splitting;
@@ -1156,8 +1492,6 @@ Tensor Bucket::split_strided_<Tensor>(uint64_t splitting) const{
 		const_cast<int64_t&>(begin->_vals.bucket.stride_size) = end_size;
 		const_cast<int64_t&>(begin->_vals.bucket.bs) = bs;
 		begin->_vals.bucket.strides_blocked = false;
-		begin->dtype = dtype;
-		begin->_vals.dtype = dtype;
 		begin->_vals.bucket.dtype = dtype;
 		begin->_total_size = end_size; 
 		begin->_vals.size = end_size;
@@ -1194,7 +1528,7 @@ std::vector<Bucket> Bucket::split_bucketed_<std::vector<Bucket>>(uint64_t splitt
 		std::ptrdiff_t distance = (end - begin);
 		if(r && i == fb.size()-1){splitting = remainder;} //this accounts for the if(r)
 		if(distance > splitting){
-			fb[i].strides_ = intrusive_ptr<void*[]>(2);
+			fb[i].strides_ = intrusive_tracked_list<void*>(2);
 			fb[i].strides_[0] = begin;
 			begin += splitting;
 			fb[i].strides_[1] = begin;
@@ -1205,7 +1539,7 @@ std::vector<Bucket> Bucket::split_bucketed_<std::vector<Bucket>>(uint64_t splitt
 			continue;
 		}
 		if(distance == splitting){
-			fb[i].strides_ = intrusive_ptr<void*[]>(2);
+			fb[i].strides_ = intrusive_tracked_list<void*>(2);
 			fb[i].strides_[0] = begin;
 			fb[i].strides_[1] = end;
 			const_cast<int64_t&>(fb[i].stride_size) = 2;
@@ -1241,7 +1575,7 @@ std::vector<Bucket> Bucket::split_bucketed_<std::vector<Bucket>>(uint64_t splitt
 			distance += (end-begin);
 			if(distance < splitting){left -= (end-begin);}
 		}
-		fb[i].strides_ = intrusive_ptr<void*[]>(newStrides); //make the new strides for the output bucked
+		fb[i].strides_ = intrusive_tracked_list<void*>(newStrides); //make the new strides for the output bucked
 		const_cast<int64_t&>(fb[i].stride_size) = newStrides; // log the size of the strides
 		void** out_strides = fb[i].strides_.get(); // keep track of the strides of the output bucket (first begin)
 		while(original_begin != begin){
@@ -1284,10 +1618,8 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		Tensor output = Tensor::makeNullTensorArray(1);
 		Tensor& t = output.item<Tensor>();
 		t._vals.bucket = *this;
-		t._vals.dtype = dtype;
 		t._vals.size = size();
 		t._total_size = size();
-		t.dtype = dtype;
 		t._size = SizeRef({t._total_size});
 		return output;
 	}
@@ -1322,14 +1654,12 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		begin_t->_vals.bucket.buckets_ = buckets_;
 		begin_t->_total_size = splitting_tsize;
 		begin_t->_vals.size = splitting_tsize;
-		begin_t->dtype = dtype;
-		begin_t->_vals.dtype = dtype;
 		begin_t->_vals.bucket.dtype = dtype;
 		begin_t->_vals.bucket.strides_blocked = true;
 		const_cast<int64_t&>(begin_t->_vals.bucket.bs) = bs;
 	
 		if(distance > splitting){
-			begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+			begin_t->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 			begin_t->_vals.bucket.strides_[0] = begin;
 			begin += splitting;
 			begin_t->_vals.bucket.strides_[1] = begin;
@@ -1338,7 +1668,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 			continue;
 		}
 		if(distance == splitting){
-			begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+			begin_t->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 			begin_t->_vals.bucket.strides_[0] = begin;
 			begin_t->_vals.bucket.strides_[1] = end;
 			const_cast<int64_t&>(begin_t->_vals.bucket.stride_size) = 2;
@@ -1373,7 +1703,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 			distance += (end-begin);
 			if(distance < splitting){left -= (end-begin);}
 		}
-		begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(newStrides); //make the new strides for the output bucked
+		begin_t->_vals.bucket.strides_ = intrusive_tracked_list<void*>(newStrides); //make the new strides for the output bucked
 		const_cast<int64_t&>(begin_t->_vals.bucket.stride_size) = newStrides; // log the size of the strides
 		void** out_strides = begin_t->_vals.bucket.strides_.get(); // keep track of the strides of the output bucket (first begin)
 		while(original_begin != begin){
@@ -1418,10 +1748,8 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		Tensor output = Tensor::makeNullTensorArray(1);
 		Tensor& t = output.item<Tensor>();
 		t._vals.bucket = *this;
-		t._vals.dtype = dtype;
 		t._vals.size = size();
 		t._total_size = size();
-		t.dtype = dtype;
 		t._size = SizeRef({t._total_size});
 		return output;
 	}
@@ -1485,14 +1813,12 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 		begin_t->_vals.bucket.buckets_ = buckets_;
 		begin_t->_total_size = cur_splitting_t;
 		begin_t->_vals.size = cur_splitting_t;
-		begin_t->dtype = dtype;
-		begin_t->_vals.dtype = dtype;
 		begin_t->_vals.bucket.dtype = dtype;
 		begin_t->_vals.bucket.strides_blocked = true;
 		const_cast<int64_t&>(begin_t->_vals.bucket.bs) = bs;
 	
 		if(distance > cur_splitting){
-			begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+			begin_t->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 			begin_t->_vals.bucket.strides_[0] = begin;
 			begin += cur_splitting;
 			begin_t->_vals.bucket.strides_[1] = begin;
@@ -1501,7 +1827,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 			continue;
 		}
 		if(distance == cur_splitting){
-			begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(2);
+			begin_t->_vals.bucket.strides_ = intrusive_tracked_list<void*>(2);
 			begin_t->_vals.bucket.strides_[0] = begin;
 			begin_t->_vals.bucket.strides_[1] = end;
 			const_cast<int64_t&>(begin_t->_vals.bucket.stride_size) = 2;
@@ -1539,7 +1865,7 @@ Tensor Bucket::split_bucketed_<Tensor>(uint64_t splitting) const{
 			//update the remaining distance
 			if(distance < cur_splitting){left -= (end-begin);}
 		}
-		begin_t->_vals.bucket.strides_ = intrusive_ptr<void*[]>(newStrides); //make the new strides for the output bucked
+		begin_t->_vals.bucket.strides_ = intrusive_tracked_list<void*>(newStrides); //make the new strides for the output bucked
 		const_cast<int64_t&>(begin_t->_vals.bucket.stride_size) = newStrides; // log the size of the strides
 		void** out_strides = begin_t->_vals.bucket.strides_.get(); // keep track of the strides of the output bucket (first begin)
 		while (original_begin != begin) {
@@ -1617,7 +1943,7 @@ Bucket Bucket::bucket_all_indices() const{
 	if(!strides_blocked){return *this;}
 	const uint32_t dtype_s = DTypeFuncs::size_of_dtype(dtype);
 	const int64_t n_stride_size = size();
-	nt::intrusive_ptr<void*[]> nStrides(n_stride_size);
+	nt::intrusive_tracked_list<void*> nStrides(n_stride_size);
 	void** arr = nStrides.get();
 	for(uint64_t i = 0; i < stride_size; ++i){
 		uint8_t* begin = reinterpret_cast<uint8_t*>(*(stride_begin() + i));
@@ -1633,7 +1959,7 @@ Bucket Bucket::bucket_all_indices() const{
 Bucket Bucket::copy_strides() const {
 	if(strides_blocked){return bucket_all_indices();}
 	const int64_t n_stride_size = size();
-	nt::intrusive_ptr<void*[]> nStrides(n_stride_size);
+	nt::intrusive_tracked_list<void*> nStrides(n_stride_size);
 	void** arr = nStrides.get();
 	void** current_strides = stride_begin();
 	void** current_end = stride_end();
@@ -1679,7 +2005,7 @@ Bucket Bucket::catV(const std::vector<Bucket>& buckets){
 	for(const auto& ref : buckets){
 		nstride_s += ref.stride_size;
 	}
-	nt::intrusive_ptr<void*[]> nStrides(nstride_s);
+	nt::intrusive_tracked_list<void*> nStrides(nstride_s);
 	uint64_t stride_index = 0;
 	for(const auto& ref : buckets){
 		Bucket::processCatData(ref, n_data, nStrides, stride_index);
@@ -1740,7 +2066,7 @@ Bucket Bucket::catV(const std::vector<std::reference_wrapper<const Bucket> >& bu
 	for(const auto& ref : buckets){
 		nstride_s += ref.get().stride_size;
 	}
-	nt::intrusive_ptr<void*[]> nStrides(nstride_s);
+	nt::intrusive_tracked_list<void*> nStrides(nstride_s);
 	uint64_t stride_index = 0;
 	for(const auto& ref : buckets){
 		Bucket::processCatData(ref.get(), n_data, nStrides, stride_index);

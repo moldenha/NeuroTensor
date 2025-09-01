@@ -2,7 +2,7 @@
 // #include "tests/tensorgrad_test.h"
 // #include "tests/layer_test.h"
 // #include "tests/tda_test.h"
-// #include "tests/nn_tda_test.h"
+#include "tests/nn_tda_test.h"
 // #include "tests/linalg_test.h"
 // #include "tests/fmri_test.h"
 
@@ -22,7 +22,7 @@ int main(){
     // eye_test();
     // nn_laplacian_2_test();
     // nn_laplacian_2_test_sub();
-    // nn_boundary_test();
+    nn_boundary_test();
     // row_swap_test();
     // softmax_test();
     // auto func1 = [](const nt::TensorGrad& x){return nt::functional::relu(x);}; 
@@ -32,7 +32,7 @@ int main(){
     // bool worked = test_gumbel_softmax_activation();
     // std::cout << std::boolalpha << "worked: "<<worked<<std::noboolalpha << std::endl;
     // symmetric_mult_test();
-    fractional_max_pool(2);
+    // fractional_max_pool(2);
 
     return 0;
 }

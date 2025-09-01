@@ -45,11 +45,11 @@ void DeviceSharedCPU::allocate_memory(const DType dt, const int64_t size){
 void DeviceSharedCPU::release_memory(){
 #ifdef USE_PARALLEL
 	if(memory_){
-		shmdt(memory_);
-		shmctl(shmid, IPC_RMID, nullptr);
 		utils::DeallocateMemory(DeviceType::CPUShared, static_cast<int64_t>(
 				reinterpret_cast<uint8_t*>(end_) -
 				reinterpret_cast<uint8_t*>(memory_)));
+		shmdt(memory_);
+		shmctl(shmid, IPC_RMID, nullptr);
 	}
 #endif
 	memory_ = nullptr;

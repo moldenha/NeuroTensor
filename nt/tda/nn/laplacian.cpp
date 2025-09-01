@@ -15,10 +15,10 @@ TensorGrad hodge_laplacian(TensorGrad radi_1, TensorGrad radi_2,
                            Tensor simplex_complex_2, Tensor simplex_complex_3){
     auto [x_indexes_kp1, y_indexes_kp1, boundaries_kp1] = 
             compute_differentiable_boundary_sparse_matrix_index(simplex_complex_3, simplex_complex_2,
-                                                                         radi_3.tensor, radi_2.tensor);
+                                                                         radi_3.detach(), radi_2.detach());
     auto [x_indexes_k, y_indexes_k, boundaries_k] = 
             compute_differentiable_boundary_sparse_matrix_index(simplex_complex_2, simplex_complex_1,
-                                                                         radi_2.tensor, radi_1.tensor);
+                                                                         radi_2.detach(), radi_1.detach());
     TensorGrad boundary_kp1 = radi_2.view(-1, 1) * radi_3;
     TensorGrad boundary_k = radi_1.view(-1, 1) * radi_2;
     {
@@ -28,7 +28,7 @@ TensorGrad hodge_laplacian(TensorGrad radi_1, TensorGrad radi_2,
         for(size_t i = 0; i < x_indexes_kp1.size(); ++i){
             access[x_indexes_kp1[i] * cols + y_indexes_kp1[i]] = (boundaries_kp1[i] < 1 ? -1 : 1.0);
         }
-        boundary_kp1 *= mult.to(boundary_kp1.dtype);
+        boundary_kp1 *= mult.to(boundary_kp1.dtype());
     }
     {
         Tensor mult = functional::zeros(boundary_k.shape(), DType::Float32);
@@ -186,7 +186,7 @@ inline double sigmoid(double x){
 TensorGrad findAllPaths(const TensorGrad& laplacian){
     std::vector<std::vector<int64_t>> all_paths;
     for(int64_t i = 0; i < laplacian.shape()[0]; ++i){
-        std::vector<std::vector<int64_t>> paths = findAllPaths(laplacian.tensor, i);
+        std::vector<std::vector<int64_t>> paths = findAllPaths(laplacian.detach(), i);
         all_paths.insert(all_paths.end(), paths.begin(), paths.end());
     }
     Tensor out = Tensor::makeNullTensorArray(all_paths.size());
@@ -196,12 +196,12 @@ TensorGrad findAllPaths(const TensorGrad& laplacian){
     for(;begin != end; ++begin, ++path_begin){
         *begin = functional::vector_to_tensor(*path_begin);
     }
-    if(!laplacian.do_track_grad){
+    if(!laplacian.track_grad()){
         return TensorGrad(out, false);
     }
 
     TensorGrad path(out, true);
-    Tensor _lap = laplacian.tensor.clone();
+    Tensor _lap = laplacian.detach().clone();
     TensorGrad::redefine_tracking(path, laplacian,
     [_lap](const Tensor& wanted_paths, intrusive_ptr<TensorGrad>& parent){
         Tensor wanted_laplacian = functional::zeros(_lap.shape(), DType::Float32);
@@ -241,7 +241,7 @@ TensorGrad findAllPaths(const TensorGrad& laplacian){
         beta = sigmoid(static_cast<double>(false_positives) / total);
 
 
-        Tensor weight = functional::ones(wanted_laplacian.shape(), wanted_laplacian.dtype);
+        Tensor weight = functional::ones(wanted_laplacian.shape(), wanted_laplacian.dtype());
         //  false negatives weight:
         // weight[wanted_laplacian == 1 && present_lap != 1] = 1.0;
         // false positives weight:
@@ -278,7 +278,7 @@ TensorGrad findAllPaths(const TensorGrad& laplacian){
         // std::cout << "total positive: "<<nt::functional::count(diff > 0) << std::endl;
         std::cout << "false positives: "<<false_positives << std::endl;
         std::cout << "false negatives: " << false_negatives << std::endl;
-        parent->grad->tensor = -dL;
+        parent->grad() = -dL;
     });
     return std::move(path);
 }

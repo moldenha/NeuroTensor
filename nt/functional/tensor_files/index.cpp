@@ -4,6 +4,7 @@
 #include "../../mp/Threading.h"
 #include "exceptions.hpp"
 #include "../../utils/macros.h"
+#include "../../dtype/ArrayVoid.hpp"
 
 namespace nt{
 namespace functional{
@@ -54,11 +55,11 @@ Tensor at(const Tensor& self, const Tensor &t) {
     using size_value_t = Tensor::size_value_t;
 
     utils::THROW_EXCEPTION(
-        t.dtype == DType::Bool || t.dtype == DType::TensorObj || t.dtype == DType::int64,
-        "RuntimeError: expected DType Bool, TensorObj, or int64 but got $", t.dtype);
-    if (t.dtype == DType::TensorObj) {
+        t.dtype() == DType::Bool || t.dtype() == DType::TensorObj || t.dtype() == DType::int64,
+        "RuntimeError: expected DType Bool, TensorObj, or int64 but got $", t.dtype());
+    if (t.dtype() == DType::TensorObj) {
         //if it is operations of tensors of tensors, then jus repeat the operation
-        if(self.dtype == DType::TensorObj){
+        if(self.dtype() == DType::TensorObj){
             Tensor output = Tensor::makeNullTensorArray(self.numel());
             Tensor* ts_begin = reinterpret_cast<Tensor*>(output.data_ptr());
             Tensor* ts_end = ts_begin + self.numel();
@@ -81,9 +82,9 @@ Tensor at(const Tensor& self, const Tensor &t) {
         const Tensor *begin_cpy = begin;
         for (; begin != end; ++begin)
             utils::THROW_EXCEPTION(
-                begin->dtype == DType::int64 && begin->is_contiguous(),
+                begin->dtype() == DType::int64 && begin->is_contiguous(),
                 "Expected indexing tensor to have dtype int64 but got $ and expected to be contiguous",
-                begin->dtype);
+                begin->dtype());
         begin = begin_cpy;
 
         // making the strides for indexing:
@@ -117,7 +118,7 @@ Tensor at(const Tensor& self, const Tensor &t) {
         Tensor output(new_vals, {static_cast<size_value_t>(n_size)});
         return output.set_mutability(self.is_mutable()); 
     }
-    else if (t.dtype == DType::int64){
+    else if (t.dtype() == DType::int64){
        utils::THROW_EXCEPTION(
             t.is_contiguous(),
             "RuntimeError: Expected indexing tensor to be contiguous");
@@ -125,6 +126,23 @@ Tensor at(const Tensor& self, const Tensor &t) {
         const int64_t* t_end = reinterpret_cast<const int64_t*>(t.data_ptr_end());
         if(self.dims() == 1){
             const size_value_t &n_size = t.numel();
+            if(self.dtype() == DType::TensorObj){
+                //it is important that it is a null tensor array and that each tensor is coppied
+                //otherwise ownership is not properly handled
+                //and when going out of scope, there will be a double-free error
+                Tensor output = Tensor::makeNullTensorArray(n_size);
+                self.arr_void().cexecute_function([&](auto my_begin, auto my_end){
+                    const int64_t& max =self.shape()[0];
+                    Tensor* out_begin = reinterpret_cast<Tensor*>(output.data_ptr());
+                    for(;t_begin != t_end; ++t_begin, ++out_begin){
+                        utils::THROW_EXCEPTION(*t_begin < max,
+                                        "Trying to get index of tensor at dim 0 of $ with that dimension only holding $", *t_begin, max);
+                        *out_begin = my_begin[*t_begin];
+                    }
+ 
+                });
+                return std::move(output);
+            }
             ArrayVoid my_vals = self.arr_void().bucket_all_indices();
             ArrayVoid new_vals = self.arr_void().new_strides(n_size);
             void **out_begin = new_vals.stride_begin();
@@ -152,8 +170,8 @@ Tensor at(const Tensor& self, const Tensor &t) {
     
     }
     utils::THROW_EXCEPTION(
-        t.dtype == DType::Bool,
-        "RuntimeError (at end, logic error): expected DType Bool, TensorObj, or int64 but got $", t.dtype);
+        t.dtype() == DType::Bool,
+        "RuntimeError (at end, logic error): expected DType Bool, TensorObj, or int64 but got $", t.dtype());
     utils::THROW_EXCEPTION(
         t.is_contiguous(),
         "RuntimeError: Expected indexing tensor to be contiguous");
@@ -179,6 +197,25 @@ Tensor at(const Tensor& self, const Tensor &t) {
     utils::THROW_EXCEPTION(
         t.numel() == self.numel(),
         "Numels must be equal for [] operator on Tensor DType::Bool, or equal to shape()[0] ($)",self.shape()[0]);
+    
+    if(self.dtype() == DType::TensorObj){
+        size_value_t new_size = ::nt::functional::count(t);
+        Tensor new_vals = Tensor::makeNullTensorArray(new_size);
+        self.arr_void().cexecute_function([&](auto my_strides, auto my_strides_end){
+            Tensor* new_strides = reinterpret_cast<Tensor*>(new_vals.data_ptr());
+            const uint_bool_t *begin =
+                reinterpret_cast<const uint_bool_t *>(t.data_ptr());
+            const uint_bool_t *end = begin + self.numel();
+            for(; begin != end; ++begin, ++my_strides){
+                if(*begin == true){
+                    *new_strides = *my_strides;
+                    ++new_strides;
+                }
+            }
+        });
+        new_vals.set_mutability(self.is_mutable());
+        return std::move(new_vals);
+    }
 
     ArrayVoid my_vals = self.arr_void().bucket_all_indices();
     size_value_t new_size = ::nt::functional::count(t);
@@ -212,19 +249,19 @@ Tensor at(const Tensor& self, std::vector<Tensor::size_value_t> xs){
     for (size_value_t i = 0; i < xs.size(); ++i) {
         xs[i] = xs[i] < 0 ? xs[i] + self.dims() : xs[i];
     }
-
-    uint64_t cur_mult = 1;
+    
+    uint64_t cur_mult = 0;
     auto begin = xs.begin();
     auto end = xs.end();
-    cur_mult *= *begin;
     SizeRef n_size = self.shape().pop_front();
+    cur_mult += (*begin * n_size.multiply());
     ++begin;
     for(;begin != end; ++begin){
-        cur_mult *= *begin;
         n_size = n_size.pop_front();
+        cur_mult += (*begin * n_size.multiply());
     }
     uint64_t mult = n_size.size() == 0 ? 1 : static_cast<uint64_t>(n_size.multiply());
-    Tensor output(self.arr_void().share_array(cur_mult * mult, mult), std::move(n_size));
+    Tensor output(self.arr_void().share_array(cur_mult, mult), std::move(n_size));
     return output.set_mutability(self.is_mutable()); 
 }
 Tensor index_except(const Tensor& self, int64_t dim, Tensor::size_value_t excluding_index) {
@@ -267,7 +304,7 @@ Tensor at_tensor_split(const Tensor& _self, const Tensor& _index, Tensor::size_v
     _NT_FUNCTIONAL_ALWAYS_CHECK_(_self, _index);
     using size_value_t = Tensor::size_value_t;
 
-    // Tensor _output(_index.shape(), _self.dtype);
+    // Tensor _output(_index.shape(), _self.dtype());
     Tensor self = _self.split_axis(splitting);
     Tensor index = _index.split_axis(splitting);
     // Tensor output = _output.split_axis(splitting);
@@ -300,7 +337,7 @@ Tensor& at_tensor_split_out_equal_shape(const Tensor& _self, const Tensor& _inde
     Tensor output = _output.split_axis(splitting);
     utils::throw_exception(self.numel() == index.numel() && self.numel() == output.numel(),
                            "Splitting at dimension $ leads to different numbers of tensors for input ($) and indexing tensor ($)",
-                           self.numel(), index.numel());
+                           splitting, self.numel(), index.numel());
 
     Tensor* self_begin = reinterpret_cast<Tensor*>(self.data_ptr());
     Tensor* index_begin = reinterpret_cast<Tensor*>(index.data_ptr());
@@ -328,7 +365,7 @@ Tensor& at_tensor_split(const Tensor& _self, const Tensor& _index, Tensor::size_
     Tensor output = _output.split_axis(splitting);
     utils::throw_exception(self.numel() == index.numel() && self.numel() == output.numel(),
                            "Splitting at dimension $ leads to different numbers of tensors for input ($) and indexing tensor ($)",
-                           self.numel(), index.numel());
+                           splitting, self.numel(), index.numel());
 
     Tensor* self_begin = reinterpret_cast<Tensor*>(self.data_ptr());
     Tensor* index_begin = reinterpret_cast<Tensor*>(index.data_ptr());
@@ -368,14 +405,17 @@ inline std::vector<Tensor> get_all(std::vector<Tensor>& ts){
 	return std::move(output);
 }
 
-std::vector<Tensor> get_indices(std::vector<Tensor>& ts, int64_t* begin, int64_t* end){
+Tensor get_indices(std::vector<Tensor>& ts, int64_t* begin, int64_t* end){
 	std::ptrdiff_t diff = std::distance(begin, end);
-	std::vector<Tensor> output(diff*ts.size());
+    Tensor output = Tensor::makeNullTensorArray(diff * ts.size());
+    Tensor* output_ = reinterpret_cast<Tensor*>(output.data_ptr());
 	int64_t* begin_cpy = begin;
 	uint64_t index = 0;
-	for(uint64_t i = 0; i < output.size(); ++i, ++index){
-		for(;begin != end; ++begin, ++i)
-			output[i] = ts[index][*begin];
+	for(uint64_t i = 0; i < output.numel(); ++index){
+		for(;begin != end; ++begin, ++i){
+			Tensor cur = ts[index][*begin];
+            output_[i] = cur;
+        }
 		begin = begin_cpy;
 	}
 	return std::move(output);
@@ -387,7 +427,7 @@ Tensor index_select(Tensor input, int64_t dim, Tensor index){
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
 	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
 	utils::THROW_EXCEPTION(index.dims() == 1, "Expected indexing tensor to have a dimensional size of 1 but got $", index.dims());
-	utils::THROW_EXCEPTION(index.dtype == DType::int64, "Expected indexing tensor to be dtype int64 but got $", index.dtype);
+	utils::THROW_EXCEPTION(index.dtype() == DType::int64, "Expected indexing tensor to be dtype int64 but got $", index.dtype());
     index = index.contiguous();
 	if(dim == 0){
 		std::vector<Tensor> output(index.numel());
@@ -406,7 +446,6 @@ Tensor index_select(Tensor input, int64_t dim, Tensor index){
 		output = get_all(output);
 		--dim;
 	}
-
 	return cat_unordered(
         get_indices(output, reinterpret_cast<int64_t*>(index.data_ptr()), 
                     reinterpret_cast<int64_t*>(index.data_ptr_end()))).view(SizeRef(std::move(n_shape)));
@@ -417,8 +456,12 @@ Tensor select(Tensor input, int64_t dim, int64_t index){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	if(dim == 0)
 		return input[index];
-	std::vector<my_range> ranges(dim+1, my_range());
-	ranges.back() = my_range(index);
+	std::vector<range_> ranges(dim+1, range);
+	// for(size_t i = 0; i < ranges.size(); ++i){
+        // ranges[i] = range_(0, input.shape()[i]);
+    // }
+    ranges.back() = range_(index, index+1);
+    
 	return input[std::move(ranges)];
 }
 

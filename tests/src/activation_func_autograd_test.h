@@ -1,0 +1,4 @@
+#ifndef NT_TESTS_ACTIVATION_FUNC_AUTOGRAD_TEST_H__
+#define NT_TESTS_ACTIVATION_FUNC_AUTOGRAD_TEST_H__
+void activation_test_autograd();
+#endif

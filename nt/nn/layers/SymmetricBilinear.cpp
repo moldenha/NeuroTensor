@@ -15,10 +15,10 @@ SymmetricBilinear::SymmetricBilinear(int64_t input_size, int64_t hidden_size,
 {
     if(use_bias){
         this->register_parameter("Bias", Bias);
-        Bias.tensor.set_mutability(false);
+        Bias.detach().set_mutability(false);
     }
-    W1.tensor.set_mutability(false);
-    W2.tensor.set_mutability(false);
+    W1.detach().set_mutability(false);
+    W2.detach().set_mutability(false);
 }
 
 TensorGrad SymmetricBilinear::forward(TensorGrad x) {
@@ -33,7 +33,7 @@ TensorGrad SymmetricBilinear::forward(TensorGrad x) {
     TensorGrad out = functional::symmetric_bilinear(x, this->W1, this->W2);
     if(!this->use_bias) return out;
     TensorGrad B = this->Bias.view(-1, 1) * this->Bias.view(1, -1);
-    B.tensor.set_mutability(false);
+    B.detach().set_mutability(false);
     return out + B;
 
     

@@ -1,6 +1,7 @@
-#ifndef _NT_SPARSE_DATA_MATRIX_H_
-#define _NT_SPARSE_DATA_MATRIX_H_
+#ifndef NT_SPARSE_DATA_MATRIX_H__
+#define NT_SPARSE_DATA_MATRIX_H__
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../utils/api_macro.h"
 #include <iostream>
 #include <memory>
 #include <cstring>
@@ -8,7 +9,7 @@
 
 namespace nt{
 namespace sparse_details{
-class SparseMemoryMatrixData : public intrusive_ptr_target{
+class NEUROTENSOR_API SparseMemoryMatrixData : public intrusive_ptr_target{
     size_t type_size;
     size_t max_size, size;
     void* memory;
@@ -29,14 +30,14 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
     SparseMemoryMatrixData(std::size_t type_size, int64_t reserve_size, std::size_t rows)
         : type_size(type_size), max_size(reserve_size), size(0), memory(nullptr), row_ptrs(rows+1, 0) {
         if (reserve_size > 0) {
-            memory = std::malloc(type_size * reserve_size);
+            memory = MetaMalloc(type_size * reserve_size);
             col_indices.reserve(reserve_size);
         }
     }
 
     ~SparseMemoryMatrixData() {
         if(memory != nullptr){
-            std::free(memory);
+            MetaCStyleFree(memory);
             memory = nullptr;
         }
     }
@@ -91,7 +92,7 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
         std::for_each(row_ptrs.begin() + row+1, row_ptrs.end(), [](int& val){++val;});
         if(size >= max_size){
             size_t new_max_size = max_size > 0 ? max_size * 2 : 1;
-            void* new_memory = std::malloc(type_size * new_max_size);
+            void* new_memory = MetaMalloc(type_size * new_max_size);
             size_t start = type_size * row_ptrs[row]+col_cntr;
             size_t end = type_size * (size - (row_ptrs[row]+col_cntr));
             void* out_memory = ((char*)new_memory) + start;
@@ -101,7 +102,7 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
                 std::memcpy(((char*)new_memory) + start + type_size, ((char*)memory) + start, end);
             }
             ++size;
-            std::free(memory);
+            MetaCStyleFree(memory);
             memory = new_memory;
             max_size = new_max_size;
             return *reinterpret_cast<T*>(out_memory);
@@ -118,17 +119,17 @@ class SparseMemoryMatrixData : public intrusive_ptr_target{
     inline void reserve(int64_t new_max_size) {
         if (new_max_size <= max_size) return;
         
-        void* new_memory = std::malloc(type_size * new_max_size);
+        void* new_memory = MetaMalloc(type_size * new_max_size);
         if (memory) {
             std::memcpy(new_memory, memory, type_size * size);
-            std::free(memory);
+            MetaCStyleFree(memory);
             memory = new_memory;
             max_size = new_max_size;
         }
     }
 
     inline SparseMemoryMatrixData copy(){
-        void* mem = std::malloc(type_size * max_size);
+        void* mem = MetaMalloc(type_size * max_size);
         std::memcpy(mem, memory, type_size * size); 
         return SparseMemoryMatrixData(type_size, max_size, size, mem, col_indices, row_ptrs);
     }

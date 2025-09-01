@@ -1,5 +1,5 @@
-#ifndef __NT_FUNCTIONAL_CPU_RAND_H__
-#define __NT_FUNCTIONAL_CPU_RAND_H__
+#ifndef NT_FUNCTIONAL_CPU_RAND_H__
+#define NT_FUNCTIONAL_CPU_RAND_H__
 
 #include "../../dtype/ArrayVoid.h"
 #include "../../dtype/Scalar.h"
@@ -9,8 +9,8 @@ namespace nt{
 namespace functional{
 namespace cpu{
 
-void rand_(ArrayVoid& output, Scalar upper, Scalar lower);
-void randint_(ArrayVoid& output, Scalar upper, Scalar lower);
+NEUROTENSOR_API void rand_(ArrayVoid& output, Scalar upper, Scalar lower);
+NEUROTENSOR_API void randint_(ArrayVoid& output, Scalar upper, Scalar lower);
 
 }
 }

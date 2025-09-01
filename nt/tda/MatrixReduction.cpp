@@ -229,9 +229,9 @@ Tensor rowReduce(Tensor A) {
 Tensor simultaneousCatReduce(Tensor &d_k, Tensor &d_kplus1, 
                              int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
     utils::throw_exception(
-        d_k.dtype == DType::Float32 && d_kplus1.dtype == DType::Float32,
+        d_k.dtype() == DType::Float32 && d_kplus1.dtype() == DType::Float32,
         "Expected boundary matrices to have dtype int8 but got $ and $",
-        d_k.dtype, d_kplus1.dtype);
+        d_k.dtype(), d_kplus1.dtype());
     utils::throw_exception(
         d_k.dims() == 2 && d_kplus1.dims() == 2,
         "Expected both matrices to have dimensionality of 2 but got $ and $",
@@ -431,9 +431,9 @@ Tensor &finishCatRowReducing(Tensor &B,
 Tensor& partialColReduce(Tensor &d_k, 
                              int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
     utils::throw_exception(
-        d_k.dtype == DType::Float32,
+        d_k.dtype() == DType::Float32,
         "Expected boundary matrices to have dtype float32 but got $",
-        d_k.dtype);
+        d_k.dtype());
     utils::throw_exception(
         d_k.dims() == 2,
         "Expected both matrices to have dimensionality of 2 but got $",
@@ -561,9 +561,9 @@ Tensor& partialColReduce(Tensor &d_k,
 Tensor &partialRowReduce(Tensor &B,
                              int64_t start_rows, int64_t start_cols, int64_t end_rows, int64_t end_cols) {
     utils::throw_exception(
-        B.dtype == DType::Float32,
+        B.dtype() == DType::Float32,
         "Expected boundary matrices to have dtype float32 but got $",
-        B.dtype);
+        B.dtype());
     utils::throw_exception(
         B.dims() == 2,
         "Expected both matrices to have dimensionality of 2 but got $",
@@ -824,9 +824,9 @@ std::map<double, int64_t>
     utils::throw_exception(A_split.numel() == B_split.numel(),
                            "Expected nummels to be same but got $ and $",
                            A_split.numel(), B_split.numel());
-
-    float **a_access = new float*[A_split.numel()];
-    float **b_access = new float*[A_split.numel()];
+    
+    float **a_access = MetaNewArr(float*, A_split.numel());
+    float **b_access = MetaNewArr(float*, A_split.numel());
     for (int64_t i = 0; i < A_split.numel(); ++i) {
         a_access[i] = reinterpret_cast<float *>(A_begin[i].data_ptr());
         b_access[i] = reinterpret_cast<float *>(B_begin[i].data_ptr());
@@ -842,8 +842,8 @@ std::map<double, int64_t>
         if(k_size < bstart_rows || k_size > B.shape()[0]) continue;
         if(kp1_size < bstart_cols || kp1_size > B.shape()[1]) continue;
         if(max > 0 && correspond.first > max) break;
-        // SparseTensor _sub_bk = d_k[{my_range(0, km1_size), my_range(0, k_size)}];
-        // SparseTensor _sub_bk1 = d_kplus1[{nt::my_range(0, k_size), nt::my_range(0, kp1_size)}];
+        // SparseTensor _sub_bk = d_k[{range_(0, km1_size), range_(0, k_size)}];
+        // SparseTensor _sub_bk1 = d_kplus1[{nt::range_(0, k_size), nt::range_(0, kp1_size)}];
         // auto [_sub_A, _sub_B] = get<2>(simultaneousReduce(_sub_bk, _sub_bk1));
         // finishRowReducing(_sub_B);
         // int64_t _rank_k = numPivotRows(_sub_A);
@@ -880,16 +880,16 @@ std::map<double, int64_t>
             out[correspond.first] = 0;
         }
         // if(k_size == 25 && km1_size == 30){
-        //     Tensor new_A = nt::functional::cat_unordered(A_split).view(d_k.shape().transpose(-1, -2))[my_range(0, 32)];
+        //     Tensor new_A = nt::functional::cat_unordered(A_split).view(d_k.shape().transpose(-1, -2))[range_(0, 32)];
         //     // Tensor new_A = nt::functional::cat_unordered(A_split).view(d_k.shape().transpose(-1, -2));
         //     std::cout << new_A<<std::endl;
-        //     // d_k.underlying_tensor().transpose(-1, -2)[{my_range(0, k_size), my_range(0, km1_size)}].print();
+        //     // d_k.underlying_tensor().transpose(-1, -2)[{range_(0, k_size), range_(0, km1_size)}].print();
         //     std::cout << "rank for a: "<<rank_k<<std::endl;
         // }
         ++cntr;
     }
-    delete[] a_access;
-    delete[] b_access;
+    MetaFreeArr<float*>(a_access);
+    MetaFreeArr<float*>(b_access);
     return std::move(out);              
 }
 
@@ -928,8 +928,8 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
                            "Expected nummels to be same but got $ and $",
                            A_split.numel(), B_split.numel());
 
-    float **a_access = new float*[A_split.numel()];
-    float **b_access = new float*[A_split.numel()];
+    float **a_access = MetaNewArr(float*, A_split.numel());
+    float **b_access = MetaNewArr(float*, A_split.numel());
     for (int64_t i = 0; i < A_split.numel(); ++i) {
         a_access[i] = reinterpret_cast<float *>(A_begin[i].data_ptr());
         b_access[i] = reinterpret_cast<float *>(B_begin[i].data_ptr());
@@ -947,8 +947,8 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
         if(k_size < astart_cols || k_size > A.shape()[0]) continue;
         if(k_size < bstart_rows || k_size > B.shape()[0]) continue;
         if(kp1_size < bstart_cols || kp1_size > B.shape()[1]) continue;
-        // SparseTensor _sub_bk = d_k[{my_range(0, km1_size), my_range(0, k_size)}];
-        // SparseTensor _sub_bk1 = d_kplus1[{nt::my_range(0, k_size), nt::my_range(0, kp1_size)}];
+        // SparseTensor _sub_bk = d_k[{range_(0, km1_size), range_(0, k_size)}];
+        // SparseTensor _sub_bk1 = d_kplus1[{nt::range_(0, k_size), nt::range_(0, kp1_size)}];
         // auto [_sub_A, _sub_B] = get<2>(simultaneousReduce(_sub_bk, _sub_bk1));
         // finishRowReducing(_sub_B);
         // int64_t _rank_k = numPivotRows(_sub_A);
@@ -978,8 +978,8 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
         // std::cout << "ranks: {"<<rank_k<<","<<rank_kp1<<"}, {"<<_rank_k<<","<<_rank_kp1<<"}"<<std::endl;
         // std::cout << correspond.first << ": old betti: "<<_betti<<"new betti: "<<betti<<std::endl;
         if(betti > 0){
-            Tensor new_B = B[{my_range(0, k_size), my_range(0, kp1_size)}];
-            Tensor boundary_kp1 = d_kplus1[{my_range(0, k_size), my_range(0, kp1_size)}].underlying_tensor();
+            Tensor new_B = B(range> k_size, range> kp1_size);
+            Tensor boundary_kp1 = d_kplus1(range> k_size, range> kp1_size).underlying_tensor();
             // if(cntr == 0){
             //     std::cout << boundary_kp1<<std::endl;
             //     ++cntr;
@@ -991,8 +991,8 @@ std::pair<std::map<double, int64_t>, std::map<double, Tensor>> getBettiNumbersCo
             betti_numbers[correspond.first] = 0;
         }
     }
-    delete[] a_access;
-    delete[] b_access;
+    MetaFreeArr<float*>(a_access);
+    MetaFreeArr<float*>(b_access);
     return std::pair<std::map<double, int64_t>, std::map<double, Tensor>>(betti_numbers, col_spaces);      
 }
 

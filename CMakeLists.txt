@@ -27,7 +27,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tbb_config.cmake)
 
 
 
-
+# ${CMAKE_BINARY_DIR}/third_party/matplot/source/matplot
 
 # Include directories
 include_directories(
@@ -70,6 +70,7 @@ set(CORE_SOURCES
     nt/utils/optional.cpp
     nt/utils/CommaOperator.cpp
     nt/Tensor.cpp
+    nt/nn/TensorGrad.cpp
 )
 
 set(MATMULT_SOURCES
@@ -127,7 +128,7 @@ set(FUNCTIONAL_SOURCES
 	nt/functional/tensor_files/dilate.cpp
 	nt/functional/tensor_files/convert.cpp
 	nt/functional/tensor_files/sort.cpp
-
+	nt/functional/tensor_files/round.cpp
     nt/functional/tensor_files/pooling/avg_pool1d.cpp
     nt/functional/tensor_files/pooling/avg_pool2d.cpp
     nt/functional/tensor_files/pooling/avg_pool3d.cpp
@@ -142,20 +143,30 @@ set(FUNCTIONAL_SOURCES
 )
 
 set(FUNCTIONAL_CPU_SOURCES
+
     nt/functional/cpu/unfold1d.cpp
     nt/functional/cpu/unfold2d.cpp
     nt/functional/cpu/unfold3d.cpp
-    nt/functional/cpu/fold.cpp
     nt/functional/cpu/unfold1d_backward.cpp
     nt/functional/cpu/unfold2d_backward.cpp
     nt/functional/cpu/unfold3d_backward.cpp
-    nt/functional/cpu/fold_backward.cpp
+    nt/functional/cpu/unfoldnd.cpp
+    nt/functional/cpu/unfoldnd_backward.cpp
+    nt/functional/cpu/fold1d.cpp
+    nt/functional/cpu/fold1d_backward.cpp
+    nt/functional/cpu/fold2d.cpp
+    nt/functional/cpu/fold2d_backward.cpp
+    nt/functional/cpu/fold3d.cpp
+    nt/functional/cpu/fold3d_backward.cpp
+    nt/functional/cpu/foldnd.cpp
+    nt/functional/cpu/foldnd_backward.cpp
     nt/functional/cpu/rand.cpp
     nt/functional/cpu/fused.cpp
     nt/functional/cpu/operators.cpp
     nt/functional/cpu/normalize.cpp
     nt/functional/cpu/min_max.cpp
     nt/functional/cpu/compare.cpp
+    nt/functional/cpu/convert.cpp
     nt/functional/cpu/softmax.cpp
     nt/functional/cpu/sum_exp_log.cpp
     nt/functional/cpu/fractional_pooling.cpp
@@ -165,9 +176,10 @@ set(FUNCTIONAL_CPU_SOURCES
     nt/functional/cpu/sort_tensor.cpp
     nt/functional/cpu/unique.cpp
     nt/functional/cpu/complex.cpp
-    nt/functional/cpu/convert.cpp
+    nt/functional/cpu/dropout.cpp
     nt/functional/cpu/fill.cpp
     nt/functional/cpu/mesh.cpp
+    nt/functional/cpu/round.cpp
 
 )
 
@@ -286,7 +298,6 @@ set(TYPES_SOURCES
     nt/dtype/ranges.cpp
     nt/dtype/Scalar.cpp
     nt/types/Types.cpp
-    nt/convert/Convert.cpp
 )
 
 # Check for compiler support for __uint128_t
@@ -322,16 +333,38 @@ endif()
 
 #this also includes autograds and layers
 set(AI_SOURCES
+    nt/nn/AutoGrad.cpp
+    nt/nn/BackwardFunc.cpp
     nt/nn/Layer.cpp
     nt/nn/LNN.cpp
-    nt/nn/TensorGrad.cpp
     nt/nn/ScalarGrad.cpp
     nt/nn/functional/functional.cpp
     nt/nn/functional/pooling.cpp
-    nt/nn/functional/non_linear.cpp
+    nt/nn/functional/activation_functions.cpp
+    nt/nn/functional/colim_transform.cpp
+    nt/nn/functional/conv.cpp
+    nt/nn/functional/dilation.cpp
+    nt/nn/functional/fill.cpp
+    nt/nn/functional/flip.cpp
+    nt/nn/functional/fused.cpp
+    nt/nn/functional/index.cpp
+    nt/nn/functional/min_max.cpp
+    nt/nn/functional/matmult.cpp
+    nt/nn/functional/operators.cpp
+    nt/nn/functional/padding.cpp
+    nt/nn/functional/repeat.cpp
+    nt/nn/functional/round.cpp
+    nt/nn/functional/split.cpp
+    nt/nn/functional/stride.cpp
+    nt/nn/functional/sort.cpp
+    nt/nn/functional/sum_exp_log.cpp
+    nt/nn/functional/transpose.cpp
+    nt/nn/functional/trig.cpp
+    nt/nn/functional/unique.cpp
     nt/nn/Loss.cpp
     nt/nn/Optimizers.cpp
     nt/nn/Module.cpp
+
     #ncps sources
     nt/nn/ncps/lstm_cell.cpp
     nt/nn/ncps/wiring/wiring.cpp
@@ -345,11 +378,15 @@ set(AI_SOURCES
     nt/nn/layers/Conv1D.cpp
     nt/nn/layers/Conv2D.cpp
     nt/nn/layers/Conv3D.cpp
+    nt/nn/layers/ConvND.cpp
     nt/nn/layers/ConvTranspose1D.cpp
     nt/nn/layers/ConvTranspose2D.cpp
     nt/nn/layers/ConvTranspose3D.cpp
     nt/nn/layers/Dropout.cpp
-    nt/nn/layers/Fold.cpp
+    nt/nn/layers/Fold1D.cpp
+    nt/nn/layers/Fold2D.cpp
+    nt/nn/layers/Fold3D.cpp
+    nt/nn/layers/FoldND.cpp
     nt/nn/layers/Functional.cpp
     nt/nn/layers/Identity.cpp
     nt/nn/layers/Linear.cpp
@@ -358,6 +395,7 @@ set(AI_SOURCES
     nt/nn/layers/Unfold1D.cpp
     nt/nn/layers/Unfold2D.cpp
     nt/nn/layers/Unfold3D.cpp
+    nt/nn/layers/UnfoldND.cpp
     nt/nn/layers/AdaptiveAvgPool1D.cpp
     nt/nn/layers/AdaptiveAvgPool2D.cpp
     nt/nn/layers/AdaptiveAvgPool3D.cpp
@@ -829,6 +867,9 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/nt/ DESTINATION include/nt FILES_M
 #installing matplot header files
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/matplot/source DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/third_party/matplot/source/matplot DESTINATION include
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/simde/simde DESTINATION include
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
@@ -863,9 +904,19 @@ if(BUILD_MAIN)
     add_executable(main.out main.cpp)
     if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
         target_link_libraries(main.out PRIVATE neurotensor)
+        target_include_directories(main.out PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+        target_include_directories(main.out
+            PRIVATE
+                ${CMAKE_BINARY_DIR}/third_party/matplot/source/matplot
+        )
 
     else()
         target_link_libraries(main.out PRIVATE ${TBB_LIB} ${MATPLOT_LIB} pthread znz niftiio ${NEUROTENSOR_DEPS})
+        target_include_directories(main.out
+            PRIVATE
+                ${CMAKE_BINARY_DIR}/third_party/matplot/source/matplot
+        )
+
     endif()
 
     # target_link_libraries(main.out PRIVATE neurotensor)
@@ -877,5 +928,32 @@ if(BUILD_MAIN)
 
     install(TARGETS main.out DESTINATION bin)
 endif()
+
+option(BUILD_TESTS "Build NeuroTensor unit tests" ON)
+
+if(BUILD_TESTS)
+    file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/tests/src/*.cpp)
+
+    message(STATUS "Test sources are ${TEST_SOURCES}")
+
+    add_executable(nt_tests ${TEST_SOURCES})
+
+    target_include_directories(nt_tests PRIVATE
+        ${PROJECT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test
+    )
+
+    target_compile_options(nt_tests PRIVATE -fsanitize=address -g)
+    target_link_options(nt_tests PRIVATE -fsanitize=address -g)
+
+    if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
+        target_link_libraries(nt_tests PRIVATE neurotensor)
+    else()
+        target_link_libraries(nt_tests PRIVATE ${TBB_LIB} ${MATPLOT_LIB} pthread znz niftiio ${NEUROTENSOR_DEPS})
+    endif()
+
+    install(TARGETS nt_tests DESTINATION bin)
+endif()
+
 
 

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "exceptions.hpp"
 #include "../../mp/Threading.h"
+#include "activation_functions.h"
 
 namespace nt{
 namespace functional{
@@ -15,9 +16,9 @@ inline void compare_equal(const Tensor& a, const Tensor& b){
                            "\nRuntimeError: Expected shape a ($) to be equal to shape b ($) ",
                            a.shape(), b.shape());
     utils::THROW_EXCEPTION(
-        a.dtype == b.dtype,
+        a.dtype() == b.dtype(),
         "\nRuntimeError: Expected dtype a ($) to be equal to dtype b ($)",
-        a.dtype, b.dtype);
+        a.dtype(), b.dtype());
 }
 
 
@@ -38,9 +39,25 @@ inline Tensor tensor_of_tensors(const Tensor& a, const Tensor& b, DualFunc func)
     return out.view(a.shape());
 }
 
+using SingleNSFunc = Tensor (*)(const Tensor&);
+inline Tensor tensor_of_tensors(const Tensor& a, SingleNSFunc func){
+    for(const auto& _t : a)
+        _NT_FUNCTIONAL_ALWAYS_CHECK_(_t);
+    Tensor out = Tensor::makeNullTensorArray(a.numel());
+    Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
+    a.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
+        [&func, &o_begin](auto begin, auto end){
+            for(;begin != end; ++begin, ++o_begin){
+                *o_begin = func(*begin);
+            }
+    });
+    return out.view(a.shape());
+}
+
+
 Tensor equal(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &equal);}
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &equal);}
     Tensor out(a.shape(), DType::Bool);
     cpu::_equal(out.arr_void(), a.arr_void(), b.arr_void());
     return out;
@@ -48,58 +65,64 @@ Tensor equal(const Tensor& a, const Tensor& b){
 
 Tensor not_equal(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &not_equal);}
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &not_equal);}
     Tensor out(a.shape(), DType::Bool);
     cpu::_not_equal(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 Tensor less_than(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &less_than);}
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &less_than);}
     Tensor out(a.shape(), DType::Bool);
     cpu::_less_than(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 Tensor greater_than(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &greater_than);}
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &greater_than);}
     Tensor out(a.shape(), DType::Bool);
     cpu::_greater_than(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 Tensor less_than_equal(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &less_than_equal);}
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &less_than_equal);}
     Tensor out(a.shape(), DType::Bool);
     cpu::_less_than_equal(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 Tensor greater_than_equal(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &greater_than_equal);}
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &greater_than_equal);}
     Tensor out(a.shape(), DType::Bool);
     cpu::_greater_than_equal(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 Tensor and_op(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &and_op);}
-    utils::throw_exception(a.dtype == DType::Bool,
-                           "and operator only works on bool dtypes got $", a.dtype);
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &and_op);}
+    utils::throw_exception(a.dtype() == DType::Bool,
+                           "and operator only works on bool dtypes got $", a.dtype());
     Tensor out(a.shape(), DType::Bool);
     cpu::_and_op(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 Tensor or_op(const Tensor& a, const Tensor& b){
     compare_equal(a, b);
-    if(a.dtype == DType::TensorObj){return tensor_of_tensors(a, b, &or_op);}
-    utils::throw_exception(a.dtype == DType::Bool,
-                           "or operator only works on bool dtypes got $", a.dtype);
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, b, &or_op);}
+    utils::throw_exception(a.dtype() == DType::Bool,
+                           "or operator only works on bool dtypes got $", a.dtype());
     Tensor out(a.shape(), DType::Bool);
     cpu::_or_op(out.arr_void(), a.arr_void(), b.arr_void());
     return std::move(out);
 }
 
+Tensor isnan(const Tensor& a){
+    if(a.dtype() == DType::TensorObj){return tensor_of_tensors(a, &isnan);}
+    Tensor out(a.shape(), DType::Bool);
+    cpu::_isnan(out.arr_void(), a.arr_void());
+    return std::move(out);
+}
 
 using SingleFunc = Tensor (*)(const Tensor&, Scalar);
 inline Tensor tensor_of_scalars(const Tensor& a, Scalar b, SingleFunc func){
@@ -153,41 +176,41 @@ Tensor greater_than_equal(const Tensor& a, Scalar b){
 }
 bool all(const Tensor & t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
 		return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
 			return std::all_of(begin, end, [](const Tensor& v){return all(v);});
 		});
 	}
-    utils::throw_exception(t.dtype == DType::Bool,
-                           "Expected dtype for all to be bool got $", t.dtype);
+    utils::throw_exception(t.dtype() == DType::Bool,
+                           "Expected dtype for all to be bool got $", t.dtype());
     return cpu::_all(t.arr_void());
 }
 bool any(const Tensor & t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
 		return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
 			return std::any_of(begin, end, [](const Tensor& v){return any(v);});
 		});
 	}
-    utils::throw_exception(t.dtype == DType::Bool,
-                           "Expected dtype for all to be bool got $", t.dtype);
+    utils::throw_exception(t.dtype() == DType::Bool,
+                           "Expected dtype for all to be bool got $", t.dtype());
     return cpu::_any(t.arr_void());
 }
 bool none(const Tensor & t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
 		return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
 			return std::all_of(begin, end, [](const Tensor& v){return none(v);});
 		});
 	}
-    utils::throw_exception(t.dtype == DType::Bool,
-                           "Expected dtype for all to be bool got $", t.dtype);
+    utils::throw_exception(t.dtype() == DType::Bool,
+                           "Expected dtype for all to be bool got $", t.dtype());
     return cpu::_none(t.arr_void());
 }
 
 int64_t amount_of(Tensor t, Scalar val){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
 		return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&val](auto begin, auto end){
             int64_t count = 0;
             for(;begin != end; ++begin){
@@ -202,7 +225,7 @@ int64_t amount_of(Tensor t, Scalar val){
 
 int64_t count(Tensor t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
 		return t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){
             int64_t _count = 0;
             for(;begin != end; ++begin){
@@ -237,7 +260,7 @@ inline void next_index(const SizeRef& s, std::vector<int64_t>& v, typename SizeR
 Tensor where(Tensor t){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
 	utils::THROW_EXCEPTION(t.is_contiguous(), "Expected contiguous tensor for where");
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         Tensor output = Tensor::makeNullTensorArray(t.numel());
         Tensor* ts_begin = reinterpret_cast<Tensor*>(output.data_ptr());
         Tensor* ts_end = ts_begin + t.numel();
@@ -246,7 +269,7 @@ Tensor where(Tensor t){
             *ts_begin = where(*begin);
         return std::move(output);
     }
-	utils::THROW_EXCEPTION(t.dtype == DType::Bool, "Expected dtype to be DType::Bool but got $", t.dtype);
+	utils::THROW_EXCEPTION(t.dtype() == DType::Bool, "Expected dtype to be DType::Bool but got $", t.dtype());
 	uint_bool_t looking(true);
 	size_t amt = amount_of(t, looking);
     if(amt == 0){
@@ -310,7 +333,7 @@ Tensor where(Tensor t){
 
 
 Tensor all(const Tensor t, int64_t dim){
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(t.numel());
         Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
         t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&begin_o, &dim](auto begin, auto end){
@@ -320,7 +343,7 @@ Tensor all(const Tensor t, int64_t dim){
 		});
         return std::move(out);
     }
-	exception_dtypes(t.dtype, DType::Bool);
+	exception_dtypes(t.dtype(), DType::Bool);
         Tensor a = Tensor::Null();
     if(dim == (t.dims()-1) || dim == -1){
         a = t.transpose(-1, -2).contiguous();
@@ -346,7 +369,7 @@ Tensor all(const Tensor t, int64_t dim){
 }
 
 Tensor any(const Tensor t, int64_t dim){
-    if(t.dtype == DType::TensorObj){
+    if(t.dtype() == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(t.numel());
         Tensor* begin_o = reinterpret_cast<Tensor*>(out.data_ptr());
         t.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&begin_o, &dim](auto begin, auto end){
@@ -356,7 +379,7 @@ Tensor any(const Tensor t, int64_t dim){
 		});
         return std::move(out);
     }
-	exception_dtypes(t.dtype, DType::Bool);
+	exception_dtypes(t.dtype(), DType::Bool);
     // Tensor a = t.contiguous();
     Tensor a = Tensor::Null();
     if(dim == (t.dims()-1) || dim == -1){
@@ -380,6 +403,73 @@ Tensor any(const Tensor t, int64_t dim){
     });
     return std::move(out);
 }
+
+Tensor isclose(const Tensor& input, const Tensor& other, Scalar rtol, Scalar atol, bool equal_nan){
+    //complex types are seperated due to things like nan values
+    //for example:
+    //(nan, 1.32)
+    //(nan, nan)
+    //if equal_nan is true, the above evaluates to true
+    utils::throw_exception(input.dtype() == other.dtype(), "\nError: input dtype ($) is expected to equal other dtype ($) for isclose", input.dtype(), other.dtype());
+    if(DTypeFuncs::is_complex(input.dtype())){
+        return isclose(input.real(), other.real(), rtol, atol, equal_nan) && isclose(input.imag(), other.imag(), rtol, atol, equal_nan);
+    }
+    utils::throw_exception(input.shape() == other.shape(), "\nError: input shape ($) is expected to equal other shape ($) for isclose", input.shape(), other.shape());
+    Tensor isnan_i = isnan(input);
+    Tensor isnan_o = isnan(other);
+    bool i_has_nan = any(isnan_i);
+    bool o_has_nan = any(isnan_o);
+    // if(equal_nan){
+    //     if((i_has_nan && !o_has_nan) | (o_has_nan && !i_has_nan)) return false;
+    // }
+    // if(!equal_nan){
+    //     if(i_has_nan || o_has_nan){return false;}
+    // }
+    Tensor subtract = (input - other);
+    abs_(subtract);
+    Tensor right = rtol * abs(other);
+    right += atol;
+    Tensor out = less_than_equal(subtract, right);
+    if(equal_nan){
+        if(i_has_nan){
+            out = or_op(out, (isnan_i == isnan_o));
+        }
+    }else{
+       out = and_op(out, and_op(isnan_i == false, isnan_o == false)); 
+    }
+    return std::move(out);
+}
+
+
+bool allclose(const Tensor& input, const Tensor& other, Scalar rtol, Scalar atol, bool equal_nan){
+    utils::throw_exception(input.dtype() == other.dtype(), "\nError: input dtype ($) is expected to equal other dtype ($) for allclose", input.dtype(), other.dtype());
+    if(DTypeFuncs::is_complex(input.dtype())){
+        return allclose(input.real(), other.real(), rtol, atol, equal_nan) && allclose(input.imag(), other.imag(), rtol, atol, equal_nan);
+    }
+    utils::throw_exception(input.shape() == other.shape(), "\nError: input shape ($) is expected to equal other shape ($) for allclose", input.shape(), other.shape());
+
+    Tensor isnan_i = isnan(input);
+    Tensor isnan_o = isnan(other);
+    bool i_has_nan = any(isnan_i);
+    bool o_has_nan = any(isnan_o);
+    if(equal_nan){
+        if((i_has_nan && !o_has_nan) || (o_has_nan && !i_has_nan)) return false;
+    }
+    if(!equal_nan){
+        if(i_has_nan || o_has_nan){return false;}
+    }
+    Tensor subtract = (input - other);
+    abs_(subtract);
+    Tensor right = rtol * abs(other);
+    right += atol;
+    Tensor out = less_than_equal(subtract, right);
+    if(equal_nan && i_has_nan){
+        if(!all(isnan_i == isnan_o)) return false; //is nan in the same places
+        out = or_op(out, isnan_i);
+    }
+    return all(out);
+}
+
 
 }
 }

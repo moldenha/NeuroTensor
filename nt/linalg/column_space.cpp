@@ -11,7 +11,7 @@ namespace linalg{
 Tensor col_space(const Tensor& _t, std::string mode){
     utils::throw_exception(mode == "svd" || mode == "lu", "Only accepted modes for column space computation are 'svd' and 'lu' got '$'", mode);
     return runEigenFunction(_t, [&mode](auto& mat) -> Tensor{
-        using MatrixType = std::remove_cvref_t<decltype(mat)>;
+        using MatrixType = ::nt::type_traits::remove_cvref_t<decltype(mat)>;
         using ScalarType = typename MatrixType::Scalar;
         if(mode == "lu"){
             auto _n = lu_col_space_eigen(mat);

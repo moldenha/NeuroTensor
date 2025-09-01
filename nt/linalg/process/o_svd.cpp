@@ -258,9 +258,9 @@ inline void svd(char *JOBU, char *JOBVT, int64_t *M, int64_t *N, T *A, int64_t *
   assert(*JOBU=='S');
   assert(*JOBVT=='S');
   const int64_t dim[2]={std::max(*N,*M), std::min(*N,*M)};
-  T* U_=new T[dim[0]*dim[0]]; memset(U_, 0, dim[0]*dim[0]*sizeof(T));
-  T* V_=new T[dim[1]*dim[1]]; memset(V_, 0, dim[1]*dim[1]*sizeof(T));
-  T* S_=new T[dim[0]*dim[1]];
+  T* U_ = MetaNewArr(T, dim[0] * dim[0]); memset(U_, 0, dim[0]*dim[0]*sizeof(T));
+  T* V_ = MetaNewArr(T, dim[1] * dim[1]); memset(V_, 0, dim[1]*dim[1]*sizeof(T));
+  T* S_ = MetaNewArr(T, dim[0] * dim[1]);
 
   const int64_t lda=*LDA;
   const int64_t ldu=*LDU;
@@ -315,57 +315,13 @@ inline void svd(char *JOBU, char *JOBVT, int64_t *M, int64_t *N, T *A, int64_t *
     S[i]=S[i]*(S[i]<0.0?-1.0:1.0);
   }
 
-  delete[] U_;
-  delete[] S_;
-  delete[] V_;
+  MetaFreeArr<T>(U_);
+  MetaFreeArr<T>(S_);
+  MetaFreeArr<T>(V_);
   *INFO=0;
 }
 
-// int example(){
-//   typedef double Real_t;
-//   int n1=45, n2=27;
 
-//   // Create matrix
-//   Real_t* M =new Real_t[n1*n2];
-//   for(size_t i=0;i<n1*n2;i++) M[i]=drand48();
-
-//   int m = n2;
-//   int n = n1;
-//   int k = (m<n?m:n);
-//   Real_t* tU =new Real_t[m*k];
-//   Real_t* tS =new Real_t[k];
-//   Real_t* tVT=new Real_t[k*n];
-
-//   { // Compute SVD
-//     int INFO=0;
-//     char JOBU  = 'S';
-//     char JOBVT = 'S';
-//     int wssize = 3*(m<n?m:n)+(m>n?m:n);
-//     int wssize1 = 5*(m<n?m:n);
-//     wssize = (wssize>wssize1?wssize:wssize1);
-//     Real_t* wsbuf = new Real_t[wssize];
-//     svd(&JOBU, &JOBVT, &m, &n, &M[0], &m, &tS[0], &tU[0], &m, &tVT[0], &k, wsbuf, &wssize, &INFO);
-//     delete[] wsbuf;
-//   }
-
-//   { // Check Error
-//     Real_t max_err=0;
-//     for(size_t i0=0;i0<m;i0++)
-//     for(size_t i1=0;i1<n;i1++){
-//       Real_t E=M[i1*m+i0];
-//       for(size_t i2=0;i2<k;i2++) E-=tU[i2*m+i0]*tS[i2]*tVT[i1*k+i2];
-//       if(max_err<std::abs(E)) max_err=std::abs(E);
-//     }
-//     std::cout<<max_err<<'\n';
-//   }
-
-//   delete[] tU;
-//   delete[] tS;
-//   delete[] tVT;
-//   delete[] M;
-
-//   return 0;
-// }
 
 
 
@@ -374,7 +330,7 @@ namespace linalg{
 
 template<DType dt = DType::Integer>
 Tensor handle_svd_matrix(Tensor& t){
-    if(dt != t.dtype){return handle_svd_matrix<DTypeFuncs::next_dtype_it<dt> >(t);}
+    if(dt != t.dtype()){return handle_svd_matrix<DTypeFuncs::next_dtype_it<dt> >(t);}
     if constexpr (DTypeFuncs::is_dtype_floating_v<dt>){
         using type_t = DTypeFuncs::dtype_to_type_t<dt>;
         int64_t n1 = t.shape()[0];
@@ -382,25 +338,25 @@ Tensor handle_svd_matrix(Tensor& t){
         int64_t m = n2;
         int64_t n = n1;
         int64_t k = (m<n?m:n);
-        Tensor tU({m, k}, t.dtype);
-        Tensor tS({k}, t.dtype);
-        Tensor tVT({k, n}, t.dtype);
+        Tensor tU({m, k}, t.dtype());
+        Tensor tS({k}, t.dtype());
+        Tensor tVT({k, n}, t.dtype());
         int64_t INFO=0;
         char JOBU  = 'S';
         char JOBVT = 'S';
         int64_t wssize = 3*(m<n?m:n)+(m>n?m:n);
         int64_t wssize1 = 5*(m<n?m:n);
         wssize = (wssize>wssize1?wssize:wssize1);
-        type_t* wsbuf = new type_t[wssize];
+        type_t* wsbuf = MetaNewArr(type_t, wssize);
         svd<type_t>(&JOBU, &JOBVT, &m, &n, reinterpret_cast<type_t*>(t.data_ptr()), &m, reinterpret_cast<type_t*>(tS.data_ptr()),
             reinterpret_cast<type_t*>(tU.data_ptr()), &m, reinterpret_cast<type_t*>(tVT.data_ptr()),
             &k, wsbuf, &wssize, &INFO);
-        delete[] wsbuf;
+        MetaFreeArr<type_t>(wsbuf);
         return functional::list(tU, tS, tVT);
 
     }
 	else{
-		utils::THROW_EXCEPTION(false, "Expected dtype to be flaoting but got dtype $", t.dtype);
+		utils::THROW_EXCEPTION(false, "Expected dtype to be flaoting but got dtype $", t.dtype());
 		return Tensor();
 	}
 }
@@ -411,7 +367,7 @@ Tensor SVD_matrix(Tensor& t){
 
 template<DType dt = DType::Float>
 Tensor handle_svd_batched(Tensor& t){
-    if(dt != t.dtype){return handle_svd_matrix<DTypeFuncs::next_dtype_it<dt> >(t);}
+    if(dt != t.dtype()){return handle_svd_matrix<DTypeFuncs::next_dtype_it<dt> >(t);}
     if constexpr (DTypeFuncs::is_dtype_floating_v<dt>){
         using type_t = DTypeFuncs::dtype_to_type_t<dt>;
         int64_t n1 = t.shape()[1];
@@ -421,16 +377,16 @@ Tensor handle_svd_batched(Tensor& t){
         int64_t m = n2;
         int64_t n = n1;
         int64_t k = (m<n?m:n);
-        Tensor tU({batches, m, k}, t.dtype);
-        Tensor tS({batches, k}, t.dtype);
-        Tensor tVT({batches, k, n}, t.dtype);
+        Tensor tU({batches, m, k}, t.dtype());
+        Tensor tS({batches, k}, t.dtype());
+        Tensor tVT({batches, k, n}, t.dtype());
         int64_t INFO=0;
         char JOBU  = 'S';
         char JOBVT = 'S';
         int64_t wssize = 3*(m<n?m:n)+(m>n?m:n);
         int64_t wssize1 = 5*(m<n?m:n);
         wssize = (wssize>wssize1?wssize:wssize1);
-        type_t* wsbuf = new type_t[wssize];
+        type_t* wsbuf = MetaNewArr(type_t, wssize);
         for(int64_t b = 0; b < batches; ++b){
             svd<type_t>(&JOBU, &JOBVT, &m, &n, &reinterpret_cast<type_t*>(t.data_ptr())[b * mat_size], &m, &reinterpret_cast<type_t*>(tS.data_ptr())[b * k],
                 &reinterpret_cast<type_t*>(tU.data_ptr())[b * m * k], &m, &reinterpret_cast<type_t*>(tVT.data_ptr())[b * k * n],
@@ -442,12 +398,12 @@ Tensor handle_svd_batched(Tensor& t){
             int64_t wssize1 = 5*(m<n?m:n);
             wssize = (wssize>wssize1?wssize:wssize1);
         }
-        delete[] wsbuf;
+        MetaFreeArr<type_t>(wsbuf);
         return functional::list(tU, tS, tVT);
 
     }
 	else{
-		utils::THROW_EXCEPTION(false, "Expected dtype to be flaoting but got dtype $", t.dtype);
+		utils::THROW_EXCEPTION(false, "Expected dtype to be flaoting but got dtype $", t.dtype());
 		return Tensor();
 	}
 }

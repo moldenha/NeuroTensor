@@ -1,17 +1,17 @@
 //certain type traits not included in the default std namespace for c++17
-#ifndef _NT_UTILS_TYPE_TRAITS_H_
-#define _NT_UTILS_TYPE_TRAITS_H_
+#ifndef NT_UTILS_TYPE_TRAITS_H__
+#define NT_UTILS_TYPE_TRAITS_H__
 
 #include <type_traits>
 #include <functional>
 
 //need to make a neurotensor standard library
 //where basically I re-make the type_traits into this
-namespace std{
+namespace nt::type_traits{
 template<class T>
 struct remove_cvref
 {
-    using type = remove_cv_t<remove_reference_t<T>>;
+    using type = std::remove_cv_t<std::remove_reference_t<T>>;
 };
 
 
@@ -36,9 +36,11 @@ template<typename T>
 rvalue_wrapper<const T> crvref(const T&& val){return rvalue_wrapper<const T>(std::forward(val));}
 
 
-template<typename T>
-struct is_bind_expression<rvalue_wrapper<T> > : std::true_type {};
 
 }
 
+namespace std{
+template<typename T>
+struct is_bind_expression<::nt::type_traits::rvalue_wrapper<T> > : std::true_type {};
+}
 #endif //_NT_UTILS_TYPE_TRAITS_H_

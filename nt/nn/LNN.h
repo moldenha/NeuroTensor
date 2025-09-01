@@ -1,5 +1,5 @@
-#ifndef _NT_LAYERS_LNN_H_
-#define _NT_LAYERS_LNN_H_
+#ifndef NT_LAYERS_LNN_H__
+#define NT_LAYERS_LNN_H__
 #include <map>
 #include "../Tensor.h"
 
@@ -27,7 +27,7 @@ enum LNNOptions{
 
 
 //liquid neural network
-class LNN : public Module{
+class NEUROTENSOR_API LNN : public Module{
     intrusive_ptr<ncps::Wiring> _wiring;
     Tensor construct_hidden(int64_t batch_size);
     //input_size, output_size, neurons

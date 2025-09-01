@@ -5,7 +5,7 @@ namespace functional{
 
 Tensor lp_pool1d(Tensor input, Scalar power, int64_t kernel_size, int64_t stride = -1, bool ceil_mode = false){
      _NT_FUNCTIONAL_ALWAYS_CHECK_(input);
-    // if(!DTypeFuncs::is_floating(input.dtype) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
+    // if(!DTypeFuncs::is_floating(input.dtype()) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
     if(stride == -1) stride = kernel_size;
     int64_t padding = 0;
     check_pool_args(input, -1, kernel_size, stride, padding);
@@ -55,7 +55,7 @@ Tensor backward_lp_pool1d(Tensor input, Tensor output_grad,
 
 
     if(power.isEqual(one)){
-        Tensor grad = zeros(in_shape, output_grad.dtype);
+        Tensor grad = zeros(in_shape, output_grad.dtype());
         Tensor strided = grad.unfold(-1, kernel_size, stride);
         while(output_grad.dims() < strided.dims()){
             output_grad = output_grad.unsqueeze(-1);

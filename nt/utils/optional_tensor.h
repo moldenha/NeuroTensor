@@ -1,5 +1,5 @@
-#ifndef _NT_UTILS_OPTIONAL_TENSOR_H_
-#define _NT_UTILS_OPTIONAL_TENSOR_H_
+#ifndef NT_UTILS_OPTIONAL_TENSOR_H__
+#define NT_UTILS_OPTIONAL_TENSOR_H__
 
 #include "tensor_holder.h"
 #include "../Tensor.h"
@@ -7,12 +7,13 @@
 #include <initializer_list>
 #include "optional_except.h"
 #include "type_traits.h"
+#include "api_macro.h"
 
 namespace nt{
 namespace utils{
 
 
-class optional_tensor{
+class NEUROTENSOR_API optional_tensor{
 	intrusive_ptr<tensor_holder> tensor;
 	public:
 		optional_tensor(const optional_tensor&);
@@ -71,7 +72,7 @@ class optional_tensor{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, Tensor&>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, Tensor&>>{};
 		}
 
 		template<class F>
@@ -79,7 +80,7 @@ class optional_tensor{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, const Tensor&>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, const Tensor&>>{};
 		}
 
 		template<class F>
@@ -87,7 +88,7 @@ class optional_tensor{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, Tensor>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, Tensor>>{};
 		}
 
 		inline void swap(optional_tensor& op) noexcept {op.tensor.swap(tensor);}

@@ -1,7 +1,8 @@
-#ifndef _NT_DEVICE_H_
-#define _NT_DEVICE_H_
+#ifndef NT_DEVICE_H__
+#define NT_DEVICE_H__
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "../dtype/DType_enum.h"
+#include "../utils/api_macro.h"
 #include <iostream>
 #include <string>
 #ifdef _WIN32
@@ -14,12 +15,12 @@ namespace nt{
 
 
 using DeleterFnPtr = void (*)(void*);
-void deleteNothing(void*);
+NEUROTENSOR_API void deleteNothing(void*);
 template<typename T>
-inline void deleteCPPArray(void* ptr){delete[] static_cast<T*>(ptr);}
-void deleteAlignedArray(void* ptr);
+inline void untracked_deleteCPPArray(void* ptr){delete[] static_cast<T*>(ptr);}
+NEUROTENSOR_API void deleteAlignedArray(void* ptr);
 
-class Device : public intrusive_ptr_target{
+class NEUROTENSOR_API Device : public intrusive_ptr_target{
 	static constexpr DeviceType device_type = dMETA;
 	public:
 		virtual ~Device() = default;
@@ -36,7 +37,7 @@ class Device : public intrusive_ptr_target{
 };
 
 
-class DeviceCPU : public Device{
+class NEUROTENSOR_API DeviceCPU : public Device{
 	public:
 		DeviceCPU();
 		~DeviceCPU() override;
@@ -66,7 +67,7 @@ class DeviceCPU : public Device{
 };
 
 
-class DeviceSharedCPU : public Device{
+class NEUROTENSOR_API DeviceSharedCPU : public Device{
 	public:
 		DeviceSharedCPU();
 		~DeviceSharedCPU() override;
@@ -101,12 +102,12 @@ class DeviceSharedCPU : public Device{
 
 //this is a class that is used to hold a list of devices
 //mainly to support bucket views, and is simple and supports the intrusive_ptr layout
-class DeviceHolder : public intrusive_ptr_target{
+class NEUROTENSOR_API DeviceHolder : public intrusive_ptr_target{
 	intrusive_ptr<Device>* devices;
 	public:
 		DeviceHolder() = delete;
-		explicit DeviceHolder(uint64_t num) : devices(new intrusive_ptr<Device>[num]) {}
-		inline ~DeviceHolder() {delete[] devices;}
+		explicit DeviceHolder(uint64_t num) : devices(MetaNewArr(intrusive_ptr<Device>,num)) {}
+		inline ~DeviceHolder() {MetaFreeArr<intrusive_ptr<Device>>(devices);}
 		template<typename IntegerType, typename std::enable_if<std::is_integral<IntegerType>::value, int>::type = 0>
 		inline intrusive_ptr<Device>& operator[](IntegerType i){return devices[i];} 
 		template<typename IntegerType, typename std::enable_if<std::is_integral<IntegerType>::value, int>::type = 0>
@@ -114,11 +115,11 @@ class DeviceHolder : public intrusive_ptr_target{
 
 };
 
-nt::intrusive_ptr<Device> make_device(const DeviceType);
-DeviceType get_device_type(const intrusive_ptr<DeviceHolder>&);
+NEUROTENSOR_API nt::intrusive_ptr<Device> make_device(const DeviceType);
+NEUROTENSOR_API DeviceType get_device_type(const intrusive_ptr<DeviceHolder>&);
 
 
 
 }
 
-#endif // _NT_DEVICE_H_
+#endif // NT_DEVICE_H__

@@ -1,7 +1,7 @@
 #ifdef _WIN32
 
-#ifndef __NT_UTILS_UTILS_SYSTEMS_WIN32_HPP__
-#define __NT_UTILS_UTILS_SYSTEMS_WIN32_HPP__
+#ifndef NT_UTILS_UTILS_SYSTEMS_WIN32_HPP__
+#define NT_UTILS_UTILS_SYSTEMS_WIN32_HPP__
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -62,5 +62,5 @@ bool isPipeReadable(int pipefd){
 
 } //nt::utils::
 
-#endif // __NT_UTILS_UTILS_SYSTEMS_WIN32_HPP__ 
+#endif // NT_UTILS_UTILS_SYSTEMS_WIN32_HPP__ 
 #endif // _WIN32

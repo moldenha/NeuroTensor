@@ -1,5 +1,5 @@
-#ifndef _NT_TDA_POINTS_H_
-#define _NT_TDA_POINTS_H_
+#ifndef NT_TDA_POINTS_H__
+#define NT_TDA_POINTS_H__
 
 #include "../Tensor.h"
 #include <cstdlib>
@@ -13,8 +13,8 @@ inline Tensor generate_random_cloud(SizeRef shape, double percent = 0.03){
     cloud[bools] = 1;
     return std::move(cloud);
 }
-Tensor extract_points_from_cloud(Tensor cloud, Scalar point, int64_t dims);
-Tensor extract_points_from_threshold(Tensor cloud, Scalar threshold, int64_t dims);
+NEUROTENSOR_API Tensor extract_points_from_cloud(Tensor cloud, Scalar point, int64_t dims);
+NEUROTENSOR_API Tensor extract_points_from_threshold(Tensor cloud, Scalar threshold, int64_t dims);
 } // namespace tda
 } // namespace nt
 

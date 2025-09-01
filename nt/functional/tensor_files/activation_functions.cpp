@@ -25,7 +25,7 @@ inline void check_dtypes(const DType& dt, const char(&s)[N]){
 Tensor& ADD_UNDERSCORE(func_name)(Tensor& x){\
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);\
     check_mutability(x);\
-    if(x.dtype == DType::TensorObj){\
+    if(x.dtype() == DType::TensorObj){\
         x.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([](auto begin, auto end){\
             for(;begin != end; ++begin)\
                 ADD_UNDERSCORE(func_name)(*begin);\
@@ -52,7 +52,7 @@ _NT_MAKE_ACTIVATION_FUNC_(sigmoid);
 Tensor& dsigmoid_(Tensor & x, bool apply_sigmoid){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     check_mutability(x);
-	if(x.dtype == DType::TensorObj){
+	if(x.dtype() == DType::TensorObj){
         x.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >([&apply_sigmoid](auto begin, auto end){
             for(;begin != end; ++begin)
                 dsigmoid_(*begin, apply_sigmoid);
@@ -74,7 +74,7 @@ Tensor dsigmoid(const Tensor & x, bool apply_sigmoid){
 Tensor& pow_(Tensor & x, Scalar p){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
     check_mutability(x);
-	if(x.dtype == DType::TensorObj){
+	if(x.dtype() == DType::TensorObj){
         x.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>([&p](auto begin, auto end){
             for(;begin != end; ++begin){
                 pow_(*begin, p);
@@ -91,7 +91,7 @@ Tensor& pow_(Tensor & x, Scalar p){
 
 Tensor pow(const Tensor & x, Scalar p){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);
-	if(x.dtype == DType::TensorObj){
+	if(x.dtype() == DType::TensorObj){
         Tensor out = Tensor::makeNullTensorArray(x.numel());
         Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
         x.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>([o_begin, &p](auto begin, auto end){
@@ -119,6 +119,8 @@ Tensor softplus(const Tensor& x, Scalar beta, Scalar threshold){
 	Tensor softplus_x = x * beta;
 	Tensor where = x > threshold;
     Tensor softplus_where = softplus_x[where];
+    if(softplus_where.is_null()) //nothing above threshold
+        return softplus_x;
 	softplus_where.set_(log(1 + exp(softplus_where)).divide_(beta));
 	return std::move(softplus_x);
 }
@@ -129,6 +131,8 @@ Tensor& softplus_(Tensor& x, Scalar beta, Scalar threshold){
 	Tensor where = x > threshold;
     x *= beta;
     Tensor softplus_where = x[where];
+    if(softplus_where.is_null()) //nothing above threshold
+        return x;
 	softplus_where.set_(log(1 + exp(softplus_where)).divide_(beta));
 	return x;
 }

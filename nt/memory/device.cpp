@@ -4,6 +4,7 @@
 #include "../Tensor.h"
 #include <iostream>
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "meta_allocator.h"
 
 #include <cstdlib> // For std::aligned_alloc
 
@@ -19,7 +20,7 @@
 namespace nt{
 
 void deleteNothing(void*){;}
-void deleteAlignedArray(void* ptr){std::free(ptr);}
+void deleteAlignedArray(void* ptr){untracked_free_aligned_alloc(ptr);}
 
 
 template<DType Dt = DType::Integer>
@@ -37,7 +38,7 @@ void* create_cpu_memory(const DType& dt, const int64_t& size){
 	/* if(amt > std::numeric_limits<int64_t>::max()){std::cout << "Potentially going to excede maximum size by allocating "<<amt<<" bytes"<<std::endl;} */
 	const std::size_t align_byte = 64;
 	if (amt % align_byte != 0) amt += align_byte - (amt % align_byte);
-	return detail::portable_aligned_alloc(align_byte, amt);
+	return untracked_aligned_alloc(align_byte, amt);
 }
 
 
@@ -53,19 +54,24 @@ DeviceCPU::~DeviceCPU(){
 void DeviceCPU::allocate_memory(const DType dt, const int64_t size){
 	release_memory();
 	utils::throw_exception(size >= 0, "Cannot allocate negative bytes of memory, tried to allocate $ bytes", size);
+    int64_t total_size = (DTypeFuncs::size_of_dtype(dt) * size);
+
 	if(dt == DType::TensorObj){
-		memory_ = new Tensor[size];
-		end_ = reinterpret_cast<Tensor*>(memory_) + size;
-		dealc = &deleteCPPArray<Tensor>;
+        utils::CheckAllocation(DeviceType::CPU, size * sizeof(Tensor));
+        memory_ = new Tensor[size];
+        end_ = reinterpret_cast<Tensor*>(memory_) + size;
+		dealc = &untracked_deleteCPPArray<Tensor>;
 	}
 	else if(dt == DType::Bool){
+        utils::CheckAllocation(DeviceType::CPU, size);
 		memory_ = new uint_bool_t[size];
 		end_ = reinterpret_cast<uint_bool_t*>(memory_) + size;
-		dealc = &deleteCPPArray<uint_bool_t>;
+		dealc = &untracked_deleteCPPArray<uint_bool_t>;
 	}
 	else{
+        utils::CheckAllocation(DeviceType::CPU, total_size);
 		memory_ = create_cpu_memory(dt, size);
-		end_ = reinterpret_cast<uint8_t*>(memory_) + (DTypeFuncs::size_of_dtype(dt) * size);
+		end_ = reinterpret_cast<uint8_t*>(memory_) + total_size;
 		dealc = &deleteAlignedArray;
 	}
 
@@ -74,6 +80,11 @@ void DeviceCPU::allocate_memory(const DType dt, const int64_t size){
 
 void DeviceCPU::release_memory(){
 	if(memory_){
+        int64_t total_size = static_cast<int64_t>(
+				reinterpret_cast<uint8_t*>(end_) -
+				reinterpret_cast<uint8_t*>(memory_));
+        utils::DeallocateMemory(DeviceType::CPU, total_size);
+        // std::cout << "deleted "<<total_size<<" bytes of memory"<<std::endl;
 		dealc(memory_);
 	}
 	memory_ = nullptr;

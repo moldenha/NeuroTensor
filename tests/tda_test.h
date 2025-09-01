@@ -536,7 +536,7 @@ void weighted_tda_test(){
 
 
 void round_tensor(nt::Tensor& t){
-    if(t.dtype == nt::DType::Float16){
+    if(t.dtype() == nt::DType::Float16){
         t.arr_void().execute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Float16> > >
         ([](auto begin, auto end){
             std::transform(begin, end, begin, [](nt::float16_t x){
@@ -546,7 +546,7 @@ void round_tensor(nt::Tensor& t){
         return;
     }
 #ifdef _128_FLOAT_SUPPORT_
-    if(t.dtype == nt::DType::Float128){
+    if(t.dtype() == nt::DType::Float128){
         t.arr_void().execute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Float128> > >
         ([](auto begin, auto end){
             std::transform(begin, end, begin, [](nt::float128_t x){return std::round(x);});
@@ -554,14 +554,14 @@ void round_tensor(nt::Tensor& t){
         return;
     }
 #endif
-    if(t.dtype == nt::DType::Float32 || t.dtype == nt::DType::Float64){
+    if(t.dtype() == nt::DType::Float32 || t.dtype() == nt::DType::Float64){
         t.arr_void().execute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Float32, nt::DType::Float64> > >
         ([](auto begin, auto end){
             std::transform(begin, end, begin, [](auto x){return std::round(x);});
         });
         return;
     }
-    if(t.dtype == nt::DType::Complex64 || t.dtype == nt::DType::Complex128){
+    if(t.dtype() == nt::DType::Complex64 || t.dtype() == nt::DType::Complex128){
         t.arr_void().execute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Complex64, nt::DType::Complex128> > >
         ([](auto begin, auto end){
             // using type = nt::utils::ItteratorBaseType_t<decltype(begin)>;
@@ -570,7 +570,7 @@ void round_tensor(nt::Tensor& t){
             });
         });
     }
-    if(t.dtype == nt::DType::Complex32){
+    if(t.dtype() == nt::DType::Complex32){
         t.arr_void().execute_function<nt::WRAP_DTYPES<nt::DTypeEnum<nt::DType::Complex32> > >
         ([](auto begin, auto end){
             std::transform(begin, end, begin, [](auto x){
@@ -758,13 +758,13 @@ void unit_simultaneous_test(int64_t increment){
         nt::tda::partialColReduce(A, start_cols1, start_rows1, end_cols1, end_rows1);
         nt::tda::partialRowReduce(B, k1start_rows1, k1start_cols1, k1end_rows1, k1end_cols1);
 
-        nt::SparseTensor _sub_bk = Boundary_K[{nt::my_range(0, end_rows1), nt::my_range(0, end_cols1)}];
-        nt::SparseTensor _sub_bk1 = Boundary_Kp1[{nt::my_range(0, k1end_rows1), nt::my_range(0, k1end_cols1)}];
+        nt::SparseTensor _sub_bk = Boundary_K[{nt::range_(0, end_rows1), nt::range_(0, end_cols1)}];
+        nt::SparseTensor _sub_bk1 = Boundary_Kp1[{nt::range_(0, k1end_rows1), nt::range_(0, k1end_cols1)}];
         auto [_sub_A, _sub_B] = nt::get<2>(nt::tda::simultaneousReduce(_sub_bk, _sub_bk1));
         nt::tda::finishRowReducing(_sub_B);
         
-        nt::Tensor new_A = A[{nt::my_range(0, end_cols1), nt::my_range(0, end_rows1)}];
-        nt::Tensor new_B = B[{nt::my_range(0, k1end_rows1), nt::my_range(0, k1end_cols1)}];
+        nt::Tensor new_A = A[{nt::range_(0, end_cols1), nt::range_(0, end_rows1)}];
+        nt::Tensor new_B = B[{nt::range_(0, k1end_rows1), nt::range_(0, k1end_cols1)}];
         nt::Tensor equal_A = (new_A == _sub_A);
         nt::Tensor equal_B = (new_B == _sub_B);
         bool equal_a = nt::functional::all(equal_A);
@@ -870,13 +870,13 @@ void better_simultaneous_reduce_test(){
     nt::tda::partialColReduce(A, start_cols1, start_rows1, end_cols1, end_rows1);
     nt::tda::partialRowReduce(B, k1start_rows1, k1start_cols1, k1end_rows1, k1end_cols1);
 
-    nt::SparseTensor _sub_bk = Boundary_K[{nt::my_range(0, end_rows1), nt::my_range(0, end_cols1)}];
-    nt::SparseTensor _sub_bk1 = Boundary_Kp1[{nt::my_range(0, k1end_rows1), nt::my_range(0, k1end_cols1)}];
+    nt::SparseTensor _sub_bk = Boundary_K[{nt::range_(0, end_rows1), nt::range_(0, end_cols1)}];
+    nt::SparseTensor _sub_bk1 = Boundary_Kp1[{nt::range_(0, k1end_rows1), nt::range_(0, k1end_cols1)}];
     auto [_sub_A, _sub_B] = nt::get<2>(nt::tda::simultaneousReduce(_sub_bk, _sub_bk1));
     nt::tda::finishRowReducing(_sub_B);
 
-    nt::Tensor new_A = A[{nt::my_range(0, end_cols1), nt::my_range(0, end_rows1)}];
-    nt::Tensor new_B = B[{nt::my_range(0, k1end_rows1), nt::my_range(0, k1end_cols1)}];
+    nt::Tensor new_A = A[{nt::range_(0, end_cols1), nt::range_(0, end_rows1)}];
+    nt::Tensor new_B = B[{nt::range_(0, k1end_rows1), nt::range_(0, k1end_cols1)}];
     nt::Tensor equal_A = (new_A == _sub_A);
     nt::Tensor equal_B = (new_B == _sub_B);
     std::cout << std::boolalpha << nt::functional::all(equal_A)
@@ -887,19 +887,19 @@ void better_simultaneous_reduce_test(){
     nt::tda::partialColReduce(A, start_cols2, start_rows2, end_cols2, end_rows2);
     nt::tda::partialRowReduce(B, k1start_rows2, k1start_cols2, k1end_rows2, k1end_cols2);
 
-    nt::SparseTensor _2_sub_bk = Boundary_K[{nt::my_range(0, end_rows2), nt::my_range(0, end_cols2)}];
-    nt::SparseTensor _2_sub_bk1 = Boundary_Kp1[{nt::my_range(0, k1end_rows2), nt::my_range(0, k1end_cols2)}];
+    nt::SparseTensor _2_sub_bk = Boundary_K[{nt::range_(0, end_rows2), nt::range_(0, end_cols2)}];
+    nt::SparseTensor _2_sub_bk1 = Boundary_Kp1[{nt::range_(0, k1end_rows2), nt::range_(0, k1end_cols2)}];
     auto [_2_sub_A, _2_sub_B] = nt::get<2>(nt::tda::simultaneousReduce(_2_sub_bk, _2_sub_bk1));
     nt::tda::finishRowReducing(_2_sub_B);
 
 
-    nt::Tensor new_A_2 = A[{nt::my_range(0, end_cols2), nt::my_range(0, end_rows2)}];
-    nt::Tensor new_B_2 = B[{nt::my_range(0, k1end_rows2), nt::my_range(0, k1end_cols2)}];
+    nt::Tensor new_A_2 = A[{nt::range_(0, end_cols2), nt::range_(0, end_rows2)}];
+    nt::Tensor new_B_2 = B[{nt::range_(0, k1end_rows2), nt::range_(0, k1end_cols2)}];
     nt::Tensor equal_A_2 = (new_A_2 == _2_sub_A);
     nt::Tensor equal_B_2 = (new_B_2 == _2_sub_B); 
     std::cout << std::boolalpha << nt::functional::all(equal_A_2)
                          << " " << nt::functional::all(equal_B_2)
-                         // << " " << nt::functional::all(interm_sub == interm_update[{nt::my_range(0, k1end_rows2), nt::my_range(0, k1end_cols2)}])
+                         // << " " << nt::functional::all(interm_sub == interm_update[{nt::range_(0, k1end_rows2), nt::range_(0, k1end_cols2)}])
               << std::noboolalpha << std::endl; 
 }
 
@@ -1073,7 +1073,7 @@ void sparse_matrix_test(){
     nt::SparseMatrix blocked = Boundary_K.block(0, 4, 0, 10);
     std::cout << "blocked: "<<std::endl;
     blocked.print();
-    nt::Tensor blocked_KOld = Boundary_KOld.underlying_tensor()[{nt::my_range(0, 4), nt::my_range(0, 10)}];
+    nt::Tensor blocked_KOld = Boundary_KOld.underlying_tensor()[{nt::range_(0, 4), nt::range_(0, 10)}];
     std::cout << blocked_KOld<<std::endl;
     nt::Tensor fromSparseMatrixB(blocked);
     nt::Tensor fromSparseTensorB = blocked_KOld.clone();
@@ -1210,7 +1210,7 @@ void cpu_simde_betti_test(){
         std::cout << "("<<temp_begin.Row()<<','<<temp_begin.Col()<<"): "<<int(*temp_begin)<<" ";
     }
     std::cout << std::endl;
-    std::cout << Boundary_Kp1.underlying_tensor()[{nt::my_range(0, 15), nt::my_range(0, 2)}];
+    std::cout << Boundary_Kp1.underlying_tensor()[{nt::range_(0, 15), nt::range_(0, 2)}];
     Boundary_Kp1M.block(0, 15, 0, 2).print();
     // nt::utils::throw_exception(false, "BREAKING");
     std::set<double> rSimplex1 = nt::tda::get_radi_set(radii_1);

@@ -1,5 +1,5 @@
-#ifndef __NT_FUNCTIONAL_TENSOR_FILES_COMBINE_H__
-#define __NT_FUNCTIONAL_TENSOR_FILES_COMBINE_H__
+#ifndef NT_FUNCTIONAL_TENSOR_FILES_COMBINE_H__
+#define NT_FUNCTIONAL_TENSOR_FILES_COMBINE_H__
 
 #include "../../Tensor.h"
 #include <vector>
@@ -8,19 +8,19 @@
 namespace nt {
 namespace functional {
 
-Tensor cat(const Tensor& _a, const Tensor &_b, int64_t dim=0);
-Tensor cat(std::vector<Tensor>);
-Tensor cat(std::vector<Tensor>, int64_t dim);
-Tensor cat(const Tensor&);
-Tensor cat(const Tensor&, int64_t dim);
-Tensor cat_unordered(const Tensor&); // a way to concatenate the tensors but not care about the shape or number of elements, the output shape can be determined by the user
-Tensor cat_unordered(const std::vector<Tensor>&); // a way to concatenate the tensors but not care about the shape or number of elements, the output shape can be determined by the user
-Tensor stack(std::vector<Tensor>);
-Tensor stack(std::vector<std::reference_wrapper<Tensor> >);
-Tensor stack(std::vector<Tensor>, int64_t dim);
-Tensor stack(std::vector<std::reference_wrapper<Tensor> >, int64_t dim);
-Tensor stack(const Tensor&, int64_t dim=0);
-Tensor vectorize(std::vector<Tensor>);
+NEUROTENSOR_API Tensor cat(const Tensor& _a, const Tensor &_b, int64_t dim=0);
+NEUROTENSOR_API Tensor cat(std::vector<Tensor>);
+NEUROTENSOR_API Tensor cat(std::vector<Tensor>, int64_t dim);
+NEUROTENSOR_API Tensor cat(const Tensor&);
+NEUROTENSOR_API Tensor cat(const Tensor&, int64_t dim);
+NEUROTENSOR_API Tensor cat_unordered(const Tensor&); // a way to concatenate the tensors but not care about the shape or number of elements, the output shape can be determined by the user
+NEUROTENSOR_API Tensor cat_unordered(const std::vector<Tensor>&); // a way to concatenate the tensors but not care about the shape or number of elements, the output shape can be determined by the user
+NEUROTENSOR_API Tensor stack(std::vector<Tensor>);
+NEUROTENSOR_API Tensor stack(std::vector<std::reference_wrapper<Tensor> >);
+NEUROTENSOR_API Tensor stack(std::vector<Tensor>, int64_t dim);
+NEUROTENSOR_API Tensor stack(std::vector<std::reference_wrapper<Tensor> >, int64_t dim);
+NEUROTENSOR_API Tensor stack(const Tensor&, int64_t dim=0);
+NEUROTENSOR_API Tensor vectorize(std::vector<Tensor>);
 
 template<typename T, typename... Args,
          typename std::enable_if<std::is_same<std::decay_t<T>, Tensor>::value, int>::type = 0>

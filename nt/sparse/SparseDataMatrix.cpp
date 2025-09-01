@@ -12,7 +12,7 @@ SparseMemoryMatrixData SparseMemoryMatrixData::block(int64_t row_start, int64_t 
     std::vector<int64_t> n_col_indices;
     int64_t max_size = (size - (row_ptrs[row_start] + (row_ptrs.back()-row_ptrs[row_end])));
     n_col_indices.reserve(max_size);
-    int8_t* out_mem = (int8_t*)std::malloc(type_size * max_size);
+    int8_t* out_mem = (int8_t*)MetaMalloc(type_size * max_size);
     void* mem_cpy = out_mem;
     const int8_t* begin = reinterpret_cast<const int8_t*>(this->memory) + (row_ptrs[row_start] * this->type_size);
     int64_t n_row_ptrs_cur = 0;

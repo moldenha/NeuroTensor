@@ -394,10 +394,10 @@ void grouped_conv_transpose_test(){
     int64_t add = int64_t(x.shape()[1]/groups) * (w.shape()[-1]);
     int64_t k_add = w.shape()[0] / groups;
     std::cout << "k_add is: "<<k_add<<std::endl;
-    nt::Tensor x_parts = x_unfold.split_axis({nt::my_range(0, x_unfold.shape()[0]), nt::my_range(0, add)});
+    nt::Tensor x_parts = x_unfold.split_axis({nt::range_(0, x_unfold.shape()[0]), nt::range_(0, add)});
     nt::Tensor w_transpose = w.transpose(0, 1).flip(-1);
     std::cout << "w_transpose shape: "<<w_transpose.shape() << std::endl;
-    nt::Tensor k_parts = w_transpose.split_axis({nt::my_range(0, w_transpose.shape()[0]), nt::my_range(0, k_add)}).view_Tensors(k_add, -1);
+    nt::Tensor k_parts = w_transpose.split_axis({nt::range_(0, w_transpose.shape()[0]), nt::range_(0, k_add)}).view_Tensors(k_add, -1);
     std::cout << "got k_parts"<<std::endl;
     nt::Tensor output = nt::functional::matmult(k_parts, x_parts);
     int64_t per_row = output.numel() / (groups * Cout * batch_size);
@@ -461,8 +461,8 @@ void conv_matmult_grouped(){
     std::cout << "unfolded"<<std::endl;
     int64_t add = int64_t(x.shape()[1]/groups) * (w.shape()[-1]);
     int64_t k_add = w.shape()[0] / groups;
-    nt::Tensor x_parts = inp_unfold.split_axis({nt::my_range(0, inp_unfold.shape()[0]), nt::my_range(0, add)}).transpose_Tensors(-1,-2).clone();
-    nt::Tensor k_parts = w.split_axis({nt::my_range(0, k_add)}).view_Tensors(k_add, -1).transpose_Tensors(-1,-2).clone();
+    nt::Tensor x_parts = inp_unfold.split_axis({nt::range_(0, inp_unfold.shape()[0]), nt::range_(0, add)}).transpose_Tensors(-1,-2).clone();
+    nt::Tensor k_parts = w.split_axis({nt::range_(0, k_add)}).view_Tensors(k_add, -1).transpose_Tensors(-1,-2).clone();
     std::cout << x_parts[0].item<nt::Tensor>().shape()<<std::endl;
     std::cout << k_parts[0].item<nt::Tensor>().shape() << std::endl;
     std::cout << "running matrix multiplication"<<std::endl;
@@ -501,7 +501,7 @@ void conv_gradient_tests(){
 
     nt::Tensor dx = nt::functional::zeros_like(x);
     nt::Tensor dw = nt::functional::zeros_like(w);
-    nt::Tensor dz = nt::functional::randn(out_functional.shape(), out_functional.dtype); // gradient
+    nt::Tensor dz = nt::functional::randn(out_functional.shape(), out_functional.dtype()); // gradient
     nt::functional::conv_dimage(dz, kernel_hold->tensor, dx, {kernel_sh, kernel_sh}, {stride, stride}, {padding, padding}, {dilation, dilation}, groups);
     nt::functional::conv_dkernel(dz, img_hold->tensor, dw, {x_sh, x_sh}, groups);
     std::cout << "dx is "<<dx<<std::endl;
@@ -530,7 +530,7 @@ void convT_gradient_tests(){
     std::cout << "got conv transpose"<<std::endl;
     nt::Tensor dx = nt::functional::zeros_like(x);
     nt::Tensor dw = nt::functional::zeros_like(w);
-    nt::Tensor dz = nt::functional::randn(out_functional.shape(), out_functional.dtype); // gradient
+    nt::Tensor dz = nt::functional::randn(out_functional.shape(), out_functional.dtype()); // gradient
     nt::functional::convt_dimage(dz, kernel_hold->tensor, dx, {kernel_sh, kernel_sh}, {stride, stride}, {padding, padding}, {output_padding, output_padding}, {dilation, dilation}, groups);
     nt::functional::convt_dkernel(dz, img_hold->tensor, dw, {padding, padding}, {x_sh, x_sh}, groups);
     std::cout << "dx is "<<dx<<std::endl;
@@ -573,7 +573,7 @@ void max_test(){
 
 
 nt::Tensor sample_gumbel(const nt::Tensor& logits){
-    nt::Tensor u = nt::functional::rand(0, 1, logits.shape(), logits.dtype); //uniform (0,1)
+    nt::Tensor u = nt::functional::rand(0, 1, logits.shape(), logits.dtype()); //uniform (0,1)
     return -nt::functional::log(-nt::functional::log(u + 1e-10));       // Gumbel(0,1)
 }
 
@@ -587,7 +587,7 @@ nt::Tensor gumbel_softmax(const nt::Tensor& logits, float tau, bool hard = false
 
     if (hard) {
         // Straight-through: make y_hard one-hot
-        nt::Tensor y_hard = nt::functional::one_hot(nt::functional::argmax(y, -1), y.shape()[-1]).to(y.dtype);
+        nt::Tensor y_hard = nt::functional::one_hot(nt::functional::argmax(y, -1), y.shape()[-1]).to(y.dtype());
         // Use straight-through estimator
         return (y_hard - y) + y;
     }

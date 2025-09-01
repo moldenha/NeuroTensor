@@ -3,8 +3,8 @@
 //but, you need certain indices to be 1,2,3, etc.
 //this is designed for that
 //it is fairly limited in functionality currently
-#ifndef _NT_SPARSE_TENSOR_H_
-#define _NT_SPARSE_TENSOR_H_
+#ifndef NT_SPARSE_TENSOR_H__
+#define NT_SPARSE_TENSOR_H__
 
 namespace nt{
 class SparseTensor;
@@ -17,18 +17,18 @@ class SparseTensor;
 
 namespace nt{
 
-class SparseMemoryPool : public intrusive_ptr_target {
+class NEUROTENSOR_API SparseMemoryPool : public intrusive_ptr_target {
 private:
     struct Block {
         char* data;   // Start of the allocated block
         size_t used;  // Bytes used in this block
         size_t size;  // Total size of the block
 
-        Block(size_t sz) : data(static_cast<char*>(std::malloc(sz))), used(0), size(sz) {
+        Block(size_t sz) : data(static_cast<char*>(MetaMalloc(sz))), used(0), size(sz) {
             if (!data) throw std::bad_alloc();
         }
 
-        ~Block() { std::free(data); }
+        ~Block() { MetaCStyleFree(data); }
     };
 
     std::vector<Block*> blocks; // List of memory blocks
@@ -36,18 +36,18 @@ private:
 
 public:
     SparseMemoryPool(size_t init_size = 1024) : block_size(init_size) {
-        blocks.push_back(new Block(block_size));
+        blocks.push_back(MetaNew(Block, block_size));
     }
 
     ~SparseMemoryPool() {
-        for (Block* block : blocks) delete block;
+        for (Block* block : blocks) MetaFree<Block>(block);
     }
 
     void* allocate(size_t bytes);
     void reset();
 };
 
-class SparseTensor{
+class NEUROTENSOR_API SparseTensor{
 public:
     using size_value_t = typename SizeRef::ArrayRefInt::value_type;
 private:
@@ -96,7 +96,7 @@ public:
     inline const SizeRef& shape() const {return _t.shape();}
     inline const size_value_t dims() const {return _t.dims();}
     inline const size_value_t& numel() const {return _t.numel();}
-    inline const DType& dtype() const {return _t.dtype;}
+    inline const DType& dtype() const {return _t.dtype();}
 
     template<typename T, typename... Args>
     inline const T& get(int64_t i, Args... args) const {
@@ -129,10 +129,12 @@ public:
     inline Tensor operator>(Scalar i) const {return _t > i;} 
     inline Tensor operator<(Scalar i) const {return _t < i;} 
     inline SparseTensor operator[](size_value_t i) const {return SparseTensor(_t[i], _mem);}
-    inline SparseTensor operator[](const my_range& ra) const {return SparseTensor(_t[ra], _mem);}
+    inline SparseTensor operator[](const range_& ra) const {return SparseTensor(_t[ra], _mem);}
     inline SparseTensor operator[](const Tensor& t) const {return SparseTensor(_t[t], _mem);}
-    inline SparseTensor operator[](std::vector<my_range> ras) const {return SparseTensor(_t[std::move(ras)], _mem);}
+    inline SparseTensor operator[](std::vector<range_> ras) const {return SparseTensor(_t[std::move(ras)], _mem);}
     inline SparseTensor operator[](std::vector<size_value_t> xs) const {return SparseTensor(_t[std::move(xs)], _mem);}
+    template<typename Arg, typename... Args>
+    inline SparseTensor operator()(Arg&& arg, Args&&... args) const {return SparseTensor(_t(std::forward<Arg>(arg), std::forward<Args>(args)...), _mem);}
     inline const Tensor& underlying_tensor() const noexcept {return _t;}
     inline SparseTensor transpose(int64_t a, int64_t b) const {return SparseTensor(_t.transpose(a, b), _mem);}
     inline SparseTensor permute(std::vector<size_value_t> v) const {return SparseTensor(_t.permute(std::move(v)), _mem);}

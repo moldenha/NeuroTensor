@@ -30,17 +30,17 @@ inline void find_adaptive(int64_t output_size, int64_t input_size,
 TensorGrad TensorGrad_Functional_Class::avg_pool1d(
     TensorGrad input, int64_t kernel_size, int64_t stride, int64_t padding,
     bool ceil_mode, bool count_include_pad) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out =
-            ::nt::functional::avg_pool1d(input.tensor, kernel_size, stride,
+            ::nt::functional::avg_pool1d(input.detach(), kernel_size, stride,
                                          padding, ceil_mode, count_include_pad);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     SizeRef in_shape = input.shape().clone();
-    TensorGrad result(::nt::functional::avg_pool1d(input.tensor, kernel_size,
+    TensorGrad result(::nt::functional::avg_pool1d(input.detach(), kernel_size,
                                                    stride, padding, ceil_mode,
                                                    count_include_pad),
                       true);
@@ -53,7 +53,7 @@ TensorGrad TensorGrad_Functional_Class::avg_pool1d(
             Tensor n_grad = ::nt::functional::backward_avg_pool1d(
                 in_shape, grad, kernel_size, stride, padding, ceil_mode,
                 count_include_pad);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         });
     return std::move(result);
 }
@@ -79,17 +79,17 @@ TensorGrad TensorGrad_Functional_Class::adaptive_avg_pool1d(TensorGrad x,
 TensorGrad TensorGrad_Functional_Class::avg_pool2d(
     TensorGrad input, utils::my_tuple kernel_size, utils::my_tuple stride,
     utils::my_tuple padding, bool ceil_mode, bool count_include_pad) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out =
-            ::nt::functional::avg_pool2d(input.tensor, kernel_size, stride,
+            ::nt::functional::avg_pool2d(input.detach(), kernel_size, stride,
                                          padding, ceil_mode, count_include_pad);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     SizeRef in_shape = input.shape().clone();
-    TensorGrad result(::nt::functional::avg_pool2d(input.tensor, kernel_size,
+    TensorGrad result(::nt::functional::avg_pool2d(input.detach(), kernel_size,
                                                    stride, padding, ceil_mode,
                                                    count_include_pad),
                       true);
@@ -102,7 +102,7 @@ TensorGrad TensorGrad_Functional_Class::avg_pool2d(
             Tensor n_grad = ::nt::functional::backward_avg_pool2d(
                 in_shape, grad, kernel_size, stride, padding, ceil_mode,
                 count_include_pad);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         });
     return std::move(result);
 }
@@ -142,17 +142,17 @@ TensorGrad TensorGrad_Functional_Class::avg_pool3d(
     TensorGrad input, utils::my_n_tuple<3> kernel_size,
     utils::my_n_tuple<3> stride, utils::my_n_tuple<3> padding, bool ceil_mode,
     bool count_include_pad) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out =
-            ::nt::functional::avg_pool3d(input.tensor, kernel_size, stride,
+            ::nt::functional::avg_pool3d(input.detach(), kernel_size, stride,
                                          padding, ceil_mode, count_include_pad);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     SizeRef in_shape = input.shape().clone();
-    TensorGrad result(::nt::functional::avg_pool3d(input.tensor, kernel_size,
+    TensorGrad result(::nt::functional::avg_pool3d(input.detach(), kernel_size,
                                                    stride, padding, ceil_mode,
                                                    count_include_pad),
                       true);
@@ -165,7 +165,7 @@ TensorGrad TensorGrad_Functional_Class::avg_pool3d(
             Tensor n_grad = ::nt::functional::backward_avg_pool3d(
                 in_shape, grad, kernel_size, stride, padding, ceil_mode,
                 count_include_pad);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         });
     return std::move(result);
 }
@@ -217,18 +217,18 @@ TensorGrad TensorGrad_Functional_Class::lp_pool1d(TensorGrad input,
                                                   int64_t kernel_size,
                                                   int64_t stride,
                                                   bool ceil_mode) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out = ::nt::functional::lp_pool1d(
-            input.tensor, power, kernel_size, stride, ceil_mode);
+            input.detach(), power, kernel_size, stride, ceil_mode);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     intrusive_ptr<tensor_holder> cpy =
-        make_intrusive<tensor_holder>(input.tensor.conditional_mutate_clone());
+        make_intrusive<tensor_holder>(input.detach().conditional_mutate_clone());
     TensorGrad result(::nt::functional::lp_pool1d(
-                          input.tensor, power, kernel_size, stride, ceil_mode),
+                          input.detach(), power, kernel_size, stride, ceil_mode),
                       true);
     result.track_tensors(input);
     result.create_backward_function(
@@ -237,7 +237,7 @@ TensorGrad TensorGrad_Functional_Class::lp_pool1d(TensorGrad input,
             intrusive_ptr<tensor_holder> cpy) {
             Tensor n_grad = ::nt::functional::backward_lp_pool1d(
                 cpy->tensor, grad, power, kernel_size, stride, ceil_mode);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     return std::move(result);
@@ -267,18 +267,18 @@ TensorGrad TensorGrad_Functional_Class::lp_pool2d(TensorGrad input,
                                                   utils::my_tuple kernel_size,
                                                   utils::my_tuple stride,
                                                   bool ceil_mode) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out = ::nt::functional::lp_pool2d(
-            input.tensor, power, kernel_size, stride, ceil_mode);
+            input.detach(), power, kernel_size, stride, ceil_mode);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     intrusive_ptr<tensor_holder> cpy =
-        make_intrusive<tensor_holder>(input.tensor.conditional_mutate_clone());
+        make_intrusive<tensor_holder>(input.detach().conditional_mutate_clone());
     TensorGrad result(::nt::functional::lp_pool2d(
-                          input.tensor, power, kernel_size, stride, ceil_mode),
+                          input.detach(), power, kernel_size, stride, ceil_mode),
                       true);
     result.track_tensors(input);
     result.create_backward_function(
@@ -287,7 +287,7 @@ TensorGrad TensorGrad_Functional_Class::lp_pool2d(TensorGrad input,
             intrusive_ptr<tensor_holder> cpy) {
             Tensor n_grad = ::nt::functional::backward_lp_pool2d(
                 cpy->tensor, grad, power, kernel_size, stride, ceil_mode);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     return std::move(result);
@@ -326,18 +326,18 @@ TensorGrad TensorGrad_Functional_Class::adaptive_lp_pool2d(
 TensorGrad TensorGrad_Functional_Class::lp_pool3d(
     TensorGrad input, Scalar power, utils::my_n_tuple<3> kernel_size,
     utils::my_n_tuple<3> stride, bool ceil_mode) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out = ::nt::functional::lp_pool3d(
-            input.tensor, power, kernel_size, stride, ceil_mode);
+            input.detach(), power, kernel_size, stride, ceil_mode);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     intrusive_ptr<tensor_holder> cpy =
-        make_intrusive<tensor_holder>(input.tensor.conditional_mutate_clone());
+        make_intrusive<tensor_holder>(input.detach().conditional_mutate_clone());
     TensorGrad result(::nt::functional::lp_pool3d(
-                          input.tensor, power, kernel_size, stride, ceil_mode),
+                          input.detach(), power, kernel_size, stride, ceil_mode),
                       true);
     result.track_tensors(input);
     result.create_backward_function(
@@ -346,7 +346,7 @@ TensorGrad TensorGrad_Functional_Class::lp_pool3d(
             intrusive_ptr<tensor_holder> cpy) {
             Tensor n_grad = ::nt::functional::backward_lp_pool3d(
                 cpy->tensor, grad, power, kernel_size, stride, ceil_mode);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     return std::move(result);
@@ -397,17 +397,17 @@ TensorGrad TensorGrad_Functional_Class::adaptive_lp_pool3d(
 TensorGrad TensorGrad_Functional_Class::max_pool1d(
     TensorGrad input, int64_t kernel_size, int64_t stride, int64_t padding,
     int64_t dilation, bool ceil_mode, bool return_indices) {
-    if (!input.do_track_grad) {
-        Tensor out = ::nt::functional::max_pool1d(input.tensor, kernel_size,
+    if (!input.track_grad()) {
+        Tensor out = ::nt::functional::max_pool1d(input.detach(), kernel_size,
                                                   stride, padding, dilation,
                                                   ceil_mode, return_indices);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     auto [output, indices] = get<2>(::nt::functional::max_pool1d(
-        input.tensor, kernel_size, stride, padding, dilation, ceil_mode, true));
+        input.detach(), kernel_size, stride, padding, dilation, ceil_mode, true));
     SizeRef in_shape = input.shape().clone();
     intrusive_ptr<tensor_holder> cpy =
         make_intrusive<tensor_holder>(indices.clone());
@@ -419,7 +419,7 @@ TensorGrad TensorGrad_Functional_Class::max_pool1d(
                    intrusive_ptr<tensor_holder> indices) {
             Tensor n_grad = ::nt::functional::backward_max_pool1d(
                 in_shape, grad, indices->tensor);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     if (!return_indices)
@@ -430,17 +430,17 @@ TensorGrad TensorGrad_Functional_Class::max_pool1d(
 TensorGrad TensorGrad_Functional_Class::max_unpool1d(
     TensorGrad input, Tensor indices, int64_t kernel_size, int64_t stride,
     int64_t padding, int64_t output_size) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out = ::nt::functional::max_unpool1d(
-            input.tensor, indices, kernel_size, stride, padding, output_size);
+            input.detach(), indices, kernel_size, stride, padding, output_size);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     intrusive_ptr<tensor_holder> cpy = make_intrusive<tensor_holder>(indices);
     SizeRef in_shape = input.shape().clone();
-    TensorGrad result(::nt::functional::max_unpool1d(input.tensor, indices,
+    TensorGrad result(::nt::functional::max_unpool1d(input.detach(), indices,
                                                      kernel_size, stride,
                                                      padding, output_size),
                       true);
@@ -451,7 +451,7 @@ TensorGrad TensorGrad_Functional_Class::max_unpool1d(
                             intrusive_ptr<tensor_holder> indices) {
             Tensor n_grad = ::nt::functional::backward_max_unpool1d(
                 in_shape, grad, indices->tensor, padding);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     return std::move(result);
@@ -460,7 +460,7 @@ TensorGrad TensorGrad_Functional_Class::max_unpool1d(
 TensorGrad TensorGrad_Functional_Class::max_unpool1d(
     TensorGrad input, TensorGrad _indices, int64_t kernel_size, int64_t stride,
     int64_t padding, int64_t output_size) {
-    return max_unpool1d(input, _indices.tensor, kernel_size, stride, padding, output_size);
+    return max_unpool1d(input, _indices.detach(), kernel_size, stride, padding, output_size);
 }
 TensorGrad
 TensorGrad_Functional_Class::adaptive_max_pool1d(TensorGrad x, int64_t l_out,
@@ -491,17 +491,17 @@ TensorGrad TensorGrad_Functional_Class::max_pool2d(
     TensorGrad input, utils::my_tuple kernel_size, utils::my_tuple stride,
     utils::my_tuple padding, utils::my_tuple dilation, bool ceil_mode,
     bool return_indices) {
-    if (!input.do_track_grad) {
-        Tensor out = ::nt::functional::max_pool2d(input.tensor, kernel_size,
+    if (!input.track_grad()) {
+        Tensor out = ::nt::functional::max_pool2d(input.detach(), kernel_size,
                                                   stride, padding, dilation,
                                                   ceil_mode, return_indices);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     auto [output, indices] = get<2>(::nt::functional::max_pool2d(
-        input.tensor, kernel_size, stride, padding, dilation, ceil_mode, true));
+        input.detach(), kernel_size, stride, padding, dilation, ceil_mode, true));
     SizeRef in_shape = input.shape().clone();
     intrusive_ptr<tensor_holder> cpy =
         make_intrusive<tensor_holder>(indices.clone());
@@ -513,7 +513,7 @@ TensorGrad TensorGrad_Functional_Class::max_pool2d(
                    intrusive_ptr<tensor_holder> indices) {
             Tensor n_grad = ::nt::functional::backward_max_pool2d(
                 in_shape, grad, indices->tensor);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     if (!return_indices)
@@ -525,17 +525,17 @@ TensorGrad TensorGrad_Functional_Class::max_unpool2d(
     TensorGrad input, Tensor indices, utils::my_tuple kernel_size,
     utils::my_tuple stride, utils::my_tuple padding,
     utils::my_tuple output_size) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out = ::nt::functional::max_unpool2d(
-            input.tensor, indices, kernel_size, stride, padding, output_size);
+            input.detach(), indices, kernel_size, stride, padding, output_size);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     intrusive_ptr<tensor_holder> cpy = make_intrusive<tensor_holder>(indices);
     SizeRef in_shape = input.shape().clone();
-    TensorGrad result(::nt::functional::max_unpool2d(input.tensor, indices,
+    TensorGrad result(::nt::functional::max_unpool2d(input.detach(), indices,
                                                      kernel_size, stride,
                                                      padding, output_size),
                       true);
@@ -546,7 +546,7 @@ TensorGrad TensorGrad_Functional_Class::max_unpool2d(
                             intrusive_ptr<tensor_holder> indices) {
             Tensor n_grad = ::nt::functional::backward_max_unpool2d(
                 in_shape, grad, indices->tensor, padding);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     return std::move(result);
@@ -555,7 +555,7 @@ TensorGrad TensorGrad_Functional_Class::max_unpool2d(
     TensorGrad input, TensorGrad _indices, utils::my_tuple kernel_size,
     utils::my_tuple stride, utils::my_tuple padding,
     utils::my_tuple output_size) {
-    return max_unpool2d(input, _indices.tensor, kernel_size, stride, padding,
+    return max_unpool2d(input, _indices.detach(), kernel_size, stride, padding,
                         output_size);
 }
 
@@ -589,17 +589,17 @@ TensorGrad TensorGrad_Functional_Class::max_pool3d(
     TensorGrad input, utils::my_n_tuple<3> kernel_size,
     utils::my_n_tuple<3> stride, utils::my_n_tuple<3> padding,
     utils::my_n_tuple<3> dilation, bool ceil_mode, bool return_indices) {
-    if (!input.do_track_grad) {
-        Tensor out = ::nt::functional::max_pool3d(input.tensor, kernel_size,
+    if (!input.track_grad()) {
+        Tensor out = ::nt::functional::max_pool3d(input.detach(), kernel_size,
                                                   stride, padding, dilation,
                                                   ceil_mode, return_indices);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     auto [output, indices] = get<2>(::nt::functional::max_pool3d(
-        input.tensor, kernel_size, stride, padding, dilation, ceil_mode, true));
+        input.detach(), kernel_size, stride, padding, dilation, ceil_mode, true));
     SizeRef in_shape = input.shape().clone();
     intrusive_ptr<tensor_holder> cpy =
         make_intrusive<tensor_holder>(indices.clone());
@@ -611,7 +611,7 @@ TensorGrad TensorGrad_Functional_Class::max_pool3d(
                    intrusive_ptr<tensor_holder> indices) {
             Tensor n_grad = ::nt::functional::backward_max_pool3d(
                 in_shape, grad, indices->tensor);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     if (!return_indices)
@@ -623,17 +623,17 @@ TensorGrad TensorGrad_Functional_Class::max_unpool3d(
     TensorGrad input, Tensor indices, utils::my_n_tuple<3> kernel_size,
     utils::my_n_tuple<3> stride, utils::my_n_tuple<3> padding,
     utils::my_n_tuple<3> output_size) {
-    if (!input.do_track_grad) {
+    if (!input.track_grad()) {
         Tensor out = ::nt::functional::max_unpool3d(
-            input.tensor, indices, kernel_size, stride, padding, output_size);
+            input.detach(), indices, kernel_size, stride, padding, output_size);
         TensorGrad result(std::move(out), false);
-        result.do_track_grad = false;
+        result.track_grad_(false);
         return std::move(result);
     }
 
     intrusive_ptr<tensor_holder> cpy = make_intrusive<tensor_holder>(indices);
     SizeRef in_shape = input.shape().clone();
-    TensorGrad result(::nt::functional::max_unpool3d(input.tensor, indices,
+    TensorGrad result(::nt::functional::max_unpool3d(input.detach(), indices,
                                                      kernel_size, stride,
                                                      padding, output_size),
                       true);
@@ -644,7 +644,7 @@ TensorGrad TensorGrad_Functional_Class::max_unpool3d(
                             intrusive_ptr<tensor_holder> indices) {
             Tensor n_grad = ::nt::functional::backward_max_unpool3d(
                 in_shape, grad, indices->tensor, padding);
-            parents[0]->grad->tensor += n_grad;
+            parents[0]->accumulate_gradient( n_grad);
         },
         cpy);
     return std::move(result);
@@ -654,7 +654,7 @@ TensorGrad TensorGrad_Functional_Class::max_unpool3d(
     TensorGrad input, TensorGrad indices, utils::my_n_tuple<3> kernel_size,
     utils::my_n_tuple<3> stride, utils::my_n_tuple<3> padding,
     utils::my_n_tuple<3> output_size) {
-    return max_unpool3d(input, indices.tensor, kernel_size, stride, padding,
+    return max_unpool3d(input, indices.detach(), kernel_size, stride, padding,
                         output_size);
 }
 TensorGrad TensorGrad_Functional_Class::adaptive_max_pool3d(
@@ -754,9 +754,11 @@ inline void check_parameters_fractional(const Tensor &input,
 // Fractional Max Pooling
 TensorGrad TensorGrad_Functional_Class::fractional_max_pool2d(
     TensorGrad _input, utils::my_tuple kernel_size, utils::my_tuple output_size,
-    std::variant<double, std::tuple<double, double>> output_ratio,
+    utils::tuple_or_var<double, 2> output_ratio,
     bool return_indices) {
-    const Tensor &input = _input.tensor;
+    static_assert(std::is_same_v<decltype(output_ratio)::tuple_t, std::tuple<double, double>>, "Error, tuple or var implemented incorrectly for tuple type");
+
+    const Tensor &input = _input.detach();
     std::vector<int64_t> row_bounds, col_bounds;
     if (!(output_size == -1)) {
         utils::throw_exception(
@@ -770,13 +772,7 @@ TensorGrad TensorGrad_Functional_Class::fractional_max_pool2d(
         col_bounds = getSlidingWindowSizesOutput(
             kernel_size[1], input.shape()[-1], output_size[1]);
     } else {
-        std::tuple<double, double> output_ratio_tup;
-        if (output_ratio.index() == 0) {
-            output_ratio_tup = std::tuple<double, double>{
-                std::get<0>(output_ratio), std::get<0>(output_ratio)};
-        } else {
-            output_ratio_tup = std::get<1>(output_ratio);
-        }
+        std::tuple<double, double> output_ratio_tup = output_ratio.get_tup();
 
         utils::throw_exception(std::get<0>(output_ratio_tup) > 0.0 &&
                                    std::get<0>(output_ratio_tup) < 1.0 &&
@@ -816,10 +812,11 @@ TensorGrad TensorGrad_Functional_Class::fractional_max_pool2d(
 TensorGrad TensorGrad_Functional_Class::fractional_max_pool3d(
     TensorGrad _input, utils::my_n_tuple<3> kernel_size,
     utils::my_n_tuple<3> output_size,
-    std::variant<double, std::tuple<double, double, double>> output_ratio,
+     utils::tuple_or_var<double, 3> output_ratio,
     bool return_indices) {
 
-    const Tensor &input = _input.tensor;
+    static_assert(std::is_same_v<decltype(output_ratio)::tuple_t, std::tuple<double, double, double>>, "Error, tuple or var implemented incorrectly for tuple type");
+    const Tensor &input = _input.detach();
     std::vector<int64_t> chan_bounds, row_bounds, col_bounds;
     if (!(output_size == -1)) {
         utils::throw_exception(
@@ -836,14 +833,7 @@ TensorGrad TensorGrad_Functional_Class::fractional_max_pool3d(
         col_bounds = getSlidingWindowSizesOutput(
             kernel_size[2], input.shape()[-1], output_size[2]);
     } else {
-        std::tuple<double, double, double> output_ratio_tup;
-        if (output_ratio.index() == 0) {
-            output_ratio_tup = std::tuple<double, double, double>{
-                std::get<0>(output_ratio), std::get<0>(output_ratio),
-                std::get<0>(output_ratio)};
-        } else {
-            output_ratio_tup = std::get<1>(output_ratio);
-        }
+        std::tuple<double, double, double> output_ratio_tup = output_ratio.get_tup();
 
         utils::throw_exception(std::get<0>(output_ratio_tup) > 0.0 &&
                                    std::get<0>(output_ratio_tup) < 1.0 &&

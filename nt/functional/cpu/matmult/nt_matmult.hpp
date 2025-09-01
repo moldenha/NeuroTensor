@@ -1,5 +1,5 @@
-#ifndef _NT_MATMULT_HPP_
-#define _NT_MATMULT_HPP_
+#ifndef NT_MATMULT_HPP__
+#define NT_MATMULT_HPP__
 #ifdef _MSC_VER
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #endif
@@ -72,7 +72,7 @@ void kzero_memory(T* array) {
 
 
 template<typename T, size_t COLS>
-inline void kpack_rowA_threaded(const T* src_matrix, T* block_matrix, int64_t src_cols) noexcept {
+NT_MATMULT_ALWAYS_INLINE void kpack_rowA_threaded(const T* src_matrix, T* block_matrix, int64_t src_cols) noexcept {
 	int64_t max = _NT_MATMULT_MIN_(COLS, src_cols);
 	for(int64_t i = 0; i < max; ++i)
 		*block_matrix++ = src_matrix[i];
@@ -82,7 +82,7 @@ inline void kpack_rowA_threaded(const T* src_matrix, T* block_matrix, int64_t sr
 
 //pack_threaded<T, a_pack_rows, a_pack_cols>(A, blockA_packed, i, k, a_rows, a_cols);
 template<typename T, size_t ROWS, size_t COLS>
-inline void pack_threaded(const T* src_matrix_pre, T* block_matrix, const int64_t& start_row, const int64_t& start_col, const int64_t& src_rows, const int64_t& src_cols) noexcept{
+NT_MATMULT_ALWAYS_INLINE void pack_threaded(const T* src_matrix_pre, T* block_matrix, const int64_t& start_row, const int64_t& start_col, const int64_t& src_rows, const int64_t& src_cols) noexcept{
 	/* kpack_blockA_threaded<T, COLS, ROWS>(src_matrix_pre + (start_row * src_cols), block_matrix, start_col, src_rows-start_row, src_cols); */
 	const T* src_matrix = src_matrix_pre + (start_row * src_cols);
 	int64_t max =  _NT_MATMULT_MIN_(ROWS, (src_rows-start_row));
@@ -98,7 +98,7 @@ inline void pack_threaded(const T* src_matrix_pre, T* block_matrix, const int64_
 
 
 template<typename T, size_t ROWS, size_t COLS>
-inline void kpack_rowB_threaded(const T* src_matrix, T* block_matrix, const int64_t& row_amt, const int64_t& src_cols, const int64_t& cur_row) noexcept {
+NT_MATMULT_ALWAYS_INLINE void kpack_rowB_threaded(const T* src_matrix, T* block_matrix, const int64_t& row_amt, const int64_t& src_cols, const int64_t& cur_row) noexcept {
 	int64_t max = _NT_MATMULT_MIN_(ROWS, src_cols);
 	for(int i = 0; i < max; ++i)
 		block_matrix[i * COLS + cur_row]  = *src_matrix++;
@@ -107,7 +107,7 @@ inline void kpack_rowB_threaded(const T* src_matrix, T* block_matrix, const int6
 
 //kpack_blockB_threaded<T, b_pack_rows, b_pack_cols>(B + (j * b_rows), blockB_packed, k, j, b_cols, b_rows);
 template<typename T, size_t ROWS, size_t COLS>
-inline void pack_transpose_threaded(const T* src_matrix_pre, T* block_matrix, const int64_t& start_col, const int64_t& start_row, const int64_t& src_cols, const int64_t& src_rows) noexcept{
+NT_MATMULT_ALWAYS_INLINE void pack_transpose_threaded(const T* src_matrix_pre, T* block_matrix, const int64_t& start_col, const int64_t& start_row, const int64_t& src_cols, const int64_t& src_rows) noexcept{
 	const T* src_matrix = src_matrix_pre + (start_row * src_cols);
 	int64_t max =  _NT_MATMULT_MIN_(COLS, (src_rows-start_row)); //row_amt
 	int64_t col_amt = src_cols - start_col;

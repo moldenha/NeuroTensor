@@ -21,10 +21,10 @@ nt::Tensor avg_pool3d_ceil(nt::Tensor input, nt::utils::my_n_tuple<3> kernel_siz
                             : ((modD+padding[0]) * (kernel_size[2] * kernel_size[1]) + (modR+padding[1]) * kernel_size[2] + (modC+padding[2]) * kernel_size[1]));
     int64_t div_c = div_a - (count_include_pad ? 0 : ((padding[0] * kernel_size[1] * kernel_size[2]) + 
                                padding[1] * kernel_size[2] + padding[2] * kernel_size[1]));
-    Scalar num_a = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    Scalar num_c = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
-    if(DTypeFuncs::is_floating(input.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    Scalar num_c = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
+    if(DTypeFuncs::is_floating(input.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
         num_c = num_c.inverse();
@@ -33,7 +33,7 @@ nt::Tensor avg_pool3d_ceil(nt::Tensor input, nt::utils::my_n_tuple<3> kernel_siz
     Tensor div = functional::nums({out.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_c;
-    if(DTypeFuncs::is_floating(input.dtype) || DTypeFuncs::is_complex(input.dtype))
+    if(DTypeFuncs::is_floating(input.dtype()) || DTypeFuncs::is_complex(input.dtype()))
         out *= div;
     else
         out /= div;
@@ -45,7 +45,7 @@ nt::Tensor avg_pool3d_ceil(nt::Tensor input, nt::utils::my_n_tuple<3> kernel_siz
 nt::Tensor avg_pool3d(nt::Tensor input, nt::utils::my_n_tuple<3> kernel_size, nt::utils::my_n_tuple<3> stride = -1, nt::utils::my_n_tuple<3> padding = 0, 
                       bool ceil_mode = false, bool count_include_pad = true){
     using namespace nt;
-    // if(!DTypeFuncs::is_floating(input.dtype) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
+    // if(!DTypeFuncs::is_floating(input.dtype()) || !DTypeFuncs::is_complex(input)) input = input.to(DType::Float32);
     if(stride == -1) stride = kernel_size;
     check_pool_args(input, -1, kernel_size[2], stride[2], padding[2]);
     check_pool_args(input, -2, kernel_size[1], stride[1], padding[1]);
@@ -93,9 +93,9 @@ nt::Tensor avg_pool3d(nt::Tensor input, nt::utils::my_n_tuple<3> kernel_size, nt
     //modR (modifying rows) is multiplied by the number of columns 
     //modC (modified cols) is multiplied by the number of rows
     int64_t div_b = div_a - (count_include_pad ? 0 : ((padding[0] * kernel_size[1] * kernel_size[2]) + padding[2] * kernel_size[1] + padding[1] * kernel_size[2]));
-    Scalar num_a = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(input.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    if(DTypeFuncs::is_floating(input.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(input.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    if(DTypeFuncs::is_floating(input.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
     }
@@ -103,7 +103,7 @@ nt::Tensor avg_pool3d(nt::Tensor input, nt::utils::my_n_tuple<3> kernel_size, nt
     Tensor div = functional::nums({out.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_b;
-    if(DTypeFuncs::is_floating(input.dtype) || DTypeFuncs::is_complex(input.dtype))
+    if(DTypeFuncs::is_floating(input.dtype()) || DTypeFuncs::is_complex(input.dtype()))
         out *= div;
     else
         out /= div;
@@ -123,7 +123,7 @@ nt::Tensor backward_avg_pool3d_ceil(nt::SizeRef in_shape, nt::Tensor output_grad
                         .redo_index(-2, in_shape[-2] + modR)
                         .redo_index(-3, in_shape[-3] + modD);}
     if(stride == -1) stride = kernel_size;
-    Tensor grad = functional::zeros(in_shape, output_grad.dtype);
+    Tensor grad = functional::zeros(in_shape, output_grad.dtype());
     Tensor strided = grad.unfold(-3, kernel_size[0], stride[0]);
     strided = strided.unfold(-3, kernel_size[1], stride[1]).unfold(-3, kernel_size[2], kernel_size[2]).flatten(-3, -1);
     while(output_grad.dims() < strided.dims()){
@@ -137,10 +137,10 @@ nt::Tensor backward_avg_pool3d_ceil(nt::SizeRef in_shape, nt::Tensor output_grad
                             : ((modD+padding[0]) * (kernel_size[2] * kernel_size[1]) + (modR+padding[1]) * kernel_size[2] + (modC+padding[2]) * kernel_size[1]));
     int64_t div_c = div_a - (count_include_pad ? 0 : ((padding[0] * kernel_size[1] * kernel_size[2]) + 
                                padding[1] * kernel_size[2] + padding[2] * kernel_size[1]));
-    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    Scalar num_c = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
-    if(DTypeFuncs::is_floating(output_grad.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    Scalar num_c = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_c, div_c)).inverse() : Scalar(div_c));
+    if(DTypeFuncs::is_floating(output_grad.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
         num_c = num_c.inverse();
@@ -151,7 +151,7 @@ nt::Tensor backward_avg_pool3d_ceil(nt::SizeRef in_shape, nt::Tensor output_grad
     Tensor div = functional::nums({output_grad.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_c;
-    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype) || DTypeFuncs::is_complex(output_grad.dtype)) ? output_grad * div : output_grad / div;  
+    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype()) || DTypeFuncs::is_complex(output_grad.dtype())) ? output_grad * div : output_grad / div;  
     strided += dl_dp.expand_as(strided);
     if(!(padding == 0)){return unpad(grad, {padding[0], padding[0] + modD, padding[1], padding[1]+modR, padding[2], padding[2]+modC}).contiguous();}
     return unpad(grad, {0, modD, 0, modR, 0, modC}).contiguous();
@@ -199,7 +199,7 @@ nt::Tensor backward_avg_pool3d(nt::SizeRef in_shape, nt::Tensor output_grad,
                             .redo_index(-3, in_shape[-3] + 2 * padding[0]);
     }
 
-    Tensor grad = functional::zeros(in_shape, output_grad.dtype);
+    Tensor grad = functional::zeros(in_shape, output_grad.dtype());
     Tensor strided = grad.unfold(-3, kernel_size[0], stride[0]);
     strided = strided.unfold(-3, kernel_size[1], stride[1]).unfold(-3, kernel_size[2], stride[2]).flatten(-3, -1);
     while(output_grad.dims() < strided.dims()){
@@ -216,9 +216,9 @@ nt::Tensor backward_avg_pool3d(nt::SizeRef in_shape, nt::Tensor output_grad,
     //modR (modifying rows) is multiplied by the number of columns 
     //modC (modified cols) is multiplied by the number of rows
     int64_t div_b = div_a - (count_include_pad ? 0 : ((padding[0] * kernel_size[1] * kernel_size[2]) + padding[2] * kernel_size[1] + padding[1] * kernel_size[2]));
-    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
-    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
-    if(DTypeFuncs::is_floating(output_grad.dtype)){
+    Scalar num_a = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_a, div_a)).inverse() : Scalar(div_a));
+    Scalar num_b = (DTypeFuncs::is_complex(output_grad.dtype()) ? Scalar(complex_64(div_b, div_b)).inverse() : Scalar(div_b));
+    if(DTypeFuncs::is_floating(output_grad.dtype())){
         num_a = num_a.inverse();
         num_b = num_b.inverse();
     }
@@ -226,7 +226,7 @@ nt::Tensor backward_avg_pool3d(nt::SizeRef in_shape, nt::Tensor output_grad,
     Tensor div = functional::nums({output_grad.shape()[-2], 1}, num_a);
     div[-1] = num_b;
     div[0] = num_b;
-    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype) || DTypeFuncs::is_complex(output_grad.dtype)) ? output_grad * div : output_grad / div;  
+    Tensor dl_dp = (DTypeFuncs::is_floating(output_grad.dtype()) || DTypeFuncs::is_complex(output_grad.dtype())) ? output_grad * div : output_grad / div;  
     strided += dl_dp.expand_as(strided);
     if(padding == 0) return std::move(grad);
     return unpad(grad, {padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]});

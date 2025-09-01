@@ -1,5 +1,5 @@
-#ifndef _NT_LINALG_TO_EIGEN_HPP_
-#define _NT_LINALG_TO_EIGEN_HPP_
+#ifndef NT_LINALG_TO_EIGEN_HPP__
+#define NT_LINALG_TO_EIGEN_HPP__
 
 #include "../../Tensor.h"
 #include "../../utils/utils.h"
@@ -29,7 +29,7 @@ Eigen::Matrix<detail::NT_Type_To_Eigen_Type_t<utils::IteratorBaseType_t<It>>, Ei
                 }else if constexpr (std::is_same_v<type, complex_32>){
                     return std::complex<float>(convert::convert<complex_64>(in_t));
                 }else{
-                    return convert::convert<eigen_type, type>(in_t);
+                    return convert::convert<eigen_type>(in_t);
                 }
             });
             return out_mat; 
@@ -49,7 +49,7 @@ Eigen::Matrix<detail::NT_Type_To_Eigen_Type_t<utils::IteratorBaseType_t<It>>, Ei
                 }else if constexpr (std::is_same_v<type, complex_32>){
                     return std::complex<float>(convert::convert<complex_64>(in_t));
                 }else{
-                    return convert::convert<eigen_type, type>(in_t);
+                    return convert::convert<eigen_type>(in_t);
                 }
             });
         }else{
@@ -64,7 +64,7 @@ Eigen::Matrix<detail::NT_Type_To_Eigen_Type_t<utils::IteratorBaseType_t<It>>, Ei
 template<typename Func, typename... Args>
 Tensor runEigenFunction(const Tensor& tensor, Func func, Args... args){
     utils::throw_exception(tensor.dims() == 2, "Only 2D tensors can be converted to Eigen matricies, got $ dims", tensor.dims());
-    utils::throw_exception(tensor.dtype != DType::Bool && tensor.dtype != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor.dtype);
+    utils::throw_exception(tensor.dtype() != DType::Bool && tensor.dtype() != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor.dtype());
     Tensor t = tensor.contiguous();
     Tensor out = t.arr_void().execute_function<WRAP_DTYPES<NumberTypesL>>([&](auto begin, auto end){
         const int64_t& rows = tensor.shape()[0];
@@ -73,8 +73,8 @@ Tensor runEigenFunction(const Tensor& tensor, Func func, Args... args){
         Tensor out = func(matrix, std::forward<Args>(args)...);
         return std::move(out);
     });
-    if(out.dtype != DType::TensorObj && out.dtype != DType::Bool){
-        return out.to(tensor.dtype);
+    if(out.dtype() != DType::TensorObj && out.dtype() != DType::Bool){
+        return out.to(tensor.dtype());
     }
     return std::move(out);
 }
@@ -83,8 +83,8 @@ template<typename Func, typename... Args>
 Tensor runDualEigenFunction(const Tensor& tensor, const Tensor& tensor2, Func func, Args... args){
     utils::throw_exception(tensor.dims() == 2, "Only 2D tensors can be converted to Eigen matricies, got $ dims", tensor.dims());
     utils::throw_exception(tensor2.dims() == 2, "Only 2D tensors can be converted to Eigen matricies, got $ dims", tensor2.dims());
-    utils::throw_exception(tensor.dtype != DType::Bool && tensor.dtype != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor.dtype);
-    utils::throw_exception(tensor2.dtype != DType::Bool && tensor2.dtype != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor2.dtype);
+    utils::throw_exception(tensor.dtype() != DType::Bool && tensor.dtype() != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor.dtype());
+    utils::throw_exception(tensor2.dtype() != DType::Bool && tensor2.dtype() != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor2.dtype());
     Tensor t1 = tensor.contiguous();
     Tensor t2 = tensor2.contiguous();
     Tensor out = t1.arr_void().execute_function<WRAP_DTYPES<NumberTypesL>>([&](auto begin, auto end){
@@ -100,8 +100,8 @@ Tensor runDualEigenFunction(const Tensor& tensor, const Tensor& tensor2, Func fu
         Tensor out = func(matrix1, matrix2, std::forward<Args>(args)...);
         return std::move(out);
     });
-    if(out.dtype != DType::TensorObj && out.dtype != DType::Bool){
-        return out.to(tensor.dtype);
+    if(out.dtype() != DType::TensorObj && out.dtype() != DType::Bool){
+        return out.to(tensor.dtype());
     }
     return std::move(out);
 }
@@ -112,9 +112,9 @@ Tensor runTrippleEigenFunction(const Tensor& tensor, const Tensor& tensor2, cons
     utils::throw_exception(tensor.dims() == 2, "Only 2D tensors can be converted to Eigen matricies for Linalg functions, got $ dims", tensor.dims());
     utils::throw_exception(tensor2.dims() == 2, "Only 2D tensors can be converted to Eigen matricies for Linalg functions, got $ dims", tensor2.dims());
     utils::throw_exception(tensor3.dims() == 2, "Only 2D tensors can be converted to Eigen matricies for Linalg functions, got $ dims", tensor3.dims());
-    utils::throw_exception(tensor.dtype != DType::Bool && tensor.dtype != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor.dtype);
-    utils::throw_exception(tensor2.dtype != DType::Bool && tensor2.dtype != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor2.dtype);
-    utils::throw_exception(tensor3.dtype != DType::Bool && tensor3.dtype != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor3.dtype);
+    utils::throw_exception(tensor.dtype() != DType::Bool && tensor.dtype() != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor.dtype());
+    utils::throw_exception(tensor2.dtype() != DType::Bool && tensor2.dtype() != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor2.dtype());
+    utils::throw_exception(tensor3.dtype() != DType::Bool && tensor3.dtype() != DType::TensorObj, "Can only use number types for linear algebra functions got $", tensor3.dtype());
     Tensor t1 = tensor.contiguous();
     Tensor t2 = tensor2.contiguous();
     Tensor t3 = tensor3.contiguous();
@@ -136,8 +136,8 @@ Tensor runTrippleEigenFunction(const Tensor& tensor, const Tensor& tensor2, cons
         Tensor out = func(matrix1, matrix2, matrix3, std::forward<Args>(args)...);
         return std::move(out);
     });
-    if(out.dtype != DType::TensorObj && out.dtype != DType::Bool){
-        return out.to(tensor.dtype);
+    if(out.dtype() != DType::TensorObj && out.dtype() != DType::Bool){
+        return out.to(tensor.dtype());
     }
     return std::move(out);
 }

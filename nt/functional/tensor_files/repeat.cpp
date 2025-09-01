@@ -11,7 +11,7 @@ namespace functional {
 Tensor repeat_(const Tensor &t, Tensor::size_value_t amt) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     using size_value_t = Tensor::size_value_t;
-    if (t.dtype == DType::TensorObj) {
+    if (t.dtype() == DType::TensorObj) {
         Tensor output = Tensor::makeNullTensorArray(amt * t.numel());
         t.arr_void()
             .cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>(

@@ -15,7 +15,7 @@ namespace tda{
 BatchPoints::BatchPoints(const Tensor& t, const uint8_t point)
 	:dim(0), point(point), last(-1)
 {
-	if(t.dtype == DType::uint8){
+	if(t.dtype() == DType::uint8){
 		original = t.clone();
 	}else{
 		original = t.to_dtype(DType::uint8);
@@ -35,7 +35,7 @@ BatchPoints::BatchPoints(Tensor&& t, const uint8_t point)
 BatchPoints::BatchPoints(const Tensor& t, const uint8_t point, const int64_t dim)
 	:dim(dim), point(point), last(-1)
 {
-	if(t.dtype == DType::uint8){
+	if(t.dtype() == DType::uint8){
 		original = t.clone();
 	}else{
 		original = t.to_dtype(DType::uint8);

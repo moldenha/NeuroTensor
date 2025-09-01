@@ -71,7 +71,7 @@ Tensor max_pool2d(Tensor input, utils::my_tuple kernel_size,
     //  Tensor arg_max = argmax(strided, -1, true);
     //  std::cout << arg_max << std::endl;
     if (!return_indices)
-        return strided.max(-1).values;
+        return max(strided, -1, false).values;
     if (return_indices) {
         Tensor bools(input.shape(), DType::Bool);
         bools.fill_(false);
@@ -90,12 +90,12 @@ Tensor max_pool2d(Tensor input, utils::my_tuple kernel_size,
         Tensor out = where(bools.flatten(-2, -1))[-1].item<Tensor>();
         return list(out_values, out.view(out_shape));
     }
-    return strided.max(-1).values;
+    return max(strided, -1, false).values;
 }
 
 Tensor backward_max_pool2d(SizeRef input_shape, Tensor dldg, Tensor indices) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(dldg, indices);
-    Tensor grad = zeros(input_shape, dldg.dtype);
+    Tensor grad = zeros(input_shape, dldg.dtype());
     Tensor f_grad = grad.flatten(-1, -2);
     Tensor setting =
         at_tensor_split(grad.flatten(-1, -2), indices.flatten(-1, -2), -2);
@@ -107,9 +107,9 @@ Tensor max_unpool2d(Tensor input, Tensor indices, utils::my_tuple kernel_size,
                     utils::my_tuple stride, utils::my_tuple padding,
                     utils::my_tuple output_size = -1) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(input, indices);
-    utils::throw_exception(indices.dtype == DType::int64,
+    utils::throw_exception(indices.dtype() == DType::int64,
                            "Max unpool requires indices to be int64 got $",
-                           indices.dtype);
+                           indices.dtype());
     if (stride == -1)
         stride = kernel_size;
     int64_t c_out =
@@ -130,8 +130,7 @@ Tensor max_unpool2d(Tensor input, Tensor indices, utils::my_tuple kernel_size,
     //     indices = indices + ((padd_r * padding[0]) + padding[1]);
     // }
     Tensor unpooled = zeros(
-        input.shape().redo_index(-1, c_out).redo_index(-2, r_out), input.dtype);
-    std::cout << "unpooled shape: "<<unpooled.shape() << std::endl;
+        input.shape().redo_index(-1, c_out).redo_index(-2, r_out), input.dtype());
     Tensor setting =
         at_tensor_split(unpooled.flatten(-2, -1), indices.flatten(-2, -1), -2);
     setting.set_(input.view(setting.shape()));
@@ -150,7 +149,7 @@ Tensor backward_max_unpool2d(SizeRef input_shape, Tensor dldg, Tensor indices,
     if(!(padding == 0)){
         dldg = pad(dldg, {padding[0], padding[0], padding[1], padding[1]});
     }
-    Tensor grad = zeros(input_shape, dldg.dtype);
+    Tensor grad = zeros(input_shape, dldg.dtype());
     Tensor f_grad = grad.flatten(-1, -2);
     at_tensor_split(dldg.flatten(-1, -2), indices.flatten(-1, -2), -2, f_grad);
     return std::move(grad);

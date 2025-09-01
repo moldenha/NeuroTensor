@@ -18,8 +18,8 @@ inline void check_dtypes(const DType& dt, const char(&s)[N]){
 #define NT_MAKE_TRIG_FUNCTION_(func_name)\
 Tensor func_name(const Tensor& x){\
     _NT_FUNCTIONAL_ALWAYS_CHECK_(x);\
-    check_dtypes(x.dtype, #func_name);\
-    if(x.dtype == DType::TensorObj){\
+    check_dtypes(x.dtype(), #func_name);\
+    if(x.dtype() == DType::TensorObj){\
         Tensor out = Tensor::makeNullTensorArray(x.numel());\
         Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());\
         x.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>([&o_begin](auto begin, auto end){\
@@ -32,7 +32,23 @@ Tensor func_name(const Tensor& x){\
     Tensor a = x.clone();\
     cpu::ADD_DOUBLE_UNDERSCORE(func_name)(a.arr_void());\
     return std::move(a);\
-}
+}\
+\
+Tensor& ADD_UNDERSCORE(func_name)(Tensor& x){\
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(x);\
+    check_mutability(x, "_" #func_name);\
+    check_dtypes(x.dtype(), "_" #func_name);\
+    if(x.dtype() == DType::TensorObj){\
+        x.arr_void().execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj>>>([](auto begin, auto end){\
+            for(;begin != end; ++begin){\
+                ADD_UNDERSCORE(func_name)(*begin);\
+            }\
+        });\
+        return x;\
+    }\
+    cpu::ADD_DOUBLE_UNDERSCORE(func_name)(x.arr_void());\
+    return x;\
+}\
     
 
 NT_MAKE_TRIG_FUNCTION_(tan);

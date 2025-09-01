@@ -38,3 +38,6 @@
 [submodule "third_party/boost_config"]
 	path = third_party/boost_config
 	url = https://github.com/boostorg/config
+[submodule "nt/dtype/compatible/fameta"]
+	path = nt/dtype/compatible/fameta
+	url = https://github.com/falemagn/fameta-counter

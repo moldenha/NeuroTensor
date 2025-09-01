@@ -1,18 +1,23 @@
-#ifndef _NT_NN_LAYERS_H_
-#define _NT_NN_LAYERS_H_
+#ifndef NT_NN_LAYERS_H__
+#define NT_NN_LAYERS_H__
 
 #include "layers/Linear.h"
 #include "layers/Identity.h"
 #include "layers/Conv1D.h"
 #include "layers/Conv2D.h"
 #include "layers/Conv3D.h"
+#include "layers/ConvND.h"
 #include "layers/ConvTranspose1D.h"
 #include "layers/ConvTranspose2D.h"
 #include "layers/ConvTranspose3D.h"
 #include "layers/Unfold1D.h"
 #include "layers/Unfold2D.h"
 #include "layers/Unfold3D.h"
-#include "layers/Fold.h"
+#include "layers/UnfoldND.h"
+#include "layers/Fold1D.h"
+#include "layers/Fold2D.h"
+#include "layers/Fold3D.h"
+#include "layers/FoldND.h"
 #include "layers/Softplus.h"
 #include "layers/Dropout.h"
 #include "layers/BatchNorm1D.h"

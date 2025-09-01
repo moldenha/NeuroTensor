@@ -1,5 +1,5 @@
-#ifndef _NT_SPARSE_MATRIX_H_
-#define _NT_SPARSE_MATRIX_H_
+#ifndef NT_SPARSE_MATRIX_H__
+#define NT_SPARSE_MATRIX_H__
 #include "../Tensor.h"
 #include "SparseDataMatrix.h"
 #include "SparseMatrixIterator.hpp"
@@ -8,7 +8,7 @@
 
 namespace nt{
 
-class SparseMatrix{
+class NEUROTENSOR_API SparseMatrix{
     int64_t rows, cols;
     DType _dtype;
     intrusive_ptr<sparse_details::SparseMemoryMatrixData> data;

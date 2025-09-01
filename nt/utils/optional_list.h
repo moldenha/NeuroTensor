@@ -1,11 +1,13 @@
-#ifndef _NT_UTILS_OPTIONAL_LIST_H_
-#define _NT_UTILS_OPTIONAL_LIST_H_
+#ifndef NT_UTILS_OPTIONAL_LIST_H__
+#define NT_UTILS_OPTIONAL_LIST_H__
 
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "../refs/intrusive_list.h"
 #include "optional_except.h"
 #include <initializer_list>
 #include "type_traits.h"
+#include "api_macro.h"
+#include <vector>
 /* #include "../dtype/Scalar.h" //more compatible with every type as a scalar */
 
 
@@ -14,14 +16,35 @@ namespace utils{
 
 
 //this is an optional specifically to wrap either a list of elements, a single element, or no elements
-class optional_list{
+class NEUROTENSOR_API optional_list{
 	intrusive_ptr<intrusive_list<int64_t> > list;
 	public:
 		optional_list(const optional_list&);
 		optional_list(optional_list&&);
 		optional_list(const intrusive_ptr<intrusive_list<int64_t> >&);
 		optional_list(intrusive_ptr<intrusive_list<int64_t> >&&);
-		optional_list(std::initializer_list<int64_t>);
+        template<typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+		optional_list(std::initializer_list<T> l)
+        :list(make_intrusive<intrusive_list<int64_t>>(l.size()))
+        {
+            int64_t* out_ptr = list->ptr();
+            const T* begin = l.begin();
+            const T* end = l.end();
+            for(;begin != end; ++begin, ++out_ptr){
+                *out_ptr = static_cast<int64_t>(*begin);
+            }
+        }
+        template<typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+		optional_list(std::vector<T> l)
+        :list(make_intrusive<intrusive_list<int64_t>>(l.size()))
+        {
+            int64_t* out_ptr = list->ptr();
+            auto begin = l.cbegin();
+            auto end = l.cend();
+            for(;begin != end; ++begin, ++out_ptr){
+                *out_ptr = static_cast<int64_t>(*begin);
+            }
+        }
 		template<typename T, std::enable_if_t<std::is_same_v<T, std::nullptr_t>, bool> = true>
 		optional_list(T element)
 		:list(nullptr)
@@ -82,11 +105,13 @@ class optional_list{
 
 		inline const int64_t& at(int64_t i) const& {
 			if(!has_value()){throw bad_optional_access();}
+            if(list->size() >= i){throw bad_optional_size_access();}
 			return (*list)[i];
 		}
 		
 		inline int64_t& at(int64_t i) & {
 			if(!has_value()){throw bad_optional_access();}
+            if(list->size() >= i){throw bad_optional_size_access();}
 			return (*list)[i];
 		}
 
@@ -105,7 +130,7 @@ class optional_list{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, Tensor&>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, Tensor&>>{};
 		}
 
 		template<class F>
@@ -113,7 +138,7 @@ class optional_list{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), **this);
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, const Tensor&>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, const Tensor&>>{};
 		}
 
 		template<class F>
@@ -121,7 +146,7 @@ class optional_list{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, intrusive_list<int64_t>>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, intrusive_list<int64_t>>>{};
 		}
 
 		template<class F>
@@ -129,7 +154,7 @@ class optional_list{
 			if (*this)
 			    return std::invoke(std::forward<F>(f), std::move(**this));
 			else
-			    return std::remove_cvref_t<std::invoke_result_t<F, intrusive_list<int64_t>>>{};
+			    return ::nt::type_traits::remove_cvref_t<std::invoke_result_t<F, intrusive_list<int64_t>>>{};
 		}
 		inline void swap(optional_list& op) noexcept {op.list.swap(list);}
 		inline void reset(){list.reset(); list = nullptr;}
@@ -171,6 +196,20 @@ class optional_list{
 		inline const int64_t& get_scalar() const& noexcept {
 			return (*this)[0];
 		}
+        
+        inline std::vector<int64_t> to_vector() const& noexcept {
+            if(!this->has_value()) return std::vector<int64_t>{};
+            return std::vector<int64_t>(this->cbegin(), this->cend());
+        }
+        
+        inline std::vector<int64_t> to_repeat_vector(int64_t i) const& {
+			if(!has_value()){throw bad_optional_access();}
+            if(!(is_scalar() || list->size() == i)){throw bad_optional_size_access();}
+            if(is_scalar()){
+                return std::vector<int64_t>(i, this->get_scalar());
+            }
+            return std::vector<int64_t>(this->cbegin(), this->cend());
+        }
 	
 };
 

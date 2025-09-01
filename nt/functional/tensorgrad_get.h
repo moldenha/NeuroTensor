@@ -1,5 +1,5 @@
-#ifndef _NT_TENSORGRAD_GET_H_
-#define _NT_TENSORGRAD_GET_H_
+#ifndef NT_TENSORGRAD_GET_H__
+#define NT_TENSORGRAD_GET_H__
 //this is a specialization to split a tensor into a tuple of tensors
 
 #include "../nn/TensorGrad.h"
@@ -20,7 +20,7 @@ inline utils::repeat_types_t<TensorGrad, sizeof...(Indices)> get_index_tensorgra
 
 template<size_t N>
 inline utils::repeat_types_t<TensorGrad, N> get(TensorGrad a){
-	if(a.tensor.dtype == DType::TensorObj){
+	if(a.dtype() == DType::TensorObj){
 		utils::throw_exception(a.numel() == N,
 				"Trying to get $ tensors with get function, but holds $ tensors",
 				N, a.numel());
@@ -36,4 +36,4 @@ inline utils::repeat_types_t<TensorGrad, N> get(TensorGrad a){
 
 
 
-#endif //_NT_TENSORGRAD_GET_H_
+#endif // NT_TENSORGRAD_GET_H__

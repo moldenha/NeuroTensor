@@ -32,26 +32,8 @@ void ScalarGrad::backward(){
         utils::throw_exception(!functional::any(this->grad == ::nt::nan), "Cannot run backward with gradient containing NaN values");
     }
     /* RUN BACKWARD FUNCTION */
-    if(!this->parent->grad){
-        this->parent->grad = nt::make_intrusive<tensor_holder>(
-            nt::functional::zeros_like(this->parent->tensor)
-        );
-    }
-    this->parent->grad->tensor = grad;
-    /* RAN BACKWARD FUNCTION */
-
-    /* RUN PARENT BACKWARD */
-    if(this->parent->backwardFunc == nullptr){
-        this->parent = nullptr;
-        return;
-    }
-    if(this->parent->backwardFunc->used()){
-        this->parent = nullptr;
-        return;
-    }
-    this->parent->run_backward(weak_intrusive_ptr<TensorGrad>(parent));
-
-    this->parent = nullptr;
+    auto graph = this->parent->get_auto_grad();
+    graph.backward(grad);
     return;
 }
 

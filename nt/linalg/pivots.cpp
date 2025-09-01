@@ -112,7 +112,7 @@ Tensor pivot_rows_matrix(const Tensor& t){
 
 Tensor pivot_rows(const Tensor& t){
     utils::throw_exception(t.dims() >= 2, "Cannot get pivot rows from tensor with dimensions less than 2 got $", t.dims());
-    utils::throw_exception(t.dtype != DType::Bool && t.dtype != DType::TensorObj, "Can only find the pivot rows of numerical types, got $", t.dtype);
+    utils::throw_exception(t.dtype() != DType::Bool && t.dtype() != DType::TensorObj, "Can only find the pivot rows of numerical types, got $", t.dtype());
     if(t.dims() == 2){
         return pivot_rows_matrix(t); 
     }
@@ -257,7 +257,7 @@ Tensor pivot_cols_matrix(const Tensor& t, bool return_where){
 
 Tensor pivot_cols(const Tensor& t, bool return_where){
     utils::throw_exception(t.dims() >= 2, "Cannot get pivot cols from tensor with dimensions less than 2 got $", t.dims());
-    utils::throw_exception(t.dtype != DType::Bool && t.dtype != DType::TensorObj, "Can only find the pivot cols of numerical types, got $", t.dtype);
+    utils::throw_exception(t.dtype() != DType::Bool && t.dtype() != DType::TensorObj, "Can only find the pivot cols of numerical types, got $", t.dtype());
     if(t.dims() == 2){
         return pivot_cols_matrix(t, return_where); 
     }
@@ -288,7 +288,7 @@ Tensor pivot_cols(const Tensor& t, bool return_where){
 //this is able to just return a number by only taking a matrix
 int64_t num_pivot_rows_matrix(const Tensor& t){
     utils::throw_exception(t.dims() == 2, "Expected to process a matrix in num_pivot_rows_matrix got $ dims", t.dims());
-    utils::throw_exception(t.dtype != DType::TensorObj, "Cannot process tensor of tensors for pivots");
+    utils::throw_exception(t.dtype() != DType::TensorObj, "Cannot process tensor of tensors for pivots");
     const int64_t& rows = t.shape()[0];
     const int64_t& cols = t.shape()[1];
     auto [one_rows, one_cols] = get<2>(functional::where(t == 1));
@@ -310,7 +310,7 @@ int64_t num_pivot_rows_matrix(const Tensor& t){
 }
 int64_t num_pivot_cols_matrix(const Tensor& t){
     utils::throw_exception(t.dims() == 2, "Expected to process a matrix in num_pivot_rows_matrix got $ dims", t.dims());
-    utils::throw_exception(t.dtype != DType::TensorObj, "Cannot process tensor of tensors for pivots");
+    utils::throw_exception(t.dtype() != DType::TensorObj, "Cannot process tensor of tensors for pivots");
     const int64_t& rows = t.shape()[0];
     const int64_t& cols = t.shape()[1];
     auto [one_rows, one_cols] = get<2>(functional::where(t == 1));
@@ -340,7 +340,7 @@ Tensor num_pivot_rows(const Tensor& t){
         return std::move(out);
     }
     utils::throw_exception(t.dims() > 2, "Expected to process a matrix or tensor in num_pivot_rows got $ dims", t.dims());
-    utils::throw_exception(t.dtype != DType::TensorObj, "Cannot process tensor of tensors for pivots");
+    utils::throw_exception(t.dtype() != DType::TensorObj, "Cannot process tensor of tensors for pivots");
     std::vector<int64_t> out_shape = t.shape().Vec();
     out_shape.pop_back();
     out_shape.pop_back();
@@ -419,7 +419,7 @@ Tensor num_pivot_cols(const Tensor& t){
         return std::move(out);
     }
     utils::throw_exception(t.dims() > 2, "Expected to process a matrix or tensor in num_pivot_rows got $ dims", t.dims());
-    utils::throw_exception(t.dtype != DType::TensorObj, "Cannot process tensor of tensors for pivots");
+    utils::throw_exception(t.dtype() != DType::TensorObj, "Cannot process tensor of tensors for pivots");
     std::vector<int64_t> out_shape = t.shape().Vec();
     out_shape.pop_back();
     out_shape.pop_back();

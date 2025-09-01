@@ -87,7 +87,7 @@ inline void func_name(T begin, T end, O out){\
 
 #define _NT_MAKE_INV_INLINE_FUNC_(operation, name)\
 template<typename T>\
-inline T _nt_##name(T element) noexcept {return T(1)/operation(element);}
+NT_ALWAYS_INLINE T _nt_##name(T element) noexcept {return T(1)/operation(element);}
 
 
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tanh, tanh, std::tanh);
@@ -155,21 +155,22 @@ inline void dtanh(T begin, T end, U out){
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
-		simde_type<base_type> twos = SimdTraits<base_type>::set1(base_type(2.0));
+		simde_type<base_type> ones = SimdTraits<base_type>::set1(base_type(1.0));
 		for(;begin + pack_size <= end; begin += pack_size, out += pack_size){
 			simde_type<base_type> current = it_loadu(begin);
-					      current = SimdTraits<base_type>::sech(current);
-					      current = SimdTraits<base_type>::pow(current, twos);
+            simde_type<base_type> tanh_r = SimdTraits<base_type>::tanh(current);
+            current = SimdTraits<base_type>::multiply(tanh_r, tanh_r);
+            current = SimdTraits<base_type>::subtract(ones, current);
 			it_storeu(out, current);
 		}
-        base_type base__Two(1);
 		for(;begin < end; ++begin, ++out){
-			base_type ch = std::cosh(*begin);
-            *out = (base_type(1) / (std::pow(ch, base__Two)));
+			base_type th = std::tanh(*begin);
+            *out = base_type(1) - (th * th);
         }
 	}else{
 		for(;begin != end; ++begin, ++out){
-			*out = (1 / (std::pow(std::cosh(*begin), 2)));
+			base_type th = std::tanh(*begin);
+            *out = base_type(1) - (th * th);
 		}
 	}
 }
@@ -541,7 +542,7 @@ namespace cpu {
 
 #define NT_MAKE_ACCESSIBLE_TRIG_FUNCTION_(func_name)\
 void ADD_UNDERSCORE(func_name)(const ArrayVoid& a, ArrayVoid& out){\
-    if(a.dtype == DType::Bool){\
+    if(a.dtype() == DType::Bool){\
         throw std::logic_error("Cannot run" \
                                 #func_name \
                                 "on bool data type"); \
@@ -554,7 +555,7 @@ void ADD_UNDERSCORE(func_name)(const ArrayVoid& a, ArrayVoid& out){\
 \
 \
 void ADD_DOUBLE_UNDERSCORE(func_name)(ArrayVoid& out){\
-   if(out.dtype == DType::Bool){\
+   if(out.dtype() == DType::Bool){\
         throw std::logic_error("Cannot run" \
                                 #func_name \
                                 "on bool data type"); \

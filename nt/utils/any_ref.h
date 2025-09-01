@@ -1,8 +1,8 @@
 //this is a class similar to std::any
 //but dedicated to taking lvalue and rvalue references and handling them appropriately
 
-#ifndef _NT_ANY_REF_H_
-#define _NT_ANY_REF_H_
+#ifndef NT_ANY_REF_H__
+#define NT_ANY_REF_H__
 #include <iostream>
 #include <memory>
 #include <typeinfo>
@@ -12,6 +12,7 @@
 #include "utils.h"
 #include <vector>
 #include "../dtype/Scalar.h"
+#include "api_macro.h"
 
 namespace nt{
 namespace utils{
@@ -49,7 +50,7 @@ int main(){
 
 
  */
-class any_ref {
+class NEUROTENSOR_API any_ref {
 private:
     struct BaseHolder {
         virtual ~BaseHolder() = default;
@@ -63,9 +64,9 @@ private:
 
     template <typename T>
     struct RValHolder : BaseHolder {
-        std::rvalue_wrapper<T> value;
+        ::nt::type_traits::rvalue_wrapper<T> value;
 
-        explicit RValHolder(std::rvalue_wrapper<T> val) : value(val) {}
+        explicit RValHolder(::nt::type_traits::rvalue_wrapper<T> val) : value(val) {}
         explicit RValHolder(T&& v) : value(std::forward<T&&>(v)) {}
         RValHolder(T&) = delete;
 
@@ -77,15 +78,15 @@ private:
             return std::make_unique<RValHolder<T>>(value);
         }
         inline bool is_rvalue() const noexcept override{return true;}
-	inline Scalar to_scalar() const noexcept override{
-		if constexpr (is_scalar_value_v<std::remove_cvref_t<T>> || std::is_same_v<std::remove_cvref_t<T>, Scalar>){
-			return Scalar(value.t);
-		}
-		return Scalar();
-	}
-	inline bool is_scalar() const noexcept override{
-		return is_scalar_value_v<std::remove_cvref_t<T>> || std::is_same_v<std::remove_cvref_t<T>, Scalar>;
-	}
+        inline Scalar to_scalar() const noexcept override{
+            if constexpr (is_scalar_value_v<::nt::type_traits::remove_cvref_t<T>> || std::is_same_v<::nt::type_traits::remove_cvref_t<T>, Scalar>){
+                return Scalar(value.t);
+            }
+            return Scalar();
+        }
+        inline bool is_scalar() const noexcept override{
+            return is_scalar_value_v<::nt::type_traits::remove_cvref_t<T>> || std::is_same_v<::nt::type_traits::remove_cvref_t<T>, Scalar>;
+        }
         
     };
     
@@ -105,21 +106,21 @@ private:
             return std::make_unique<LValHolder<T>>(value);
         }
         inline bool is_lvalue() const noexcept override{return true;}
-	inline Scalar to_scalar() const noexcept override{
-		if constexpr (is_scalar_value_v<std::remove_cvref_t<T>> || std::is_same_v<std::remove_cvref_t<T>, Scalar>){
-			return Scalar(value.get());
-		}
-		return Scalar();
-	}
-	inline bool is_scalar() const noexcept override{
-		return is_scalar_value_v<std::remove_cvref_t<T>> || std::is_same_v<std::remove_cvref_t<T>, Scalar>;
-	}
+        inline Scalar to_scalar() const noexcept override{
+            if constexpr (is_scalar_value_v<::nt::type_traits::remove_cvref_t<T>> || std::is_same_v<::nt::type_traits::remove_cvref_t<T>, Scalar>){
+                return Scalar(value.get());
+            }
+            return Scalar();
+        }
+        inline bool is_scalar() const noexcept override{
+            return is_scalar_value_v<::nt::type_traits::remove_cvref_t<T>> || std::is_same_v<::nt::type_traits::remove_cvref_t<T>, Scalar>;
+        }
         private:
         inline std::reference_wrapper<T> to_ref(T& val){
             if constexpr (std::is_const_v<T>){
-                return std::cref(add_cv_like<const std::remove_cvref_t<T>&>(val));
+                return std::cref(add_cv_like<const ::nt::type_traits::remove_cvref_t<T>&>(val));
             }else{
-                return std::ref(add_cv_like<std::remove_cvref_t<T>&>(val));
+                return std::ref(add_cv_like<::nt::type_traits::remove_cvref_t<T>&>(val));
             }
         }
         
@@ -133,16 +134,16 @@ public:
 
     // Constructor to store a value
     template <typename T, std::enable_if_t<std::is_rvalue_reference_v<T> && std::is_const_v<T>, bool> = true>
-    any_ref(T&& value) : holder(std::make_unique<RValHolder<const std::remove_cvref_t<T>> >(std::forward<T>(value))) {}
+    any_ref(T&& value) : holder(std::make_unique<RValHolder<const ::nt::type_traits::remove_cvref_t<T>> >(std::forward<T>(value))) {}
     
     template <typename T, std::enable_if_t<std::is_rvalue_reference_v<T> && !std::is_const_v<T>, bool> = true>
-    any_ref(T&& value) : holder(std::make_unique<RValHolder<std::remove_cvref_t<T>> >(std::forward<T>(value))) {}
+    any_ref(T&& value) : holder(std::make_unique<RValHolder<::nt::type_traits::remove_cvref_t<T>> >(std::forward<T>(value))) {}
     
     template <typename T, std::enable_if_t<std::is_lvalue_reference_v<T> && std::is_const_v<std::remove_reference_t<T>>, bool> = true>
-    any_ref(T&& value) : holder(std::make_unique<LValHolder<const std::remove_cvref_t<T>> >(add_cv_like<const std::remove_cvref_t<T>&>(value))) {}
+    any_ref(T&& value) : holder(std::make_unique<LValHolder<const ::nt::type_traits::remove_cvref_t<T>> >(add_cv_like<const ::nt::type_traits::remove_cvref_t<T>&>(value))) {}
     
     template <typename T, std::enable_if_t<std::is_lvalue_reference_v<T> && !std::is_const_v<std::remove_reference_t<T>>, bool> = true>
-    any_ref(T&& value) : holder(std::make_unique<LValHolder<std::remove_cvref_t<T>> >(add_cv_like<std::remove_cvref_t<T>&>(value))) {}
+    any_ref(T&& value) : holder(std::make_unique<LValHolder<::nt::type_traits::remove_cvref_t<T>> >(add_cv_like<::nt::type_traits::remove_cvref_t<T>&>(value))) {}
     
     template <typename T, std::enable_if_t<!std::is_reference_v<T>, bool> = true>
     any_ref(T&& value) : holder(std::make_unique<RValHolder<T> >(std::forward<T&&>(value))) {}
@@ -214,39 +215,39 @@ public:
                 //throw std::bad_cast("trying to get lvalue reference from any_ref that does not hold a reference");
             }
             if constexpr (std::is_const_v<T>){
-                if(type() != typeid(std::remove_cvref_t<T>) && type() != typeid(const std::remove_cvref_t<T>)){
+                if(type() != typeid(::nt::type_traits::remove_cvref_t<T>) && type() != typeid(const ::nt::type_traits::remove_cvref_t<T>)){
                     std::cerr << "trying to get lvalue reference from any_ref that does not hold a reference of that type" << std::endl;
                     throw std::bad_cast();
                     //throw std::bad_cast("trying to get lvalue reference from any_ref that does not hold a reference of that type");
                 }
-                if(type() == typeid(std::remove_cvref_t<T>)){
-                    return static_cast<LValHolder<std::remove_cvref_t<T> >*>(holder.get())->value.get();
+                if(type() == typeid(::nt::type_traits::remove_cvref_t<T>)){
+                    return static_cast<LValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get();
                 }
-                else if(type() == typeid(const std::remove_cvref_t<T>)){
-                    return static_cast<LValHolder<const std::remove_cvref_t<T> >*>(holder.get())->value.get();
+                else if(type() == typeid(const ::nt::type_traits::remove_cvref_t<T>)){
+                    return static_cast<LValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get();
                 }
             }else{
-                if(type() != typeid(std::remove_cvref_t<T>)){
+                if(type() != typeid(::nt::type_traits::remove_cvref_t<T>)){
                     std::cerr << "trying to get a non-const lvalue reference from any_ref that does not hold a non-const reference of that type" << std::endl;
                     throw std::bad_cast();
                     //throw std::bad_cast("trying to get a non-const lvalue reference from any_ref that does not hold a non-const reference of that type");
                 }
-                return static_cast<LValHolder<std::remove_cvref_t<T> >*>(holder.get())->value.get();
+                return static_cast<LValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get();
             }
         }else if constexpr (std::is_rvalue_reference_v<T>){
 	    //a special case to handle scalars since r values will be coppied
-	    if constexpr (is_scalar_value_v<std::remove_cvref_t<T>> || std::is_same_v<Scalar,std::remove_cvref_t<T>>){
+	    if constexpr (is_scalar_value_v<::nt::type_traits::remove_cvref_t<T>> || std::is_same_v<Scalar,::nt::type_traits::remove_cvref_t<T>>){
 		    if(!this->is_scalar()){
 			std::cerr << "trying to get Scalar from any_ref that does not hold a Scalar" << std::endl;
                         throw std::bad_cast();
 		    }
-		    if constexpr (std::is_same_v<Scalar,std::remove_cvref_t<T>>){
+		    if constexpr (std::is_same_v<Scalar,::nt::type_traits::remove_cvref_t<T>>){
 			return this->to_scalar();
 		    }else{
-			return this->to_scalar().to<std::remove_cvref_t<T>>(); 
+			return this->to_scalar().to<::nt::type_traits::remove_cvref_t<T>>(); 
 		    }
 	    }
-            if constexpr (!std::is_copy_constructible_v<std::remove_cvref_t<T>>){
+            if constexpr (!std::is_copy_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                 if(!holder->is_rvalue()){
                     std::cerr << "trying to get rvalue reference from any_ref that does not hold an rvalue reference to a type that does not have a copy constructable" << std::endl;
                     throw std::bad_cast();
@@ -254,16 +255,16 @@ public:
                 }
             }
             if constexpr (std::is_const_v<T>){
-                if(type() != typeid(std::remove_cvref_t<T>) && type() != typeid(const std::remove_cvref_t<T>)){
+                if(type() != typeid(::nt::type_traits::remove_cvref_t<T>) && type() != typeid(const ::nt::type_traits::remove_cvref_t<T>)){
                     std::cerr << "trying to get rvalue reference from any_ref that does not hold a reference of that type" << std::endl;
                     throw std::bad_cast();
                     //throw std::bad_cast("trying to get rvalue reference from any_ref that does not hold a reference of that type");
                 }
-                if(type() == typeid(std::remove_cvref_t<T>)){
-                    if constexpr (std::is_copy_constructible_v<std::remove_cvref_t<T>>){
+                if(type() == typeid(::nt::type_traits::remove_cvref_t<T>)){
+                    if constexpr (std::is_copy_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                         if(holder->is_lvalue()){
-                            typename std::remove_cvref_t<T> val(static_cast<LValHolder<std::remove_cvref_t<T> >*>(holder.get())->value.get());
-                            if constexpr (std::is_move_constructible_v<std::remove_cvref_t<T>>){
+                            typename ::nt::type_traits::remove_cvref_t<T> val(static_cast<LValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get());
+                            if constexpr (std::is_move_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                                 any_ref out(std::move(val));
                                 return out.cast<T>();
                             }else{
@@ -272,13 +273,13 @@ public:
                             }
                         }
                     }
-                    return static_cast<RValHolder<std::remove_cvref_t<T> >*>(holder.get())->value();
+                    return static_cast<RValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value();
                 }
-                else if(type() == typeid(const std::remove_cvref_t<T>)){
-                    if constexpr (std::is_copy_constructible_v<std::remove_cvref_t<T>>){
+                else if(type() == typeid(const ::nt::type_traits::remove_cvref_t<T>)){
+                    if constexpr (std::is_copy_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                         if(holder->is_lvalue()){
-                            typename std::remove_cvref_t<T> val(static_cast<LValHolder<const std::remove_cvref_t<T> >*>(holder.get())->value.get());
-                            if constexpr (std::is_move_constructible_v<std::remove_cvref_t<T>>){
+                            typename ::nt::type_traits::remove_cvref_t<T> val(static_cast<LValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get());
+                            if constexpr (std::is_move_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                                 any_ref out(std::move(val));
                                 return out.cast<T>();
                             }else{
@@ -287,13 +288,13 @@ public:
                             }
                         }
                     }
-                    return static_cast<RValHolder<const std::remove_cvref_t<T> >*>(holder.get())->value();
+                    return static_cast<RValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value();
                 }
             }else{
-                if constexpr (std::is_copy_constructible_v<std::remove_cvref_t<T>>){
+                if constexpr (std::is_copy_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                     if(holder->is_lvalue()){
-                        typename std::remove_cvref_t<T> val(static_cast<LValHolder<std::remove_cvref_t<T> >*>(holder.get())->value.get());
-                        if constexpr (std::is_move_constructible_v<std::remove_cvref_t<T>>){
+                        typename ::nt::type_traits::remove_cvref_t<T> val(static_cast<LValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get());
+                        if constexpr (std::is_move_constructible_v<::nt::type_traits::remove_cvref_t<T>>){
                             any_ref out(std::move(val));
                             return out.cast<T>();
                         }else{
@@ -302,40 +303,40 @@ public:
                         }
                     }
                 }
-                return static_cast<RValHolder<std::remove_cvref_t<T> >*>(holder.get())->value();
+                return static_cast<RValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value();
             }
         }else{
             //just regular values
 	    //a special case to handle scalars and copy them to regular values
-	    // if constexpr (std::is_same_v<Scalar,std::remove_cvref_t<T>>){
-	    if constexpr (is_scalar_value_v<std::remove_cvref_t<T>> || std::is_same_v<Scalar,std::remove_cvref_t<T>>){
+	    // if constexpr (std::is_same_v<Scalar,::nt::type_traits::remove_cvref_t<T>>){
+	    if constexpr (is_scalar_value_v<::nt::type_traits::remove_cvref_t<T>> || std::is_same_v<Scalar,::nt::type_traits::remove_cvref_t<T>>){
 		    if(!this->is_scalar()){
 			std::cerr << "trying to get Scalar from any_ref that does not hold a Scalar" << std::endl;
                         throw std::bad_cast();
 		    }
-		    if constexpr (std::is_same_v<Scalar,std::remove_cvref_t<T>>){
+		    if constexpr (std::is_same_v<Scalar,::nt::type_traits::remove_cvref_t<T>>){
 			return this->to_scalar();
 		    }else{
-			return this->to_scalar().to<std::remove_cvref_t<T>>(); 
+			return this->to_scalar().to<::nt::type_traits::remove_cvref_t<T>>(); 
 		    }
 	    }
 
-            if(type() != typeid(std::remove_cvref_t<T>) && type() != typeid(const std::remove_cvref_t<T>)){
+            if(type() != typeid(::nt::type_traits::remove_cvref_t<T>) && type() != typeid(const ::nt::type_traits::remove_cvref_t<T>)){
                 std::cerr << "trying to get a value from any_ref that does not hold a value of that type" << std::endl;
                 throw std::bad_cast();
                 //throw std::bad_cast("trying to get a value from any_ref that does not hold a value of that type");
             }
-            if(type() == typeid(std::remove_cvref_t<T>)){
+            if(type() == typeid(::nt::type_traits::remove_cvref_t<T>)){
                 if(holder->is_lvalue()){
-                    return static_cast<LValHolder<std::remove_cvref_t<T> >*>(holder.get())->value.get();
+                    return static_cast<LValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get();
                 }else if(holder->is_rvalue()){
-                    return static_cast<RValHolder<std::remove_cvref_t<T> >*>(holder.get())->value();
+                    return static_cast<RValHolder<::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value();
                 }
             }
             if(holder->is_lvalue()){
-                return static_cast<LValHolder<const std::remove_cvref_t<T> >*>(holder.get())->value.get();
+                return static_cast<LValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value.get();
             }
-            return static_cast<RValHolder<const std::remove_cvref_t<T> >*>(holder.get())->value();
+            return static_cast<RValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(holder.get())->value();
         }
     }
 
@@ -355,22 +356,22 @@ inline std::vector<any_ref> make_any_ref_vector(Args&&... vals){
 }
 
 template<typename T>
-T& cast_lvalue(any_ref& ref){
-	if(ref.type() != typeid(std::remove_cvref_t<T>) && ref.type() != typeid(const std::remove_cvref_t<T>)){
+inline T& cast_lvalue(any_ref& ref){
+	if(ref.type() != typeid(::nt::type_traits::remove_cvref_t<T>) && ref.type() != typeid(const ::nt::type_traits::remove_cvref_t<T>)){
 		std::cerr << "trying to get a value from any_ref that does not hold a value of that type" << std::endl;
-                throw std::bad_cast();
+        throw std::bad_cast();
 	}
 	if(ref.is_lvalue()){
-		if(typeid(std::remove_cvref_t<T>) == ref.type()){
-			return static_cast<any_ref::LValHolder<std::remove_cvref_t<T> >*>(ref.holder.get())->value.get();
+		if(typeid(::nt::type_traits::remove_cvref_t<T>) == ref.type()){
+			return static_cast<any_ref::LValHolder<::nt::type_traits::remove_cvref_t<T> >*>(ref.holder.get())->value.get();
 		}
-		return const_cast<std::remove_cvref_t<T>&>(static_cast<any_ref::LValHolder<const std::remove_cvref_t<T> >*>(ref.holder.get())->value.get());
+		return const_cast<::nt::type_traits::remove_cvref_t<T>&>(static_cast<any_ref::LValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(ref.holder.get())->value.get());
 	}
 	//ref is an r value
-	if(typeid(std::remove_cvref_t<T>) == ref.type()){
-		return static_cast<any_ref::RValHolder<std::remove_cvref_t<T> >*>(ref.holder.get())->value.t;
+	if(typeid(::nt::type_traits::remove_cvref_t<T>) == ref.type()){
+		return static_cast<any_ref::RValHolder<::nt::type_traits::remove_cvref_t<T> >*>(ref.holder.get())->value.t;
 	}
-	return const_cast<std::remove_cvref_t<T>&>(static_cast<any_ref::RValHolder<const std::remove_cvref_t<T> >*>(ref.holder.get())->value.t);
+	return const_cast<::nt::type_traits::remove_cvref_t<T>&>(static_cast<any_ref::RValHolder<const ::nt::type_traits::remove_cvref_t<T> >*>(ref.holder.get())->value.t);
 }
 
 }} //nt::utils::

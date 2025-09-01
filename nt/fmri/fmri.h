@@ -1,5 +1,5 @@
-#ifndef __NT_FMRI_FUNCTION_HEADER__
-#define __NT_FMRI_FUNCTION_HEADER__
+#ifndef NT_FMRI_FUNCTION_HEADER__
+#define NT_FMRI_FUNCTION_HEADER__
 
 #include "tensor_files/save_load.h"
 // #include "tensor_files/processing.h"

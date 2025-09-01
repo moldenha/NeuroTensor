@@ -119,12 +119,12 @@ SizeRef::SizeRef(const value_type (&Arr)[N])
 
 }
 
-SizeRef::SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec)
-	:_sizes(Vec)
-{
-	// size_ref_check(*this);
+// SizeRef::SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec)
+// 	:_sizes(Vec)
+// {
+// 	// size_ref_check(*this);
 
-}
+// }
 
 SizeRef::SizeRef(std::nullptr_t)
 	:_sizes(nullptr)
@@ -148,13 +148,17 @@ const typename SizeRef::ArrayRefInt::value_type& SizeRef::operator[](value_type 
 	return _sizes[x];
 }
 
-SizeRef SizeRef::operator[](my_range r) const{
+SizeRef SizeRef::operator[](range_ r) const{
 	/* std::cout <<"range: "<< r << std::endl; */
 	r.fix(size());
 	/* std::cout <<"range: "<< r << std::endl; */
 	std::vector<value_type> outp(cbegin() + r.begin, cbegin() + r.end);
 	return SizeRef(outp);
 }
+
+// Look into changing this function to make it be size() + (end+1) to make -1 a valid range
+// However, this breaks the linear function
+// So change it, correct it, and make sure that the linear function then works
 
 SizeRef SizeRef::range(value_type begin, value_type end) const{
 	begin = begin < 0 ? size() + begin : begin;

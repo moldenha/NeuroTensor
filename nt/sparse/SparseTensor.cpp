@@ -104,7 +104,7 @@ void* SparseTensor::_set(std::vector<size_value_t> xs) {
     void** val_array = _t._vals.stride_begin();
     void* ptr = val_array[index];
     if(in_sparse_memory(ptr)){
-        val_array[index] = _mem->allocate(DTypeFuncs::size_of_dtype(_t.dtype));
+        val_array[index] = _mem->allocate(DTypeFuncs::size_of_dtype(_t.dtype()));
         ptr = val_array[index];
     }
     return ptr;
@@ -119,7 +119,7 @@ void* SparseTensor::_set(const size_value_t& index) {
     void** begin = _t._vals.stride_begin();
     void* ptr = begin[index];
     if(in_sparse_memory(ptr)){
-        begin[index] = _mem->allocate(DTypeFuncs::size_of_dtype(_t.dtype));
+        begin[index] = _mem->allocate(DTypeFuncs::size_of_dtype(_t.dtype()));
         ptr = begin[index];
     }
     return ptr;
@@ -143,10 +143,10 @@ SparseTensor::SparseTensor(Tensor indices, Tensor values, SizeRef sh, DType dt, 
 {
     this->initialize(val, sh, dt);
     void* out_ptr_data = this->_mem->allocate((values.numel()+1) * DTypeFuncs::size_of_dtype(dt));
-    utils::THROW_EXCEPTION(values.dtype == _t.dtype, "Expected to get same dtype for values ($) as the sparse tensor was initialized with ($)", values.dtype, _t.dtype);
+    utils::THROW_EXCEPTION(values.dtype() == _t.dtype(), "Expected to get same dtype for values ($) as the sparse tensor was initialized with ($)", values.dtype(), _t.dtype());
     utils::THROW_EXCEPTION(
-        indices.dtype == DType::TensorObj,
-        "RuntimeError: expected DType TensorObj for indices when setting sparse tensor but got $", indices.dtype);
+        indices.dtype() == DType::TensorObj,
+        "RuntimeError: expected DType TensorObj for indices when setting sparse tensor but got $", indices.dtype());
     utils::THROW_EXCEPTION(
         indices.is_contiguous(),
         "RuntimeError: Expected indexing tensor to be contiguous");
@@ -161,9 +161,9 @@ SparseTensor::SparseTensor(Tensor indices, Tensor values, SizeRef sh, DType dt, 
     utils::THROW_EXCEPTION(num_elements == values.numel(), "Expected to get same number of elements for values ($) as indices ($)",values.numel(), num_elements);
     for (; begin != end; ++begin){
         utils::THROW_EXCEPTION(
-            begin->dtype == DType::int64 && begin->is_contiguous(),
+            begin->dtype() == DType::int64 && begin->is_contiguous(),
             "Expected indexing tensor to have dtype int64 but got $ and expected to be contiguous",
-            begin->dtype);
+            begin->dtype());
         utils::THROW_EXCEPTION(num_elements = begin->numel(), 
                                "Expected all coordinate tensors in indices to have same size but got $ and $", 
                                num_elements, begin->numel());
@@ -234,13 +234,13 @@ SparseTensor& SparseTensor::operator=(SparseTensor&& t){
 
 //this needs to be updated to work like t[indices] = values;
 SparseTensor& SparseTensor::set(Tensor indices, Tensor values){    
-    void* out_ptr_data = this->_mem->allocate((values.numel()+1) * DTypeFuncs::size_of_dtype(_t.dtype));
-    utils::THROW_EXCEPTION(values.dtype == _t.dtype, 
+    void* out_ptr_data = this->_mem->allocate((values.numel()+1) * DTypeFuncs::size_of_dtype(_t.dtype()));
+    utils::THROW_EXCEPTION(values.dtype() == _t.dtype(), 
                            "Expected to get same dtype for values ($) as the sparse tensor was initialized with ($)", 
-                           values.dtype, _t.dtype);
+                           values.dtype(), _t.dtype());
     utils::THROW_EXCEPTION(
-        indices.dtype == DType::TensorObj,
-        "RuntimeError: expected DType TensorObj for indices when setting sparse tensor but got $", indices.dtype);
+        indices.dtype() == DType::TensorObj,
+        "RuntimeError: expected DType TensorObj for indices when setting sparse tensor but got $", indices.dtype());
     utils::THROW_EXCEPTION(
         indices.is_contiguous(),
         "RuntimeError: Expected indexing tensor to be contiguous");
@@ -255,9 +255,9 @@ SparseTensor& SparseTensor::set(Tensor indices, Tensor values){
     utils::THROW_EXCEPTION(num_elements == values.numel(), "Expected to get same number of elements for values ($) as indices ($)",values.numel(), num_elements);
     for (; begin != end; ++begin){
         utils::THROW_EXCEPTION(
-            begin->dtype == DType::int64 && begin->is_contiguous(),
+            begin->dtype() == DType::int64 && begin->is_contiguous(),
             "Expected indexing tensor to have dtype int64 but got $ and expected to be contiguous",
-            begin->dtype);
+            begin->dtype());
         utils::THROW_EXCEPTION(num_elements = begin->numel(), 
                                "Expected all coordinate tensors in indices to have same size but got $ and $", 
                                num_elements, begin->numel());
@@ -306,8 +306,8 @@ SparseTensor& SparseTensor::set(Tensor indices, Tensor values){
 SparseTensor& SparseTensor::set(Tensor indices, Scalar value){
 
     utils::THROW_EXCEPTION(
-        indices.dtype == DType::TensorObj,
-        "RuntimeError: expected DType TensorObj for indices when setting sparse tensor but got $", indices.dtype);
+        indices.dtype() == DType::TensorObj,
+        "RuntimeError: expected DType TensorObj for indices when setting sparse tensor but got $", indices.dtype());
     utils::THROW_EXCEPTION(
         indices.is_contiguous(),
         "RuntimeError: Expected indexing tensor to be contiguous");
@@ -319,12 +319,12 @@ SparseTensor& SparseTensor::set(Tensor indices, Scalar value){
     const Tensor *end = begin + indices.numel();
     const Tensor *begin_cpy = begin;
     int64_t num_elements = begin->numel();
-    void* out_ptr_data = this->_mem->allocate((num_elements+1) * DTypeFuncs::size_of_dtype(_t.dtype));
+    void* out_ptr_data = this->_mem->allocate((num_elements+1) * DTypeFuncs::size_of_dtype(_t.dtype()));
     for (; begin != end; ++begin){
         utils::THROW_EXCEPTION(
-            begin->dtype == DType::int64 && begin->is_contiguous(),
+            begin->dtype() == DType::int64 && begin->is_contiguous(),
             "Expected indexing tensor to have dtype int64 but got $ and expected to be contiguous",
-            begin->dtype);
+            begin->dtype());
         utils::THROW_EXCEPTION(num_elements = begin->numel(), 
                                "Expected all coordinate tensors in indices to have same size but got $ and $", 
                                num_elements, begin->numel());
@@ -392,7 +392,7 @@ SparseTensor& SparseTensor::operator ^= (const SparseTensor& val){
     const void* m_data_ptr = data_ptr();
     auto& mem = this->_mem;
     const int64_t cur_counter = (s_end - s_begin) / 2;
-    void* out_ptr_data = this->_mem->allocate((cur_counter+1) * DTypeFuncs::size_of_dtype(_t.dtype));
+    void* out_ptr_data = this->_mem->allocate((cur_counter+1) * DTypeFuncs::size_of_dtype(_t.dtype()));
     auto& dt = dtype();
     Scalar sc = ptr_to_scalar(_t, m_data_ptr);
     if(sc.isZero()){
@@ -450,8 +450,8 @@ SparseTensor& SparseTensor::operator ^= (const SparseTensor& val){
 
 
 SparseTensor& SparseTensor::operator ^= (const Tensor& val){
-    utils::THROW_EXCEPTION(val.dtype == dtype(), "Expected dtypes of input ($) and this tensor ($) to match",
-                           val.dtype, dtype());
+    utils::THROW_EXCEPTION(val.dtype() == dtype(), "Expected dtypes of input ($) and this tensor ($) to match",
+                           val.dtype(), dtype());
     utils::THROW_EXCEPTION(val.shape() == shape(), "Expected shapes of input ($) and this tensor ($) to match",
                            val.shape(), shape());
     utils::THROW_EXCEPTION(DTypeFuncs::is_integer(dtype()) , "Can only do ^= operator with integer types");
@@ -461,7 +461,7 @@ SparseTensor& SparseTensor::operator ^= (const Tensor& val){
     const void* m_data_ptr = data_ptr();
     auto& mem = this->_mem;
     const int64_t cur_counter = (s_end - s_begin) / 2;
-    void* out_ptr_data = this->_mem->allocate((cur_counter+1) * DTypeFuncs::size_of_dtype(_t.dtype));
+    void* out_ptr_data = this->_mem->allocate((cur_counter+1) * DTypeFuncs::size_of_dtype(_t.dtype()));
     auto& dt = dtype();
     Scalar sc = ptr_to_scalar(_t, m_data_ptr);
     if(sc.isZero()){
@@ -528,7 +528,7 @@ SparseTensor& SparseTensor::operator ^= (const Tensor& val){
 //     const void* m_data_ptr = data_ptr();
 //     auto& mem = this->_mem;
 //     const int64_t cur_counter = (s_end - s_begin) / 2;
-//     void* out_ptr_data = this->_mem->allocate((cur_counter+1) * DTypeFuncs::size_of_dtype(_t.dtype));
+//     void* out_ptr_data = this->_mem->allocate((cur_counter+1) * DTypeFuncs::size_of_dtype(_t.dtype()));
 //     auto& dt = dtype();
 //     Scalar sc = ptr_to_scalar(_t, m_data_ptr);
 //     if(sc.isZero()){
@@ -603,7 +603,7 @@ SparseTensor& SparseTensor::operator ^= (const Tensor& val){
     
 //     if(counter == 0){return;}
 //     begin = b_cpy;
-//     int64_t size = DTypeFuncs::size_of_dtype(_t.dtype);
+//     int64_t size = DTypeFuncs::size_of_dtype(_t.dtype());
 //     void* n_ptr = this->_mem->allocate(size * counter);
 //     char* ptr = reinterpret_cast<char*>(n_ptr);
 
@@ -647,7 +647,7 @@ SparseTensor& SparseTensor::operator ^= (const Tensor& val){
 //     std::cout << "garbaged"<<std::endl;
 //     this->_t.set_(t);
 //     // utils::throw_exception(t.shape() == shape(), "Expected to set tensors of the same shape but got $ = $", shape(), t.shape());
-//     // utils::throw_exception(t.dtype == _t.dtype, "Expected to set tensors of the same dtype but got $ = $", _t.dtype, t.dtype);
+//     // utils::throw_exception(t.dtype() == _t.dtype(), "Expected to set tensors of the same dtype but got $ = $", _t.dtype(), t.dtype());
 //     // void** s_begin = stride_begin();
 //     // void** s_end = stride_end();
 //     // std::cout << "end-begin: " << s_end - s_begin << std::endl;

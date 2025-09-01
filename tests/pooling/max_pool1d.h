@@ -42,7 +42,7 @@ nt::Tensor max_pool1d(nt::Tensor input, int64_t kernel_size, int64_t stride = -1
 }
 
 nt::Tensor backward_max_pool1d(nt::SizeRef input_shape, nt::Tensor dldg, nt::Tensor indices){
-    nt::Tensor grad = nt::functional::zeros(input_shape, dldg.dtype);
+    nt::Tensor grad = nt::functional::zeros(input_shape, dldg.dtype());
     nt::Tensor setting = nt::functional::at_tensor_split(grad, indices, -2);
     setting.set_(dldg);
     return std::move(grad);
@@ -51,14 +51,14 @@ nt::Tensor backward_max_pool1d(nt::SizeRef input_shape, nt::Tensor dldg, nt::Ten
 
 nt::Tensor max_unpool1d(nt::Tensor input, nt::Tensor indices, int64_t kernel_size, int64_t stride = -1, int64_t padding = 0, int64_t output_size=-1){
     using namespace nt;
-    utils::throw_exception(indices.dtype == DType::int64,
-        "max_unpool requires indices to be int64 got $", indices.dtype);
+    utils::throw_exception(indices.dtype() == DType::int64,
+        "max_unpool requires indices to be int64 got $", indices.dtype());
     if(stride == -1) stride = kernel_size;
     int64_t h_out = (output_size != -1 ? output_size : (input.shape()[-1] - 1) * stride - 2 * padding + kernel_size);
     utils::throw_exception(h_out > 0,
                            "Error output size $ cannot be less than or equal to 0", h_out);
     if(padding > 0) indices = indices + padding;
-    Tensor unpooled = functional::zeros(input.shape().redo_index(-1, h_out), input.dtype);
+    Tensor unpooled = functional::zeros(input.shape().redo_index(-1, h_out), input.dtype());
     Tensor setting = functional::at_tensor_split(unpooled, indices, -2);
     setting.set_(input);
     return std::move(unpooled);
@@ -67,7 +67,7 @@ nt::Tensor max_unpool1d(nt::Tensor input, nt::Tensor indices, int64_t kernel_siz
 nt::Tensor backward_max_unpool1d(nt::SizeRef input_shape, nt::Tensor dldg, nt::Tensor indices, int64_t padding){
     using namespace nt;
     if(padding > 0) indices = indices + padding;
-    Tensor grad = functional::zeros(input_shape, dldg.dtype);
+    Tensor grad = functional::zeros(input_shape, dldg.dtype());
     functional::at_tensor_split(dldg, indices, -2, grad);
     return std::move(grad);
 }

@@ -1,7 +1,7 @@
 //these are operations to just load and store elements from the iterators
 
-#ifndef _NT_SIMDE_ITERATOR_H_
-#define _NT_SIMDE_ITERATOR_H_
+#ifndef NT_SIMDE_ITERATOR_H__
+#define NT_SIMDE_ITERATOR_H__
 #include "../../memory/iterator.h"
 #include "../simde_traits.h"
 #include "../../utils/utils.h" // for utils::reverse_index_sequence

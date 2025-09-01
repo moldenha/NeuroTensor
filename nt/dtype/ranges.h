@@ -1,57 +1,56 @@
-#ifndef NT_RANGES_H_
-#define NT_RANGES_H_
+#ifndef NT_RANGES_H__
+#define NT_RANGES_H__
 
 #include <iostream>
 #include <functional>
 #include <numeric>
 #include <cstdint>
+#include "../utils/api_macro.h"
+#include <utility>
 
 namespace nt{
 
-struct my_range{
-	int64_t begin, end; // begining and end of the range
-	my_range();
-	explicit my_range(const int64_t& v); // a start and by default end = -1;
-	explicit my_range(const int64_t& v, const int64_t &v2); // a start and an end
-	my_range& operator+(const int64_t& v); // set the end to v;
-	my_range& operator-(const int64_t& v); // set end to -v;
-	my_range& operator+=(const int64_t& v); // increment begin and end by v
-	my_range& operator-=(const int64_t& v); // decrement begin and end by v
-	void fix(size_t s); // if begin or end is less than 0, add s to them
-	const int64_t length() const; // end - begin
-    bool operator==(const my_range&) const;
-    bool operator<(const my_range&) const;
-    bool operator>(const my_range&) const;
-    bool operator<=(const my_range&) const;
-    bool operator>=(const my_range&) const;
+
+#define NT_RANGE_CMP_OPERATOR_(op) inline constexpr bool operator op (const range_& r) const {return this->begin op r.begin && this->end op r.end;}
+
+//Note: constexpr functions since C++17 are implicitly inline
+//      The constexpr functions are marked as inline for readability
+struct range_{
+	int64_t begin, end; // begining and end of the range_
+	constexpr range_() : begin(0), end(-1) {}
+    constexpr range_(const int64_t& s) : begin(s), end(s+1) {}
+    constexpr range_(const int64_t& s, const int64_t& e) : begin(s), end(e) {}
+    constexpr range_(const range_& r) : begin(r.begin), end(r.end) {}
+    range_(range_&& r) : begin(std::exchange(r.begin, 0)), end(std::exchange(r.end, 0)) {}
+    inline constexpr range_& operator=(const range_& r){this->begin = r.begin; this->end = r.end; return *this;}
+    inline range_& operator=(range_&& r){this->begin = std::exchange(r.begin, 0); this->end = std::exchange(r.end, 0); return *this;}
+    
+    inline constexpr range_ operator>(const int64_t& e) const {return range_(begin, e);}
+    inline constexpr range_ operator()(const int64_t& s, const int64_t& e) const {return range_(s, e);}
+    inline constexpr range_ operator()(const int64_t& s) const {return range_(s, -1);}
+    NT_RANGE_CMP_OPERATOR_(==);
+    NT_RANGE_CMP_OPERATOR_(<);
+    NT_RANGE_CMP_OPERATOR_(>);
+    NT_RANGE_CMP_OPERATOR_(<=);
+    NT_RANGE_CMP_OPERATOR_(>=);
+
+    inline constexpr range_ operator+(const int64_t& v) const {return range_(begin, end + v);}
+    inline constexpr range_ operator-(const int64_t& v) const {return range_(begin, end - v);}
+    inline constexpr range_& operator+=(const int64_t& v) {begin += v; end += v; return *this;}
+    inline constexpr range_& operator-=(const int64_t& v) {begin -= v; end -= v; return *this;}
+    range_& fix(int64_t s);
+	inline constexpr int64_t length() const {return end - begin;}
 };
 
+#undef NT_RANGE_CMP_OPERATOR_ 
 
-std::ostream& operator<<(std::ostream& out, const my_range& v);
-inline std::ostream& operator<<(std::ostream& out, const std::vector<my_range>& v){
-	if(v.size() == 0)
-		return out << "[]"<<std::endl;
-	out << "[";
-	for(uint32_t i = 0; i < v.size() - 1; ++i)
-		out << v[i].begin << ':' << v[i].end << ',';
-	out << v.back().begin << ':' << v.back().end << ']';
-	return out;
-}
-inline std::ostream& operator<<(std::ostream& out, const std::vector<std::vector<my_range> >& v){
-	if(v.size() == 0)
-		return out << "{}"<<std::endl;
-	out << '{';
-	for(uint32_t i = 0; i < v.size()-1; ++i)
-		out << v[i] << ',';
-	out << v.back() << '}';
-	return out;
-}
+inline constexpr range_ operator<(const int64_t& s, const range_ r){return range_(s, r.end);}
+inline static constexpr range_ range = range_();
 
+NEUROTENSOR_API std::ostream& operator<<(std::ostream& out, const range_& v);
+NEUROTENSOR_API std::ostream& operator<<(std::ostream& out, const std::vector<range_>& v);
+NEUROTENSOR_API std::ostream& operator<<(std::ostream& out, const std::vector<std::vector<range_> >& v);
 
-namespace literals{
-#define NEG_1_LITERAL INT64_MAX
-my_range operator ""_r(unsigned long long i);
-}
 
 }
 

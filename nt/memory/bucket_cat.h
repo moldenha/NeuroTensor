@@ -1,5 +1,5 @@
-#ifndef _NT_BUCKET_CAT_H_
-#define _NT_BUCKET_CAT_H_
+#ifndef NT_BUCKET_CAT_H__
+#define NT_BUCKET_CAT_H__
 #include "bucket.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "device.h"
@@ -41,7 +41,7 @@ inline intrusive_ptr<DeviceHolder> to_device_holder(const std::vector<std::refer
 }
 
 template<typename Buck>
-inline void Bucket::processCatData(const Buck& b, std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_ptr<void*[]> nStrides, uint64_t& stride_index){
+inline void Bucket::processCatData(const Buck& b, std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_tracked_list<void*> nStrides, uint64_t& stride_index){
 	static_assert(std::is_same_v<Buck, Bucket>, "Expected to only recieve type Bucket or ArrayVoid");
 	if constexpr (std::is_same_v<Buck, Bucket>){
 		const auto cur_size = nData.size();
@@ -59,12 +59,12 @@ inline void Bucket::processCatData(const Buck& b, std::vector<std::reference_wra
 }
 
 template<typename First>
-inline void Bucket::processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_ptr<void*[]>& nStrides, uint64_t& stride_index, const First& first){
+inline void Bucket::processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_tracked_list<void*>& nStrides, uint64_t& stride_index, const First& first){
 	processCatData<First>(first, nData, nStrides, stride_index);
 }
 
 template<typename First, typename... Rest>
-inline void Bucket::processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_ptr<void*[]>& nStrides, uint64_t& stride_index, const First& first, const Rest&... rest){
+inline void Bucket::processCatDataHelper(std::vector<std::reference_wrapper<const intrusive_ptr<Device> >>& nData, nt::intrusive_tracked_list<void*>& nStrides, uint64_t& stride_index, const First& first, const Rest&... rest){
 	processCatData<First>(first, nData, nStrides, stride_index);
 	processCatDataHelper(nData, nStrides, stride_index, rest...);
 }
@@ -169,7 +169,7 @@ inline Bucket Bucket::cat(const Buckets&... buckets){
 			return Bucket::catV(convertBuckets(buckets...));
 		}
 		bool block_type = processCatBlockType(buckets...);
-		nt::intrusive_ptr<void*[]> nStrides(n_stride_size);
+		nt::intrusive_tracked_list<void*> nStrides(n_stride_size);
 		std::vector<std::reference_wrapper<const intrusive_ptr<Device> > > n_data;
 		uint64_t stride_index = 0;
 		processCatDataHelper(n_data, nStrides, stride_index, buckets...);
@@ -183,6 +183,6 @@ inline Bucket Bucket::cat(const Buckets&... buckets){
 
 
 
-#endif // _NT_BUCKET_CAT_H_
+#endif // NT_BUCKET_CAT_H__
 
 

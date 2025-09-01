@@ -1,6 +1,6 @@
 //This is a header file that ensures that nt::float128_t is included
-#ifndef _NT_TYPES_FLOAT128_ENSURE_H_
-#define _NT_TYPES_FLOAT128_ENSURE_H_
+#ifndef NT_TYPES_FLOAT128_ENSURE_H__
+#define NT_TYPES_FLOAT128_ENSURE_H__
 
 #if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
 namespace nt{

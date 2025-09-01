@@ -14,9 +14,9 @@ Linear::Linear(int64_t in_channels, int64_t out_channels, bool use_bias)
 {
     if(use_bias){
         this->register_parameter("Bias", this->Bias);
-        this->Bias.tensor.set_mutability(false);
+        this->Bias.detach().set_mutability(false);
     }
-    this->Weight.tensor.set_mutability(false);
+    this->Weight.detach().set_mutability(false);
 }
 
 TensorGrad Linear::forward(TensorGrad x){

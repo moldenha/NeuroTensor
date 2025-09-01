@@ -1,5 +1,5 @@
-#ifndef _NT_LAYER_OPTIMIZERS_H_
-#define _NT_LAYER_OPTIMIZERS_H_
+#ifndef NT_LAYER_OPTIMIZERS_H__
+#define NT_LAYER_OPTIMIZERS_H__
 
 #include "TensorGrad.h"
 #include "Layer.h"
@@ -9,7 +9,7 @@ namespace nt{
 namespace optimizers{
 
 
-class SGD{
+class NEUROTENSOR_API SGD{
 	reflect::detail::custom_typed_iterator<TensorGrad> parameters;
 	double learning_rate;
 	//this function basically erases all gradients to be tracked and everything
@@ -24,7 +24,7 @@ class SGD{
 		void zero_grad();
 };
 
-class Adam{
+class NEUROTENSOR_API Adam{
 	reflect::detail::custom_typed_iterator<TensorGrad> parameters;
 	double learning_rate, beta1, beta2, epsilon;
 	Tensor m, v;
@@ -48,8 +48,8 @@ class Adam{
 			auto begin = parameters.begin();
 			for(;begin1 != end1; ++begin1, ++begin2, ++begin){
 				if(begin->is_null()){continue;}
-				*begin1 = functional::zeros_like(begin->tensor);
-				*begin2 = functional::zeros_like(begin->tensor);
+				*begin1 = functional::zeros_like(begin->detach());
+				*begin2 = functional::zeros_like(begin->detach());
 			}
 		}
 

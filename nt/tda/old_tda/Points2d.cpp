@@ -15,7 +15,7 @@ namespace tda{
 /* 	Tensor w = functional::where(points == point); */
 /* 	Tensor x = w[0].item<Tensor>(); */
 /* 	Tensor y = w[1].item<Tensor>(); */
-/* 	utils::throw_exception(x.dtype == DType::int64 && y.dtype == DType::int64, "Expected to make Tensors of dtype int64 but got $ and $ instead", x.dtype, y.dtype); */
+/* 	utils::throw_exception(x.dtype() == DType::int64 && y.dtype() == DType::int64, "Expected to make Tensors of dtype int64 but got $ and $ instead", x.dtype(), y.dtype()); */
 /* 	this->points.reserve(x.numel()); */
 /* 	int64_t* x_begin = reinterpret_cast<int64_t*>(x.data_ptr()); */
 /* 	int64_t* y_begin = reinterpret_cast<int64_t*>(y.data_ptr()); */

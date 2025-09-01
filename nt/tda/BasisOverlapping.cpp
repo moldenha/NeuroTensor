@@ -4,14 +4,14 @@ namespace nt {
 namespace tda {
 
 BasisOverlapping::BasisOverlapping(Tensor points) {
-    utils::throw_exception(points.dtype == DType::TensorObj,
+    utils::throw_exception(points.dtype() == DType::TensorObj,
                            "Expected to get batches of tensors in terms of "
                            "tensor objects but got $",
-                           points.dtype);
-    utils::throw_exception(points[0].item<Tensor>().dtype == DType::int64,
+                           points.dtype());
+    utils::throw_exception(points[0].item<Tensor>().dtype() == DType::int64,
                            "Expected to get the coordinates of the points in "
                            "terms of int64, but got $",
-                           points[0].item<Tensor>().dtype);
+                           points[0].item<Tensor>().dtype());
     utils::throw_exception(
         points[0].item<Tensor>().dims() == 2,
         "Expected to get the dims of the points as 2, but got $",

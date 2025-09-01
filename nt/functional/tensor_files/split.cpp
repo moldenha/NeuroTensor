@@ -4,7 +4,7 @@
 namespace nt{
 namespace functional{
 
-Tensor split(Tensor input, typename SizeRef::value_type split_size, int64_t dim){
+Tensor split_(const Tensor& input, typename SizeRef::value_type split_size, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
 	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
@@ -19,24 +19,24 @@ Tensor split(Tensor input, typename SizeRef::value_type split_size, int64_t dim)
     typename SizeRef::value_type end = split_size;
     if(!remainder){
         for(typename SizeRef::value_type i = 0; i < total_tensors; ++i){
-            output[i] = input[my_range(begin, end)];
+            output[i] = input[range_(begin, end)];
             begin += split_size;
             end += split_size;
         }
         return std::move(output);
     }
     for(typename SizeRef::value_type i = 0; i < total_tensors-1; ++i){
-        output[i] = input[my_range(begin, end)];
+        output[i] = input[range_(begin, end)];
         begin += split_size;
         end += split_size;
     }
-    output[total_tensors-1] = input[my_range(begin, -1)];
+    output[total_tensors-1] = input[range_(begin, -1)];
     return std::move(output);
 
 }
 
 
-Tensor split(Tensor input, std::vector<typename SizeRef::value_type> split_sections, int64_t dim){
+Tensor split_(const Tensor& input, std::vector<typename SizeRef::value_type> split_sections, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	typename SizeRef::value_type sum = std::accumulate(split_sections.cbegin(), split_sections.cend(), 0);
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
@@ -49,12 +49,12 @@ Tensor split(Tensor input, std::vector<typename SizeRef::value_type> split_secti
 		typename SizeRef::value_type begin = 0;
 		for(typename SizeRef::value_type i = 0; i < split_sections.size(); ++i, ++o_begin){
             // std::cout << "doing range from "<<begin<<" to "<<split_sections[i]<<std::endl;
-			*o_begin = input[my_range(begin, split_sections[i]+begin)];
+			*o_begin = input[range_(begin, split_sections[i]+begin)];
 			begin += split_sections[i];
 		}
 		return std::move(output);
 	}
-    Tensor output = split(input.transpose(0, dim), std::move(split_sections), 0);
+    Tensor output = split_(input.transpose(0, dim), std::move(split_sections), 0);
     Tensor* begin = reinterpret_cast<Tensor*>(output.data_ptr());
     Tensor* end = begin + output.numel();
     for(;begin != end; ++begin)
@@ -64,7 +64,25 @@ Tensor split(Tensor input, std::vector<typename SizeRef::value_type> split_secti
 }
 
 
-inline std::vector<Tensor> get_all(Tensor& t){
+
+Tensor split(const Tensor& input, int64_t dim, utils::optional_list split){
+    if(!split.has_value()){
+        return input.split_axis(dim);
+    }
+    using value_t = typename SizeRef::value_type;
+    if(split->size() == 1){
+        value_t val = *(split->begin());
+        return split_(input, val, dim);
+    }
+    std::vector<value_t> splits;
+    splits.reserve(split->size());
+    std::copy(split.cbegin(), split.cend(), std::back_inserter(splits));
+    return split_(input, std::move(splits), dim);
+
+
+}
+
+inline std::vector<Tensor> get_all(const Tensor& t){
 	std::vector<Tensor> output(t.shape()[0]);
 	for(typename SizeRef::value_type i = 0; i < t.shape()[0]; ++i)
 		output[i] = t[i];
@@ -88,7 +106,7 @@ inline std::vector<Tensor> get_all(std::vector<Tensor>& ts){
 }
 
 
-Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim){
+Tensor chunk(const Tensor& input, typename Tensor::size_value_t chunks, int64_t dim){
 	dim = (dim < 0) ? dim + input.dims() : dim;
 	utils::THROW_EXCEPTION(dim < input.dims(), "Expected (dim = $) to be less than dims of input which is $", dim, input.dims());
 	utils::THROW_EXCEPTION(dim >= 0, "Expected (dim = $) to be greater than or equal to zero", dim);
@@ -99,11 +117,11 @@ Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim){
 		typename SizeRef::value_type end = adding;
         Tensor* o_begin = reinterpret_cast<Tensor*>(output.data_ptr());
 		for(typename SizeRef::value_type i = 0; i < chunks-1; ++i, ++o_begin){
-			*o_begin = input[my_range(begin, end)];
+			*o_begin = input[range_(begin, end)];
 			begin += adding;
 			end += adding;
 		}
-		*o_begin = input[my_range(begin, -1)];
+		*o_begin = input[range_(begin, -1)];
 		return std::move(output);
 	}
 	std::vector<Tensor> vec = get_all(input);
@@ -122,7 +140,7 @@ Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim){
 	for(typename SizeRef::value_type i = 0; i < chunks-1; ++i, ++o_begin){
 		std::vector<Tensor> vec_cpy(vec.size());
 		for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
-			vec_cpy[j] = vec[i][my_range(begin, end)];
+			vec_cpy[j] = vec[i][range_(begin, end)];
 		}
 		*o_begin = cat_unordered(vec_cpy).view(curr_shape);
 		begin += adding;
@@ -133,7 +151,7 @@ Tensor chunk(Tensor input, typename Tensor::size_value_t chunks, int64_t dim){
 
 	std::vector<Tensor> vec_cpy(vec.size());
 	for(typename SizeRef::value_type j = 0; j < vec.size(); ++j){
-		vec_cpy[j] = vec[j][my_range(begin, -1)];
+		vec_cpy[j] = vec[j][range_(begin, -1)];
 	}
 	*o_begin = cat_unordered(vec_cpy).view(SizeRef(std::move(n_shape)));
 	return std::move(output);

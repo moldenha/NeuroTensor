@@ -45,13 +45,13 @@ inline static constexpr auto im2col_cpu_3d_backward = [](auto data_im_ptr,
 #ifdef USE_PARALLEL
     if constexpr (std::is_pointer_v<decltype(data_im_ptr)>) {
         threading::preferential_parallel_for(
-            threading::block_ranges<2>(0, batch_size, 0, channels_col),
-            [&](threading::blocked_range<2> block) {
+            threading::block_ranges<1>(0, batch_size),
+            [&](threading::blocked_range<1> block) {
                 for (int64_t batch = block.begin[0]; batch < block.end[0];
                      ++batch) {
                     auto data_col_ptr = data_col + batch * batch_col_add;
                     auto data_im = data_im_ptr + batch * batch_im_add;
-                    for (int64_t c = block.begin[1]; c < block.end[1]; ++c) {
+                    for (int64_t c = 0; c < channels_col; ++c) {
                         int64_t w_offset = c % k_c;
                         int64_t h_offset = (c / k_c) % k_r;
                         int64_t d_offset = (c / k_c / k_r) % k_d;

@@ -6,9 +6,9 @@ namespace optimizers{
 
 void SGD::step(){
 	for(auto& t : parameters){
-		if(t.do_track_grad && t.grad != nullptr && !t.is_null()){
-			t.grad->tensor.clip_(-10, 10);
-			t.grad->tensor *= learning_rate;
+		if(t.track_grad()){
+			t.grad().clip_(-10, 10);
+			t.grad() *= learning_rate;
 			t.update_mutable();
 		}
 	}
@@ -16,22 +16,17 @@ void SGD::step(){
 }
 
 void SGD::erase_grad_tracking(){
-	this->zero_grad();
 	for(auto& t : parameters){
 		if(t.is_null()){continue;}
-		t.parents->clear();
-		t.backwardFunc->set(nullptr);
-		t.children->clear();
+        t._erase_graph();
+        t.zero_self_grad_only();
 	}
 }
 
 void SGD::zero_grad(){
 	for(auto& t : parameters){
 		if(t.is_null()){continue;}
-        if(t.grad == nullptr){t.grad = make_intrusive<tensor_holder>(functional::zeros_like(t.tensor));}
-        else{
-            t.grad->tensor.fill_(0);
-        }
+        t.zero_self_grad_only();
 	}
 }
 
@@ -41,12 +36,10 @@ void SGD::zero_grad(){
 
 
 void Adam::erase_grad_tracking(){
-	this->zero_grad();
 	for(auto& t : parameters){
 		if(t.is_null()){continue;}
-		t.parents->clear();
-		t.backwardFunc->set(nullptr);
-		t.children->clear();
+        t._erase_graph();
+        t.zero_self_grad_only();
 	}
 }
 
@@ -54,10 +47,7 @@ void Adam::erase_grad_tracking(){
 void Adam::zero_grad(){
 	for(auto& t : parameters){
 		if(t.is_null()){continue;}
-        if(t.grad == nullptr){t.grad = make_intrusive<tensor_holder>(functional::zeros_like(t.tensor));}
-        else{
-            t.grad->tensor.fill_(0);
-        }
+        t.zero_self_grad_only();
 	}
 }
 
@@ -78,14 +68,14 @@ void Adam::step(){
 	Tensor* end1 = begin1 + this->parameters.size();
 	auto begin = this->parameters.begin();
 	for(;begin1 != end1; ++begin1, ++begin2, ++begin){
-		if(!begin->do_track_grad || begin->grad == nullptr || begin->is_null()){continue;}
+        if(begin->is_null() || !begin->track_grad()) continue;
 		if(begin1->is_null()){
-			*begin1 = functional::zeros_like(begin->tensor);
+			*begin1 = functional::zeros_like(begin->detach());
 		}
 		if(begin2->is_null()){
-			*begin2 = functional::zeros_like(begin->tensor);
+			*begin2 = functional::zeros_like(begin->detach());
 		}
-		Tensor& grad = begin->grad->tensor;
+		Tensor& grad = begin->grad();
 		//first moment
 		begin1->multiply_(this->beta1).add_(1-beta1); //m
 		begin1->multiply_(grad);

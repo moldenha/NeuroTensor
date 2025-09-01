@@ -13,7 +13,7 @@ namespace tda{
 Points::Points(const Tensor& t, const uint8_t point)
 	:dim(0)
 {
-	if(t.dtype == DType::uint8){
+	if(t.dtype() == DType::uint8){
 		original = t.clone();
 	}else{
 		original = t.to_dtype(DType::uint8);
@@ -34,7 +34,7 @@ Points::Points(Tensor&& t, const uint8_t point)
 Points::Points(const Tensor& t, const uint8_t point, const int64_t dim)
 	:dim(dim)
 {
-	if(t.dtype == DType::uint8){
+	if(t.dtype() == DType::uint8){
 		original = t.clone();
 	}else{
 		original = t.to_dtype(DType::uint8);
@@ -362,7 +362,7 @@ unordered_point_set Points::generate_all_points_within_radius(const Point& cente
 
 std::vector<Point> Points::generatePoints() const{
 	if(!this->pts.empty()){return pts;}
-	utils::throw_exception(coords.dtype == DType::TensorObj, "expected coordinates to have a dtype of tensor but got $", coords.dtype);
+	utils::throw_exception(coords.dtype() == DType::TensorObj, "expected coordinates to have a dtype of tensor but got $", coords.dtype());
 	/* utils::throw_exception(coords.numel() == N, "Expected to have $ tensors in coords but got $", N, coords.numel()); */
 	const int64_t& N = coords.numel();
 	const Tensor* ts = reinterpret_cast<const Tensor*>(coords.data_ptr());

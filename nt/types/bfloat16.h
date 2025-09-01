@@ -1,6 +1,5 @@
-#ifdef _HALF_FLOAT_SUPPORT_
-#ifndef _NT_BFLOAT_16_H_
-#define _NT_BFLOAT_16_H_
+#ifndef NT_BFLOAT_16_H__
+#define NT_BFLOAT_16_H__
 
 //a library for bfloat16
 //suport to be added to NeuroTensor soon
@@ -62,5 +61,4 @@ inline float16_t* inplace_to_float16_from_bfloat16(bfloat16_t* vals, const int64
 
 }
 
-#endif //_NT_BFLOAT_16_H_
-#endif //_HALF_FLOAT_SUPPORT
+#endif //NT_BFLOAT_16_H_

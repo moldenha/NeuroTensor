@@ -37,7 +37,7 @@ inline bool _nt_sort_descending_tensor_valsonly_(const Tensor& a, const Tensor& 
 }
 
 void _sort_vals_dtype_tensor_only_(ArrayVoid& values, const bool& descending, const int64_t& dim_size){
-    if(values.dtype != DType::TensorObj){
+    if(values.dtype() != DType::TensorObj){
         throw std::invalid_argument("_sort_vals_dtype_tensor_only_ is only designated to handle tensor dtype, try _sort_vals_only_");
     }
     if(!values.is_contiguous()){
@@ -122,11 +122,11 @@ inline bool _nt_sort_ascending_tensor_(const int64_t& a, const int64_t& b, const
 }
 
 void _sort_tensor_(ArrayVoid& values, int64_t* indices_begin, int64_t* indices_end, const bool& descending, const int64_t& dim_size){
-    if(values.dtype == DType::TensorObj){
-        throw std::invalid_argument("_sort_ is not designated to handle tensor dtype, try _sort_tensor_");
+    if(values.dtype() != DType::TensorObj){
+        throw std::invalid_argument("_sort_tensor_ is only designed to handle tensor dtype, try _sort_");
     }
     if(!values.is_contiguous()){
-        throw std::invalid_argument("values to cpu::_sort_vals_only_ must be contiguous");
+        throw std::invalid_argument("values to cpu::_sort_ must be contiguous");
     }
     values.execute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj> > >(
     [&descending, &dim_size, &indices_begin](auto begin, auto end){

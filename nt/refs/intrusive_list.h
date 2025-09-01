@@ -1,6 +1,7 @@
-#ifndef _NT_INTRUSIVE_LIST_H_
-#define _NT_INTRUSIVE_LIST_H_
+#ifndef NT_INTRUSIVE_LIST_H__
+#define NT_INTRUSIVE_LIST_H__
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../memory/meta_allocator.h"
 
 
 namespace nt{
@@ -17,7 +18,7 @@ class intrusive_list : public intrusive_ptr_target{
 			:_ptr(nullptr), _size(0)
 		{}
 		intrusive_list(int64_t elements)
-			:_ptr(elements == 0 ? nullptr : new T[elements]), _size(elements)
+			:_ptr(elements == 0 ? nullptr : MetaNewArr(T, elements)), _size(elements)
 		{}
 		intrusive_list(int64_t elements, T element)
 			:intrusive_list(elements)
@@ -36,10 +37,10 @@ class intrusive_list : public intrusive_ptr_target{
 			:_ptr(l._ptr), _size(l._size)
 		{
 			l._size = 0;
-			delete[] l._ptr;
+			// delete[] l._ptr;
 		}
 
-		inline ~intrusive_list() { if(_ptr != nullptr){ delete[] _ptr; } }
+		inline ~intrusive_list() { if(_ptr != nullptr){ MetaFreeArr<T>(_ptr); } }
 		inline const int64_t& size() const noexcept {return _size;}
 		inline const bool empty() const noexcept {return _ptr == nullptr;}
 		inline T* ptr() noexcept {return _ptr;}
@@ -56,10 +57,10 @@ class intrusive_list : public intrusive_ptr_target{
 		inline const T& at(int64_t n) const noexcept {return _ptr[n];}
 		inline intrusive_list& operator=(std::initializer_list<T> ls) noexcept {
 			if(!empty()){
-				delete[] _ptr;
+                MetaFreeArr<T>(_ptr);
 			}
 			_size = ls.size();
-			_ptr = new T[_size];
+			_ptr = MetaNewArr(T, _size);
 			std::copy(ls.begin(), ls.end(), _ptr);
 			return *this;
 		}

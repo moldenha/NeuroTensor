@@ -9,7 +9,7 @@ Tensor extract_points_from_cloud(Tensor cloud, Scalar point, int64_t dims) {
         cloud.dims() >= dims,
         "Expected to process cloud with dims of at least $ but got $", dims,
         cloud.dims());
-    // if(cloud.dtype != DType::int8){cloud = cloud.to(DType::int8);}
+    // if(cloud.dtype() != DType::int8){cloud = cloud.to(DType::int8);}
     if (cloud.dims() == dims) {
         cloud = cloud.unsqueeze(0);
     } else if (cloud.dims() > (dims + 1)) {
@@ -31,7 +31,7 @@ Tensor extract_points_from_threshold(Tensor cloud, Scalar threshold,
         cloud.dims() >= dims,
         "Expected to process cloud with dims of at least $ but got $", dims,
         cloud.dims());
-    // if(cloud.dtype != DType::int8){cloud = cloud.to(DType::int8);}
+    // if(cloud.dtype() != DType::int8){cloud = cloud.to(DType::int8);}
     if (cloud.dims() == dims) {
         cloud = cloud.unsqueeze(0);
     } else if (cloud.dims() > (dims + 1)) {

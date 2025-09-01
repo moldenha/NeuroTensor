@@ -83,7 +83,7 @@ nt::Tensor max_pool3d(nt::Tensor input,
 }
 
 nt::Tensor backward_max_pool3d(nt::SizeRef input_shape, nt::Tensor dldg, nt::Tensor indices){
-    nt::Tensor grad = nt::functional::zeros(input_shape, dldg.dtype);
+    nt::Tensor grad = nt::functional::zeros(input_shape, dldg.dtype());
     nt::Tensor setting = nt::functional::at_tensor_split(grad.flatten(-1, -3), indices.flatten(-1,-3), -2);
     setting.set_(dldg.flatten(-1, -3));
     return std::move(grad);
@@ -91,8 +91,8 @@ nt::Tensor backward_max_pool3d(nt::SizeRef input_shape, nt::Tensor dldg, nt::Ten
 
 nt::Tensor max_unpool3d(nt::Tensor input, nt::Tensor indices, nt::utils::my_n_tuple<3> kernel_size, nt::utils::my_n_tuple<3> stride, nt::utils::my_n_tuple<3> padding, nt::utils::my_n_tuple<3> output_size = -1){
     using namespace nt;
-    utils::throw_exception(indices.dtype == DType::int64,
-                           "Max unpool requires indices to be int64 got $", indices.dtype);
+    utils::throw_exception(indices.dtype() == DType::int64,
+                           "Max unpool requires indices to be int64 got $", indices.dtype());
     if(stride == -1) stride = kernel_size;
     int64_t c_out = (output_size[1] != -1 ? output_size[-1] : (input.shape()[-1] - 1) * stride[2] - 2 * padding[2] + kernel_size[2]);
     int64_t r_out = (output_size[1] != -1 ? output_size[-2] : (input.shape()[-2] - 1) * stride[1] - 2 * padding[1] + kernel_size[1]);
@@ -104,7 +104,7 @@ nt::Tensor max_unpool3d(nt::Tensor input, nt::Tensor indices, nt::utils::my_n_tu
     utils::throw_exception(d_out > 0,
                            "Error, output size $ cannot be less than or equal to 0", d_out);
     // if(!(padding == 0)) indices = indices + ((padding[0] * kernel_size[1] * kernel_size[2]) + (kernel_size[2] * padding[1]) + padding[2]);
-    Tensor unpooled = functional::zeros(input.shape().redo_index(-1, c_out).redo_index(-2, r_out).redo_index(-3, d_out), input.dtype);
+    Tensor unpooled = functional::zeros(input.shape().redo_index(-1, c_out).redo_index(-2, r_out).redo_index(-3, d_out), input.dtype());
     Tensor setting = functional::at_tensor_split(unpooled.flatten(-3, -1), indices.flatten(-3, -1), -2);
     setting.set_(input.view(setting.shape()));
     return std::move(unpooled);
@@ -115,7 +115,7 @@ nt::Tensor backward_max_unpool3d(nt::SizeRef input_shape, nt::Tensor dldg, nt::T
     // if(!(padding == 0)){
     //     indices = indices + ((padding[0] * dldg.shape()[-2] * dldg.shape()[-1]) + (dldg.shape()[-2] * padding[1]) + padding[2]); 
     // }
-    Tensor grad = functional::zeros(input_shape, dldg.dtype);
+    Tensor grad = functional::zeros(input_shape, dldg.dtype());
     Tensor f_grad = grad.flatten(-1,-3);
     functional::at_tensor_split(dldg.flatten(-1, -3), indices.flatten(-1,-3), -2, f_grad);
     return std::move(grad);

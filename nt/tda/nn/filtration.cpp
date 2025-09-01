@@ -7,7 +7,7 @@ namespace tda{
 
 std::tuple<Tensor, TensorGrad> VRfiltration(const TensorGrad& dist_matrix, int64_t k, double max_radi, bool sort){
     utils::throw_exception(k >= 1, "Cannot get simplexes with less than 1 point, but got k of $", k);
-    if(dist_matrix.dtype == DType::Float32){
+    if(dist_matrix.dtype() == DType::Float32){
         utils::throw_exception(dist_matrix.dims() == 2, 
                                "Expected dist_matrix to be a square matrix but got shape $", dist_matrix.shape());
         utils::throw_exception(dist_matrix.shape()[0] == dist_matrix.shape()[1],
@@ -17,9 +17,9 @@ std::tuple<Tensor, TensorGrad> VRfiltration(const TensorGrad& dist_matrix, int64
             Tensor radii = functional::zeros({dist_matrix.shape()[1]}, DType::Float32);
             return {simplex_complex, TensorGrad(radii, true)};
         }
-        std::pair<Tensor, Tensor> complex_gr =  find_all_simplicies(k, dist_matrix.shape()[0], dist_matrix.tensor, max_radi, sort);
+        std::pair<Tensor, Tensor> complex_gr =  find_all_simplicies(k, dist_matrix.shape()[0], dist_matrix.detach(), max_radi, sort);
         auto [simplex_complex, radii] = get<2>(complex_gr.first.contiguous());
-        if(!dist_matrix.do_track_grad){
+        if(!dist_matrix.track_grad()){
             return {simplex_complex, TensorGrad(radii, false)};
         }
         Tensor grad_indices = complex_gr.second.contiguous();
@@ -30,7 +30,7 @@ std::tuple<Tensor, TensorGrad> VRfiltration(const TensorGrad& dist_matrix, int64
         return std::make_tuple(simplex_complex, out_grad);
         
     }
-    utils::throw_exception(dist_matrix.dtype == DType::TensorObj,
+    utils::throw_exception(dist_matrix.dtype() == DType::TensorObj,
                            "filtration can only happen from a distance matrix of float32 or from a tensor of distance matrices");
 
     //will make this happen over multiple threads in future
@@ -48,12 +48,12 @@ std::tuple<Tensor, TensorGrad> VRfiltration(const TensorGrad& dist_matrix, int64
 
 std::tuple<Tensor, TensorGrad, TensorGrad> VRfiltration(const TensorGrad& dist_matrix1, const TensorGrad& dist_matrix2, int64_t k, double max_radi, bool sort){
     utils::throw_exception(k >= 1, "Cannot get simplexes with less than 1 point, but got k of $", k);
-    utils::throw_exception(dist_matrix2.dtype == dist_matrix1.dtype,
-                           "Expected distance matrices to have the same dtype ($) != ($)", dist_matrix1.dtype , dist_matrix2.dtype);
+    utils::throw_exception(dist_matrix2.dtype() == dist_matrix1.dtype(),
+                           "Expected distance matrices to have the same dtype ($) != ($)", dist_matrix1.dtype() , dist_matrix2.dtype());
     utils::throw_exception(dist_matrix1.shape() == dist_matrix2.shape(), 
                            "Expected distance matrices 1 ($) and 2 ($) to have the same shape", 
                            dist_matrix1.shape(), dist_matrix2.shape()); 
-    if(dist_matrix1.dtype == DType::Float32){
+    if(dist_matrix1.dtype() == DType::Float32){
         utils::throw_exception(dist_matrix1.dims() == 2, 
                                "Expected dist_matrix to be a square matrix but got shape $", dist_matrix1.shape());
         utils::throw_exception(dist_matrix1.shape()[0] == dist_matrix1.shape()[1],
@@ -63,10 +63,10 @@ std::tuple<Tensor, TensorGrad, TensorGrad> VRfiltration(const TensorGrad& dist_m
             Tensor radii1 = functional::ones({dist_matrix1.shape()[1]}, DType::Float32);
             return {simplex_complex, TensorGrad(radii1.clone(), true), TensorGrad(radii1, true)};
         }
-        std::pair<Tensor, Tensor> complex_gr =  find_all_simplicies(k, dist_matrix1.shape()[0], dist_matrix1.tensor, max_radi, sort);
+        std::pair<Tensor, Tensor> complex_gr =  find_all_simplicies(k, dist_matrix1.shape()[0], dist_matrix1.detach(), max_radi, sort);
         auto [simplex_complex, radii1] = get<2>(complex_gr.first.contiguous());
-        if(!dist_matrix1.do_track_grad){
-            Tensor radii2 = dist_matrix2.tensor.flatten(0, -1)[complex_gr.second].contiguous();
+        if(!dist_matrix1.track_grad()){
+            Tensor radii2 = dist_matrix2.detach().flatten(0, -1)[complex_gr.second].contiguous();
             return {simplex_complex, TensorGrad(radii1, false), TensorGrad(radii2, false)};
         }
         TensorGrad radii2 = dist_matrix2.flatten(0, -1)[complex_gr.second].contiguous();
@@ -79,7 +79,7 @@ std::tuple<Tensor, TensorGrad, TensorGrad> VRfiltration(const TensorGrad& dist_m
         
     }
 
-    utils::throw_exception(dist_matrix1.dtype == DType::TensorObj,
+    utils::throw_exception(dist_matrix1.dtype() == DType::TensorObj,
                            "filtration can only happen from a distance matrix of float32 or from a tensor of distance matrices");
 
     //will make this happen over multiple threads in future

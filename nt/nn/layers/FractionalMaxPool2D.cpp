@@ -6,7 +6,7 @@
 namespace nt{
 namespace layers{
 
-FractionalMaxPool2D::FractionalMaxPool2D(utils::my_tuple kernel_size, utils::my_tuple output_size, std::variant<double, std::tuple<double, double>> output_ratio, bool return_indices)
+FractionalMaxPool2D::FractionalMaxPool2D(utils::my_tuple kernel_size, utils::my_tuple output_size, utils::tuple_or_var<double, 2> output_ratio, bool return_indices)
         : kernel_size(kernel_size), output_size(output_size), output_ratio(output_ratio), return_indices(return_indices)
 
 {}
