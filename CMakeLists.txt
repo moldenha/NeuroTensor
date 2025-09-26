@@ -762,8 +762,6 @@ endif()
 # These will be linked because they are built with neurotensor
 # list(APPEND NEUROTENSOR_LIBS
 #     $<TARGET_FILE:tbb>
-#     $<TARGET_FILE:tbbmalloc>
-#     $<TARGET_FILE:tbbmalloc>
 #     $<TARGET_FILE:niftiio>
 #     $<TARGET_FILE:znz>
 #     $<TARGET_FILE:matplot++>
@@ -780,7 +778,6 @@ endif()
 #     COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
 #                                 ${NEUROTENSOR_LIBS}
 #                                     $<TARGET_FILE:tbb>
-#                                     $<TARGET_FILE:tbbmalloc>
 #                                     $<TARGET_FILE:niftiio>
 #                                     $<TARGET_FILE:znz>
 #                                     $<TARGET_FILE:matplot>
@@ -799,7 +796,6 @@ endif()
 # #     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
 # #     #                             ${NEUROTENSOR_LIBS}
 # #     #                                 $<TARGET_FILE:tbb>
-# #     #                                 $<TARGET_FILE:tbbmalloc>
 # #     #                                 $<TARGET_FILE:niftiio>
 # #     #                                 $<TARGET_FILE:znz>
 # #     #                                 $<TARGET_FILE:matplot>
@@ -810,7 +806,6 @@ endif()
 #     COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 
 #                         ${NEUROTENSOR_LIBS}
 #                         $<TARGET_FILE:tbb>
-#                         $<TARGET_FILE:tbbmalloc>
 #                         $<TARGET_FILE:niftiio>
 #                         $<TARGET_FILE:znz>
 #                         $<TARGET_FILE:matplot>
@@ -911,7 +906,26 @@ if(BUILD_MAIN)
         )
 
     else()
-        target_link_libraries(main.out PRIVATE ${TBB_LIB} ${MATPLOT_LIB} pthread znz niftiio ${NEUROTENSOR_DEPS})
+        target_link_libraries(main.out PRIVATE ${TBB_LIB} ${MATPLOT_LIB} pthread znz niftiio 
+            nt_core
+            nt_types
+            nt_functional
+            nt_functional_cpu
+            nt_matmult
+            nt_linalg
+            nt_svd
+            nt_qr
+            nt_inv
+            nt_column_space
+            nt_null_space
+            nt_ai
+            nt_tda
+            nt_sparse
+            nt_images
+            nt_memory
+            nt_multi_processing
+            nt_fmri
+        )
         target_include_directories(main.out
             PRIVATE
                 ${CMAKE_BINARY_DIR}/third_party/matplot/source/matplot

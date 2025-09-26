@@ -485,8 +485,8 @@ TensorGrad BoundaryMatrix(Tensor simplex_complex_kp1, Tensor simplex_complex_k,
     // std::cout << "logits_c: "<<logits_c.shape()<<std::endl;
     // std::cout << "logits_r: "<<logits_r<<std::endl;
     //computing soft permutations accross the matrices  [autograd tracked]
-    // TensorGrad P_row = ::nt::functional::gumbel_softmax(logits_r, 1.0, true, -1, true);
-    // TensorGrad P_col =::nt::functional::gumbel_softmax(logits_c, 1.0, true, -1, true);
+    TensorGrad P_row = ::nt::functional::gumbel_softmax(logits_r, 1.0, true, -1, true);
+    TensorGrad P_col =::nt::functional::gumbel_softmax(logits_c, 1.0, true, -1, true);
     // std::cout << "P_row: "<<P_row.shape() << std::endl;
     // std::cout << "P_col: "<<P_col.shape() << std::endl;
     // std::cout << "P_row: "<<P_row << std::endl;

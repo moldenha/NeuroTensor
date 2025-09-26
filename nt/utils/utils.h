@@ -201,6 +201,19 @@ inline void throw_exception_2(const bool err, std::string_view str, const char* 
 #define THROW_EXCEPTION(err, message, ...) \
     throw_exception_2((err), (message), __FILE__, __LINE__, ##__VA_ARGS__)
 
+
+// internally compiled print function
+void printf_def(std::string);
+template<typename... Args>
+inline void printf(std::string_view str, const Args&... args){
+    std::ostringstream out;
+    size_t last_pos = 0;
+    (print_format_inner(out, str, last_pos, args), ...);
+    while(last_pos < str.size())
+        print_format_inner(out, str, last_pos, "");
+    printf_def(out.str());
+}
+
 }} //nt::utils::
 
 #include "../memory/track_memory.h"

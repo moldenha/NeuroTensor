@@ -47,7 +47,7 @@
 // - activation_test [done]
 // - col_im_test [done]
 // - matmult_test <- in linear_autograd_test [done]
-// - conv_test 
+// - conv_test [done]
 // - dilate_test
 // - min_max_test
 // - normalize_test

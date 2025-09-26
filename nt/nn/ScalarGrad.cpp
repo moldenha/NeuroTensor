@@ -1,3 +1,4 @@
+#include <optional>
 #include "ScalarGrad.h"
 #include "../dtype/DType.h"
 #include "../functional/functional.h"

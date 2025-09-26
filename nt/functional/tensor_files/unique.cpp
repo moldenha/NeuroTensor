@@ -1,3 +1,4 @@
+#include <optional>
 #include "../cpu/unique.h"
 
 namespace nt{

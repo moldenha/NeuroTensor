@@ -1,5 +1,5 @@
-#ifndef NT_LAYERS_CONV_TRANSPOSE3D_H_
-#define NT_LAYERS_CONV_TRANSPOSE3D_H_
+#ifndef NT_LAYERS_CONV_TRANSPOSE3D_H__
+#define NT_LAYERS_CONV_TRANSPOSE3D_H__
 
 #include "../../Tensor.h"
 #include "../Module.h"

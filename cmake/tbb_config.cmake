@@ -13,7 +13,7 @@ add_subdirectory(third_party/tbb)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(tbb PRIVATE -Wno-stringop-overflow)
 endif()
-set(TBB_LIB tbb tbbmalloc)  # Use the built TBB target, when built from source just called tbb
+set(TBB_LIB tbb)  # Use the built TBB target, when built from source just called tbb
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/tbb/include)
 
 

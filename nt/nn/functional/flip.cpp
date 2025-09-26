@@ -4,6 +4,7 @@
 #include "../TensorGrad.h"
 #include "../functional_class.h"
 #include "../../utils/macros.h"
+#include <algorithm>
 
 namespace nt{
 namespace functional{
@@ -23,8 +24,11 @@ TensorGrad TensorGrad_Functional_Class::flip(const TensorGrad& x, utils::optiona
             });
     }else{
         result.create_backward_function(
-            [list](const Tensor &grad,
+            [list = std::move(list)](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
+                if(list.is_scalar())
+                    parents[0]->accumulate_gradient(::nt::functional::flip(grad, list));
+                std::reverse(const_cast<int64_t*>(list.begin()), const_cast<int64_t*>(list.end()));
                 parents[0]->accumulate_gradient(::nt::functional::flip(grad, list));
             });
 

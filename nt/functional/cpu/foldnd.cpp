@@ -148,7 +148,7 @@ NT_ALWAYS_INLINE std::vector<int64_t> compute_strides(const std::vector<int64_t>
 }
 
 template<typename T, typename T2>
-NT_ALWAYS_INLINE void run_inner_foldnd_loop(
+inline void run_inner_foldnd_loop(
     size_t i,
     int64_t col_add,
     int64_t img_add,

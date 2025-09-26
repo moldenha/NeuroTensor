@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 #include "../dtype/ArrayVoid.hpp"
+#include "../types/hash.h"
 
 namespace nt {
 namespace tda {
@@ -15,47 +16,10 @@ template <typename T> struct NumericVectorHash {
         return vec.arr_void()
             .cexecute_function<WRAP_DTYPES<
                 DTypeEnum<DTypeFuncs::type_to_dtype<T>>>>([](auto begin,
-                                                             auto end) {
+                                                             auto end) -> std::size_t {
                 std::size_t hash = 0;
                 for (; begin != end; ++begin) {
-                    if constexpr (std::is_same_v<my_complex<float16_t>, T>) {
-                        hash ^= std::hash<float>{}(
-                                    _NT_FLOAT16_TO_FLOAT32_(begin->real())) +
-                                0x9e3779b9 + (hash << 6) + (hash >> 2);
-                        hash ^= std::hash<float>{}(
-                                    _NT_FLOAT16_TO_FLOAT32_(begin->imag())) +
-                                0x9e3779b9 + (hash << 6) + (hash >> 2);
-                    } else if constexpr (std::is_same_v<my_complex<float>, T>) {
-                        hash ^= std::hash<float>{}(begin->real()) + 0x9e3779b9 +
-                                (hash << 6) + (hash >> 2);
-                        hash ^= std::hash<float>{}(begin->imag()) + 0x9e3779b9 +
-                                (hash << 6) + (hash >> 2);
-                    } else if constexpr (std::is_same_v<my_complex<double>,
-                                                        T>) {
-                        hash ^= std::hash<double>{}(begin->real()) +
-                                0x9e3779b9 + (hash << 6) + (hash >> 2);
-                        hash ^= std::hash<double>{}(begin->imag()) +
-                                0x9e3779b9 + (hash << 6) + (hash >> 2);
-                    } else if constexpr (std::is_same_v<float16_t, T>) {
-                        hash ^= std::hash<float>{}(
-                                    _NT_FLOAT16_TO_FLOAT32_(*begin)) +
-                                0x9e3779b9 + (hash << 6) + (hash >> 2);
-                    } else if constexpr (std::is_same_v<uint_bool_t, T>) {
-                        hash ^=
-                            std::hash<float>{}(*begin ? float(1) : float(0)) +
-                            0x9e3779b9 + (hash << 6) + (hash >> 2);
-                    }
-                    else if constexpr (std::is_same_v<uint128_t, T>) {
-                        hash ^= std::hash<uint128_t>{}(*begin) +
-                            0x9e3779b9 + (hash << 6) + (hash >> 2);
-                    } else if constexpr (std::is_same_v<int128_t, T>) {
-                        hash ^= std::hash<int128_t>{}(*begin) +
-                            0x9e3779b9 + (hash << 6) + (hash >> 2);
-                    }
-                    else {
-                        hash ^= std::hash<T>{}(*begin) + 0x9e3779b9 +
-                                (hash << 6) + (hash >> 2);
-                    }
+                    hash ^= ::nt::types::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
                 }
                 return hash;
             });

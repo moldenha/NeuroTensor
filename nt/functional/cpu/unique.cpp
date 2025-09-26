@@ -5,66 +5,11 @@
 #include <unordered_set>
 #include <algorithm>
 #include "../../types/Types.h"
+#include "../../types/hash.h"
 #include "../../convert/Convert.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 
 
-namespace std{
-
-template<>
-struct hash<nt::float16_t>{
-    NT_ALWAYS_INLINE std::size_t operator()(const nt::float16_t& s) const noexcept{
-        return std::hash<float>{}(nt::convert::convert<float>(s));
-    }
-};
-
-template<>
-struct hash<nt::complex_32>{
-    NT_ALWAYS_INLINE std::size_t operator()(const nt::complex_32& s) const noexcept{
-        std::size_t h1 = std::hash<float>{}(nt::convert::convert<float>(s.real()));
-        std::size_t h2 = std::hash<float>{}(nt::convert::convert<float>(s.imag())); 
-        return h1 ^ (h2 << 1);
-    }
-};
-
-
-template<>
-struct hash<nt::complex_64>{
-    NT_ALWAYS_INLINE std::size_t operator()(const nt::complex_64& s) const noexcept{
-        std::size_t h1 = std::hash<float>{}(s.real());
-        std::size_t h2 = std::hash<float>{}(s.imag()); 
-        return h1 ^ (h2 << 1);
-    }
-};
-
-
-template<>
-struct hash<nt::complex_128>{
-    NT_ALWAYS_INLINE std::size_t operator()(const nt::complex_128& s) const noexcept{
-        std::size_t h1 = std::hash<double>{}(s.real());
-        std::size_t h2 = std::hash<double>{}(s.imag()); 
-        return h1 ^ (h2 << 1);
-    }
-};
-
-template<>
-struct hash<nt::uint_bool_t>{
-    NT_ALWAYS_INLINE std::size_t operator()(const nt::uint_bool_t& s) const noexcept{
-        return std::hash<float>{}(s ? float(1) : float(0));
-    }
-};
-
-
-#ifdef BOOST_MP_STANDALONE
-template<>
-struct hash<nt::float128_t>{
-    NT_ALWAYS_INLINE std::size_t operator()(const nt::float128_t& s) const noexcept{
-        return std::hash<double>{}(convert::convert<double>(s));
-    }
-};
-#endif
-
-}
 
 namespace nt{
 namespace functional{
@@ -77,7 +22,7 @@ struct NumericVectorHash {
         return vec.arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DTypeFuncs::type_to_dtype<T> > > >([](auto begin, auto end){
             std::size_t hash = 0;
             for(;begin != end; ++begin){
-                hash ^= std::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                hash ^= nt::types::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
             }
             return hash;
         });
@@ -108,7 +53,7 @@ struct tensor_hashed{
         hash = a_->arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DTypeFuncs::type_to_dtype<T> > > >([](auto begin, auto end){
             std::size_t hash = 0;
             for(;begin != end; ++begin){
-                hash ^= std::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                hash ^= nt::types::hash<T>{}(*begin) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
             }
             return hash;
         });
@@ -144,7 +89,7 @@ Tensor _unique_vals_only(const Tensor& input, bool return_sorted, bool return_in
     Tensor indices = input.arr_void().cexecute_function<WRAP_DTYPES<NumberTypesL, DTypeEnum<DType::Bool> > >(
     [&return_sorted, &return_indices](auto begin, auto end) -> Tensor {
         using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-        std::unordered_map<value_t, int64_t> unique_map;
+        nt::types::unordered_map<value_t, int64_t> unique_map;
         int64_t counter = 0;
         unique_map[*begin] = counter;
         ++begin;

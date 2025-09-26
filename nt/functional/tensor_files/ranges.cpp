@@ -39,6 +39,14 @@ std::vector<std::pair<int64_t, int64_t>>
                           std::vector<std::pair<int64_t, int64_t>> vec, SizeRef shape){
     if(index >= r.size()) return std::move(vec);
     r[index].fix(shape[0]);
+    if(shape.size() == 1 && shape[0] == r[index].end && r[index].begin == 0){return std::move(vec);}
+    if(shape.size() == 1){
+        for(size_t i = 0; i < vec.size(); ++i){
+            vec[i].first += r[index].begin;
+            vec[i].second -= (shape[0] - r[index].end);
+        }
+        return std::move(vec);
+    }
     std::vector<std::pair<int64_t, int64_t>> n_vec;
     n_vec.reserve(vec.size() * r[index].length());
     for(size_t i = 0; i < vec.size(); ++i){
@@ -67,8 +75,7 @@ std::vector<std::pair<int64_t, int64_t>> make_range_vector(std::vector<range_> r
     auto cur = out_ranges[0];
     for(size_t i = 1; i < out_ranges.size(); ++i) {
         auto& nxt = out_ranges[i];
-        int64_t minus = cur.second - nxt.first;
-        if(minus < 2 && minus > -2){
+        if(cur.second == nxt.first){ 
             // overlap or directly adjacent: merge
             cur.second = std::max(cur.second, nxt.second);
         } else {
@@ -200,7 +207,6 @@ Tensor op_range(const Tensor& t, std::vector<range_> r){
     // return std::move(ranged);
 
     std::vector<std::pair<int64_t, int64_t>> range_numels = details::make_range_vector(r, t.shape(), t.numel());
-
 
     // while (r.size() > 0 && idx_is_total(r.back(), t.shape(), r.size() - 1)) {
     //     r.pop_back();

@@ -11,6 +11,7 @@ class NEUROTENSOR_API TensorGrad_Functional_Class; // forward declaration
 } // namespace functional
 } // namespace nt
 
+#include <optional>
 #include "TensorGrad.h"
 #include "../utils/tuple_or_var.h"
 namespace nt {
@@ -130,7 +131,15 @@ class NEUROTENSOR_API TensorGrad_Functional_Class {
                                        utils::my_n_tuple<3>,
                                        utils::my_n_tuple<3>, int64_t);
 
-
+    static NEUROTENSOR_API TensorGrad conv_transposend(const TensorGrad &, const TensorGrad &,
+                                                       int64_t, utils::optional_list, utils::optional_list,
+                                                       utils::optional_list, utils::optional_list, int64_t);
+    static NEUROTENSOR_API TensorGrad conv_transposend(const Tensor &, const TensorGrad &,
+                                                       int64_t, utils::optional_list, utils::optional_list,
+                                                       utils::optional_list, utils::optional_list, int64_t);
+    static NEUROTENSOR_API TensorGrad conv_transposend(const TensorGrad &, const Tensor &,
+                                                       int64_t, utils::optional_list, utils::optional_list,
+                                                       utils::optional_list, utils::optional_list, int64_t);
     static NEUROTENSOR_API TensorGrad clamp(const TensorGrad &, std::optional<Scalar>,
                             std::optional<Scalar>);
     static NEUROTENSOR_API TensorGrad& clamp_(TensorGrad &, std::optional<Scalar>,
@@ -174,12 +183,15 @@ class NEUROTENSOR_API TensorGrad_Functional_Class {
     static NEUROTENSOR_API TensorGrad dilate(const TensorGrad&, Tensor::size_value_t);
     static NEUROTENSOR_API TensorGrad dilate(const TensorGrad&, Tensor::size_value_t, Tensor::size_value_t);
     static NEUROTENSOR_API TensorGrad dilate(const TensorGrad&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
+    static NEUROTENSOR_API TensorGrad dilate(const TensorGrad&, std::vector<Tensor::size_value_t>, bool);
     static NEUROTENSOR_API TensorGrad undilate_(const TensorGrad&, Tensor::size_value_t);
     static NEUROTENSOR_API TensorGrad undilate_(const TensorGrad&, Tensor::size_value_t, Tensor::size_value_t);
     static NEUROTENSOR_API TensorGrad undilate_(const TensorGrad&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
+    static NEUROTENSOR_API TensorGrad undilate_(const TensorGrad&, std::vector<Tensor::size_value_t>, bool);
     static NEUROTENSOR_API TensorGrad undilate(const TensorGrad&, Tensor::size_value_t);
     static NEUROTENSOR_API TensorGrad undilate(const TensorGrad&, Tensor::size_value_t, Tensor::size_value_t);
     static NEUROTENSOR_API TensorGrad undilate(const TensorGrad&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
+    static NEUROTENSOR_API TensorGrad undilate(const TensorGrad&, std::vector<Tensor::size_value_t>);
     
     static NEUROTENSOR_API TensorGrad zeros_like(const TensorGrad&);
     static NEUROTENSOR_API TensorGrad ones_like(const TensorGrad&);

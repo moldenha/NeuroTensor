@@ -54,6 +54,21 @@ TensorGrad TensorGrad_Functional_Class::dilate(const TensorGrad& x, Tensor::size
     return std::move(result);
 }
 
+TensorGrad TensorGrad_Functional_Class::dilate(const TensorGrad& x, std::vector<Tensor::size_value_t> dils, bool test){
+    TensorGrad result(::nt::functional::dilate(x.detach(), dils, test));
+    if (!x.track_grad()) {
+        result.track_grad_(false);
+        return std::move(result);
+    }
+    result.track_tensors(x);
+    result.create_backward_function(
+        [test, dils = std::move(dils)](const Tensor &grad,
+              std::vector<intrusive_ptr<TensorGrad>> &parents) {
+            parents[0]->accumulate_gradient( ::nt::functional::undilate_(grad, std::move(dils), test) );
+        });
+    return std::move(result);
+}
+
 TensorGrad TensorGrad_Functional_Class::undilate(const TensorGrad& x, Tensor::size_value_t a){
     TensorGrad result(::nt::functional::undilate(x.detach(), a));
     if (!x.track_grad()) {
@@ -101,6 +116,20 @@ TensorGrad TensorGrad_Functional_Class::undilate(const TensorGrad& x, Tensor::si
 }
 
 
+TensorGrad TensorGrad_Functional_Class::undilate(const TensorGrad& x, std::vector<Tensor::size_value_t> dils){
+    TensorGrad result(::nt::functional::undilate(x.detach(), dils));
+    if (!x.track_grad()) {
+        result.track_grad_(false);
+        return std::move(result);
+    }
+    result.track_tensors(x);
+    result.create_backward_function(
+        [dils = std::move(dils)](const Tensor &grad,
+              std::vector<intrusive_ptr<TensorGrad>> &parents) {
+            parents[0]->accumulate_gradient( ::nt::functional::dilate(grad, std::move(dils)) );
+        });
+    return std::move(result);
+}
 
 TensorGrad TensorGrad_Functional_Class::undilate_(const TensorGrad& x, Tensor::size_value_t a){
     TensorGrad result(::nt::functional::undilate_(x.detach(), a));
@@ -123,7 +152,13 @@ TensorGrad TensorGrad_Functional_Class::undilate_(const TensorGrad& x, Tensor::s
     });
     return std::move(result);
 }
-
+TensorGrad TensorGrad_Functional_Class::undilate_(const TensorGrad& x, std::vector<Tensor::size_value_t> dils, bool test){
+    TensorGrad result(::nt::functional::undilate_(x.detach(), dils, test));
+    result.track_grad(x, [&dils, &test](Tensor& grad){
+        return ::nt::functional::undilate_(grad, dils, test);
+    });
+    return std::move(result);
+}
 
 }
 }

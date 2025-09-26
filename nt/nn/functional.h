@@ -288,8 +288,21 @@ inline TensorGrad conv_transpose3d(const TensorGrad &image, const Tensor &kernel
                                                 padding, output_padding, dilation, groups);
 }
 
-
-
+inline TensorGrad conv_transposend(const TensorGrad &image, const TensorGrad &kernel,
+                                                   int64_t dim, utils::optional_list stride = 1, utils::optional_list padding = 0,
+                                                   utils::optional_list output_padding = 0, utils::optional_list dilation = 1, int64_t groups = 1){
+    return TensorGrad_Functional_Class::conv_transposend(image, kernel, dim, stride, padding, output_padding, dilation, groups);
+}
+inline TensorGrad conv_transposend(const Tensor &image, const TensorGrad &kernel,
+                                                   int64_t dim, utils::optional_list stride = 1, utils::optional_list padding = 0,
+                                                   utils::optional_list output_padding = 0, utils::optional_list dilation = 1, int64_t groups = 1){
+    return TensorGrad_Functional_Class::conv_transposend(image, kernel, dim, stride, padding, output_padding, dilation, groups);
+}
+inline TensorGrad conv_transposend(const TensorGrad &image, const Tensor &kernel,
+                                                   int64_t dim, utils::optional_list stride = 1, utils::optional_list padding = 0,
+                                                   utils::optional_list output_padding = 0, utils::optional_list dilation = 1, int64_t groups = 1){
+    return TensorGrad_Functional_Class::conv_transposend(image, kernel, dim, stride, padding, output_padding, dilation, groups);
+}
 
 
 inline TensorGrad clamp(const TensorGrad &a,
@@ -414,6 +427,9 @@ inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::s
 inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
     return TensorGrad_Functional_Class::dilate(tg, a, b, c);
 }
+inline TensorGrad dilate(const TensorGrad& tg, std::vector<Tensor::size_value_t> dil, bool test = false){
+    return TensorGrad_Functional_Class::dilate(tg, std::move(dil), test);
+}
 inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a){
     return TensorGrad_Functional_Class::undilate(tg, a);
 }
@@ -423,6 +439,9 @@ inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor:
 inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
     return TensorGrad_Functional_Class::undilate(tg, a, b, c);
 }
+inline TensorGrad undilate(const TensorGrad& tg, std::vector<Tensor::size_value_t> dil){
+    return TensorGrad_Functional_Class::undilate(tg, std::move(dil));
+}
 inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a){
     return TensorGrad_Functional_Class::undilate_(tg, a);
 }
@@ -431,6 +450,9 @@ inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor
 }
 inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
     return TensorGrad_Functional_Class::undilate_(tg, a, b, c);
+}
+inline TensorGrad undilate_(const TensorGrad& tg, std::vector<Tensor::size_value_t> dil, bool test = false){
+    return TensorGrad_Functional_Class::undilate_(tg, std::move(dil), test);
 }
 
 inline TensorGrad zeros_like(const TensorGrad& tg){ return TensorGrad_Functional_Class::zeros_like(tg); }

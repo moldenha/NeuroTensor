@@ -125,17 +125,24 @@ Tensor flip_view(const Tensor& t, utils::optional_list list){
     ArrayVoid in_vals = t.arr_void().get_bucket().is_strided()
                                  ? t.arr_void()
                                  : t.arr_void().bucket_all_indices();
-    void **_in = in_vals.stride_begin();
+    ArrayVoid cur_vals = in_vals;
     ArrayVoid out_vals = t.arr_void().new_strides(t.numel());
-    void **_out = out_vals.stride_begin();
     if(!list){
+        void** _in = cur_vals.stride_begin();
+        void** _out = out_vals.stride_begin();
         details::reverse_view(_in, _out, t.numel());
         Tensor out(out_vals, t.shape());
         out.set_mutability(t.is_mutable());
         return std::move(out);
     }
     for (auto begin = list->cbegin(); begin != list->cend(); ++begin) {
+        void** _in = cur_vals.stride_begin();
+        void** _out = out_vals.stride_begin();
         details::reverse_strided_from(_in, _out, t.shape(), *begin, t.numel());
+        if (std::next(begin) != list->cend()) {
+            cur_vals = out_vals;
+            out_vals = t.arr_void().new_strides(t.numel());
+        }
     }
     Tensor out(out_vals, t.shape());
     out.set_mutability(t.is_mutable());

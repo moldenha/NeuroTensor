@@ -48,6 +48,8 @@ namespace utils{
 // int64_t meta_memory_allocated = 0;
 // }
 
+void printf_def(std::string s){std::cout << s << std::endl;}
+
 #ifdef USE_PARALLEL
 
 

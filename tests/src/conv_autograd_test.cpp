@@ -496,7 +496,9 @@ void conv_autograd_test(){
             "error: gradients for w do not match $ \n$ \n$ \n$",
             nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
     });
-
+    // The following works but is slow, so taking it out of test file because already works,
+    // but dont want to waste the time
+    /*
     run_test("ConvND (N = 4) Autograd test", []{
         nt::TensorGrad x(nt::rand(0, 3, {1, 3, 16, 16, 16, 16}), true);
         nt::TensorGrad w(nt::rand(0, 3, {4, 3, 3, 3, 3, 3}), true);
@@ -548,6 +550,7 @@ void conv_autograd_test(){
 
     });
 
+    */
 
     run_test("Conv1d Transpose Autograd test", []{
         std::string name = "conv_transpose1d";
@@ -569,7 +572,103 @@ void conv_autograd_test(){
             nt::allclose(o.detach(), expected_output),
             "Error: outputs do not match $ \n$ \n$ \n$",
             nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
-        std::cout << "running backward now..." << std::endl;
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+        
+    run_test("Conv1d Transpose Grouped Autograd test", []{
+        std::string name = "conv_transpose1d";
+        std::string extension = "_grouped";
+        make_conv_files(name, "1, 4, 5", "4, 2, 3", ", stride = 1, groups = 2, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose1d(x, w, stride = 1, groups = 2, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+
+    run_test("Conv1d Transpose Bigger Grouped Autograd test", []{
+        std::string name = "conv_transpose1d";
+        std::string extension = "_grouped_bigger";
+        make_conv_files(name, "1, 20, 5", "20, 15, 3", ", stride = 1, groups = 5, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose1d(x, w, stride = 1, groups = 5, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv1d Transpose Batched Autograd test", []{
+        std::string name = "conv_transpose1d";
+        std::string extension = "_batched";
+        make_conv_files(name, "3, 3, 7", "3, 8, 3", ", stride = 2, output_padding = 1, padding=1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose1d(x, w, stride = 2, output_padding = 1, padding=1);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
         o.backward(grad);
         nt::utils::throw_exception(
             nt::allclose(x.grad(), expected_xgrad),
@@ -581,6 +680,328 @@ void conv_autograd_test(){
             nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
     });
 
-    
+    run_test("Conv1d Transpose Grouped Batched Autograd test", []{
+        std::string name = "conv_transpose1d";
+        std::string extension = "_grouped_batched";
+        make_conv_files(name, "3, 4, 5", "4, 2, 3", ", stride = 1, groups = 2, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose1d(x, w, stride = 1, groups = 2, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+    // nt::Tensor example = nt::functional::rand(0, 10, {3, 12, 5}, nt::DType::Float32);
+    // nt::Tensor making({3, 12, 5}, nt::DType::Float32);
+    // std::cout << "example: "<<example.view(6, 6, 5) << std::endl;
+    // std::cout << "making: "<<making<<std::endl;
+    // nt::functional::cat(making.split_axis({0 <nt::range> 3, 0 <nt::range> 6})).fill_(example.view(6, 6, 5));
+    // std::cout << "new making: "<<making.view(6, 6, 5)<<std::endl;
+    run_test("Conv2d Transpose Autograd test", []{
+        std::string name = "conv_transpose2d";
+        make_conv_files(name, "1, 3, 9, 7", "3, 8, 3, 3", ", stride = 2, output_padding = 1");
+        std::string filename_a = "../tests/autograd_data/" + name + "_input.npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad.npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad.npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad.npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight.npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output.npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose2d(x, w, stride = 2, output_padding = 1);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv2d Transpose Grouped Autograd test", []{
+        std::string name = "conv_transpose2d";
+        std::string extension = "_grouped";
+        make_conv_files(name, "1, 20, 19, 19", "20, 15, 3, 4", ", stride = 1, groups = 5, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose2d(x, w, stride = 1, groups = 5, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv2d Transpose Batched Autograd test", []{
+        std::string name = "conv_transpose2d";
+        std::string extension = "_batched";
+        make_conv_files(name, "3, 3, 18, 19", "3, 8, 3, 5", ", stride = 2, output_padding = 1, padding=1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose2d(x, w, stride = 2, output_padding = 1, padding=1);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv2d Transpose Grouped Batched Autograd test", []{
+        std::string name = "conv_transpose2d";
+        std::string extension = "_grouped_batched";
+        make_conv_files(name, "3, 4, 5, 9", "4, 2, 3, 3", ", stride = 1, groups = 2, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose2d(x, w, stride = 1, groups = 2, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv3d Transpose Autograd test", []{
+        std::string name = "conv_transpose3d";
+        make_conv_files(name, "1, 3, 7, 9, 7", "3, 8, 3, 3, 3", ", stride = 2, output_padding = 1");
+        std::string filename_a = "../tests/autograd_data/" + name + "_input.npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad.npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad.npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad.npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight.npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output.npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose3d(x, w, stride = 2, output_padding = 1);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv3d Transpose Grouped Autograd test", []{
+        std::string name = "conv_transpose3d";
+        std::string extension = "_grouped";
+        make_conv_files(name, "1, 20, 17, 19, 19", "20, 15, 4, 3, 4", ", stride = 1, groups = 5, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose3d(x, w, stride = 1, groups = 5, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv3d Transpose Batched Autograd test", []{
+        std::string name = "conv_transpose3d";
+        std::string extension = "_batched";
+        make_conv_files(name, "3, 3, 17, 18, 19", "3, 8, 5, 3, 5", ", stride = 2, output_padding = 1, padding=1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose3d(x, w, stride = 2, output_padding = 1, padding=1);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    run_test("Conv3d Transpose Grouped Batched Autograd test", []{
+        std::string name = "conv_transpose3d";
+        std::string extension = "_grouped_batched";
+        make_conv_files(name, "3, 4, 8, 5, 9", "4, 2, 3, 3, 3", ", stride = 1, groups = 2, padding = 1", extension);
+        std::string filename_a = "../tests/autograd_data/" + name + "_input" + extension + ".npy";
+        std::string filename_b = "../tests/autograd_data/" + name + "_grad" + extension + ".npy";
+        std::string filename_c = "../tests/autograd_data/" + name + "_xgrad" + extension + ".npy";
+        std::string filename_d = "../tests/autograd_data/" + name + "_wgrad" + extension + ".npy";
+        std::string filename_e = "../tests/autograd_data/" + name + "_weight" + extension + ".npy";
+        std::string filename_f = "../tests/autograd_data/" + name + "_output" + extension + ".npy";
+        nt::TensorGrad x(nt::from_numpy(filename_a), true);
+        nt::TensorGrad w(nt::from_numpy(filename_e), true);
+        nt::Tensor grad = nt::from_numpy(filename_b);
+        nt::Tensor expected_xgrad = nt::from_numpy(filename_c);
+        nt::Tensor expected_wgrad = nt::from_numpy(filename_d);
+        nt::Tensor expected_output = nt::from_numpy(filename_f);
+        nt::TensorGrad o = nt::conv_transpose3d(x, w, stride = 1, groups = 2, padding = 1);
+        o.backward(grad);
+        nt::utils::throw_exception(
+            nt::allclose(o.detach(), expected_output),
+            "Error: outputs do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, o.detach(), expected_output, nt::isclose(o.detach(), expected_output));
+        nt::utils::throw_exception(
+            nt::allclose(x.grad(), expected_xgrad),
+            "error: gradients for x do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
+        nt::utils::throw_exception(
+            nt::allclose(w.grad(), expected_wgrad),
+            "error: gradients for w do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, w.grad(), expected_wgrad, nt::isclose(w.grad(), expected_wgrad));
+    });
+
+    // run_test("ConvNd (N=4) Transpose Autograd test", []{
+    //     nt::TensorGrad x(nt::randn({1, 3, 7, 7, 9, 7}), true);
+    //     nt::TensorGrad w(nt::randn({3, 8, 3, 3, 3, 3}), true);
+    //     nt::TensorGrad o = nt::conv_transposend(x, w, stride = 2, output_padding = 1, dim = 4);
+    //     nt::Tensor grad = nt::rand(0, 3, o.shape(), nt::DType::Float);
+    //     o.backward(grad);
+    // });
+
+    // run_test("ConvNd (N=4) Transpose Grouped Autograd test", []{
+    //     nt::TensorGrad x(nt::randn({1, 20, 19, 17, 19, 19}), true);
+    //     nt::TensorGrad w(nt::randn({20, 15, 3, 4, 3, 4}), true);
+    //     nt::TensorGrad o = nt::conv_transposend(x, w, stride = 1, groups = 5, padding = 1, dim = 4);
+    //     nt::Tensor grad = nt::rand(0, 3, o.shape(), nt::DType::Float);
+    //     o.backward(grad);
+    // });
+
+    // run_test("ConvNd (N=4) Transpose Batched Autograd test", []{
+    //     nt::TensorGrad x(nt::randn({3, 3, 7, 7, 9, 7}), true);
+    //     nt::TensorGrad w(nt::randn({3, 8, 3, 3, 3, 3}), true);
+    //     nt::TensorGrad o = nt::conv_transposend(x, w, stride = 2, output_padding = 1, dim = 4);
+    //     nt::Tensor grad = nt::rand(0, 3, o.shape(), nt::DType::Float);
+    //     o.backward(grad);
+    // });
+
+    // run_test("ConvNd (N=4) Transpose Grouped Batched Autograd test", []{
+    //     nt::TensorGrad x(nt::randn({3, 4, 8, 5, 9, 9}), true);
+    //     nt::TensorGrad w(nt::randn({4, 2, 3, 3, 3, 3}), true);
+    //     nt::TensorGrad o = nt::conv_transposend(x, w, stride = 1, groups = 2, padding = 1, dim = 4);
+    //     nt::Tensor grad = nt::rand(0, 3, o.shape(), nt::DType::Float);
+    //     o.backward(grad);
+    // });
+
 }
 

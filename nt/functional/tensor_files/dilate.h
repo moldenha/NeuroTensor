@@ -3,6 +3,7 @@
 
 #include "../../Tensor.h"
 #include "../../dtype/Scalar.h"
+#include <vector>
 
 namespace nt {
 namespace functional {
@@ -10,16 +11,18 @@ namespace functional {
 NEUROTENSOR_API Tensor undilate_(const Tensor&, Tensor::size_value_t);
 NEUROTENSOR_API Tensor undilate_(const Tensor&, Tensor::size_value_t, Tensor::size_value_t);
 NEUROTENSOR_API Tensor undilate_(const Tensor&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
+NEUROTENSOR_API Tensor undilate_(const Tensor&, std::vector<Tensor::size_value_t>, bool test = false);
 
 NEUROTENSOR_API Tensor undilate(const Tensor&, Tensor::size_value_t);
 NEUROTENSOR_API Tensor undilate(const Tensor&, Tensor::size_value_t, Tensor::size_value_t);
 NEUROTENSOR_API Tensor undilate(const Tensor&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
+NEUROTENSOR_API Tensor undilate(const Tensor&, std::vector<Tensor::size_value_t>);
 
 
 NEUROTENSOR_API Tensor dilate(const Tensor&, Tensor::size_value_t);
 NEUROTENSOR_API Tensor dilate(const Tensor&, Tensor::size_value_t, Tensor::size_value_t);
 NEUROTENSOR_API Tensor dilate(const Tensor&, Tensor::size_value_t, Tensor::size_value_t, Tensor::size_value_t);
-
+NEUROTENSOR_API Tensor dilate(const Tensor&, std::vector<Tensor::size_value_t>, bool test = false);
 
 }
 }
