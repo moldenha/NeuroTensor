@@ -83,12 +83,8 @@ struct NEUROTENSOR_API GraphNode : public intrusive_ptr_target {
         if(!this->backwardFunc) this->backwardFunc = make_intrusive<backward_func>();
     }
 
-    inline void ensure_view_backward_initialization(bool zero_if_uninit = false ) {
-        //this is a function that can be used to make sure grad and backwardFunc are not nullptr
-        if(!this->grad) this->grad = make_intrusive<tensor_holder>(zero_if_uninit ? nt::functional::zeros_like(tensor->tensor) : Tensor::Null());
-        if(!this->backwardFunc) this->backwardFunc = make_intrusive<view_backward_func>();
-    }
-
+    void ensure_view_backward_initialization(bool zero_if_uninit = false );
+    void ensure_self_mod_backward_initialization(bool zero_if_uninit = false );
     // This function is to make sure the gradient is initialized
     // So, if !bool(this->grad) it will be initialized, or if this->grad->tensor.is_null()
     // it will also be initialized

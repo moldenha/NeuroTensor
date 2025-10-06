@@ -354,18 +354,43 @@ class NEUROTENSOR_API Tensor final{
         Tensor unpad(std::vector<size_value_t>) const;
         Tensor flip(utils::optional_list list = nullptr) const;
         Tensor flip_view(utils::optional_list list = nullptr) const;
-		Tensor undilate_(size_value_t dil) const;
-		Tensor undilate_(size_value_t, size_value_t) const;
-		Tensor undilate_(size_value_t, size_value_t, size_value_t) const;
-		Tensor undilate(size_value_t dil) const;
-        Tensor undilate(size_value_t row_dil, size_value_t col_dil) const;
-        Tensor undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const;
-		//dilate by basically adding that many zeros between each row and collumn
-		//the above has a memory thing where it takes part of its memory from the original tensor
-		//there is also a contiguous version below
-		Tensor dilate(size_value_t dil) const;
-		Tensor dilate(size_value_t dil_r, size_value_t dil_c) const;
-		Tensor dilate(size_value_t chan_dil, size_value_t dil_r, size_value_t dil_c) const;
+        Tensor undilate_(std::vector<size_value_t>) const;
+        template<typename... Args>
+        inline Tensor undilate_(size_value_t i, Args... args) const {
+            std::vector<size_value_t> vec;
+            vec.reserve(sizeof...(Args) + 1);
+            utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+            return this->undilate_(std::move(vec)); 
+        }
+        Tensor undilate(std::vector<size_value_t>) const;
+        template<typename... Args>
+        inline Tensor undilate(size_value_t i, Args... args) const {
+            std::vector<size_value_t> vec;
+            vec.reserve(sizeof...(Args) + 1);
+            utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+            return this->undilate(std::move(vec)); 
+        }
+        Tensor dilate(std::vector<size_value_t>) const;
+        template<typename... Args>
+        inline Tensor dilate(size_value_t i, Args... args) const {
+            std::vector<size_value_t> vec;
+            vec.reserve(sizeof...(Args) + 1);
+            utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+            return this->dilate(std::move(vec)); 
+        }
+
+		//Tensor undilate_(size_value_t dil) const;
+		//Tensor undilate_(size_value_t, size_value_t) const;
+		//Tensor undilate_(size_value_t, size_value_t, size_value_t) const;
+		//Tensor undilate(size_value_t dil) const;
+        //Tensor undilate(size_value_t row_dil, size_value_t col_dil) const;
+        //Tensor undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const;
+		////dilate by basically adding that many zeros between each row and collumn
+		////the above has a memory thing where it takes part of its memory from the original tensor
+		////there is also a contiguous version below
+		//Tensor dilate(size_value_t dil) const;
+		//Tensor dilate(size_value_t dil_r, size_value_t dil_c) const;
+		//Tensor dilate(size_value_t chan_dil, size_value_t dil_r, size_value_t dil_c) const;
 		Tensor repeat_(size_value_t amt) const; //this is the amount to repeat wthout copying memory by
 		/* Tensor dilate_mem_(size_value_t dil) const; */
 		Tensor repeat_(size_value_t dim, size_value_t amt) const;

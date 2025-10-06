@@ -55,6 +55,18 @@ void GraphNode::run_backward() {
 }
 void GraphNode::run_backward(const Tensor& _grad) { backwardFunc->run(_grad, parents); }
 
+void GraphNode::ensure_view_backward_initialization(bool zero_if_uninit ){
+    //this is a function that can be used to make sure grad and backwardFunc are not nullptr
+    if(!this->grad) this->grad = make_intrusive<tensor_holder>(zero_if_uninit ? nt::functional::zeros_like(tensor->tensor) : Tensor::Null());
+    if(!this->backwardFunc || !this->backwardFunc->is_view_change()) this->backwardFunc = make_intrusive<view_backward_func>();
+}
+
+void GraphNode::ensure_self_mod_backward_initialization(bool zero_if_uninit ) {
+    //this is a function that can be used to make sure grad and backwardFunc are not nullptr
+    if(!this->grad) this->grad = make_intrusive<tensor_holder>(zero_if_uninit ? nt::functional::zeros_like(tensor->tensor) : Tensor::Null());
+    if(!this->backwardFunc || !this->backwardFunc->is_self_mod()) this->backwardFunc = make_intrusive<self_mod_backward_func>();
+}
+
 }
 
 
@@ -69,9 +81,12 @@ void AutoGrad<HashSet>::traverse_graph_impl(const intrusive_ptr<utility::GraphNo
 
     // Children are traversed first
     // The backward call of children needs to be called first
-    for (const auto& child : node->children) {
-        traverse_graph_impl(child, result, visited);
+    for(auto it = node->children.rbegin(); it != node->children.rend(); ++it){
+        traverse_graph_impl(*it, result, visited);
     }
+    // for (const auto& child : node->children) {
+    //     traverse_graph_impl(child, result, visited);
+    // }
 
     result.push_back(node);
 
@@ -118,13 +133,15 @@ inline intrusive_ptr<utility::GraphNode> goto_next_parent(const intrusive_ptr<ut
 // t[0].fill_(0)
 // y = t + 10
 
-
 inline void trace_child_view_change(std::vector<intrusive_ptr<utility::GraphNode>>& vec, size_t i, intrusive_ptr<utility::GraphNode>& cur_child){
     // static std::string prefix = "GradTrack";
     intrusive_ptr<utility::GraphNode> next_parent = goto_next_parent(cur_child, vec, i);
     if(!bool(next_parent)){
         return;    
     }
+
+    // this is if the previous one is a view change
+    // such as t[0].fill_(0) <- t[0] was the view change, but fill_ was the change on self, t[0] was the view change parent
     if(next_parent->backwardFunc->is_view_change() && next_parent->grad && !(next_parent->grad->tensor.is_null())){
         Tensor sending_back = next_parent->grad->tensor.clone();
         next_parent->grad->tensor.fill_(0); // zero out grad, and have it re-accumulated
@@ -133,7 +150,7 @@ inline void trace_child_view_change(std::vector<intrusive_ptr<utility::GraphNode
     }
     while(bool(next_parent)){
         next_parent = goto_next_parent(next_parent, vec, i);
-        if(!bool(next_parent)) return;
+        if(!bool(next_parent)){return;}
         if(next_parent->backwardFunc->is_view_change() && next_parent->grad && !(next_parent->grad->tensor.is_null())){
             Tensor sending_back = next_parent->grad->tensor.clone();
             next_parent->grad->tensor.fill_(0); // zero out grad, and have it re-accumulated
@@ -151,6 +168,7 @@ void AutoGrad<HashSet>::backward(const Tensor& initialGrad){
     Tensor cpy_grad = this->traversed[0]->grad->tensor.clone();
     this->traversed[0]->zero_grad();
     this->traversed[0]->run_backward(cpy_grad);
+    this->traversed[0]->accumulate_gradient(cpy_grad);
     for(size_t i = 1; i < this->traversed.size(); ++i){
         if(this->traversed[i]->grad && this->traversed[i]->grad->tensor.is_null()){
             trace_child_view_change(this->traversed, i+1, this->traversed[i]);
@@ -170,6 +188,7 @@ void AutoGrad<HashSet>::backward(){
     Tensor cpy_grad = this->traversed[0]->grad->tensor.clone();
     this->traversed[0]->zero_grad();
     this->traversed[0]->run_backward(cpy_grad);
+    this->traversed[0]->accumulate_gradient(cpy_grad);
     for(size_t i = 1; i < this->traversed.size(); ++i){
         if(this->traversed[i]->grad && this->traversed[i]->grad->tensor.is_null()){
             trace_child_view_change(this->traversed, i+1, this->traversed[i]);
@@ -188,6 +207,9 @@ void AutoGrad<HashSet>::validate_graph(){
         utils::throw_exception(node->backwardFunc, "Error, expected backwardFunc to be defined");
     }
 }
+
+
+
 
 template class AutoGrad<std::unordered_set<intrusive_ptr<utility::GraphNode>>>;
 

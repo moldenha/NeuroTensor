@@ -4,6 +4,7 @@ namespace nt::grad::utility {
 
 class backward_func;
 class view_backward_func;
+class self_mod_backward_func;
 
 }
 #include "../intrusive_ptr/intrusive_ptr.hpp"
@@ -52,6 +53,21 @@ class NEUROTENSOR_API backward_func : public intrusive_ptr_target {
     void run(const Tensor& grad, const std::vector<weak_intrusive_ptr<GraphNode>>& weak_parents);
     inline bool is_valid() const noexcept {return Func != nullptr;}
     inline virtual bool is_view_change() const {return false;}
+    inline virtual bool is_self_mod() const {return false;}
+
+};
+
+// 
+class NEUROTENSOR_API self_mod_backward_func : public backward_func{
+    public:
+        self_mod_backward_func()
+        :backward_func() {};
+        self_mod_backward_func(std::string name_)
+        :backward_func(std::move(name_)) {};
+        self_mod_backward_func(backward_func::func_type func)
+        :backward_func(func) {};
+        
+        inline bool is_self_mod() const override {return true;}
 
 };
 

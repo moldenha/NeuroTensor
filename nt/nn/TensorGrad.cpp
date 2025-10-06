@@ -660,14 +660,14 @@ TensorGrad TensorGrad::flip(utils::optional_list list) const {
 
 
 
-TensorGrad TensorGrad::dilate(size_value_t dil) const {
+TensorGrad TensorGrad::dilate(std::vector<size_value_t> dil) const {
     handle_null_tensors(*this);
-    return functional::dilate(*this, dil);
+    return functional::dilate(*this, std::move(dil));
 }
 
-TensorGrad TensorGrad::undilate(size_value_t dil) const {
+TensorGrad TensorGrad::undilate(std::vector<size_value_t> dil) const {
     handle_null_tensors(*this);
-    return functional::undilate(*this, dil);
+    return functional::undilate(*this, std::move(dil));
 }
 
 // these are all the operations where it is just the stride or view changed
@@ -820,7 +820,7 @@ TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(div, size_value_t, i)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(real)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(imag)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(flip_view, utils::optional_list, list)
-TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(undilate_, size_value_t, dil)
+TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(undilate_, std::vector<size_value_t>, dil)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(repeat_, size_value_t, amt)
 TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(repeat_, size_value_t, dim,
                                         size_value_t, amt)

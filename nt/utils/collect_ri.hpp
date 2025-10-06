@@ -1,3 +1,28 @@
+// This is a helper file to collect all variadic template parameters into a vector of integers or ranges or ranges + integers
+// so that basically something like this could be done:
+//
+// auto a = t.dilate(1, 2, 3)
+// instead of:
+// auto a = t.dilate({1, 2, 3})
+//
+//and implementation would be:
+//
+//template<typename... Args>
+//inline Tensor dilate(int64_t i, Args&&... args) const{
+//  std::vector<int64_t> vec;
+//  vec.reserve(sizeof...(Args) + 1);
+//  utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+//  this->dilate(std::move(vec);
+//}
+//
+//
+//on the other hand it also allows for this function:
+//
+//auto a = t(1, 1 <range> 10, 1 <range, range> 10);
+//For when there is a mix of ranges and solid integers, it is all compiled into a vector of ranges
+//to then be processed
+#ifndef NT_COLLECT_INTEGERS_AND_RANGES_TO_VEC_HPP__
+#define NT_COLLECT_INTEGERS_AND_RANGES_TO_VEC_HPP__
 #include "../dtype/ranges.h"
 #include <type_traits>
 #include <vector>
@@ -56,3 +81,5 @@ inline decltype(auto) collect_integers_or_ranges(Arg&& arg, Args&&... args){
 }
 
 }
+
+#endif

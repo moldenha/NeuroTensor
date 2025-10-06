@@ -9,12 +9,16 @@ namespace functional {
 void parse_shape(std::string_view input, std::vector<int64_t>& shape) {
 
     // Remove parentheses
+    if(input == "()"){
+        shape.push_back(1);
+        return;
+    }
     input.remove_prefix(1);
     input.remove_suffix(1);
     std::string inp(input);
     std::stringstream ss(inp); // Convert string_view to string for stringstream
     std::string token;
-
+    
     while (std::getline(ss, token, ',')) {
         shape.push_back(std::stoll(token)); // Convert string to int64_t
     }

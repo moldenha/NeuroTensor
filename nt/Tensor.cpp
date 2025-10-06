@@ -1802,15 +1802,10 @@ Tensor Tensor::pad(std::vector<size_value_t> p, const char *mode,
 Tensor Tensor::unpad(std::vector<size_value_t> p) const {return functional::unpad(*this, std::move(p), /*return_contiguous = */true);}
 Tensor Tensor::flip(utils::optional_list list) const{return functional::flip(*this, list);}
 Tensor Tensor::flip_view(utils::optional_list list) const{return functional::flip_view(*this, list);}
-Tensor Tensor::dilate(size_value_t dil) const { return functional::dilate(*this, dil); }
-Tensor Tensor::dilate(size_value_t row_dil, size_value_t col_dil) const { return functional::dilate(*this, row_dil, col_dil); }
-Tensor Tensor::dilate(size_value_t channel_dil, size_value_t row_dil, size_value_t col_dil) const { return functional::dilate(*this, channel_dil, row_dil, col_dil); }
-Tensor Tensor::undilate(size_value_t dil) const {return functional::undilate_(*this, dil).clone();}
-Tensor Tensor::undilate(size_value_t row_dil, size_value_t col_dil) const {return functional::undilate_(*this, row_dil, col_dil).clone(); }
-Tensor Tensor::undilate(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const {return functional::undilate_(*this, chan_dil, row_dil, col_dil).clone(); }
-Tensor Tensor::undilate_(size_value_t dil) const {return functional::undilate_(*this, dil);}
-Tensor Tensor::undilate_(size_value_t row_dil, size_value_t col_dil) const {return functional::undilate_(*this, row_dil, col_dil);}
-Tensor Tensor::undilate_(size_value_t chan_dil, size_value_t row_dil, size_value_t col_dil) const { return functional::undilate_(*this, row_dil, col_dil, chan_dil);}
+
+Tensor Tensor::dilate(std::vector<size_value_t> dil) const { return functional::dilate(*this, std::move(dil)); }
+Tensor Tensor::undilate(std::vector<size_value_t> dil) const { return functional::undilate(*this, std::move(dil)); }
+Tensor Tensor::undilate_(std::vector<size_value_t> dil) const { return functional::undilate_(*this, std::move(dil)); }
 
 } // namespace nt
 

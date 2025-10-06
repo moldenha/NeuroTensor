@@ -109,13 +109,19 @@ TensorGrad TensorGrad_Functional_Class::maximum(const std::vector<TensorGrad>& t
         std::copy(ts.begin(), ts.end(), std::back_inserter(n_ts));
         return maximum(n_tgs, n_ts, ss);
     }
-    std::vector<Tensor> all_tensors;
-    all_tensors.reserve(tgs.size() + ts.size());
-    for(const auto& tg : tgs) all_tensors.push_back(tg.detach());
-    all_tensors.insert(all_tensors.end(), ts.begin(), ts.end());
+    std::vector<Tensor> all_tensors(tgs.size() + ts.size(), Tensor::Null());
+    int64_t cntr = 0;
+    for(const auto& tg : tgs){
+        all_tensors[cntr] = tg.detach();
+        ++cntr;
+    }
+    for(const auto& te : ts){
+        all_tensors[cntr] = te;
+        ++cntr;
+    }
     bool do_scalars = (ss.size() > 0);
-    Tensor out = (do_scalars) ? ::nt::functional::maximum(std::move(all_tensors), ::nt::functional::maximum(std::move(ss))) : ::nt::functional::maximum(std::move(all_tensors));
-
+    Tensor out = (do_scalars) ? ::nt::functional::maximum(all_tensors, ::nt::functional::maximum(std::move(ss))) 
+                                : ::nt::functional::maximum(all_tensors);
     intrusive_ptr<tensor_holder> result_th = make_intrusive<tensor_holder>(out.conditional_mutate_clone());
     TensorGrad result(out, true);
     result.track_tensors(const_cast<std::vector<TensorGrad>&>(tgs));
@@ -166,10 +172,16 @@ TensorGrad TensorGrad_Functional_Class::minimum(const std::vector<TensorGrad>& t
         std::copy(ts.begin(), ts.end(), std::back_inserter(n_ts));
         return minimum(n_tgs, n_ts, ss);
     }
-    std::vector<Tensor> all_tensors;
-    all_tensors.reserve(tgs.size() + ts.size());
-    for(const auto& tg : tgs) all_tensors.push_back(tg.detach());
-    all_tensors.insert(all_tensors.end(), ts.begin(), ts.end());
+    std::vector<Tensor> all_tensors(tgs.size() + ts.size(), Tensor::Null());
+    int64_t cntr = 0;
+    for(const auto& tg : tgs){
+        all_tensors[cntr] = tg.detach();
+        ++cntr;
+    }
+    for(const auto& te : ts){
+        all_tensors[cntr] = te;
+        ++cntr;
+    }
     bool do_scalars = (ss.size() > 0);
     Tensor out = (do_scalars) ? ::nt::functional::minimum(std::move(all_tensors), ::nt::functional::minimum(std::move(ss))) : ::nt::functional::minimum(std::move(all_tensors));
 

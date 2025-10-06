@@ -81,11 +81,11 @@ TensorGrad TensorGrad_Functional_Class::abs(const TensorGrad &x){
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                intrusive_ptr<tensor_holder> saved_x) {
                 //compute the gradient using the saved input tensor
-                // Tensor sign_grad = (saved_x->tensor > 0).to(DType::Float32) -
-                //                    (saved_x->tensor < 0).to(DType::Float32); //compute sign
-                Tensor sign_grad = ((saved_x->tensor < 0).to(DType::Float32) -
-                                   (saved_x->tensor > 0).to(DType::Float32))
-                                    .to(grad.dtype()); //compute sign
+                Tensor sign_grad = ((saved_x->tensor > 0).to(DType::Float32) -
+                                   (saved_x->tensor < 0).to(DType::Float32)).to(grad.dtype()); //compute sign
+                // Tensor sign_grad = ((saved_x->tensor < 0).to(DType::Float32) -
+                //                    (saved_x->tensor > 0).to(DType::Float32))
+                //                     .to(grad.dtype()); //compute sign
                 parents[0]->accumulate_gradient( grad * sign_grad );
             },
             saved_x);

@@ -119,7 +119,18 @@ inline void TensorGrad::create_backward_function(backward_func&& func, Arg1&& ar
 
 
 
-
+// this is a function to get the last "self modifying" node
+// so basically it will go down the list and get the last tensor that contains what is currently
+// pointing to "self"
+inline intrusive_ptr<grad::utility::GraphNode> get_current_self_node(intrusive_ptr<grad::utility::GraphNode> current){
+    if(current->children.size() == 0) return current;
+    for(auto it = current->children.rbegin(); it != current->children.rend(); ++it){
+        if((*it)->backwardFunc->is_self_mod()){
+            return get_current_self_node(*it);
+        }
+    }
+    return current;
+}
 
 inline void TensorGrad::track_tensors(const TensorGrad& t){
     if(!this->track_grad()) return;
@@ -132,10 +143,11 @@ inline void TensorGrad::track_tensors(const TensorGrad& t){
     // Step4: Make (*this) the intrusive_ptr<graph::utility::GraphNode> child
     
     this->Node->ensure_backward_initialization();
-    t.Node->ensure_backward_initialization();
+    intrusive_ptr<grad::utility::GraphNode> last_node = get_current_self_node(t.Node);
+    last_node->ensure_backward_initialization();
 
-    this->Node->parents.emplace_back(t.Node); // Step3
-    t.Node->children.emplace_back(this->Node); // Step4
+    this->Node->parents.emplace_back(last_node); // Step3
+    last_node->children.emplace_back(this->Node); // Step4
 }
 
 template<typename... Args>
@@ -159,16 +171,26 @@ inline void TensorGrad::track_tensors(const TensorGrad& t, const Args&... args){
 //  - Instead, new_A becomes a child of old_A, so grad tracking wise new_A will still
 //          be back propogated before old_A, but old_A won't go out of scope
 
+
+
+
 template<typename BackFunc>
 inline void TensorGrad::track_self_mod_tensors(BackFunc&& func, const char* func_name){
     if(!this->track_grad()) return;
     intrusive_ptr<grad::utility::GraphNode> 
         new_node = make_intrusive<grad::utility::GraphNode>(this->Node->tensor, grad::utility::DontTrackGrad{});
-    new_node->ensure_backward_initialization(true);
+    // if(this->Node->backwardFunc->is_view_change()){
+    //     std::cout << "this parent is a view change" << std::endl;
+    // }else{
+    //     std::cout << "this parent is not a view change" << std::endl;
+    // }
+    new_node->ensure_self_mod_backward_initialization(true);
     new_node->backwardFunc->set(std::forward<BackFunc>(func));
     new_node->backwardFunc->set_name(func_name);
-    new_node->parents.emplace_back(this->Node);
-    this->Node->children.emplace_back(new_node);
+    intrusive_ptr<grad::utility::GraphNode> last_node = get_current_self_node(this->Node);
+
+    new_node->parents.emplace_back(last_node);
+    last_node->children.emplace_back(new_node);
 }
 
 template<typename BackFunc, typename... Args>
@@ -176,7 +198,7 @@ inline void TensorGrad::track_self_mod_tensors(BackFunc&& func, const char* func
     if(!this->track_grad()) return;
     intrusive_ptr<grad::utility::GraphNode> 
         new_node = make_intrusive<grad::utility::GraphNode>(this->Node->tensor, grad::utility::DontTrackGrad{});
-    new_node->ensure_backward_initialization(true);
+    new_node->ensure_self_mod_backward_initialization(true);
     new_node->backwardFunc->set(std::forward<BackFunc>(func));
     new_node->backwardFunc->set_name(func_name);
     TensorGrad holder(new_node);

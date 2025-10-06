@@ -391,9 +391,31 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     TensorGrad unpad(std::vector<size_value_t> p) const;
     TensorGrad flip(utils::optional_list list = nullptr) const;
     TensorGrad flip_view(utils::optional_list list = nullptr) const;
-    TensorGrad dilate(size_value_t) const;
-    TensorGrad undilate(size_value_t) const;
-    TensorGrad undilate_(size_value_t) const;
+    TensorGrad dilate(std::vector<size_value_t>) const;
+    template<typename... Args>
+    inline TensorGrad dilate(size_value_t i, Args&&... args) const {
+        std::vector<size_value_t> vec;
+        vec.reserve(sizeof...(Args) + 1);
+        utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+        return this->dilate(std::move(vec)); 
+    }
+    TensorGrad undilate(std::vector<size_value_t>) const;
+    template<typename... Args>
+    inline TensorGrad undilate(size_value_t i, Args&&... args) const {
+        std::vector<size_value_t> vec;
+        vec.reserve(sizeof...(Args) + 1);
+        utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+        return this->undilate(std::move(vec)); 
+    }
+    TensorGrad undilate_(std::vector<size_value_t>) const;
+
+    template<typename... Args>
+    inline TensorGrad undilate_(size_value_t i, Args&&... args) const {
+        std::vector<size_value_t> vec;
+        vec.reserve(sizeof...(Args) + 1);
+        utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+        return this->undilate_(std::move(vec)); 
+    }
     TensorGrad repeat_(size_value_t amt) const;
     TensorGrad repeat_(size_value_t dim, size_value_t amt) const;
     TensorGrad expand(SizeRef) const;
@@ -444,7 +466,11 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     void backward(const Tensor &);
     void accumulate_gradient(const Tensor &);
     void accumulate_gradient(Scalar);
-    
+    inline std::string backward_name() const {
+        return (this->Node->backwardFunc != nullptr) ? this->Node->backwardFunc->get_name() : "None";
+    }
+
+
     // To be done after backward is called:
     void update();         // updates current values based on gradient
     void update_mutable(); // updates current values based on gradient even if

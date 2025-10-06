@@ -595,91 +595,23 @@ NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::to);
 
 namespace functional_details{
     NT_ALWAYS_INLINE Tensor undilate(const Tensor& x, utils::optional_any_tuple<Tensor::size_value_t> tup){
-        if(tup.size() == 1){
-            return ::nt::functional::undilate(x, tup[0]);
-        }
-        else if(tup.size() == 2){
-            return ::nt::functional::undilate(x, tup[0], tup[1]);
-        }
-        else if(tup.size() == 3){
-            return ::nt::functional::undilate(x, tup[0], tup[1], tup[2]);
-        }else{
-            return ::nt::functional::undilate(x, tup.get_vals());
-        }
+        return ::nt::functional::undilate(x, tup.get_vals());
     }
     NT_ALWAYS_INLINE Tensor undilate_(const Tensor& x, utils::optional_any_tuple<Tensor::size_value_t> tup, bool test){
-        if(tup.size() == 1 && !test){
-            return ::nt::functional::undilate_(x, tup[0]);
-        }
-        else if(tup.size() == 2 && !test){
-            return ::nt::functional::undilate_(x, tup[0], tup[1]);
-        }
-        else if(tup.size() == 3 && !test){
-            return ::nt::functional::undilate_(x, tup[0], tup[1], tup[2]);
-        }else{
-            return ::nt::functional::undilate_(x, tup.get_vals(), test);
-        }
+        return ::nt::functional::undilate_(x, tup.get_vals(), test);
     }
     NT_ALWAYS_INLINE Tensor dilate(const Tensor& x, utils::optional_any_tuple<Tensor::size_value_t> tup, bool test){
-        utils::throw_exception(tup.size() <= 3, "Dilation and undilation past 3 dimensions is currently unsupported");
-        if(tup.size() == 1 && !test){
-            return ::nt::functional::dilate(x, tup[0]);
-        }
-        else if(tup.size() == 2 && !test){
-            return ::nt::functional::dilate(x, tup[0], tup[1]);
-        }
-        else if(tup.size() == 3 && !test){
-            return ::nt::functional::dilate(x, tup[0], tup[1], tup[2]);
-        }else{
-            return ::nt::functional::dilate(x, tup.get_vals(), test);
-        }
+        return ::nt::functional::dilate(x, tup.get_vals(), test);
     }
     NT_ALWAYS_INLINE TensorGrad undilate(const TensorGrad& x, utils::optional_any_tuple<Tensor::size_value_t> tup){
-        utils::throw_exception(tup.size() <= 3, "Dilation and undilation past 3 dimensions is currently unsupported");
-        if(tup.size() == 1){
-            return ::nt::functional::undilate(x, tup[0]);
-        }
-        else if(tup.size() == 2){
-            return ::nt::functional::undilate(x, tup[0], tup[1]);
-        }
-        else if(tup.size() == 3){
-            return ::nt::functional::undilate(x, tup[0], tup[1], tup[2]);
-        }else{
-            return ::nt::functional::undilate(x, tup.get_vals());
-        }
+        return ::nt::functional::dilate(x, tup.get_vals());
     }
     NT_ALWAYS_INLINE TensorGrad undilate_(const TensorGrad& x, utils::optional_any_tuple<Tensor::size_value_t> tup, bool test){
-        utils::throw_exception(tup.size() <= 3, "Dilation and undilation past 3 dimensions is currently unsupported");
-        if(tup.size() == 1 && !test){
-            return ::nt::functional::undilate_(x, tup[0]);
-        }
-        else if(tup.size() == 2 && !test){
-            return ::nt::functional::undilate_(x, tup[0], tup[1]);
-        }
-        else if(tup.size() == 3 && !test){
-            return ::nt::functional::undilate_(x, tup[0], tup[1], tup[2]);
-        }
-        else{
-            return ::nt::functional::undilate_(x, tup.get_vals(), test);
-        }
-
+        return ::nt::functional::undilate_(x, tup.get_vals(), test);
     }
     NT_ALWAYS_INLINE TensorGrad dilate(const TensorGrad& x, utils::optional_any_tuple<Tensor::size_value_t> tup, bool test){
-        utils::throw_exception(tup.size() <= 3, "Dilation and undilation past 3 dimensions is currently unsupported");
-        if(tup.size() == 1 && !test){
-            return ::nt::functional::dilate(x, tup[0]);
-        }
-        else if(tup.size() == 2 && !test){
-            return ::nt::functional::dilate(x, tup[0], tup[1]);
-        }
-        else if(tup.size() == 3 && !test){
-            return ::nt::functional::dilate(x, tup[0], tup[1], tup[2]);
-        }
-        else{
-            return ::nt::functional::dilate(x, tup.get_vals(), test);
-        }
+        return ::nt::functional::dilate(x, tup.get_vals(), test);
     }
-
 }
 
 NT_MAKE_NAMED_PARAMETER_FUNCTION_WITH_INIT_LIST_(dilate)
@@ -1096,7 +1028,7 @@ inline void to_vec_tensor_grad_sub(std::vector<TensorGrad> &out_tensors, T &&arg
     if constexpr (std::is_same_v<::nt::type_traits::remove_cvref_t<T>, TensorGrad>) {
         out_tensors.emplace_back(std::forward<T &&>(arg));
     }
-    to_vec_tensor_sub(out_tensors, std::forward<Args &&>(args)...);
+    to_vec_tensor_grad_sub(out_tensors, std::forward<Args &&>(args)...);
 }
 
 template <typename T, typename... Args>
@@ -1112,7 +1044,7 @@ inline std::vector<TensorGrad> to_vec_tensor_grad(T &&arg, Args &&...args) {
     if constexpr (std::is_same_v<::nt::type_traits::remove_cvref_t<T>, TensorGrad>) {
         out_tensors.emplace_back(std::forward<T &&>(arg));
     }
-    to_vec_tensor_sub(out_tensors, std::forward<Args &&>(args)...);
+    to_vec_tensor_grad_sub(out_tensors, std::forward<Args &&>(args)...);
     return std::move(out_tensors);
 }
 

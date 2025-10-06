@@ -292,18 +292,18 @@ NT_ALWAYS_INLINE nt::type_traits::remove_cvref_t<To> convert(_From&& f){
     }
     //handling bool cases:
     else if constexpr (std::is_same_v<From, bool>){
-        return convert<To>(std::forward<_From>(f) ? float(0) : float(1));
+        return convert<To>(std::forward<_From>(f) ? float(1) : float(0));
     }
     else if constexpr (std::is_same_v<From, uint_bool_t>){
-        return convert<To>((std::forward<_From>(f).value == 1) ? float(0) : float(1));
+        return convert<To>((std::forward<_From>(f).value == 1) ? float(1) : float(0));
     }
     else if constexpr (std::is_same_v<To, bool>){
-        From one(1);
-        return one == std::forward<_From>(f);
+        From zero(0);
+        return zero < std::forward<_From>(f);
     }
     else if constexpr (std::is_same_v<To, uint_bool_t>){
-        From one(1);
-        return uint_bool_t(one == std::forward<_From>(f));
+        From zero(0);
+        return uint_bool_t(zero < std::forward<_From>(f));
     }
 
     //some specific use cases pre-defined
@@ -344,7 +344,10 @@ NT_ALWAYS_INLINE nt::type_traits::remove_cvref_t<To> convert(_From&& f){
         return uint128_t(convert<uint64_t>(std::forward<_From>(f)));
     }
 #else
-    else if constexpr((std::is_same_v<From, int128_t> || std::is_same_v<From, uint128_t>) && DTypeFuncs::is_dtype_floating_v<ToDType> ){
+    else if constexpr(std::is_same_v<From, int128_t>){
+        return convert<To>(int64_t(std::forward<_From>(f)));
+    }
+    else if constexpr(std::is_same_v<From, uint128_t> && DTypeFuncs::is_dtype_floating_v<ToDType> ){
         return details::portable_128_int_to_floating<To>(std::forward<_From>(f)); 
     }
 #endif

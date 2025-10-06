@@ -5,9 +5,8 @@
 #ifndef NT_TENSORGAD_FUNCTIONAL_H__
 #define NT_TENSORGAD_FUNCTIONAL_H__
 
-
-
 #include "functional_class.h"
+#include "../utils/collect_ri.hpp"
 
 namespace nt {
 namespace functional {
@@ -418,41 +417,65 @@ inline TensorGrad to_complex_from_real(const TensorGrad& tg){return TensorGrad_F
 inline TensorGrad to_complex_from_imag(const TensorGrad& tg){return TensorGrad_Functional_Class::to_complex_from_imag(tg);}
 inline TensorGrad to(const TensorGrad& tg, DType dt){return TensorGrad_Functional_Class::to(tg, dt);}
 
-inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a){
-    return TensorGrad_Functional_Class::dilate(tg, a);
-}
-inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
-    return TensorGrad_Functional_Class::dilate(tg, a, b);
-}
-inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
-    return TensorGrad_Functional_Class::dilate(tg, a, b, c);
-}
+// inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a){
+//     return TensorGrad_Functional_Class::dilate(tg, a);
+// }
+// inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
+//     return TensorGrad_Functional_Class::dilate(tg, a, b);
+// }
+// inline TensorGrad dilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
+//     return TensorGrad_Functional_Class::dilate(tg, a, b, c);
+// }
 inline TensorGrad dilate(const TensorGrad& tg, std::vector<Tensor::size_value_t> dil, bool test = false){
     return TensorGrad_Functional_Class::dilate(tg, std::move(dil), test);
 }
-inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a){
-    return TensorGrad_Functional_Class::undilate(tg, a);
+template<typename... Args>
+inline TensorGrad dilate(const TensorGrad& t, Tensor::size_value_t i, Args&&... args){
+    std::vector<Tensor::size_value_t> vec;
+    vec.reserve(sizeof...(Args) + 1);
+    utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+    return dilate(t, std::move(vec));
 }
-inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
-    return TensorGrad_Functional_Class::undilate(tg, a, b);
-}
-inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
-    return TensorGrad_Functional_Class::undilate(tg, a, b, c);
-}
+
+// inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a){
+//     return TensorGrad_Functional_Class::undilate(tg, a);
+// }
+// inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
+//     return TensorGrad_Functional_Class::undilate(tg, a, b);
+// }
+// inline TensorGrad undilate(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
+//     return TensorGrad_Functional_Class::undilate(tg, a, b, c);
+// }
 inline TensorGrad undilate(const TensorGrad& tg, std::vector<Tensor::size_value_t> dil){
     return TensorGrad_Functional_Class::undilate(tg, std::move(dil));
 }
-inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a){
-    return TensorGrad_Functional_Class::undilate_(tg, a);
+template<typename... Args>
+inline TensorGrad undilate(const TensorGrad& t, Tensor::size_value_t i, Args&&... args){
+    std::vector<Tensor::size_value_t> vec;
+    vec.reserve(sizeof...(Args) + 1);
+    utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+    return undilate(t, std::move(vec));
 }
-inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
-    return TensorGrad_Functional_Class::undilate_(tg, a, b);
-}
-inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
-    return TensorGrad_Functional_Class::undilate_(tg, a, b, c);
-}
+
+
+// inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a){
+//     return TensorGrad_Functional_Class::undilate_(tg, a);
+// }
+// inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b){
+//     return TensorGrad_Functional_Class::undilate_(tg, a, b);
+// }
+// inline TensorGrad undilate_(const TensorGrad& tg, Tensor::size_value_t a, Tensor::size_value_t b, Tensor::size_value_t c){
+//     return TensorGrad_Functional_Class::undilate_(tg, a, b, c);
+// }
 inline TensorGrad undilate_(const TensorGrad& tg, std::vector<Tensor::size_value_t> dil, bool test = false){
     return TensorGrad_Functional_Class::undilate_(tg, std::move(dil), test);
+}
+template<typename... Args>
+inline TensorGrad undilate_(const TensorGrad& t, Tensor::size_value_t i, Args&&... args){
+    std::vector<Tensor::size_value_t> vec;
+    vec.reserve(sizeof...(Args) + 1);
+    utils::collect_integers_impl(vec, i, std::forward<Args>(args)...);
+    return undilate_(t, std::move(vec));
 }
 
 inline TensorGrad zeros_like(const TensorGrad& tg){ return TensorGrad_Functional_Class::zeros_like(tg); }

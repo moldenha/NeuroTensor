@@ -8,7 +8,7 @@ namespace nt{
 namespace functional{
 
 
-Tensor undilate_(const Tensor& input, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
+Tensor undilate__(const Tensor& input, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(input);
     using size_value_t = Tensor::size_value_t;
     if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1)) {
@@ -75,7 +75,7 @@ Tensor undilate_(const Tensor& input, Tensor::size_value_t row_dil, Tensor::size
     return Tensor(std::move(cpy), std::move(outp_shape)).set_mutability(input.is_mutable());
 }
 
-Tensor undilate_(const Tensor& input, Tensor::size_value_t col_dil){
+Tensor undilate__(const Tensor& input, Tensor::size_value_t col_dil){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(input);
     using size_value_t = Tensor::size_value_t;
     if ((col_dil == 0 || col_dil == 1)) {
@@ -111,7 +111,7 @@ Tensor undilate_(const Tensor& input, Tensor::size_value_t col_dil){
     return Tensor(std::move(cpy), std::move(outp_shape)).set_mutability(input.is_mutable());
 }
 
-Tensor undilate_(const Tensor& input, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
+Tensor undilate__(const Tensor& input, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(input);
     using size_value_t = Tensor::size_value_t;
     if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1)) {
@@ -220,13 +220,13 @@ inline void sub_n_undilate_(const std::vector<Tensor::size_value_t>& originals, 
 Tensor undilate_(const Tensor& t, std::vector<Tensor::size_value_t> vec, bool test){
     using size_value_t = Tensor::size_value_t;
     if(vec.size() == 1 && !test){
-        return undilate_(t, vec[0]);
+        return undilate__(t, vec[0]);
     }
     if(vec.size() == 2 && !test){
-        return undilate_(t, vec[0], vec[1]);
+        return undilate__(t, vec[0], vec[1]);
     }
     if(vec.size() == 3 && !test){
-        return undilate_(t, vec[0], vec[1], vec[2]);
+        return undilate__(t, vec[0], vec[1], vec[2]);
     }
     if(std::all_of(vec.cbegin(), vec.cend(), [](const auto& val){return val == 0 || val == 1;})){
         return t;
@@ -297,22 +297,22 @@ Tensor undilate_(const Tensor& t, std::vector<Tensor::size_value_t> vec, bool te
     return Tensor(std::move(cpy), std::move(outp_shape)).set_mutability(t.is_mutable());
 }
 
-Tensor undilate(const Tensor& t, Tensor::size_value_t dil) {
-    return undilate_(t, dil).clone();
-}
-Tensor undilate(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
-    return undilate_(t, row_dil, col_dil).clone(); 
-}
-Tensor undilate(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
-    return undilate_(t, chan_dil, row_dil, col_dil).clone(); 
-}
+// Tensor undilate(const Tensor& t, Tensor::size_value_t dil) {
+//     return undilate_(t, dil).clone();
+// }
+// Tensor undilate(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
+//     return undilate_(t, row_dil, col_dil).clone(); 
+// }
+// Tensor undilate(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
+//     return undilate_(t, chan_dil, row_dil, col_dil).clone(); 
+// }
 Tensor undilate(const Tensor& t, std::vector<Tensor::size_value_t> dilations) {
     return undilate_(t, std::move(dilations), false).clone(); 
 }
 
 
 
-Tensor dilate(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
+Tensor dilate_(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil) {
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     using size_value_t = Tensor::size_value_t;
     if (row_dil == 0 && col_dil == 0)
@@ -329,11 +329,11 @@ Tensor dilate(const Tensor& t, Tensor::size_value_t row_dil, Tensor::size_value_
     vec[vec.size() - 2] -= (row_dil - 1);
 
     Tensor outp = zeros(SizeRef(vec), t.dtype());
-    undilate_(outp, row_dil, col_dil).set_(t);
+    undilate__(outp, row_dil, col_dil).set_(t);
     return std::move(outp);
 }
 
-Tensor dilate(const Tensor& t, Tensor::size_value_t col_dil){
+Tensor dilate_(const Tensor& t, Tensor::size_value_t col_dil){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     using size_value_t = Tensor::size_value_t;
     if (col_dil == 0)
@@ -348,13 +348,13 @@ Tensor dilate(const Tensor& t, Tensor::size_value_t col_dil){
     vec.back() -= (col_dil - 1);
 
     Tensor outp = zeros(SizeRef(vec), t.dtype());
-    Tensor view = undilate_(outp, col_dil);
+    Tensor view = undilate__(outp, col_dil);
     view.set_(t);
     return std::move(outp);
 
 
 }
-Tensor dilate(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
+Tensor dilate_(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value_t row_dil, Tensor::size_value_t col_dil){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     using size_value_t = Tensor::size_value_t;
     if ((row_dil == 0 || row_dil == 1) && (col_dil == 0 || col_dil == 1) && (chan_dil == 0 || chan_dil == 1))
@@ -377,7 +377,7 @@ Tensor dilate(const Tensor& t, Tensor::size_value_t chan_dil, Tensor::size_value
     vec[vec.size() - 3] -= (chan_dil - 1);
     
     Tensor outp = zeros(SizeRef(vec), t.dtype());
-    undilate_(outp, chan_dil, row_dil, col_dil).set_(t);
+    undilate__(outp, chan_dil, row_dil, col_dil).set_(t);
     return std::move(outp);
 }
 
@@ -386,13 +386,13 @@ Tensor dilate(const Tensor& t, std::vector<Tensor::size_value_t> dilations, bool
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t);
     using size_value_t = Tensor::size_value_t;
     if(dilations.size() == 1 && !test){
-        return dilate(t, dilations[0]);
+        return dilate_(t, dilations[0]);
     }
     if(dilations.size() == 2 && !test){
-        return dilate(t, dilations[0], dilations[1]);
+        return dilate_(t, dilations[0], dilations[1]);
     }
     if(dilations.size() == 3 && !test){
-        return dilate(t, dilations[0], dilations[1], dilations[2]);
+        return dilate_(t, dilations[0], dilations[1], dilations[2]);
     }
     if(std::all_of(dilations.cbegin(), dilations.cend(), [](const auto& val){return val == 0 || val == 1;})){
         return t.contiguous();
@@ -418,8 +418,6 @@ Tensor dilate(const Tensor& t, std::vector<Tensor::size_value_t> dilations, bool
     Tensor undilate_view = undilate_(outp, std::move(dilations), test);
     undilate_view.set_(t);
     return std::move(outp);
-
-
 }
 
 // Tensor undilate_(size_value_t dil) const {
