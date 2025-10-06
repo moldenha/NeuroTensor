@@ -28,13 +28,13 @@ std::cout << t2 << std::endl;
 
 This library is built for C++17, and as C++26 comes out will be adapted for that. NeuroTensor offers an extension for named parameters in the `nt` namespace. NeuroTensor also offers more streamlined ranges, and much more. This is an example of working use in C++17 below.
 
-```
+```C++
 // important to define this macro if you want named parameters to work like arg = 10, instead of ntarg_(arg) = 10
 #define NT_DEFINE_PARAMETER_ARGUMENTS
 #include <nt/nt.h>
 
 int main(){
-    using namespace nt::literals; // if you want to have arguments define
+    using namespace nt::literals; // if you want to have arguments defined
     auto x = nt::randn({2, 3, 10});
     auto y = nt::pow(exponent = 2, input = x);
     auto z = nt::softplus(y, threshold = 30.0);
