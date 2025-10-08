@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "operators.h"
+#include "fill.h"
 #include "../../Tensor.h"
 #include "../../refs/SizeRef.h"
 #include "../../dtype/ArrayVoid.h"
@@ -339,8 +340,17 @@ Tensor fmod(const Tensor& t, const Tensor& other){
     //     });
     //     return std::move(out);
     // }
-    Tensor output = t.clone();
-    cpu::_fmod_array_(output.arr_void(), other.arr_void());
+
+    if(t.shape() == other.shape()){
+        Tensor output = t.clone();
+        cpu::_fmod_array_(output.arr_void(), other.arr_void());
+        return std::move(output);
+    }
+	Tensor output = (t.dims() > other.dims()) ? t.unsqueeze_as(other) : t;
+	Tensor b = (other.dims() > t.dims()) ? other.unsqueeze_as(t) : other;
+    output = output.expand_as(b).clone();
+    b = b.expand_as(output).clone();
+    cpu::_fmod_array_(output.arr_void(), b.arr_void());
     return std::move(output);
 }
 
@@ -384,10 +394,22 @@ Tensor fmod_b_backward(const Tensor& a, const Tensor& b, const Tensor& grad){
                            "Modulo backward expects all dtypes to match");
     utils::throw_exception(DTypeFuncs::is_floating(a.dtype()) || DTypeFuncs::is_complex(a.dtype()),
                            "Modulo backward can only happen on floating dtypes but got $", grad.dtype());
-    utils::throw_exception(a.shape() == b.shape() && a.shape() == grad.shape(),
-                           "Expected all shapes to match for fmod backward");
-    Tensor output(a.shape(), a.dtype());
-    cpu::_fmod_backward(a.arr_void(), b.arr_void(), grad.arr_void(), output.arr_void());
+
+    if(a.shape() == b.shape() && a.shape() == grad.shape()){
+        Tensor output(a.shape(), a.dtype());
+        cpu::_fmod_backward(a.arr_void(), b.arr_void(), grad.arr_void(), output.arr_void());
+        return std::move(output);
+    }
+
+    Tensor output = ::nt::functional::zeros_like(b);
+	Tensor _b = (a.dims() > b.dims()) ? b.unsqueeze_as(a) : b;
+	Tensor _a = (b.dims() > a.dims()) ? a.unsqueeze_as(b) : a;
+    _b = _b.expand_as(_a).clone();
+    _a = _a.expand_as(_b).clone();
+    Tensor _output = ::nt::functional::zeros_like(_b);
+    utils::THROW_EXCEPTION(_b.shape() == grad.shape(), "Internal Backward Error: grad shape not the same as it should be");
+    cpu::_fmod_backward(_a.arr_void(), _b.arr_void(), grad.arr_void(), _output.arr_void());
+    output += _output;
     return std::move(output);
 }
 
@@ -417,7 +439,7 @@ Tensor& remainder_(Tensor& t, Scalar num){
 Tensor remainder(const Tensor& t, const Tensor& other){
     _NT_FUNCTIONAL_ALWAYS_CHECK_(t, other);
     utils::throw_exception(t.dtype() == other.dtype() && t.dtype() != DType::TensorObj,
-                           "Error got invalid dtypes for remainder of 2 twnsors $ and $", t.dtype(), other.dtype());
+                           "Error got invalid dtypes for remainder of 2 tensors $ and $", t.dtype(), other.dtype());
     // if(t.dtype() == DType::TensorObj){
     //     Tensor out = Tensor::makeNullTensorArray(t.numel());
     //     Tensor* o_begin = reinterpret_cast<Tensor*>(out.data_ptr());
@@ -428,8 +450,16 @@ Tensor remainder(const Tensor& t, const Tensor& other){
     //     });
     //     return std::move(out);
     // }
-    Tensor output = t.clone();
-    cpu::_remainder_array_(output.arr_void(), other.arr_void());
+    if(t.shape() == other.shape()){
+        Tensor output = t.clone();
+        cpu::_remainder_array_(output.arr_void(), other.arr_void());
+        return std::move(output);
+    }
+	Tensor output = (t.dims() > other.dims()) ? t.unsqueeze_as(other) : t;
+	Tensor b = (other.dims() > t.dims()) ? other.unsqueeze_as(t) : other;
+    output = output.expand_as(b).clone();
+    b = b.expand_as(output).clone();
+    cpu::_remainder_array_(output.arr_void(), b.arr_void());
     return std::move(output);
 }
 
@@ -473,10 +503,21 @@ Tensor remainder_b_backward(const Tensor& a, const Tensor& b, const Tensor& grad
                            "Modulo backward expects all dtypes to match");
     utils::throw_exception(DTypeFuncs::is_floating(a.dtype()) || DTypeFuncs::is_complex(a.dtype()),
                            "Modulo backward can only happen on floating dtypes but got $", grad.dtype());
-    utils::throw_exception(a.shape() == b.shape() && a.shape() == grad.shape(),
-                           "Expected all shapes to match for remainder backward");
-    Tensor output(a.shape(), a.dtype());
-    cpu::_remainder_backward(a.arr_void(), b.arr_void(), grad.arr_void(), output.arr_void());
+    if(a.shape() == b.shape() && a.shape() == grad.shape()){
+        Tensor output(a.shape(), a.dtype());
+        cpu::_remainder_backward(a.arr_void(), b.arr_void(), grad.arr_void(), output.arr_void());
+        return std::move(output);
+    }
+
+    Tensor output = ::nt::functional::zeros_like(b);
+	Tensor _b = (a.dims() > b.dims()) ? b.unsqueeze_as(a) : b;
+	Tensor _a = (b.dims() > a.dims()) ? a.unsqueeze_as(b) : a;
+    _b = _b.expand_as(_a).clone();
+    _a = _a.expand_as(_b).clone();
+    Tensor _output = ::nt::functional::zeros_like(_b);
+    utils::THROW_EXCEPTION(_b.shape() == grad.shape(), "Internal Backward Error: grad shape not the same as it should be");
+    cpu::_remainder_backward(_a.arr_void(), _b.arr_void(), grad.arr_void(), _output.arr_void());
+    output += _output;
     return std::move(output);
 }
 

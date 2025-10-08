@@ -42,6 +42,7 @@
 #include "trig_autograd_test.h"
 #include "min_max_autograd_test.h"
 #include "autograd_view_test.h"
+#include "operator_autograd_test.h"
 // Autograd tests to back-test against pytorch
 // While all of the functions are used for both nt::Tensor's and nt::TensorGrad's
 // The following just have functions with non-trivial autograds that need to be back-tested
@@ -50,9 +51,9 @@
 // - matmult_test <- in linear_autograd_test [done]
 // - conv_test [done]
 // - dilate_test [no pytorch equivalent]
-// - min_max_test
+// - min_max_test [done]
 // - normalize_test
-// - operator_test
+// - operator_test [done]
 // - padding_test
 // - pooling_test
 // - round_test
@@ -111,5 +112,6 @@ int main(){
     conv_autograd_test();
     min_max_autograd_test();
     view_autograd_test();
+    operator_autograd_test();
     return 0;
 }

@@ -973,8 +973,8 @@ void _remainder_backward(const ArrayVoid& a, const ArrayVoid& b, const ArrayVoid
     if(a.dtype() != b.dtype() || b.dtype() != grad.dtype() || grad.dtype() != out.dtype()){
         throw std::logic_error("dtypes must be the same for remainder backward");
     }
-    if(!DTypeFuncs::is_floating(a.dtype()) || !DTypeFuncs::is_complex(a.dtype())){
-        throw std::logic_error("Error. dtype for remainder backward must be floating");
+    if(!(DTypeFuncs::is_floating(a.dtype()) || DTypeFuncs::is_complex(a.dtype()))){
+        throw std::logic_error("Error. dtype for remainder backward must be floating or complex");
     }
     // if(!out.is_contiguous()){
     //     throw std::logic_error("remainder backward output should be contiguous");
@@ -992,8 +992,8 @@ void _remainder_backward(const Scalar& a, const ArrayVoid& b, const ArrayVoid& g
     if(b.dtype() != grad.dtype() || grad.dtype() != out.dtype()){
         throw std::logic_error("dtypes must be the same for remainder backward");
     }
-    if(!DTypeFuncs::is_floating(grad.dtype()) || !DTypeFuncs::is_complex(grad.dtype())){
-        throw std::logic_error("Error. dtype for remainder backward must be floating");
+    if(!(DTypeFuncs::is_floating(grad.dtype()) || DTypeFuncs::is_complex(grad.dtype()))){
+        throw std::logic_error("Error. dtype for remainder backward must be floating or complex");
     }
     // if(!out.is_contiguous()){
     //     throw std::logic_error("remainder backward output should be contiguous");

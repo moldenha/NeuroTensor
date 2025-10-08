@@ -176,13 +176,13 @@ NT_ALWAYS_INLINE Tensor div_grad_a(const Tensor& grad, const Scalar& b){return :
 NT_ALWAYS_INLINE Tensor div_grad_b(const Tensor& grad, const intrusive_ptr<tensor_holder>& a, const intrusive_ptr<tensor_holder>& b){
     Tensor pa = ::nt::functional::multiply(a->tensor, grad);
     Tensor pb = ::nt::functional::pow(b->tensor, 2);
-    return ::nt::functional::divide(pa, pb);
+    return -::nt::functional::divide(pa, pb);
 }
 
 NT_ALWAYS_INLINE Tensor div_grad_b(const Tensor& grad, const Scalar& a, const intrusive_ptr<tensor_holder>& b){
     Tensor pa = ::nt::functional::multiply(a, grad);
     Tensor pb = ::nt::functional::pow(b->tensor, 2);
-    return ::nt::functional::divide(pa, pb);
+    return -::nt::functional::divide(pa, pb);
 }
 
 
@@ -745,14 +745,13 @@ TensorGrad TensorGrad_Functional_Class::inverse(const TensorGrad& input){
         return std::move(result);
     }
     TensorGrad result(::nt::functional::inverse(input.detach()), input.track_grad());
-
+    result.track_tensors(input);
     result.create_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> a) {
             parents[0]->accumulate_gradient(-grad / a->tensor);
-        },
-        make_intrusive<tensor_holder>(::nt::functional::pow(input.detach(), 2)));
-
+        }, make_intrusive<tensor_holder>(::nt::functional::pow(input.detach(), 2))
+    );
     return std::move(result);
 }
 
