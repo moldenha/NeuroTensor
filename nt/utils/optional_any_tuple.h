@@ -1,6 +1,7 @@
 #ifndef NT_UTILS_OPTIONAL_ANY_TUPLE_H__
 #define NT_UTILS_OPTIONAL_ANY_TUPLE_H__
 
+#include "optional_forward.h"
 #include <type_traits>
 #include <vector>
 #include "api_macro.h"

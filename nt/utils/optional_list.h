@@ -1,6 +1,7 @@
 #ifndef NT_UTILS_OPTIONAL_LIST_H__
 #define NT_UTILS_OPTIONAL_LIST_H__
 
+#include "optional_forward.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "../refs/intrusive_list.h"
 #include "optional_except.h"

@@ -350,6 +350,7 @@ set(AI_SOURCES
     nt/nn/functional/index.cpp
     nt/nn/functional/min_max.cpp
     nt/nn/functional/matmult.cpp
+    nt/nn/functional/normalize.cpp
     nt/nn/functional/operators.cpp
     nt/nn/functional/padding.cpp
     nt/nn/functional/repeat.cpp

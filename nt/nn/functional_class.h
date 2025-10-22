@@ -11,9 +11,13 @@ class NEUROTENSOR_API TensorGrad_Functional_Class; // forward declaration
 } // namespace functional
 } // namespace nt
 
+#include "../utils/optional_forward.h"
 #include <optional>
 #include "TensorGrad.h"
 #include "../utils/tuple_or_var.h"
+
+//#include "../utils/optional_tensorgrad.h"
+
 namespace nt {
 namespace functional {
 
@@ -144,9 +148,22 @@ class NEUROTENSOR_API TensorGrad_Functional_Class {
                             std::optional<Scalar>);
     static NEUROTENSOR_API TensorGrad& clamp_(TensorGrad &, std::optional<Scalar>,
                             std::optional<Scalar>);
-
+    
+    // normalize.cpp
     static NEUROTENSOR_API TensorGrad var(const TensorGrad &, utils::optional_list, int64_t,
                           bool);
+    static NEUROTENSOR_API TensorGrad batch_norm(const TensorGrad &, const Tensor &, const Tensor &,
+                                                 utils::optional_tensorgrad, utils::optional_tensorgrad,
+                                                 bool, Scalar, Scalar);
+    static NEUROTENSOR_API TensorGrad batch_norm(const Tensor &, const Tensor &, const Tensor &,
+                                                 utils::optional_tensorgrad, utils::optional_tensorgrad,
+                                                 bool, Scalar, Scalar);    
+    static NEUROTENSOR_API TensorGrad group_norm(const TensorGrad &, int64_t,
+                                                 utils::optional_tensorgrad, utils::optional_tensorgrad,
+                                                 Scalar);
+    static NEUROTENSOR_API TensorGrad group_norm(const Tensor &, int64_t,
+                                                 utils::optional_tensorgrad, utils::optional_tensorgrad,
+                                                 Scalar);
     //activation_functions.cpp
     static NEUROTENSOR_API TensorGrad sqrt(const TensorGrad &);
     static NEUROTENSOR_API TensorGrad invsqrt(const TensorGrad &);

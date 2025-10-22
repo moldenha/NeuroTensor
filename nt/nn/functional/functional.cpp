@@ -688,29 +688,6 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
 
 
 
-TensorGrad TensorGrad_Functional_Class::var(const TensorGrad &x,
-                                            utils::optional_list dim,
-                                            int64_t correction, bool keepdim) {
-    if (!x.track_grad()) {
-        Tensor out = ::nt::functional::var(x.detach(), dim, correction, keepdim);
-        TensorGrad result(std::move(out), x.track_grad());
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    intrusive_ptr<tensor_holder> x_c =
-            make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
-    TensorGrad result(
-            ::nt::functional::var(x_c->tensor, dim, correction, keepdim), x.track_grad());
-    result.track_tensors(x);
-    result.create_backward_function(
-            [dim, correction](const Tensor &grad,
-                                                std::vector<intrusive_ptr<TensorGrad>> &parents,
-                                                intrusive_ptr<tensor_holder> x) {
-                parents[0]->accumulate_gradient(::nt::functional::dvar(grad, x->tensor, dim, correction));
-            },
-            x_c);
-    return std::move(result);
-}
 
 
 Tensor cat_vec(std::vector<TensorGrad> &tgs) {

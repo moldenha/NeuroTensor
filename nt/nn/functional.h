@@ -7,6 +7,9 @@
 
 #include "functional_class.h"
 #include "../utils/collect_ri.hpp"
+#include "../functional/tensor_files/normalize.h"
+#include "../utils/optional_tensor_variant.h"
+#include "../utils/type_traits.h"
 
 namespace nt {
 namespace functional {
@@ -320,6 +323,219 @@ inline TensorGrad var(const TensorGrad &a, utils::optional_list dim = nullptr,
                       int64_t correction = 1, bool keepdim = false) {
     return TensorGrad_Functional_Class::var(a, dim, correction, keepdim);
 }
+
+namespace details{
+
+// this is a function that forces a tensograd optional
+// by default the utils::optional_tensorgrad(var) will be none if var is holding only a tensor
+// This will make it so that if it does not have a value only then it will be none
+inline utils::optional_tensorgrad force_optional_tg(utils::optional_tensor_variant var){
+    if(!var.has_value()) return utils::optional_tensorgrad(nullptr);
+    if(var.tracking_grad()) return utils::optional_tensorgrad(var);
+    return utils::optional_tensorgrad(TensorGrad(var.value<Tensor>(), false));
+}
+
+}
+
+inline TensorGrad batch_norm(const TensorGrad & x, const Tensor & running_mean, const Tensor & running_var,
+                                             utils::optional_tensor_variant weight = nullptr,
+                                             utils::optional_tensor_variant bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    return TensorGrad_Functional_Class::batch_norm(x, running_mean, running_var,
+                                                   utils::details::force_optional_tg(weight),
+                                                   utils::details::force_optional_tg(bias),
+                                                   training, momentum, eps);
+    
+}
+
+
+namespace details{
+
+
+template<typename WT, typename BT>
+struct norm_variant_output{
+    using type = typename std::conditional_t<
+                std::is_same_v<WT, TensorGrad> || std::is_same_v<BT, TensorGrad>,
+                TensorGrad, Tensor>;
+};
+
+}
+
+template<typename WT, typename BT>
+inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+                                             const Tensor & running_mean, const Tensor & running_var,
+                                             WT weight = nullptr, BT bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
+                  && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
+                "Needed weight and bias type to be tensor, tensorgrad, or null");
+    using out_type = typename details::norm_variant_output<WT, BT>::type;
+    if constexpr (std::is_same_v<out_type, Tensor>){
+        return no_grad::batch_norm(x, running_mean, running_var,
+                                   utils::optional_tensor(weight), utils::optional_tensor(bias),
+                                   training, momentum, eps);
+    }else{
+        return TensorGrad_Functional_Class::batch_norm(x, running_mean, running_var,
+                                                       utils::optional_tensorgrad(weight),
+                                                       utils::optional_tensorgrad(bias),
+                                                       training, momentum, eps);
+    }
+}
+
+inline TensorGrad batch_norm(const TensorGrad & x, const TensorGrad & running_mean, const Tensor & running_var,
+                                             utils::optional_tensor_variant weight = nullptr,
+                                             utils::optional_tensor_variant bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    utils::throw_exception(!running_mean.track_grad(),
+                           "Error, running mean cannot require a gradient for batch norm");
+
+    return TensorGrad_Functional_Class::batch_norm(x, running_mean.detach(), running_var,
+                                                   utils::details::force_optional_tg(weight),
+                                                   utils::details::force_optional_tg(bias),
+                                                   training, momentum, eps);
+    
+}
+
+
+
+inline TensorGrad batch_norm(const TensorGrad & x, const TensorGrad & running_mean, const TensorGrad & running_var,
+                                             utils::optional_tensor_variant weight = nullptr,
+                                             utils::optional_tensor_variant bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    utils::throw_exception(!running_mean.track_grad() && !running_var.track_grad(),
+                           "Error, running mean and running var cannot require a gradient for batch norm");
+    return TensorGrad_Functional_Class::batch_norm(x, running_mean.detach(), running_var.detach(),
+                                                   utils::details::force_optional_tg(weight),
+                                                   utils::details::force_optional_tg(bias),
+                                                   training, momentum, eps);
+    
+}
+
+inline TensorGrad batch_norm(const TensorGrad & x, const Tensor & running_mean, const TensorGrad & running_var,
+                                             utils::optional_tensor_variant weight = nullptr,
+                                             utils::optional_tensor_variant bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    utils::throw_exception(!running_var.track_grad(),
+                           "Error, running var cannot require a gradient for batch norm");
+
+    return TensorGrad_Functional_Class::batch_norm(x, running_mean, running_var.detach(),
+                                                   utils::details::force_optional_tg(weight),
+                                                   utils::details::force_optional_tg(bias),
+                                                   training, momentum, eps);
+    
+}
+
+template<typename WT, typename BT>
+inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+                                            const TensorGrad & running_mean, const Tensor & running_var,
+                                             WT weight = nullptr,
+                                             BT bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    utils::throw_exception(!running_mean.track_grad(),
+                           "Error, running mean cannot require a gradient for batch norm");
+    static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
+                  && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
+                "Needed weight and bias type to be tensor, tensorgrad, or null");
+    using out_type = typename details::norm_variant_output<WT, BT>::type;
+    if constexpr (std::is_same_v<out_type, Tensor>){
+        return no_grad::batch_norm(x, running_mean.detach(), running_var,
+                                   utils::optional_tensor(weight), utils::optional_tensor(bias),
+                                   training, momentum, eps);
+    }else{
+        return TensorGrad_Functional_Class::batch_norm(x, running_mean.detach(), running_var,
+                                                       utils::optional_tensorgrad(weight),
+                                                       utils::optional_tensorgrad(bias),
+                                                       training, momentum, eps);
+    }
+}
+
+
+template<typename WT, typename BT>
+inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+                                             const TensorGrad & running_mean, const TensorGrad & running_var,
+                                             WT weight = nullptr,
+                                             BT bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    utils::throw_exception(!running_mean.track_grad() && !running_var.track_grad(),
+                           "Error, running mean and running var cannot require a gradient for batch norm");
+    static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
+                  && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
+                "Needed weight and bias type to be tensor, tensorgrad, or null");
+    using out_type = typename details::norm_variant_output<WT, BT>::type;
+    if constexpr (std::is_same_v<out_type, Tensor>){
+        return no_grad::batch_norm(x, running_mean.detach(), running_var.detach(),
+                                   utils::optional_tensor(weight), utils::optional_tensor(bias),
+                                   training, momentum, eps);
+    }else{
+        return TensorGrad_Functional_Class::batch_norm(x, running_mean.detach(), running_var.detach(),
+                                                       utils::optional_tensorgrad(weight),
+                                                       utils::optional_tensorgrad(bias),
+                                                       training, momentum, eps);
+    }
+
+}
+
+
+
+
+template<typename WT, typename BT>
+inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+                                             const Tensor & running_mean, const TensorGrad & running_var,
+                                             WT weight = nullptr,
+                                             BT bias = nullptr,
+                                             bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
+    utils::throw_exception(!running_var.track_grad(),
+                           "Error, running var cannot require a gradient for batch norm");
+    static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
+                  && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
+                "Needed weight and bias type to be tensor, tensorgrad, or null");
+    using out_type = typename details::norm_variant_output<WT, BT>::type;
+    if constexpr (std::is_same_v<out_type, Tensor>){
+        return no_grad::batch_norm(x, running_mean, running_var.detach(),
+                                   utils::optional_tensor(weight), utils::optional_tensor(bias),
+                                   training, momentum, eps);
+    }else{
+        return TensorGrad_Functional_Class::batch_norm(x, running_mean, running_var.detach(),
+                                                       utils::optional_tensorgrad(weight),
+                                                       utils::optional_tensorgrad(bias),
+                                                       training, momentum, eps);
+    }
+}
+
+
+
+inline TensorGrad group_norm(const TensorGrad & input, int64_t num_groups,
+                                             utils::optional_tensor_variant weight = nullptr,
+                                             utils::optional_tensor_variant bias = nullptr,
+                                             Scalar eps = 1e-05){
+    return TensorGrad_Functional_Class::group_norm(input, num_groups,
+                                                   utils::details::force_optional_tg(weight),
+                                                   utils::details::force_optional_tg(bias),
+                                                   eps);
+    
+}
+
+template<typename WT, typename BT>
+inline typename details::norm_variant_output<WT, BT>::type group_norm(const Tensor & input, 
+                                             int64_t num_groups,
+                                             WT weight = nullptr, BT bias = nullptr,
+                                             Scalar eps = 1e-05){
+    static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
+                  && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
+                "Needed weight and bias type to be tensor, tensorgrad, or null");
+    using out_type = typename details::norm_variant_output<WT, BT>::type;
+    if constexpr (std::is_same_v<out_type, Tensor>){
+        return no_grad::group_norm(input, num_groups,
+                                   utils::optional_tensor(weight), utils::optional_tensor(bias),
+                                   eps);
+    }else{
+        return TensorGrad_Functional_Class::group_norm(input, num_groups,
+                                                       utils::optional_tensorgrad(weight),
+                                                       utils::optional_tensorgrad(bias),
+                                                       eps);
+    }
+}
+
 
 //activation_functions.cpp
 

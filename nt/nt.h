@@ -1263,6 +1263,47 @@ NT_MAKE_NAMED_PARAMETER_FUNCTION_(var)
     ntarg_(keepdim) = false
 NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::var)
 
+NT_MAKE_NAMED_PARAMETER_FUNCTION_(batch_norm)
+    ntarg_(input),
+    ntarg_(running_mean),
+    ntarg_(running_var),
+    ntarg_(weight) = nullptr,
+    ntarg_(bias) = nullptr,
+    ntarg_(training) = false,
+    ntarg_(momentum) = 0.1,
+    ntarg_(eps) = 1e-05
+NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::batch_norm)
+
+
+NT_MAKE_NAMED_PARAMETER_FUNCTION_(batch_norm_)
+    ntarg_(input),
+    ntarg_(running_mean),
+    ntarg_(running_var),
+    ntarg_(weight) = nullptr,
+    ntarg_(bias) = nullptr,
+    ntarg_(training) = false,
+    ntarg_(momentum) = 0.1,
+    ntarg_(eps) = 1e-05
+NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::no_grad::batch_norm_)
+
+
+NT_MAKE_NAMED_PARAMETER_FUNCTION_(group_norm)
+    ntarg_(input),
+    ntarg_(num_groups),
+    ntarg_(weight) = nullptr,
+    ntarg_(bias) = nullptr,
+    ntarg_(eps) = 1e-05
+NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::group_norm)
+
+
+NT_MAKE_NAMED_PARAMETER_FUNCTION_(group_norm_)
+    ntarg_(input),
+    ntarg_(num_groups),
+    ntarg_(weight) = nullptr,
+    ntarg_(bias) = nullptr,
+    ntarg_(eps) = 1e-05
+NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::no_grad::group_norm_)
+
 //numpy.h 
 
 namespace functional_details{
@@ -1969,6 +2010,7 @@ NT_DEFINE_ARGUMENT(dims)
 NT_DEFINE_ARGUMENT(dim0)
 NT_DEFINE_ARGUMENT(dim1)
 NT_DEFINE_ARGUMENT(dtype)
+NT_DEFINE_ARGUMENT(eps)
 NT_DEFINE_ARGUMENT(equal_nan)
 NT_DEFINE_ARGUMENT(exponent)
 NT_DEFINE_ARGUMENT(groups)
@@ -1986,10 +2028,12 @@ NT_DEFINE_ARGUMENT(low)
 NT_DEFINE_ARGUMENT(max)
 NT_DEFINE_ARGUMENT(min)
 NT_DEFINE_ARGUMENT(mode)
+NT_DEFINE_ARGUMENT(momentum)
 NT_DEFINE_ARGUMENT(name)
 NT_DEFINE_ARGUMENT(no_contiguous)
 NT_DEFINE_ARGUMENT(num)
 NT_DEFINE_ARGUMENT(num_classes)
+NT_DEFINE_ARGUMENT(num_groups)
 NT_DEFINE_ARGUMENT(other)
 NT_DEFINE_ARGUMENT(output)
 NT_DEFINE_ARGUMENT(output_padding)
@@ -2002,6 +2046,8 @@ NT_DEFINE_ARGUMENT(ratio)
 NT_DEFINE_ARGUMENT(return_indices)
 NT_DEFINE_ARGUMENT(return_sorted)
 NT_DEFINE_ARGUMENT(return_unique)
+NT_DEFINE_ARGUMENT(running_mean)
+NT_DEFINE_ARGUMENT(running_var)
 NT_DEFINE_ARGUMENT(rtol)
 NT_DEFINE_ARGUMENT(size)
 NT_DEFINE_ARGUMENT(splitting)
@@ -2015,6 +2061,7 @@ NT_DEFINE_ARGUMENT(tensor1)
 NT_DEFINE_ARGUMENT(tensor2)
 NT_DEFINE_ARGUMENT(tensors)
 NT_DEFINE_ARGUMENT(threshold)
+NT_DEFINE_ARGUMENT(training)
 NT_DEFINE_ARGUMENT(transpose_a)
 NT_DEFINE_ARGUMENT(transpose_b)
 NT_DEFINE_ARGUMENT(transpose_out)

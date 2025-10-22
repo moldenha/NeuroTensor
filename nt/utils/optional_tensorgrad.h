@@ -1,6 +1,7 @@
 #ifndef NT_UTILS_OPTIONAL_TENSORGRAD_H__
 #define NT_UTILS_OPTIONAL_TENSORGRAD_H__
 
+#include "optional_forward.h"
 #include "../nn/TensorGrad.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include <initializer_list>
@@ -21,12 +22,16 @@ class NEUROTENSOR_API optional_tensorgrad{
 		optional_tensorgrad(intrusive_ptr<TensorGrad>&& other):tensor(std::move(other)) {}
 		optional_tensorgrad(const TensorGrad& other):tensor(make_intrusive<TensorGrad>(other)) {}
 		optional_tensorgrad(TensorGrad&& other):tensor(make_intrusive<TensorGrad>(std::move(other))) {}
+        optional_tensorgrad(const Tensor& other):tensor(make_intrusive<TensorGrad>(other, false)) {}
+        optional_tensorgrad(Tensor&& other):tensor(make_intrusive<TensorGrad>(std::move(other), false)) {}
 		optional_tensorgrad(std::nullptr_t):tensor(nullptr) {}
 		optional_tensorgrad():tensor(nullptr) {}
 		inline optional_tensorgrad& operator=(const optional_tensorgrad& other){tensor = other.tensor; return *this;}
 		inline optional_tensorgrad& operator=(optional_tensorgrad&& other){tensor = std::move(other.tensor); return *this;}
 		inline optional_tensorgrad& operator=(TensorGrad&& other){tensor = make_intrusive<TensorGrad>(std::move(other)); return *this;}
 		inline optional_tensorgrad& operator=(const TensorGrad& other){tensor = make_intrusive<TensorGrad>(other); return *this;}
+        inline optional_tensorgrad& operator=(Tensor&& other){tensor = make_intrusive<TensorGrad>(std::move(other), false); return *this;}
+        inline optional_tensorgrad& operator=(const Tensor& other){tensor = make_intrusive<TensorGrad>(other, false); return *this;}
 		inline optional_tensorgrad& operator=(const intrusive_ptr<TensorGrad>& other){tensor = other; return *this;}
 		inline optional_tensorgrad& operator=(intrusive_ptr<TensorGrad>&& other){tensor = std::move(other); return *this;}
 		inline optional_tensorgrad& operator=(std::nullptr_t){tensor.reset(); tensor = nullptr; return *this;}

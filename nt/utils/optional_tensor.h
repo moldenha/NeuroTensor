@@ -1,6 +1,7 @@
 #ifndef NT_UTILS_OPTIONAL_TENSOR_H__
 #define NT_UTILS_OPTIONAL_TENSOR_H__
 
+#include "optional_forward.h"
 #include "tensor_holder.h"
 #include "../Tensor.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
