@@ -25,7 +25,7 @@
     url = https://gitlab.com/libeigen/eigen.git
 [submodule "src/nn/ncps"]
     path = nt/nn/ncps
-    url = git@github.com:moldenha/NeuroTensor-NCPS.git
+    url = https://github.com/moldenha/NeuroTensor-NCPS.git
 [submodule "third_party/nifti_clib"]
 	path = third_party/nifti_clib
 	url = https://github.com/NIFTI-Imaging/nifti_clib
@@ -41,3 +41,4 @@
 [submodule "nt/dtype/compatible/fameta"]
 	path = nt/dtype/compatible/fameta
 	url = https://github.com/falemagn/fameta-counter
+
