@@ -32,6 +32,7 @@
 #include "trig_test.h"
 #include "unique_test.h"
 #include "intrusive_ptr_test.h"
+#include "null_test.h"
 #include "mutability_test.h"
 #include "pytorch_test.h"
 #include "tensor_grad_test.h"
@@ -102,6 +103,7 @@ int main(){
     trig_test();
     unique_test();
     intrusive_ptr_test();
+    null_test();
     mutability_test();
     // Testing autograd against the pytorch autograd
     // pytorch_test();

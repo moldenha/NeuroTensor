@@ -147,6 +147,29 @@ NT_ALWAYS_INLINE std::vector<int64_t> compute_strides(const std::vector<int64_t>
     return strides;
 }
 
+#define NT_INNER_FOLDND_TEXT__\
+        indexes[i] = idx;\
+        col_off = idx * col_strides[i];\
+        im_off = (idx * stride[i] - padding[i] + offset[i] * dilation[i]) * img_strides[i];\
+        run_inner_foldnd_loop(i + 1,\
+                       col_add + col_off,\
+                       img_add + im_off,\
+                       indexes,\
+                       pad_start,\
+                       pad_end,\
+                       offset,\
+                       cols,\
+                       img_strides,\
+                       col_strides,\
+                       size,\
+                       kernel,\
+                       stride,\
+                       padding,\
+                       dilation,\
+                       im_ptr,\
+                       col_ptr);\
+            ++idx;\
+
 template<typename T, typename T2>
 inline void run_inner_foldnd_loop(
     size_t i,
@@ -172,28 +195,56 @@ inline void run_inner_foldnd_loop(
         return;
     }
 
-    for (int64_t idx = pad_start[i]; idx < pad_end[i]; ++idx) {
-        indexes[i] = idx;
-        int64_t col_off = idx * col_strides[i];
-        int64_t im_off = (idx * stride[i] - padding[i] + offset[i] * dilation[i]) * img_strides[i];
-        run_inner_foldnd_loop(i + 1,
-                       col_add + col_off,
-                       img_add + im_off,
-                       indexes,
-                       pad_start,
-                       pad_end,
-                       offset,
-                       cols,
-                       img_strides,
-                       col_strides,
-                       size,
-                       kernel,
-                       stride,
-                       padding,
-                       dilation,
-                       im_ptr,
-                       col_ptr);
+    // using Duff's device unroll algorithm to improve speed
+    constexpr int64_t unroll_factor = 8;
+    const int64_t N = pad_end[i] - pad_start[i];
+    const int64_t remainder = N % unroll_factor;
+    int64_t j = (N + unroll_factor - 1) / unroll_factor;
+    int64_t idx = pad_start[i];
+    int64_t col_off, im_off;
+
+    switch(remainder){
+        case 0: do{
+            NT_INNER_FOLDND_TEXT__;
+        case 7:
+            NT_INNER_FOLDND_TEXT__;
+        case 6:
+            NT_INNER_FOLDND_TEXT__;
+        case 5:
+            NT_INNER_FOLDND_TEXT__;
+        case 4:
+            NT_INNER_FOLDND_TEXT__;
+        case 3:
+            NT_INNER_FOLDND_TEXT__;
+        case 2:
+            NT_INNER_FOLDND_TEXT__;
+        case 1:
+            NT_INNER_FOLDND_TEXT__;
+        } while(--j > 0);
     }
+
+    // for (int64_t idx = pad_start[i]; idx < pad_end[i]; ++idx) {
+    //     indexes[i] = idx;
+    //     int64_t col_off = idx * col_strides[i];
+    //     int64_t im_off = (idx * stride[i] - padding[i] + offset[i] * dilation[i]) * img_strides[i];
+    //     run_inner_foldnd_loop(i + 1,
+    //                    col_add + col_off,
+    //                    img_add + im_off,
+    //                    indexes,
+    //                    pad_start,
+    //                    pad_end,
+    //                    offset,
+    //                    cols,
+    //                    img_strides,
+    //                    col_strides,
+    //                    size,
+    //                    kernel,
+    //                    stride,
+    //                    padding,
+    //                    dilation,
+    //                    im_ptr,
+    //                    col_ptr);
+    // }
 }
 
 inline static constexpr auto col2im_cpu_nd = [](auto data_im_ptr, auto data_im_ptr_end, auto data_col,
@@ -278,6 +329,8 @@ void foldnd_(ArrayVoid &im, ArrayVoid &col, const int64_t& channels,
                     batch_size);
 }
 
+
+#undef NT_INNER_FOLDND_TEXT__ 
 
 } // namespace cpu
 } // namespace functional

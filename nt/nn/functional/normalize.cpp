@@ -207,8 +207,8 @@ TensorGrad TensorGrad_Functional_Class::group_norm(const TensorGrad& input, int6
     intrusive_ptr<tensor_holder> original_weight = 
             make_intrusive<tensor_holder>(bool(weight) ? weight.value().detach().conditional_mutate_clone() : Tensor::Null());
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(input.detach().conditional_mutate_clone());
-    intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({num_groups}, input.dtype()));
-    intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({num_groups}, input.dtype()));
+    intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
+    intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
     TensorGrad result(::nt::functional::no_grad::group_norm(
         input.detach(), num_groups,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
@@ -289,8 +289,8 @@ TensorGrad TensorGrad_Functional_Class::group_norm(const Tensor& input, int64_t 
     intrusive_ptr<tensor_holder> original_weight = 
             make_intrusive<tensor_holder>(bool(weight) ? weight.value().detach().conditional_mutate_clone() : Tensor::Null());
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(input.conditional_mutate_clone());
-    intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({num_groups}, input.dtype()));
-    intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({num_groups}, input.dtype()));
+    intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
+    intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
     TensorGrad result(::nt::functional::no_grad::group_norm(
         input, num_groups,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),

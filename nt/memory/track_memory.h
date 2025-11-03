@@ -1,5 +1,6 @@
 #ifndef NT_TRACK_MEMORY_H__
 #define NT_TRACK_MEMORY_H__
+#include <mutex>
 #include "DeviceEnum.h"
 #include "meta_allocator.h"
 #include "memory_limits.h"

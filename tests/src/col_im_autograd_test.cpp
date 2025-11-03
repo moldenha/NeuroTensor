@@ -176,7 +176,19 @@ void col_im_test_autograd(){
         y2.backward(grad2);
 
         nt::utils::throw_exception(nt::allclose(x1.grad(), x2.grad()),
-                               "Error, gradients for UnfoldND and Unfold3D do not match");
+           "Error, gradients for UnfoldND and Unfold3D do not match");
+    });
+
+    run_test("UnfoldND (N = 4) Autograd Test", []{
+        nt::TensorGrad x(nt::rand(0, 10, {1, 2, 6, 6, 6, 6}), true);
+        auto y = nt::functional::unfoldnd(x, 4, /*kernel_size = */ {3, 3, 3, 3},
+                                           /*dilation = */ 1, 
+                                           /*padding = */ {1, 1, 1, 1}, 
+                                           /*stride = */ {1, 1, 2, 2},
+                                           /*transpose_out = */ true,
+                                           /*test_mode = */ true);    
+        nt::Tensor grad1 = nt::randn(y.shape(), y.dtype());
+        y.backward(grad1);
     });
 
     run_test("FoldND -> Fold1D Autograd Test", []{
@@ -229,6 +241,16 @@ void col_im_test_autograd(){
 
         nt::utils::throw_exception(nt::allclose(x1.grad(), x2.grad()),
                                "Error, gradients for FoldND and Fold3D do not match");
+    });
+
+    run_test("FoldND (N = 4) Autograd Test", []{
+        nt::TensorGrad x(nt::randn({3, 36, 750}), true);
+        auto y = nt::functional::foldnd(x, /*n = */4, 
+                                         /*output_size = */ 5, /*kernel_size = */{3, 3, 2, 2}, 
+                                         /*dilation = */ {1, 1, 1, 2}, /*padding = */1,
+                                         /*stride = */1, /*test_mode = */ true);        
+        nt::Tensor grad = nt::randn(y.shape(), y.dtype());
+        y.backward(grad);
     });
 
 

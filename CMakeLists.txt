@@ -164,6 +164,8 @@ set(FUNCTIONAL_CPU_SOURCES
     nt/functional/cpu/fused.cpp
     nt/functional/cpu/operators.cpp
     nt/functional/cpu/normalize.cpp
+    nt/functional/cpu/batch_norm.cpp
+    nt/functional/cpu/group_norm.cpp
     nt/functional/cpu/min_max.cpp
     nt/functional/cpu/compare.cpp
     nt/functional/cpu/convert.cpp

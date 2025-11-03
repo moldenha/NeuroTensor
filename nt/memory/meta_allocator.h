@@ -41,6 +41,7 @@
 #include <cstdlib> // std::aligned_alloc
 #include <cstring> // std::malloc
 #include <shared_mutex> // shared_mutex, unique_lock, shared_lock
+#include <mutex>
 #include "../utils/always_inline_macro.h" // NT_ALWAYS_INLINE
 #include "../utils/numargs_macro.h"
 

@@ -210,7 +210,6 @@ void normalize_autograd_test(){
         nt::Tensor expected_output = nt::from_numpy(filename_h);
         auto o = nt::group_norm(x, num_groups = 4, weight = weight_, bias = bias_, eps = 1e-05);
         o.backward(grad);
-        std::cout << "shapes: "<<expected_xgrad.shape() << ',' << expected_weight_grad.shape()<<',' << expected_bias_grad.shape()<<','<<expected_output.shape()<<std::endl;
         nt::utils::throw_exception(
             nt::allclose(o, expected_output, rtol = 1e-4, ntarg_(atol) = 1e-5),
             "Error: outputs do not match $ \n$ \n$ \n$",
@@ -222,14 +221,16 @@ void normalize_autograd_test(){
             nt::noprintdtype, bias_.grad(), expected_bias_grad, nt::isclose(bias_.grad(), expected_bias_grad));
 
         nt::utils::throw_exception(
+            nt::allclose(weight_.grad(), expected_weight_grad, rtol = 1e-4, ntarg_(atol) = 1e-5),
+            "Error: weight gradients do not match $ \n$ \n$ \n$",
+            nt::noprintdtype, weight_.grad(), expected_weight_grad, nt::isclose(weight_.grad(), expected_weight_grad));
+
+        nt::utils::throw_exception(
             nt::allclose(x.grad(), expected_xgrad, rtol = 1e-4, ntarg_(atol) = 1e-5),
             "Error: x gradients do not match $ \n$ \n$ \n$",
             nt::noprintdtype, x.grad(), expected_xgrad, nt::isclose(x.grad(), expected_xgrad));
 
-        nt::utils::throw_exception(
-            nt::allclose(weight_.grad(), expected_weight_grad, rtol = 1e-4, ntarg_(atol) = 1e-5),
-            "Error: weight gradients do not match $ \n$ \n$ \n$",
-            nt::noprintdtype, weight_.grad(), expected_weight_grad, nt::isclose(weight_.grad(), expected_weight_grad));
+
         
 
     });

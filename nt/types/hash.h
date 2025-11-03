@@ -75,11 +75,11 @@ struct hash<nt::uint_bool_t>{
 template<>
 struct hash<nt::float128_t>{
     NT_ALWAYS_INLINE std::size_t operator()(const nt::float128_t& s) const noexcept{
-        if constexpr (std::is_default_constructible<std::hash<nt::float128_t>>::value){
-            return std::hash<nt::float128_t>{}(s);
-        }else{
-            return std::hash<double>{}(convert::convert<double>(s));
-        }
+        // if constexpr (std::is_default_constructible<std::hash<nt::float128_t>>::value){
+        //     return std::hash<nt::float128_t>{}(s);
+        // }else{
+        return std::hash<double>{}(convert::convert<double>(s));
+        // }
     }
 };
 
@@ -88,28 +88,28 @@ struct hash<nt::float128_t>{
 template <>
 struct hash<nt::int128_t> {
     std::size_t operator()(const nt::int128_t& value) const noexcept {
-        if constexpr (std::is_default_constructible<std::hash<nt::int128_t>>::value){
-            return std::hash<nt::int128_t>{}(value);
-        }else{
-            int64_t low  = convert::convert<int64_t>(value);
-            int64_t high = convert::convert<int64_t>(value >> 64);
-            // Combine high and low into a hash
-            return std::hash<int64_t>{}(low) ^ (std::hash<int64_t>{}(high) << 1);
-        }
+        // if constexpr (std::is_default_constructible<std::hash<nt::int128_t>>::value){
+        //     return std::hash<nt::int128_t>{}(value);
+        // }else{
+        int64_t low  = convert::convert<int64_t>(value);
+        int64_t high = convert::convert<int64_t>(value >> 64);
+        // Combine high and low into a hash
+        return std::hash<int64_t>{}(low) ^ (std::hash<int64_t>{}(high) << 1);
+        // }
     }
 };
 
 template <>
 struct hash<nt::uint128_t> {
     std::size_t operator()(const nt::uint128_t& value) const noexcept {
-        if constexpr (std::is_default_constructible<std::hash<nt::uint128_t>>::value){
-            return std::hash<nt::uint128_t>{}(value);
-        }else{
-            int64_t low  = convert::convert<int64_t>(value);
-            int64_t high = convert::convert<int64_t>(value >> 64);
-            // Combine high and low into a hash
-            return std::hash<int64_t>{}(low) ^ (std::hash<int64_t>{}(high) << 1);
-        }
+        // if constexpr (std::is_default_constructible<std::hash<nt::uint128_t>>::value){
+        //     return std::hash<nt::uint128_t>{}(value);
+        // }else{
+        int64_t low  = convert::convert<int64_t>(value);
+        int64_t high = convert::convert<int64_t>(value >> 64);
+        // Combine high and low into a hash
+        return std::hash<int64_t>{}(low) ^ (std::hash<int64_t>{}(high) << 1);
+        // }
     }
 };
 
