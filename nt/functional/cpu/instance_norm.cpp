@@ -40,8 +40,11 @@ void calc_stats_use_input(
     T& mean, T& var, iter x_ptr,
     const int64_t& inner_size, const int64_t& HW, const int64_t& C,
     const int64_t& N, const int64_t& c, const int64_t& n,
-    T*, T*, T)
+    T* run_mean_ptr, T* run_var_ptr, T momentum)
 {
+#pragma unused(run_mean_ptr)
+#pragma unused(run_var_ptr)
+#pragma unused(momentum)
     mean = 0;
     for (int64_t hw = 0; hw < HW; ++hw)
         mean += x_ptr[((n * C + c) * HW) + hw];
@@ -57,11 +60,18 @@ void calc_stats_use_input(
 
 template<typename iter, typename T>
 void calc_stats_no_use_input(
-    T& mean, T& var, iter, 
+    T& mean, T& var, iter x_ptr, 
     const int64_t& inner_size, const int64_t& HW, const int64_t& C,
     const int64_t& N, const int64_t& c, const int64_t& n,
     T* run_mean_ptr, T* run_var_ptr, T)
 {
+#pragma unused(x_ptr)
+#pragma unused(inner_size)
+#pragma unused(HW)
+#pragma unused(C)
+#pragma unused(N)
+#pragma unused(n)
+
     mean = run_mean_ptr[c];
     var = run_var_ptr[c];
 }
