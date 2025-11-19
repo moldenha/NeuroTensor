@@ -353,24 +353,22 @@ namespace details{
 
 
 template<typename WT, typename BT>
-struct norm_variant_output{
-    using type = typename std::conditional_t<
-                std::is_same_v<WT, TensorGrad> || std::is_same_v<BT, TensorGrad>,
-                TensorGrad, Tensor>;
-};
+using norm_variant_output = type_traits::conditional_t<
+                        type_traits::is_decay_in_v<TensorGrad, WT, BT>,
+                        TensorGrad, Tensor>;
 
 }
 
 template<typename WT, typename BT>
-inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+inline details::norm_variant_output<WT, BT> batch_norm(const Tensor & x, 
                                              const Tensor & running_mean, const Tensor & running_var,
                                              WT weight = nullptr, BT bias = nullptr,
                                              bool training = false, Scalar momentum = 0.1, Scalar eps = 1e-05){
     static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
                   && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
                 "Needed weight and bias type to be tensor, tensorgrad, or null");
-    using out_type = typename details::norm_variant_output<WT, BT>::type;
-    if constexpr (std::is_same_v<out_type, Tensor>){
+    using out_type = details::norm_variant_output<WT, BT>;
+    if constexpr (type_traits::is_same_v<out_type, Tensor>){
         return no_grad::batch_norm(x, running_mean, running_var,
                                    utils::optional_tensor(weight), utils::optional_tensor(bias),
                                    training, momentum, eps);
@@ -426,7 +424,7 @@ inline TensorGrad batch_norm(const TensorGrad & x, const Tensor & running_mean, 
 }
 
 template<typename WT, typename BT>
-inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+inline details::norm_variant_output<WT, BT> batch_norm(const Tensor & x, 
                                             const TensorGrad & running_mean, const Tensor & running_var,
                                              WT weight = nullptr,
                                              BT bias = nullptr,
@@ -436,8 +434,8 @@ inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tens
     static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
                   && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
                 "Needed weight and bias type to be tensor, tensorgrad, or null");
-    using out_type = typename details::norm_variant_output<WT, BT>::type;
-    if constexpr (std::is_same_v<out_type, Tensor>){
+    using out_type = details::norm_variant_output<WT, BT>;
+    if constexpr (type_traits::is_same_v<out_type, Tensor>){
         return no_grad::batch_norm(x, running_mean.detach(), running_var,
                                    utils::optional_tensor(weight), utils::optional_tensor(bias),
                                    training, momentum, eps);
@@ -451,7 +449,7 @@ inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tens
 
 
 template<typename WT, typename BT>
-inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+inline details::norm_variant_output<WT, BT> batch_norm(const Tensor & x, 
                                              const TensorGrad & running_mean, const TensorGrad & running_var,
                                              WT weight = nullptr,
                                              BT bias = nullptr,
@@ -461,8 +459,8 @@ inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tens
     static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
                   && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
                 "Needed weight and bias type to be tensor, tensorgrad, or null");
-    using out_type = typename details::norm_variant_output<WT, BT>::type;
-    if constexpr (std::is_same_v<out_type, Tensor>){
+    using out_type = details::norm_variant_output<WT, BT>;
+    if constexpr (type_traits::is_same_v<out_type, Tensor>){
         return no_grad::batch_norm(x, running_mean.detach(), running_var.detach(),
                                    utils::optional_tensor(weight), utils::optional_tensor(bias),
                                    training, momentum, eps);
@@ -479,7 +477,7 @@ inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tens
 
 
 template<typename WT, typename BT>
-inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tensor & x, 
+inline details::norm_variant_output<WT, BT> batch_norm(const Tensor & x, 
                                              const Tensor & running_mean, const TensorGrad & running_var,
                                              WT weight = nullptr,
                                              BT bias = nullptr,
@@ -489,8 +487,8 @@ inline typename details::norm_variant_output<WT, BT>::type batch_norm(const Tens
     static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
                   && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
                 "Needed weight and bias type to be tensor, tensorgrad, or null");
-    using out_type = typename details::norm_variant_output<WT, BT>::type;
-    if constexpr (std::is_same_v<out_type, Tensor>){
+    using out_type = details::norm_variant_output<WT, BT>;
+    if constexpr (type_traits::is_same_v<out_type, Tensor>){
         return no_grad::batch_norm(x, running_mean, running_var.detach(),
                                    utils::optional_tensor(weight), utils::optional_tensor(bias),
                                    training, momentum, eps);
@@ -516,15 +514,15 @@ inline TensorGrad group_norm(const TensorGrad & input, int64_t num_groups,
 }
 
 template<typename WT, typename BT>
-inline typename details::norm_variant_output<WT, BT>::type group_norm(const Tensor & input, 
+inline details::norm_variant_output<WT, BT> group_norm(const Tensor & input, 
                                              int64_t num_groups,
                                              WT weight = nullptr, BT bias = nullptr,
                                              Scalar eps = 1e-05){
     static_assert(utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<WT>>::value
                   && utils::details::valid_optional_tensor_variant_type<type_traits::remove_cvref_t<BT>>::value,
                 "Needed weight and bias type to be tensor, tensorgrad, or null");
-    using out_type = typename details::norm_variant_output<WT, BT>::type;
-    if constexpr (std::is_same_v<out_type, Tensor>){
+    using out_type = details::norm_variant_output<WT, BT>;
+    if constexpr (type_traits::is_same_v<out_type, Tensor>){
         return no_grad::group_norm(input, num_groups,
                                    utils::optional_tensor(weight), utils::optional_tensor(bias),
                                    eps);
@@ -536,6 +534,66 @@ inline typename details::norm_variant_output<WT, BT>::type group_norm(const Tens
     }
 }
 
+namespace details{
+
+
+inline utils::optional_tensor force_optional_tensor(utils::optional_tensor_variant var){
+    if(!var.has_value()) return utils::optional_tensor(nullptr);
+    if(var.tracking_grad()){
+        const TensorGrad& tg = var.value<TensorGrad>();
+        utils::throw_exception(!tg.track_grad(), 
+            "Error, expected running_mean and running_var to not be tracking gradient"
+        );
+        return utils::optional_tensor(var.value<Tensor>());
+    }
+    return utils::optional_tensor(var);
+}
+
+}
+
+inline TensorGrad instance_norm(const TensorGrad& x, 
+                                                utils::optional_tensor_variant running_mean = nullptr, 
+                                                utils::optional_tensor_variant running_var = nullptr,
+                                                utils::optional_tensor_variant weight = nullptr, 
+                                                utils::optional_tensor_variant bias = nullptr,
+                                                bool use_input_stats = true, Scalar momentum = 0.1, Scalar eps = 1e-5){
+    return TensorGrad_Functional_Class::instance_norm(x, 
+                                                   details::force_optional_tensor(running_mean), 
+                                                   details::force_optional_tensor(running_var),
+                                                   utils::details::force_optional_tg(weight),
+                                                   utils::details::force_optional_tg(bias),
+                                                   use_input_stats, momentum, eps);
+
+    
+
+}
+
+
+template<typename WT, typename BT>
+inline details::norm_variant_output<WT, BT> instance_norm(const Tensor& x, 
+                                                utils::optional_tensor_variant running_mean = nullptr, 
+                                                utils::optional_tensor_variant running_var = nullptr,
+                                                WT weight = nullptr, 
+                                                BT bias = nullptr,
+                                                bool use_input_stats = true, Scalar momentum = 0.1, Scalar eps = 1e-5){
+    using type = details::norm_variant_output<WT, BT>;
+    if constexpr (type_traits::is_same_v<type, TensorGrad>){
+        return TensorGrad_Functional_Class::instance_norm(x,
+                                                   details::force_optional_tensor(running_mean), 
+                                                   details::force_optional_tensor(running_var),
+                                                   utils::optional_tensorgrad(weight),
+                                                   utils::optional_tensorgrad(bias),
+                                                   use_input_stats, momentum, eps);
+    }else {
+        return no_grad::instance_norm(x,
+                                   details::force_optional_tensor(running_mean), 
+                                   details::force_optional_tensor(running_var),
+                                   utils::optional_tensor(weight), 
+                                   utils::optional_tensor(bias),
+                                   use_input_stats, momentum, eps);
+    }
+
+}
 
 //activation_functions.cpp
 

@@ -61,7 +61,7 @@ inline void fill_zero(BucketIterator_list<T>& begin, BucketIterator_list<T>& end
 
 }
 
-void ::nt::functional::cpu::_dropout2d_(nt::ArrayVoid& tensor, nt::ArrayVoid const& bools, long long const& rows, long long const& cols){
+void ::nt::functional::cpu::_dropout2d_(nt::ArrayVoid& tensor, nt::ArrayVoid const& bools, const int64_t& rows, const int64_t& cols){
     const uint64_t total_size = tensor.Size();
     if(!total_size % (rows * cols) != 0){
         throw std::logic_error("Error: dropout2d was given invalid rows and columns");

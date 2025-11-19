@@ -166,6 +166,7 @@ set(FUNCTIONAL_CPU_SOURCES
     nt/functional/cpu/normalize.cpp
     nt/functional/cpu/batch_norm.cpp
     nt/functional/cpu/group_norm.cpp
+    nt/functional/cpu/instance_norm.cpp
     nt/functional/cpu/min_max.cpp
     nt/functional/cpu/compare.cpp
     nt/functional/cpu/convert.cpp
@@ -710,8 +711,78 @@ else()
     message(STATUS "Niftiio File not found")
 endif()
 
+option(BUILD_ARCHIVE_FORCE "Force the building of an archive even if all library files dont exist, build them" OFF)
 
-if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
+if(BUILD_ARCHIVE_FORCE)
+    message(STATUS "Library files are being forced to be packaged")
+else()
+    message(STATUS "Library files are not being forced to be packaged")
+endif()
+
+# if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST OR BUILD_ARCHIVE_FORCE)
+#     if(BUILD_ARCHIVE_FORCE AND NOT NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
+#         message(WARNING "Some library files were missing — BUILD_ARCHIVE_FORCE=ON, forcing rebuild and packaging.")
+#     else()
+#         message(STATUS "All library files found — building neurotensor from static libraries.")
+#     endif()
+
+#     # Determine object file extension
+#     if (WIN32)
+#         set(OBJECT_FILE_EXT "*.obj")
+#     else()
+#         set(OBJECT_FILE_EXT "*.o")
+#     endif()
+
+#     # Force build of dependencies if missing and BUILD_ARCHIVE_FORCE=ON
+#     if(BUILD_ARCHIVE_FORCE)
+#         message(STATUS "Forcing build of all dependency libraries before archiving...")
+#         add_custom_target(force_build_all_deps ALL DEPENDS ${NEUROTENSOR_DEPS})
+#     endif()
+
+#     # Collect all compiled object files
+#     file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
+#         RELATIVE "${CMAKE_BINARY_DIR}"
+#         "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
+#     )
+
+#     # Output archive name
+#     set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+#     # Archive command
+#     add_custom_command(
+#         OUTPUT "${OUTPUT_ARCHIVE}"
+#         COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+#         DEPENDS ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+#         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+#         COMMENT "Archiving NeuroTensor object files into ${OUTPUT_ARCHIVE}"
+#         VERBATIM
+#     )
+#     add_custom_target(neurotensor_archive ALL DEPENDS "${OUTPUT_ARCHIVE}")
+
+#     add_library(neurotensor STATIC IMPORTED GLOBAL)
+#     set_target_properties(neurotensor PROPERTIES
+#         IMPORTED_LOCATION "${OUTPUT_ARCHIVE}"
+#         LINKER_LANGUAGE CXX
+#     )
+
+#     # add_custom_target(neurotensor_archive DEPENDS "${OUTPUT_ARCHIVE}")
+#     add_dependencies(neurotensor neurotensor_archive)
+
+# else()
+#     message(WARNING "Cannot find all library files, building dummy for neurotensor")
+#     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
+# endif()
+
+# if(NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILES)
+#     list(GET NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILES 0 NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE)
+#     list(APPEND NEUROTENSOR_LIBS NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE)
+#     message(STATUS "Found niftiio at " ${NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE}) 
+# else()
+#     message(STATUS "Niftiio File not found")
+# endif()
+
+
+if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
     message(STATUS "Building neurotensor from static libraries")
     message(STATUS "Looking for object files")
     if (WIN32)
@@ -754,11 +825,113 @@ if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST )
     #                    ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
     #                     )
     # set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
+elseif(BUILD_ARCHIVE_FORCE)
+    message(WARNING "BUILD_ARCHIVE_FORCE=ON — building any missing dependencies and combining all objects...")
+
+    # Determine object file extension
+    if(WIN32)
+        set(OBJECT_FILE_EXT "*.obj")
+    else()
+        set(OBJECT_FILE_EXT "*.o")
+    endif()
+
+    # --- Step 1: Force build any missing dependencies ---
+    set(_valid_deps "")
+    foreach(dep ${NEUROTENSOR_DEPS})
+        if(TARGET ${dep})
+            list(APPEND _valid_deps ${dep})
+        else()
+            message(WARNING "Dependency target '${dep}' does not exist yet — it will be skipped.")
+        endif()
+    endforeach()
+
+    if(_valid_deps)
+        message(STATUS "Forcing dependent targets to build before archiving...")
+        add_custom_target(force_build_all_deps ALL DEPENDS ${_valid_deps})
+    else()
+        message(WARNING "No valid dependency targets found for forced build.")
+    endif()
+
+    # --- Step 2: After deps build, collect all object files ---
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/collect_objects.stamp"
+        COMMAND ${CMAKE_COMMAND} -E echo "Collecting all available object files..."
+        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/collect_objects.stamp"
+        DEPENDS force_build_all_deps
+        COMMENT "Ensuring all missing libraries are built before packaging"
+    )
+
+    file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
+        RELATIVE "${CMAKE_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
+    )
+
+    set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+    # --- Step 3: Create the final archive from all object files ---
+    add_custom_command(
+        OUTPUT "${OUTPUT_ARCHIVE}"
+        COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+        DEPENDS "${CMAKE_BINARY_DIR}/collect_objects.stamp" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        COMMENT "Building NeuroTensor static archive with forced dependency build"
+        VERBATIM
+    )
+
+    add_custom_target(neurotensor_archive ALL DEPENDS "${OUTPUT_ARCHIVE}")
+
+    # --- Step 4: Create an installable target ---
+    add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
+    add_dependencies(neurotensor neurotensor_archive)
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 endif()
 
+
+# if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST OR BUILD_ARCHIVE_FORCE)
+#     message(STATUS "Building neurotensor from static libraries")
+#     message(STATUS "Looking for object files")
+#     if (WIN32)
+#         set(OBJECT_FILE_EXT "*.obj")
+#     else()
+#         set(OBJECT_FILE_EXT "*.o")
+#     endif()
+    
+
+#     # Collect object files
+#     file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
+#         RELATIVE "${CMAKE_BINARY_DIR}"
+#         "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
+#     )
+
+#     # Output archive name (e.g., libneurotensor.a or neurotensor.lib)
+#     set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+#     # Create archive using CMAKE_AR
+#     add_custom_command(
+#         OUTPUT "${OUTPUT_ARCHIVE}"
+#         COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+#         DEPENDS ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+#         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+#         COMMENT "Archiving NeuroTensor object files into ${OUTPUT_ARCHIVE}"
+#         VERBATIM
+#     )
+
+#     # Declare IMPORTED static library target
+#     add_library(neurotensor STATIC IMPORTED GLOBAL)
+#     set_target_properties(neurotensor PROPERTIES
+#         IMPORTED_LOCATION "${OUTPUT_ARCHIVE}"
+#         LINKER_LANGUAGE CXX
+#     )
+
+#     # Trigger archive creation before the imported target is usable
+#     add_custom_target(neurotensor_archive DEPENDS "${OUTPUT_ARCHIVE}")
+#     add_dependencies(neurotensor neurotensor_archive)
+    # add_library(neurotensor STATIC
+    #                    ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
+    #                     )
+    # set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
 
 
 # Third-party libs (adapt path as needed)
@@ -787,23 +960,23 @@ endif()
 
 #     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
 #   )
-# # elseif(UNIX)
-# #   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
-# #   add_custom_command(TARGET neurotensor POST_BUILD
-# #     COMMAND rm -f $<TARGET_FILE:neurotensor>
-# #     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
-# #     COMMAND echo "📦 Running ranlib on final archive"
-# #     COMMAND ranlib $<TARGET_FILE:neurotensor>
-# #     # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
-# #     # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
-# #     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-# #     #                             ${NEUROTENSOR_LIBS}
-# #     #                                 $<TARGET_FILE:tbb>
-# #     #                                 $<TARGET_FILE:niftiio>
-# #     #                                 $<TARGET_FILE:znz>
-# #     #                                 $<TARGET_FILE:matplot>
-# #     # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
-# #   )
+# elseif(UNIX)
+#   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
+#   add_custom_command(TARGET neurotensor POST_BUILD
+#     COMMAND rm -f $<TARGET_FILE:neurotensor>
+#     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
+#     COMMAND echo "📦 Running ranlib on final archive"
+#     COMMAND ranlib $<TARGET_FILE:neurotensor>
+#     # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
+#     # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
+#     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
+#     #                             ${NEUROTENSOR_LIBS}
+#     #                                 $<TARGET_FILE:tbb>
+#     #                                 $<TARGET_FILE:niftiio>
+#     #                                 $<TARGET_FILE:znz>
+#     #                                 $<TARGET_FILE:matplot>
+#     # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
+#   )
 # elseif(WIN32)
 #   add_custom_command(TARGET neurotensor POST_BUILD
 #     COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 
@@ -849,6 +1022,16 @@ endif()
 
 if( NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
 install(FILES "${OUTPUT_ARCHIVE}" DESTINATION lib)
+elseif(BUILD_ARCHIVE_FORCE)
+# Forced build mode — install the newly built archive
+message(STATUS "Installing forced-built NeuroTensor archive to lib/")
+install(FILES "${OUTPUT_ARCHIVE}" DESTINATION lib)
+
+# Optionally also install headers
+# install(DIRECTORY "${CMAKE_SOURCE_DIR}/nt/"
+#     DESTINATION include/nt
+#     FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
 else()
 # Install the library and headers
 install(TARGETS neurotensor

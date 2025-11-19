@@ -512,7 +512,11 @@ NT_GET_X_UNSIGNED_INTEGER_DTYPES_
     }
 }
 
-const SizeRef &Tensor::shape() const { return _size; }
+const SizeRef &Tensor::shape() const { 
+    utils::throw_exception(!this->is_null(), 
+                           "Cannot get shape of null tensor"); 
+    return _size; 
+}
 
 Tensor Tensor::operator[](size_value_t x) {return functional::at(*this, x);}
 const Tensor Tensor::operator[](size_value_t x) const { return functional::at(*this, x);}

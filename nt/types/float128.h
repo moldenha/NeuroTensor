@@ -2,10 +2,15 @@
 #ifndef NT_TYPES_FLOAT128_ENSURE_H__
 #define NT_TYPES_FLOAT128_ENSURE_H__
 
+#include "../utils/type_traits.h"
+
 #if defined(__SIZEOF_LONG_DOUBLE__) && __SIZEOF_LONG_DOUBLE__ == 16
 namespace nt{
   using float128_t = long double;
+    static_assert(type_traits::is_floating_point_v<float128_t>,
+                  "Error, type traits floating point for long double not implemented");
   #define _128_FLOAT_SUPPORT_
+  #define NT_128_FLOAT_LONG_DOUBLE_TYPE_DEFINED__
 }
 
 #elif defined(__GNUC__) && !defined(__APPLE__) && defined(__SIZEOF_FLOAT128__)
@@ -42,6 +47,25 @@ using float128_t = boost::multiprecision::cpp_bin_float_quad;
 
 #undef _NO_128_SUPPORT_
 #endif // _NO_128_SUPPORT_
+
+
+#ifndef NT_128_FLOAT_LONG_DOUBLE_TYPE_DEFINED__ 
+namespace nt::type_traits{
+
+template<>
+struct is_floating_point<float128_t> : true_type {};
+template<>
+struct is_floating_point<const float128_t> : true_type {};
+template<>
+struct is_floating_point<const volatile float128_t> : true_type {};
+template<>
+struct is_floating_point<volatile float128_t> : true_type {};
+
+}
+
+#else
+#undef NT_128_FLOAT_LONG_DOUBLE_TYPE_DEFINED__
+#endif
 
 
 #endif //_NT_TYPES_FLOAT128_ENSURE_H_ 

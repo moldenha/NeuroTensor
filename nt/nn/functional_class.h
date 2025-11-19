@@ -164,6 +164,14 @@ class NEUROTENSOR_API TensorGrad_Functional_Class {
     static NEUROTENSOR_API TensorGrad group_norm(const Tensor &, int64_t,
                                                  utils::optional_tensorgrad, utils::optional_tensorgrad,
                                                  Scalar);
+    static NEUROTENSOR_API TensorGrad instance_norm(const TensorGrad&, utils::optional_tensor, 
+                                                      utils::optional_tensor,
+                                                    utils::optional_tensorgrad, utils::optional_tensorgrad,
+                                                    bool, Scalar, Scalar);
+    static NEUROTENSOR_API TensorGrad instance_norm(const Tensor&, utils::optional_tensor, 
+                                                      utils::optional_tensor,
+                                                    utils::optional_tensorgrad, utils::optional_tensorgrad,
+                                                    bool, Scalar, Scalar);
     //activation_functions.cpp
     static NEUROTENSOR_API TensorGrad sqrt(const TensorGrad &);
     static NEUROTENSOR_API TensorGrad invsqrt(const TensorGrad &);

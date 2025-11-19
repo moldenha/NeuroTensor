@@ -46,8 +46,49 @@ struct hash<::nt::int128_t>{
                std::hash<int64_t>()(int64_t(x >> 64));
     }
 };
-
 }
 #endif // __SIZEOF_INT128__ 
+
+#include "../utils/type_traits.h"
+
+static_assert(nt::type_traits::is_same_v<int, int>);
+
+namespace nt::type_traits{
+// template<>
+// struct is_integer<::nt::uint128_t> : true_type{};
+// template<>
+// struct is_integer<const ::nt::uint128_t> : true_type{};
+// template<>
+// struct is_integer<volatile const ::nt::uint128_t> : true_type{};
+// template<>
+// struct is_integer<volatile ::nt::uint128_t> : true_type{};
+
+template<>
+struct is_integral<::nt::uint128_t>: true_type {};
+template<>
+struct is_integral<const ::nt::uint128_t>: true_type {};
+template<>
+struct is_integral<volatile ::nt::uint128_t>: true_type {};
+template<>
+struct is_integral<volatile const ::nt::uint128_t>: true_type {};
+
+// template<>
+// struct is_integer<::nt::int128_t> : true_type{};
+// template<>
+// struct is_integer<const ::nt::int128_t> : true_type{};
+// template<>
+// struct is_integer<volatile ::nt::int128_t> : true_type{};
+// template<>
+// struct is_integer<volatile const ::nt::int128_t> : true_type{};
+
+template<>
+struct is_integral<::nt::int128_t>: true_type {};
+template<>
+struct is_integral<const ::nt::int128_t>: true_type {};
+template<>
+struct is_integral<volatile ::nt::int128_t>: true_type {};
+template<>
+struct is_integral<volatile const ::nt::int128_t>: true_type {};
+}
 
 #endif // _NT_TYPES_BIT_128_INTEGER_ENSURE_H_ 

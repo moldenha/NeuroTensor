@@ -4,6 +4,7 @@
 #include "../../dtype/DType_enum.h"
 #include "../../dtype/Scalar.h"
 #include "../../refs/SizeRef.h"
+#include "../../types/math.h"
 #include <random>
 #include "rand.h"
 
@@ -57,7 +58,8 @@ void calc_stats_use_input(
 template<typename iter, typename T>
 void calc_stats_no_use_input(
     T& mean, T& var, iter, 
-    const int64_t&, const int64_t&, const int64_t&, const int64_t&, const int64_t&, const int64_t&,
+    const int64_t& inner_size, const int64_t& HW, const int64_t& C,
+    const int64_t& N, const int64_t& c, const int64_t& n,
     T* run_mean_ptr, T* run_var_ptr, T)
 {
     mean = run_mean_ptr[c];
@@ -118,7 +120,7 @@ void _instance_norm_(
                 scalar_t mean = 0, var = 0;
                 func(mean, var, x_ptr, inner_size, HW, C, N, c, n, run_mean_ptr, run_var_ptr, momentum);
 
-                scalar_t inv_std = 1.0 / std::sqrt(var + eps);
+                scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
                 scalar_t gamma = w_ptr[c];
                 scalar_t beta  = b_ptr[c];
 
@@ -196,7 +198,7 @@ void _instance_norm_(
                 scalar_t mean = 0, var = 0;
                 func(mean, var, x_ptr, inner_size, HW, C, N, c, n, run_mean_ptr, run_var_ptr, momentum);
 
-                scalar_t inv_std = 1.0 / std::sqrt(var + eps);
+                scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
 
                 mean_ptr[(n * C) + c] = mean;
                 inv_ptr[(n * C) + c] = inv_std;
@@ -325,6 +327,5 @@ void _instance_norm_backward_input_(
         }
     }, input);
 }
-
 
 } // namespace nt::functional::cpu::

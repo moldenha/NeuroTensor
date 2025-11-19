@@ -1304,6 +1304,30 @@ NT_MAKE_NAMED_PARAMETER_FUNCTION_(group_norm_)
     ntarg_(eps) = 1e-05
 NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::no_grad::group_norm_)
 
+
+NT_MAKE_NAMED_PARAMETER_FUNCTION_(instance_norm)
+    ntarg_(input),
+    ntarg_(running_mean) = nullptr,
+    ntarg_(running_var) = nullptr,
+    ntarg_(weight) = nullptr,
+    ntarg_(bias) = nullptr,
+    ntarg_(use_input_stats) = true, 
+    ntarg_(momentum) = 0.1,
+    ntarg_(eps) = 1e-05
+NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::instance_norm)
+
+
+NT_MAKE_NAMED_PARAMETER_FUNCTION_(instance_norm_)
+    ntarg_(input),
+    ntarg_(running_mean) = nullptr,
+    ntarg_(running_var) = nullptr,
+    ntarg_(weight) = nullptr,
+    ntarg_(bias) = nullptr,
+    ntarg_(use_input_stats) = true, 
+    ntarg_(momentum) = 0.1,
+    ntarg_(eps) = 1e-05
+NT_OVERLOAD_NAMED_PARAMETER_FUNCTION_(functional::no_grad::instance_norm_)
+
 //numpy.h 
 
 namespace functional_details{
@@ -2066,6 +2090,7 @@ NT_DEFINE_ARGUMENT(transpose_a)
 NT_DEFINE_ARGUMENT(transpose_b)
 NT_DEFINE_ARGUMENT(transpose_out)
 NT_DEFINE_ARGUMENT(type)
+NT_DEFINE_ARGUMENT(use_input_stats)
 NT_DEFINE_ARGUMENT(val)
 NT_DEFINE_ARGUMENT(value)
 NT_DEFINE_ARGUMENT(vec)

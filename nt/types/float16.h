@@ -4,6 +4,8 @@
 
 
 #include <simde/simde-f16.h> //using this to convert between float32 and float16
+#include "../utils/type_traits.h"
+
 #define _HALF_FLOAT_SUPPORT_ //by default is going to have half float support
 #ifdef SIMDE_FLOAT16_IS_SCALAR
 namespace nt{
@@ -35,6 +37,17 @@ namespace nt{
 inline int16_t _NT_FLOAT16_TO_INT16_(float16_t fp) noexcept {
 	int16_t out = *reinterpret_cast<int16_t*>(&fp);
 	return out;
+}
+
+namespace type_traits{
+template<>
+struct is_floating_point<float16_t> : true_type {};
+template<>
+struct is_floating_point<const float16_t> : true_type {};
+template<>
+struct is_floating_point<const volatile float16_t> : true_type {};
+template<>
+struct is_floating_point<volatile float16_t> : true_type {};
 }
 }
 

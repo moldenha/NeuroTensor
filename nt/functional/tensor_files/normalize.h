@@ -46,6 +46,24 @@ NEUROTENSOR_API Tensor group_norm_backward(const Tensor& grad, const Tensor& inp
                                            const Tensor& stored_means, const Tensor& stored_inv,
                                            Tensor original_weight = Tensor::Null(), Tensor original_bias = Tensor::Null(), Scalar eps = 1e-05);
 
+NEUROTENSOR_API Tensor& instance_norm_(Tensor& x, utils::optional_tensor running_mean = nullptr,
+                                       utils::optional_tensor running_var = nullptr, 
+                                    utils::optional_tensor weight = nullptr, utils::optional_tensor bias = nullptr,
+                                    bool use_input_stats = true, Scalar momentum = 0.1, Scalar eps = 1e-5,
+                                    intrusive_ptr<tensor_holder> stored_means = nullptr, 
+                                    intrusive_ptr<tensor_holder> stored_inv = nullptr);
+
+NEUROTENSOR_API Tensor instance_norm(const Tensor& input, utils::optional_tensor running_mean = nullptr,
+                                       utils::optional_tensor running_var = nullptr, 
+                                    utils::optional_tensor weight = nullptr, utils::optional_tensor bias = nullptr,
+                                    bool use_input_stats = true, Scalar momentum = 0.1, Scalar eps = 1e-5,
+                                    intrusive_ptr<tensor_holder> stored_means = nullptr, 
+                                    intrusive_ptr<tensor_holder> stored_inv = nullptr);
+
+NEUROTENSOR_API Tensor instance_norm_backward(const Tensor& grad, const Tensor& input,
+                                           const Tensor& stored_means, const Tensor& stored_inv,
+                                           Tensor original_weight, Tensor original_bias, Scalar eps);
+
 } // namespace no_grad
 } // namespace nt::functional
 

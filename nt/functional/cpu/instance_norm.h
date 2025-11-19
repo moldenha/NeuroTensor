@@ -58,5 +58,13 @@ void _instance_norm_backward_input_(
     const ArrayVoid& mean_vals,
     const ArrayVoid& inv_vals);
 
+void _instance_norm_backward_weight_bias_(
+    ArrayVoid& grad_weight, ArrayVoid& grad_bais,
+    const ArrayVoid& grad_output,
+    const ArrayVoid& input,
+    int64_t N, int64_t C, int64_t HW,
+    Scalar _eps,
+    const ArrayVoid& mean_vals,
+    const ArrayVoid& inv_vals);
 
 } // namespace nt::functional::cpu::

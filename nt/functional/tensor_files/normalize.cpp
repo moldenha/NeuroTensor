@@ -2,9 +2,8 @@
 #include "../cpu/normalize.h"
 #include "../cpu/batch_norm.h"
 #include "../cpu/group_norm.h"
-// #include "../cpu/instance_norm.h"
+#include "../cpu/instance_norm.h"
 #include "../../dtype/ArrayVoid.h"
-#include "../../dtype/ArrayVoid.hpp"
 #include <cmath>
 #include "exceptions.hpp"
 #include "activation_functions.h"
@@ -353,19 +352,30 @@ Tensor& instance_norm_(Tensor& x, utils::optional_tensor running_mean, utils::op
     utils::throw_exception(DTypeFuncs::is_floating(x.dtype()) || DTypeFuncs::is_complex(x.dtype()),
             "instance_norm_ can only happen on floating dtypes but got $", x.dtype());
     
-    if(weight.has_value())
+    int64_t N = x.shape()[0], C = x.shape()[1];
+    int64_t HW = x.numel() / (N * C);
+ 
+
+    if(weight.has_value()){
         utils::throw_exception(x.dtype() == weight.value().dtype(),
                            "Expected x and weight to have the same dtype but got ($, $)",
                            x.dtype(), weight.value().dtype());
-    if(bias.has_value())
+        utils::throw_exception(weight->shape() == SizeRef({C}),
+                               "Error, expected Weight shape to be {$} but got $ for instance norm",
+                               C, weight->shape());
+    }
+    if(bias.has_value()){
         utils::throw_exception(x.dtype() == bias.value().dtype(),
                            "Expected x, and bias to have the same dtype but got ($, $)",
                            x.dtype(), bias.value().dtype());
+        utils::throw_exception(bias->shape() == SizeRef({C}),
+                               "Error, expected Weight shape to be {$} but got $ for instance norm",
+                               C, bias->shape());
+
+    }
     
     utils::throw_exception(x.dims() >= 3, "Error, the number of dimensions for input ($) must be greater than or equal to 3 for instance_norm_",
                            x.dims());
-    int64_t N = x.shape()[0], C = x.shape()[1];
-    int64_t HW = x.numel() / (N * C);
     
     Tensor _bias = bias.has_value() ? bias.value().contiguous() : zeros({C}, x.dtype());
     Tensor _weight = weight.has_value() ? weight.value().contiguous() : ones({C}, x.dtype());
@@ -392,7 +402,7 @@ Tensor& instance_norm_(Tensor& x, utils::optional_tensor running_mean, utils::op
         // stored arrays must be C long and same dtype
         utils::throw_exception(stored_means->tensor.numel() == N * C,
             "stored_means must have numel == N * C ($ * $ = $) but got $", N, C, N * C, stored_means->tensor.numel());
-        utils::throw_exception(stored_inv->tensor.numel() == C,
+        utils::throw_exception(stored_inv->tensor.numel() == N * C,
             "stored_inv must have numel == N * C ($ * $ = $) but got $", N, C, N * C, stored_inv->tensor.numel());
         utils::throw_exception(stored_means->tensor.dtype() == x.dtype() && stored_inv->tensor.dtype() == x.dtype(),
             "stored_means and stored_inv must have same dtype as input");
@@ -411,61 +421,62 @@ Tensor& instance_norm_(Tensor& x, utils::optional_tensor running_mean, utils::op
 }
 
 
-// Tensor instance_norm(const Tensor& input, utils::optional_tensor running_mean, utils::optional_tensor running_var, 
-//                     utils::optional_tensor weight, utils::optional_tensor bias,
-//                     bool use_input_stats, Scalar momentum, Scalar eps,
-//                     intrusive_ptr<tensor_holder> stored_means, intrusive_ptr<tensor_holder> stored_inv){
-//     Tensor output = input.clone();
-//     instance_norm_(output, running_mean, running_var, weight, bias, use_input_stats, momentum, eps, stored_means, stored_inv);
-//     return std::move(output);
-// }
+Tensor instance_norm(const Tensor& input, utils::optional_tensor running_mean, utils::optional_tensor running_var, 
+                    utils::optional_tensor weight, utils::optional_tensor bias,
+                    bool use_input_stats, Scalar momentum, Scalar eps,
+                    intrusive_ptr<tensor_holder> stored_means, intrusive_ptr<tensor_holder> stored_inv){
+    Tensor output = input.clone();
+    instance_norm_(output, running_mean, running_var, weight, bias, use_input_stats, momentum, eps, stored_means, stored_inv);
+    return std::move(output);
+}
 
-// Tensor instance_norm_backward(const Tensor& grad, const Tensor& input, int64_t num_groups,
-//                                            const Tensor& stored_means, const Tensor& stored_inv,
-//                                            Tensor original_weight, Tensor original_bias, Scalar eps){
+Tensor instance_norm_backward(const Tensor& grad, const Tensor& input,
+                                           const Tensor& stored_means, const Tensor& stored_inv,
+                                           Tensor original_weight, Tensor original_bias, Scalar eps){
 
-//     _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, input, stored_means, stored_inv); utils::throw_exception(grad.dtype() == input.dtype(),
-//                            "Error, expected grad dtype $ to match input ($) dtype",
-//                            grad.dtype(), input.dtype());
-//     utils::throw_exception(grad.shape() == input.shape(),
-//                            "Error expected grad shape ($) to match input shape ($)",
-//                            grad.shape(), input.shape());
-//     if(!original_weight.is_null()){
-//         utils::throw_exception(grad.dtype() == original_weight.dtype(),
-//                                "Erorr: Expected grad dtype ($) to be the same as the original weight ($)",
-//                                grad.dtype(), original_weight.dtype());
-//     }
-//     if(!original_bias.is_null()){
-//         utils::throw_exception(grad.dtype() == original_bias.dtype(),
-//                                "Erorr: Expected grad dtype ($) to be the same as the original bias ($)",
-//                                grad.dtype(), original_bias.dtype());
-//     }
-//     int64_t N = input.shape()[0], C = input.shape()[1];
-//     int64_t HW = input.numel() / (N * C);
-//     if(original_weight.is_null() && original_bias.is_null()){
-//         Tensor weight = ones({C}, input.dtype());
-//         Tensor grad_input = zeros_like(input);
-//         cpu::_group_norm_backward_input_(grad_input.arr_void(), grad.arr_void(), input.arr_void(),
-//                                                  weight.arr_void(), N, C, HW,
-//                                                  num_groups, eps, stored_means.arr_void(), stored_inv.arr_void());
-//         return std::move(grad_input);
-//     }
+    _NT_FUNCTIONAL_ALWAYS_CHECK_(grad, input, stored_means, stored_inv); 
+    utils::throw_exception(grad.dtype() == input.dtype(),
+                           "Error, expected grad dtype $ to match input ($) dtype",
+                           grad.dtype(), input.dtype());
+    utils::throw_exception(grad.shape() == input.shape(),
+                           "Error expected grad shape ($) to match input shape ($)",
+                           grad.shape(), input.shape());
+    if(!original_weight.is_null()){
+        utils::throw_exception(grad.dtype() == original_weight.dtype(),
+                               "Erorr: Expected grad dtype ($) to be the same as the original weight ($)",
+                               grad.dtype(), original_weight.dtype());
+    }
+    // if(!original_bias.is_null()){
+    //     utils::throw_exception(grad.dtype() == original_bias.dtype(),
+    //                            "Erorr: Expected grad dtype ($) to be the same as the original bias ($)",
+    //                            grad.dtype(), original_bias.dtype());
+    // }
+    int64_t N = input.shape()[0], C = input.shape()[1];
+    int64_t HW = input.numel() / (N * C);
+    if(original_weight.is_null() && original_bias.is_null()){
+        Tensor weight = ones({C}, input.dtype());
+        Tensor grad_input = zeros_like(input);
+        cpu::_instance_norm_backward_input_(grad_input.arr_void(), grad.arr_void(), input.arr_void(),
+                                                 weight.arr_void(), N, C, HW,
+                                                 eps, stored_means.arr_void(), stored_inv.arr_void());
+        return std::move(grad_input);
+    }
     
-//     Tensor weight = original_weight.is_null() ? ones({C}, input.dtype()) : original_weight;
-//     Tensor grad_input = zeros_like(input);
-//     cpu::_group_norm_backward_input_(grad_input.arr_void(), grad.arr_void(), input.arr_void(),
-//                                          weight.arr_void(), N, C, HW,
-//                                          num_groups, eps, stored_means.arr_void(), stored_inv.arr_void());
+    Tensor weight = original_weight.is_null() ? ones({C}, input.dtype()) : original_weight;
+    Tensor grad_input = zeros_like(input);
+    cpu::_instance_norm_backward_input_(grad_input.arr_void(), grad.arr_void(), input.arr_void(),
+                                                 weight.arr_void(), N, C, HW,
+                                                 eps, stored_means.arr_void(), stored_inv.arr_void());
 
 
-//     Tensor grad_weight = zeros({C}, input.dtype());
-//     Tensor grad_bias = zeros({C}, input.dtype());
-//     cpu::_group_norm_backward_weight_bias_(grad_weight.arr_void(), grad_bias.arr_void(), grad.arr_void(),
-//                                                     input.arr_void(), N, C, HW,
-//                                                     num_groups, stored_means.arr_void(), stored_inv.arr_void());
-//     return list(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+    Tensor grad_weight = zeros({C}, input.dtype());
+    Tensor grad_bias = zeros({C}, input.dtype());
+    cpu::_instance_norm_backward_weight_bias_(grad_weight.arr_void(), grad_bias.arr_void(), grad.arr_void(),
+                                                    input.arr_void(), N, C, HW,
+                                                    stored_means.arr_void(), stored_inv.arr_void());
+    return list(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
     
-// }
+}
 
 } // nt::functional::no_grad::
 } // nt::functional::

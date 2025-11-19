@@ -8,6 +8,7 @@
 #include <cstring>
 #include "../dtype/DType_enum.h"
 #include "../convert/Convert.h"
+#include "../utils/type_traits.h"
 
 namespace nt{
 
@@ -55,9 +56,20 @@ inline float16_t* inplace_to_float16_from_bfloat16(bfloat16_t* vals, const int64
 	return n_vals;
 }
 
-
 }
 
+namespace type_traits{
+
+template<>
+struct is_floating_point<bfloat16_t> : true_type {};
+template<>
+struct is_floating_point<const bfloat16_t> : true_type {};
+template<>
+struct is_floating_point<const volatile bfloat16_t> : true_type {};
+template<>
+struct is_floating_point<volatile bfloat16_t> : true_type {};
+
+}
 
 }
 
