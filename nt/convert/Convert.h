@@ -5,18 +5,37 @@
 #include "../utils/api_macro.h"
 #include "../utils/type_traits.h"
 #include "../dtype/compatible/DType_compatible.h"
+#include "../dtype/compatible/DTypeDeclareMacros.h"
 #include "../types/float16.h"
 #include "../utils/bit.h"
+#include <type_traits>
 
 namespace nt::convert{
 
 namespace details{
 
 template<typename T>
-inline static constexpr bool valid_convert_type_v =
-    (std::is_same_v<nt::type_traits::remove_cvref_t<T>, uint_bool_t> ||
-     std::is_same_v<nt::type_traits::remove_cvref_t<T>, bool> ||
-     (DTypeFuncs::type_to_dtype<nt::type_traits::remove_cvref_t<T>> != DType::Bool));
+inline static constexpr bool valid_convert_type_v = 
+    nt::type_traits::is_decay_in_v<T, bool, nt::uint_bool_t> 
+    || nt::DTypeFuncs::type_to_dtype<nt::type_traits::decay_t<T>> != nt::DType::Bool;
+
+#define NT_CHECK_VALID_CONVERT_TYPES_MACRO__(type, name_a, name_b)\
+    static_assert(valid_convert_type_v<type>, "Error type for " #name_a " is not seen as a valid convert type");
+
+NT_GET_DEFINE_FLOATING_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
+NT_GET_DEFINE_COMPLEX_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
+NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
+NT_GET_DEFINE_UNSIGNED_INTEGER_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
+NT_GET_DEFINE_OTHER_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
+
+
+#undef NT_CHECK_VALID_CONVERT_TYPES_MACRO__ 
+
+/* template<typename T> */
+/* inline static constexpr bool valid_convert_type_v = */
+/*     (std::is_same_v<nt::type_traits::remove_cvref_t<T>, uint_bool_t> || */
+/*      std::is_same_v<nt::type_traits::remove_cvref_t<T>, bool> || */
+/*      (DTypeFuncs::type_to_dtype<nt::type_traits::remove_cvref_t<T>> != DType::Bool)); */
 
 NT_ALWAYS_INLINE int128_t float32_to_int128(float value) {
     // Handle special cases
@@ -192,7 +211,7 @@ inline float128_t portable_128_int_to_floating(int128_t val) {
     int64_t high = static_cast<int64_t>(val >> 64);
     uint64_t low = static_cast<uint64_t>(val);
 
-    constexpr float128_t two_pow_64 = 18446744073709551616.0;
+    float128_t two_pow_64 = 18446744073709551616.0;
     float128_t result = float128_t(high) * two_pow_64
                       + float128_t(low);
     return result;
@@ -226,7 +245,7 @@ inline float128_t portable_128_int_to_floating(uint128_t val) {
     uint64_t high = static_cast<uint64_t>(val >> 64);
     uint64_t low = static_cast<uint64_t>(val);
 
-    constexpr float128_t two_pow_64 = 18446744073709551616.0;
+    float128_t two_pow_64 = 18446744073709551616.0;
     float128_t result = float128_t(high) * two_pow_64
                       + float128_t(low);
     return result;
@@ -261,11 +280,11 @@ NT_ALWAYS_INLINE float16_t portable_128_int_to_floating<float16_t>(uint128_t val
 
 }
 
-template<typename To, typename _From, 
-    std::enable_if_t<details::valid_convert_type_v<nt::type_traits::remove_cvref_t<To>> 
-    && details::valid_convert_type_v<nt::type_traits::remove_cvref_t<_From>>, bool> = true>
-NT_ALWAYS_INLINE nt::type_traits::remove_cvref_t<To> convert(_From&& f){
-    using From = typename nt::type_traits::remove_cvref_t<_From>;
+template<typename To, typename _From,
+    std::enable_if_t<details::valid_convert_type_v<To>
+                    && details::valid_convert_type_v<_From>, bool> = true>
+NT_ALWAYS_INLINE nt::type_traits::decay_t<To> convert(_From&& f){
+    using From = typename nt::type_traits::decay_t<_From>;
     static constexpr DType FromDType = DTypeFuncs::type_to_dtype<From>;
     static constexpr DType ToDType = DTypeFuncs::type_to_dtype<To>;
     if constexpr (FromDType == ToDType){
@@ -318,7 +337,7 @@ NT_ALWAYS_INLINE nt::type_traits::remove_cvref_t<To> convert(_From&& f){
         return convert::convert<To>(val);
     }
     else if constexpr(ToDType == DType::Float16){
-        if(FromDType == DType::Float64){
+        if constexpr (FromDType == DType::Float64){
             return details::safe_float16_from_double(std::forward<_From>(f));
         }
         float sub_val = convert::convert<float>(std::forward<_From>(f));

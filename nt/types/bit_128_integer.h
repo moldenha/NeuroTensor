@@ -8,9 +8,16 @@ using uint128_t = __uint128_t;
 using int128_t = __int128_t;
 std::ostream& operator<<(std::ostream& os, const __int128_t i);
 std::ostream& operator<<(std::ostream& os, const __uint128_t i);
+namespace type_traits{
+constexpr bool system_int128 = true;
+}
 }
 
 #else
+
+namespace nt::type_traits{
+constexpr bool system_int128 = false;
+}
 
 //currently has library for uint128 support that is cross platform
 //will be adding int128 support that is cross platform soon
@@ -27,6 +34,8 @@ namespace nt{
 using int128_t = boost::multiprecision::int128_t; 
 }
 #endif //__SIZEOF_INT128__
+
+
 
 
 #ifndef __SIZEOF_INT128__ 
@@ -54,6 +63,8 @@ struct hash<::nt::int128_t>{
 static_assert(nt::type_traits::is_same_v<int, int>);
 
 namespace nt::type_traits{
+
+
 // template<>
 // struct is_integer<::nt::uint128_t> : true_type{};
 // template<>

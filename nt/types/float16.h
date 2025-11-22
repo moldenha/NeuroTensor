@@ -15,6 +15,9 @@ namespace nt{
 	inline std::ostream& operator<<(std::ostream& os, const float16_t& val){
 		return os << _NT_FLOAT16_TO_FLOAT32_(val);
 	}
+namespace type_traits{
+constexpr bool simde_float16 = true;
+}
 }
 #else
 #include <half/half.hpp>
@@ -23,6 +26,9 @@ namespace nt{
 	#define _NT_FLOAT16_TO_FLOAT32_(f16) float(f16)
 	#define _NT_FLOAT32_TO_FLOAT16_(f) half_float::half(f)
 	//by default has a way to print out the half_float::half
+namespace type_traits{
+constexpr bool simde_float16 = true;
+}
 }
 
 namespace std{

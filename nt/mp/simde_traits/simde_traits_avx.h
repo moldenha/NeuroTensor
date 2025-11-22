@@ -181,7 +181,7 @@ struct SimdTraits_avx;
         type vals_b[SimdTraits_avx<type>::pack_size];\
         SimdTraits_avx<type>::store((cast)vals_b, b);\
         for(int i = 0; i < SimdTraits_avx<type>::pack_size; ++i){\
-            out_bool[i] = (vals_a[i] != vals_b[i]);\
+            out_bool[i] = (vals_a[i] <= vals_b[i]);\
         }\
     };\
 

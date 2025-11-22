@@ -47,6 +47,7 @@
 
 void operator_test(){
     using namespace nt::literals;
+    /* run_test(" */
     NT_MAKE_OPERATOR_TEST(multiply, *);
     NT_MAKE_OPERATOR_TEST(add, +);
     NT_MAKE_OPERATOR_TEST(subtract, -);

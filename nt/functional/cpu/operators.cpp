@@ -38,9 +38,9 @@ NT_ALWAYS_INLINE ::nt::float128_t trunc(const ::nt::float128_t& x) {
     // Remove the fractional part by casting to integer type
     // then back to float128
     if (x >= 0)
-        return ::nt::float128_t(static_cast<int128_t>(x));
+        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
     else
-        return ::nt::float128_t(static_cast<int128_t>(x));
+        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
 }
 
 }

@@ -7,6 +7,7 @@
 #include "../../refs/SizeRef.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include "../../convert/Convert.h"
+#include "../../types/math.h"
 #include <cmath>
 
 #include "../../types/float128.h"
@@ -32,9 +33,9 @@ NT_ALWAYS_INLINE ::nt::float128_t trunc(const ::nt::float128_t& x) {
     // Remove the fractional part by casting to integer type
     // then back to float128
     if (x >= 0)
-        return ::nt::float128_t(static_cast<int128_t>(x));
+        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
     else
-        return ::nt::float128_t(static_cast<int128_t>(x));
+        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
 }
 
 NT_ALWAYS_INLINE ::nt::float128_t floor(const ::nt::float128_t& x) {
@@ -162,7 +163,7 @@ inline void round_decimal(T begin, T end, U out, int64_t decimals){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     base_type ten = base_type(10);
-    base_type mult = std::pow(ten, decimals);
+    base_type mult = ::nt::pow(ten, decimals);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
         simde_type<base_type> val = SimdTraits<base_type>::set1(mult);

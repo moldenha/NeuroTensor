@@ -89,10 +89,10 @@ class BucketIterator_list{
 		inline BucketIterator_list operator+(std::ptrdiff_t i) noexcept {return BucketIterator_list(m_ptr + i);}
 
 		inline friend bool operator!=(const T*& a, const BucketIterator_list<T>& b) noexcept {
-			return b.current_ptr != a;
+			return b.m_ptr != a;
 		}
 		inline friend bool operator==(const T*& a, const BucketIterator_list<T>& b) noexcept {
-			return b.current_ptr == a;
+			return b.m_ptr == a;
 		}
 	private:
 		store_type m_ptr;

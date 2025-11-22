@@ -11,6 +11,9 @@ namespace nt{
                   "Error, type traits floating point for long double not implemented");
   #define _128_FLOAT_SUPPORT_
   #define NT_128_FLOAT_LONG_DOUBLE_TYPE_DEFINED__
+namespace type_traits{
+constexpr bool system_float128 = true;
+}
 }
 
 #elif defined(__GNUC__) && !defined(__APPLE__) && defined(__SIZEOF_FLOAT128__)
@@ -19,6 +22,9 @@ namespace nt{
   using float128_t = __float128;
   std::ostream& operator<<(std::ostream& os, const float128_t& val);
   #define _128_FLOAT_SUPPORT_
+namespace type_traits{
+constexpr bool system_float128 = true;
+}
 }
 
 #elif defined(__GNUC__) && defined(__FP_FAST_F128)
@@ -27,6 +33,9 @@ namespace nt{
   using float128_t = __fp128;
   std::ostream& operator<<(std::ostream& os, const float128_t& val);
   #define _128_FLOAT_SUPPORT_
+namespace type_traits{
+constexpr bool system_float128 = true;
+}
 }
 
 #else
@@ -43,6 +52,9 @@ namespace nt{
 namespace nt{
 using float128_t = boost::multiprecision::cpp_bin_float_quad;
 #define _128_FLOAT_SUPPORT_ 
+namespace type_traits{
+constexpr bool system_float128 = false;
+}
 }
 
 #undef _NO_128_SUPPORT_

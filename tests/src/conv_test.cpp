@@ -88,6 +88,8 @@ struct my_make_signed<uint8_t>{
     using type = int8_t;
 };
 
+
+#ifdef SIMDE_ARCH_X86_AVX2
 template<typename T>
 void make_avx2_test(std::string name){
     run_test(name.c_str(), []{
@@ -106,7 +108,15 @@ void make_avx2_test(std::string name){
     });
 }
 
+#else 
+// just something to fill the space
+template<typename T> void make_avx2_test(std::string name){
+    run_test(name.c_str(), []{
+        using arr_to_t = typename my_make_signed<T>::type;
+    });
+}
 
+#endif
 
 template<typename T>
 void make_avx_test(std::string name){
