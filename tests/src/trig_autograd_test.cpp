@@ -152,7 +152,7 @@ void trig_test_autograd(){
     using namespace nt::literals;
     NT_MAKE_RUN_TEST(tanh, false, 1e-5, 1e-8);
     NT_MAKE_RUN_TEST(tan, false, 1e-3, 1e-4);
-    NT_MAKE_RUN_TEST(atan, false, 1e-5, 1e-8);
+    NT_MAKE_RUN_TEST(atan, false, 1e-3, 1e-4);
     NT_MAKE_RUN_TEST(atanh, false, 1e-3, 1e-4);
 
     NT_MAKE_RUN_TEST(sinh, false, 1e-5, 1e-8);

@@ -2,9 +2,11 @@
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include "../../utils/numargs_macro.h"
+#include "../../utils/type_traits.h"
+#include "../../math/math.h"
 #include <algorithm>
 
-#include "128_bit_funcs.hpp"
+// #include "128_bit_funcs.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -17,7 +19,7 @@ namespace mp {
 #define _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(func_name, simde_op, transform_op) \
 template<typename T, typename O>\
 inline void func_name(T begin, T end, O out){\
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");\
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");\
 	using base_type = utils::IteratorBaseType_t<T>;\
 	if constexpr (simde_svml_supported_v<base_type>){\
 		static constexpr size_t pack_size = pack_size_v<base_type>;\
@@ -41,8 +43,8 @@ template<typename T>\
 inline T _nt_##name(T element) noexcept {return T(1)/operation(element);}
 
 
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sqrt, sqrt, std::sqrt);
-_NT_MAKE_INV_INLINE_FUNC_(std::sqrt, invsqrt)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sqrt, sqrt, ::nt::math::sqrt);
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::sqrt, invsqrt)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(invsqrt, invsqrt, _nt_invsqrt);
 
 #undef _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_
@@ -50,7 +52,7 @@ _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(invsqrt, invsqrt, _nt_invsqrt);
 
 template<typename T, typename U>
 inline void sigmoid(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -64,10 +66,10 @@ inline void sigmoid(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = (base_type(1.0) / (base_type(1.0) + std::exp(-(*begin))));
+			*out = (base_type(1.0) / (base_type(1.0) + ::nt::math::exp(-(*begin))));
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = (base_type(1.0) / (base_type(1.0) + std::exp(-(*begin))));
+            *out = (base_type(1.0) / (base_type(1.0) + ::nt::math::exp(-(*begin))));
         }
 	}
 }
@@ -75,7 +77,7 @@ inline void sigmoid(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dsigmoid(T begin, T end, U out, bool apply_sigmoid){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	if(apply_sigmoid){
 		sigmoid<T, U>(begin, end, out);
 		dsigmoid(out, out + (end-begin), out, false);
@@ -102,7 +104,7 @@ inline void dsigmoid(T begin, T end, U out, bool apply_sigmoid){
 //x * sigmoid(x)
 template<typename T, typename U>
 inline void silu(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -117,17 +119,17 @@ inline void silu(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = *begin * (base_type(1.0) / (base_type(1.0) + std::exp(-(*begin))));
+			*out = *begin * (base_type(1.0) / (base_type(1.0) + ::nt::math::exp(-(*begin))));
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = *begin * (base_type(1.0) / (base_type(1.0) + std::exp(-(*begin))));
+            *out = *begin * (base_type(1.0) / (base_type(1.0) + ::nt::math::exp(-(*begin))));
         }
 	}
 }
 
 template<typename T, typename U>
 inline void dsilu(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -145,25 +147,25 @@ inline void dsilu(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-			base_type sigmoid_x = (base_type(1.0) / (base_type(1.0) + std::exp(-(*begin))));
+			base_type sigmoid_x = (base_type(1.0) / (base_type(1.0) + ::nt::math::exp(-(*begin))));
             *out = sigmoid_x * (1 + *begin * (1 - sigmoid_x));
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-			base_type sigmoid_x = (base_type(1.0) / (base_type(1.0) + std::exp(-(*begin))));
+			base_type sigmoid_x = (base_type(1.0) / (base_type(1.0) + ::nt::math::exp(-(*begin))));
             *out = sigmoid_x * (1 + *begin * (1 - sigmoid_x));
         }
 	}
 }
 
 
-//Scalar sqrt_2_pi = std::sqrt(2.0 / M_PI);
-//0.5 * x * (1.0 + tanh(sqrt_2_pi * (x + 0.044715 * std::pow(x, 3))));
+//Scalar sqrt_2_pi = ::nt::math::sqrt(2.0 / M_PI);
+//0.5 * x * (1.0 + tanh(sqrt_2_pi * (x + 0.044715 * ::nt::math::pow(x, 3))));
 template<typename T, typename U>
 inline void gelu(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
-    base_type sqrt_2_pi = static_cast<base_type>(std::sqrt(2.0 / M_PI));
+    base_type sqrt_2_pi = static_cast<base_type>(::nt::math::sqrt(2.0 / M_PI));
 
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -177,20 +179,20 @@ inline void gelu(T begin, T end, U out){
 			simde_type<base_type> current = it_loadu(begin);
             simde_type<base_type> pow = SimdTraits<base_type>::pow(current, three);
             simde_type<base_type> first = SimdTraits<base_type>::add(current, 
-                                          SimdTraits<base_type>::multiply(weird_num, pow)); //(x + 0.044715 * std::pow(x, 3))
+                                          SimdTraits<base_type>::multiply(weird_num, pow)); //(x + 0.044715 * ::nt::math::pow(x, 3))
 
             simde_type<base_type> second = SimdTraits<base_type>::tanh( 
-                                          SimdTraits<base_type>::multiply(pi_num, first)); //tanh(sqrt_2_pi * (x + 0.044715 * std::pow(x, 3)))
+                                          SimdTraits<base_type>::multiply(pi_num, first)); //tanh(sqrt_2_pi * (x + 0.044715 * ::nt::math::pow(x, 3)))
             current = SimdTraits<base_type>::multiply(current,
                         SimdTraits<base_type>::add(ones, second));
             current = SimdTraits<base_type>::multiply(current, half);
       		it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-            base_type p = std::pow(*begin, base_type(3));
+            base_type p = ::nt::math::pow(*begin, base_type(3));
             base_type b = base_type(*begin + base_type(0.044715)) * p;
             base_type t_inp = sqrt_2_pi * b;
-            base_type t = std::tanh(t_inp);
+            base_type t = ::nt::math::tanh(t_inp);
             t += base_type(1);
             t *= *begin;
             t *= base_type(0.5);
@@ -198,25 +200,25 @@ inline void gelu(T begin, T end, U out){
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out= base_type(0.5) * *begin * (base_type(1.0) + std::tanh(sqrt_2_pi * ( *begin + base_type(0.044715) * std::pow(*begin, 3))));
+            *out= base_type(0.5) * *begin * (base_type(1.0) + ::nt::math::tanh(sqrt_2_pi * ( *begin + base_type(0.044715) * ::nt::math::pow(*begin, 3))));
         }
 	}
 }
 
 
 
-//Scalar sqrt_2_pi = std::sqrt(2.0 / M_PI);
+//Scalar sqrt_2_pi = ::nt::math::sqrt(2.0 / M_PI);
 //const Scalar c(0.044715)
-//z = sqrt_2_pi * (x + c * std::pow(x, 3));
+//z = sqrt_2_pi * (x + c * ::nt::math::pow(x, 3));
 //z = tanh(z)
 //tanh_derivative = 1 - (z * z)
 //dz_dx = sqrt_2_pi * (1 + 3 * c.to<double>() * x * x);
 //0.5 * (1 + z) + 0.5 * x * tanh_derivative * dz_dx
 template<typename T, typename U>
 inline void dgelu(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
-    base_type sqrt_2_pi = static_cast<base_type>(std::sqrt(2.0 / M_PI));
+    base_type sqrt_2_pi = static_cast<base_type>(::nt::math::sqrt(2.0 / M_PI));
     base_type c  = static_cast<base_type>(0.044715);
     base_type cm  = static_cast<base_type>(3 * 0.044715);
     
@@ -257,8 +259,8 @@ inline void dgelu(T begin, T end, U out){
         base_type base_Three = convert::convert<base_type>(float(3));
         base_type base_One = convert::convert<base_type>(float(1));
 		for(;begin < end; ++begin, ++out){
-            base_type z = sqrt_2_pi * (*begin + c * std::pow(*begin, base_Three));
-            z = std::tanh(z);
+            base_type z = sqrt_2_pi * (*begin + c * ::nt::math::pow(*begin, base_Three));
+            z = ::nt::math::tanh(z);
             base_type tanh_derivative = base_One - (z * z);
             base_type dz_dx = sqrt_2_pi * (base_One + cm * *begin * *begin);
             z += 1;
@@ -266,8 +268,8 @@ inline void dgelu(T begin, T end, U out){
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            base_type z = sqrt_2_pi * (*begin + c * std::pow(*begin, 3));
-            z = std::tanh(z);
+            base_type z = sqrt_2_pi * (*begin + c * ::nt::math::pow(*begin, 3));
+            z = ::nt::math::tanh(z);
             base_type tanh_derivative = 1 - (z * z);
             base_type dz_dx = sqrt_2_pi * (1 + cm * *begin * *begin);
             z += 1;
@@ -279,7 +281,7 @@ inline void dgelu(T begin, T end, U out){
 //it is just 0.5 * invsqrt(x)
 template<typename T, typename U>
 inline void dsqrt(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -291,17 +293,17 @@ inline void dsqrt(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = (base_type(1) / (base_type(2) * (std::sqrt(*begin))));
+			*out = (base_type(1) / (base_type(2) * (::nt::math::sqrt(*begin))));
 	}else{
 		for(;begin != end; ++begin, ++out){
-			*out = (-1 / (2 * (std::sqrt(*begin))));
+			*out = (-1 / (2 * (::nt::math::sqrt(*begin))));
 		}
 	}
 }
 
 template<typename T, typename U>
 inline void dinvsqrt(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -318,21 +320,21 @@ inline void dinvsqrt(T begin, T end, U out){
         base_type base__Two(2);
         base_type base__NegOne(-1);
 		for(;begin < end; ++begin, ++out){
-		    base_type p = std::pow(*begin, base__Three);
-            p = std::sqrt(p);
+		    base_type p = ::nt::math::pow(*begin, base__Three);
+            p = ::nt::math::sqrt(p);
             p *= base__Two;
             *out = base_type(base__NegOne / p);
         }
 	}else{
 		for(;begin != end; ++begin, ++out){
-			*out = (-1 / (2 * (std::sqrt(std::pow(*begin, 3)))));
+			*out = (-1 / (2 * (::nt::math::sqrt(::nt::math::pow(*begin, 3)))));
 		}
 	}
 }
 
 template<typename T, typename O>
 inline void pow(T begin, T end, O out, utils::IteratorBaseType_t<T> num){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -343,11 +345,11 @@ inline void pow(T begin, T end, O out, utils::IteratorBaseType_t<T> num){
 			it_storeu(out, c);
 		}
 		std::transform(begin, end, out,
-				[&](base_type x) { return std::pow(x, num); });
+				[&](base_type x) { return ::nt::math::pow(x, num); });
 	}
 	else{
 		std::transform(begin, end, out,
-				[&](base_type x) { return std::pow(x, num); });
+				[&](base_type x) { return ::nt::math::pow(x, num); });
 	}
 
 }
@@ -442,27 +444,12 @@ void _pow(const ArrayVoid& a, ArrayVoid& out, Scalar p){
 }
 
 void _abs_(ArrayVoid& a){
-    if(!DTypeFuncs::is_complex(a.dtype())){
-        a.execute_function_chunk<WRAP_DTYPES< FloatingTypesL, SignedTypesL> >([](auto begin, auto end){
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            if constexpr (std::is_same_v<value_t, int128_t>){
-                for(;begin != end; ++begin)
-                    *begin = static_cast<int128_t>(std::abs(int64_t(*begin)));
-                    
-            }
-            else{
-                for(;begin != end; ++begin)
-                    *begin = std::abs(*begin);
-            }
-        });
-    }
-    if(DTypeFuncs::is_complex(a.dtype())){
-        a.execute_function_chunk<WRAP_DTYPES<ComplexTypesL> >([](auto begin, auto end){
-            using value_t = utils::IteratorBaseType_t<decltype(begin)>;
-            for(;begin != end; ++begin)
-                *begin = value_t(std::abs(std::get<0>(*begin)), std::abs(std::get<1>(*begin)));
-        });
-    }
+    a.execute_function_chunk<WRAP_DTYPES< FloatingTypesL, SignedTypesL, ComplexTypesL> >([](auto begin, auto end){
+        using value_t = utils::IteratorBaseType_t<decltype(begin)>;
+        for(;begin != end; ++begin){
+            *begin = ::nt::math::abs(*begin);
+        }
+    });
 }
 
 

@@ -3,9 +3,11 @@
 #include "../../mp/simde_traits.h"
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
+#include "../../utils/type_traits.h"
+#include "../../math/math.h"
 #include <algorithm>
 
-#include "128_bit_funcs.hpp"
+// #include "128_bit_funcs.hpp"
 
 
 
@@ -33,7 +35,7 @@ inline utils::IteratorBaseType_t<T> accumulate(T begin, T end, utils::IteratorBa
 
 template<typename T, typename O>
 inline void exp(T begin, T end, O out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -43,17 +45,17 @@ inline void exp(T begin, T end, O out){
 			it_storeu(out, c);
 		}
 		std::transform(begin, end, out,
-				[](base_type x) { return std::exp(x); });
+				[](base_type x) { return ::nt::math::exp(x); });
 	}
 	else{
 		std::transform(begin, end, out,
-				[](base_type x) { return std::exp(x); });
+				[](base_type x) { return ::nt::math::exp(x); });
 	}
 }
 
 template<typename T, typename O>
 inline void log(T begin, T end, O out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -63,11 +65,11 @@ inline void log(T begin, T end, O out){
 			it_storeu(out, c);
 		}
 		std::transform(begin, end, out,
-				[](base_type x) { return std::log(x); });
+				[](base_type x) { return ::nt::math::log(x); });
 	}
 	else{
 		std::transform(begin, end, out,
-				[](base_type x) { return std::log(x); });
+				[](base_type x) { return ::nt::math::log(x); });
 	}
 }
 

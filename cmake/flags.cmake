@@ -36,7 +36,7 @@ elseif(ENABLE_ASAN)
 endif()
 
 #these files will automatically detect and add the correct simd instruction set
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/detect_simd.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/detect_simd.cmake)
 
 
 #this makes all the macros in NeuroTensor a lot more likely to work and a lot easier to use for reflection purposes

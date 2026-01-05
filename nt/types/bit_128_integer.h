@@ -1,6 +1,7 @@
 // This is a header file that ensures that nt::uint128_t and nt::int128_t is included
 #ifndef NT_TYPES_BIT_128_INTEGER_ENSURE_H__
 #define NT_TYPES_BIT_128_INTEGER_ENSURE_H__
+#include <iostream>
 
 #ifdef __SIZEOF_INT128__
 namespace nt{
@@ -82,6 +83,9 @@ template<>
 struct is_integral<volatile ::nt::uint128_t>: true_type {};
 template<>
 struct is_integral<volatile const ::nt::uint128_t>: true_type {};
+template<>
+struct is_unsigned<::nt::uint128_t> : true_type {};
+
 
 // template<>
 // struct is_integer<::nt::int128_t> : true_type{};
@@ -100,6 +104,17 @@ template<>
 struct is_integral<volatile ::nt::int128_t>: true_type {};
 template<>
 struct is_integral<volatile const ::nt::int128_t>: true_type {};
+
+template<>
+struct make_unsigned<::nt::int128_t>{
+    using type = ::nt::uint128_t;
+};
+
+template<>
+struct make_signed<::nt::uint128_t> {
+    using type = ::nt::int128_t;
+};
+
 }
 
 #endif // _NT_TYPES_BIT_128_INTEGER_ENSURE_H_ 

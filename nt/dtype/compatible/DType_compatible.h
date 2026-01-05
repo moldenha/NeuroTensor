@@ -5,6 +5,7 @@
 #include "compatible_macro.h"
 #include "DTypeDeclareMacros.h"
 
+
 #define X(type, dtype_enum_a, dtype_enum_b)\
     NT_REGISTER_FLOATING_TYPE(type, k##dtype_enum_a)
 NT_GET_X_FLOATING_DTYPES_
@@ -33,33 +34,6 @@ NT_GET_X_OTHER_DTYPES_
 NT_FINISH_DTYPE_REGISTER()
 
 
-namespace nt::DTypeFuncs{
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    NT_CHECK_FLOATING_(DType::dtype_enum_a, type)
-NT_GET_X_FLOATING_DTYPES_
-#undef X
-
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    NT_CHECK_COMPLEX_(DType::dtype_enum_a, type)
-NT_GET_X_COMPLEX_DTYPES_
-#undef X
-
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    NT_CHECK_SIGNED_(DType::dtype_enum_a, type)
-NT_GET_X_SIGNED_INTEGER_DTYPES_
-#undef X
-
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    NT_CHECK_UNSIGNED_(DType::dtype_enum_a, type)
-NT_GET_X_UNSIGNED_INTEGER_DTYPES_
-#undef X
-
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    NT_CHECK_OTHER_(DType::dtype_enum_a, type)
-NT_GET_X_OTHER_DTYPES_
-#undef X
-
-}
 
 
 

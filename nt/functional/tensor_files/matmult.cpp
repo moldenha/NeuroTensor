@@ -1,4 +1,7 @@
-/* #include <immintrin.h> */
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
 
 #include "../../dtype/Scalar.h"
 #include "../functional.h"
@@ -36,3 +39,7 @@ Tensor matmult_cT(const Tensor& a, const Tensor& b){return matmult(a,b,false,tru
 
 }
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

@@ -8,6 +8,7 @@
 #include "../../mp/simde_traits.h"
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../types/Types.h"
+#include "../../utils/type_traits.h"
 
 namespace nt{
 namespace mp{
@@ -95,11 +96,11 @@ inline void iota(T begin, T end, utils::IteratorBaseType_t<T> value = 0){
 		for(size_t i = 0; i < pack_size; ++i, ++value_cpy){
 			loading[i] = base_type(value_cpy);
 		}
-        base_type to_set_1__ = (details::is_sub_my_complex<base_type>::value) ? base_type(pack_size) : static_cast<base_type>(pack_size);
+        base_type to_set_1__ = (type_traits::is_complex_v<base_type>) ? base_type(pack_size) : static_cast<base_type>(pack_size);
 		simde_type<base_type> val;
 		simde_type<base_type> add = SimdTraits<base_type>::set1(to_set_1__);
 
-		if constexpr (std::is_integral<base_type>::value || std::is_unsigned<base_type>::value){
+		if constexpr (type_traits::is_integral_v<base_type> || type_traits::is_unsigned_v<base_type>){
 			val = SimdTraits<base_type>::loadu(reinterpret_cast<const simde_type<base_type>*>(loading));
 		}else{
 			val = SimdTraits<base_type>::loadu(loading);
@@ -112,7 +113,7 @@ inline void iota(T begin, T end, utils::IteratorBaseType_t<T> value = 0){
 			val = SimdTraits<base_type>::add(val, add);
 		}
 
-		if constexpr (details::is_sub_my_complex<base_type>::value){
+		if constexpr (type_traits::is_complex_v<base_type>){
             base_type my_cur_one__(1, 1);
             for(;begin < end; ++begin, value += my_cur_one__){
                 *begin = value;

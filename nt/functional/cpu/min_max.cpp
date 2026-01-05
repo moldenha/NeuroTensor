@@ -1,3 +1,8 @@
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
+
 #include "../../mp/simde_traits.h"
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "min_max.h"
@@ -323,3 +328,7 @@ void _max_strided(const ArrayVoid& in, ArrayVoid& indices, int64_t cols){
 }
 }
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

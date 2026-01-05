@@ -6,35 +6,21 @@
 #include "../utils/type_traits.h"
 #include "../dtype/compatible/DType_compatible.h"
 #include "../dtype/compatible/DTypeDeclareMacros.h"
-#include "../types/float16.h"
-#include "../utils/bit.h"
+#include "../types/Types.h"
+#include "../bit/bit_cast.h"
+#include "utils.h"
+#include "floating.h"
 #include <type_traits>
+#include <cmath>
 
 namespace nt::convert{
 
 namespace details{
 
-template<typename T>
-inline static constexpr bool valid_convert_type_v = 
-    nt::type_traits::is_decay_in_v<T, bool, nt::uint_bool_t> 
-    || nt::DTypeFuncs::type_to_dtype<nt::type_traits::decay_t<T>> != nt::DType::Bool;
-
-#define NT_CHECK_VALID_CONVERT_TYPES_MACRO__(type, name_a, name_b)\
-    static_assert(valid_convert_type_v<type>, "Error type for " #name_a " is not seen as a valid convert type");
-
-NT_GET_DEFINE_FLOATING_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
-NT_GET_DEFINE_COMPLEX_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
-NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
-NT_GET_DEFINE_UNSIGNED_INTEGER_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
-NT_GET_DEFINE_OTHER_DTYPES_(NT_CHECK_VALID_CONVERT_TYPES_MACRO__)
-
-
-#undef NT_CHECK_VALID_CONVERT_TYPES_MACRO__ 
-
 /* template<typename T> */
 /* inline static constexpr bool valid_convert_type_v = */
-/*     (std::is_same_v<nt::type_traits::remove_cvref_t<T>, uint_bool_t> || */
-/*      std::is_same_v<nt::type_traits::remove_cvref_t<T>, bool> || */
+/*     (type_traits::is_same_v<nt::type_traits::remove_cvref_t<T>, uint_bool_t> || */
+/*      type_traits::is_same_v<nt::type_traits::remove_cvref_t<T>, bool> || */
 /*      (DTypeFuncs::type_to_dtype<nt::type_traits::remove_cvref_t<T>> != DType::Bool)); */
 
 NT_ALWAYS_INLINE int128_t float32_to_int128(float value) {
@@ -74,45 +60,6 @@ NT_ALWAYS_INLINE uint128_t float32_to_uint128(float value) {
     // Convert the float to int128
     return static_cast<uint128_t>(value);
 }
-
-// Constants for float16 limits
-constexpr double FLOAT16_MAX = 65504.0;              // max normal
-constexpr double FLOAT16_MIN_POSITIVE = 6.10e-5;     // min positive normal
-constexpr double FLOAT16_SMALLEST = 5.96e-8;         // min subnormal
-constexpr double FLOAT16_INFINITY = std::numeric_limits<float>::infinity();
-
-NT_ALWAYS_INLINE float16_t safe_float16_from_double(const double& x) {
-    if (std::isnan(x)) return 0x7e00; // float16 canonical quiet NaN
-    if (std::isinf(x)) return (x > 0) ? 0x7c00 : 0xfc00;
-    if (x > FLOAT16_MAX) return 0x7c00; // +inf
-    if (x < -FLOAT16_MAX) return 0xfc00; // -inf
-    if (std::abs(x) < FLOAT16_SMALLEST) return 0x0000; // flush to zero
-
-    // Convert through float32 first, which is common in practice
-    float f32 = static_cast<float>(x);
-
-    // Now convert to float16 bits
-    uint32_t bits;
-    std::memcpy(&bits, &f32, sizeof(bits));
-
-    uint16_t sign     = (bits >> 16) & 0x8000;
-    int16_t  exponent = ((bits >> 23) & 0xFF) - 127 + 15;
-    uint32_t mantissa = bits & 0x007FFFFF;
-
-    if (exponent <= 0) {
-        // Subnormal or underflow
-        return sign;
-    } else if (exponent >= 31) {
-        // Overflow to infinity
-        return sign | 0x7C00;
-    }
-    uint16_t float16_raw = sign | (exponent << 10) | (mantissa >> 13);
-    float16_t out;
-    std::memcpy(&out, &float16_raw, sizeof(out));
-    return out;
-}
-
-
 
 
 // template<typename U>
@@ -207,15 +154,13 @@ NT_ALWAYS_INLINE double portable_128_int_to_floating<double>(int128_t val) {
 }
 
 template<>
-inline float128_t portable_128_int_to_floating(int128_t val) {
-    int64_t high = static_cast<int64_t>(val >> 64);
-    uint64_t low = static_cast<uint64_t>(val);
-
-    float128_t two_pow_64 = 18446744073709551616.0;
-    float128_t result = float128_t(high) * two_pow_64
-                      + float128_t(low);
-    return result;
+inline nt::float128_t portable_128_int_to_floating(int128_t val) {
+    bool sign = val < 0;
+    val = sign ? -val : val;
+    nt::b128 b = nt::bit_cast<nt::b128>(val);
+    return sign ? -nt::float128_t::from_integer(b) : nt::float128_t::from_integer(b);
 }
+
 
 
 
@@ -242,13 +187,8 @@ NT_ALWAYS_INLINE double portable_128_int_to_floating<double>(uint128_t val) {
 
 template<>
 inline float128_t portable_128_int_to_floating(uint128_t val) {
-    uint64_t high = static_cast<uint64_t>(val >> 64);
-    uint64_t low = static_cast<uint64_t>(val);
-
-    float128_t two_pow_64 = 18446744073709551616.0;
-    float128_t result = float128_t(high) * two_pow_64
-                      + float128_t(low);
-    return result;
+    b128 b = bit_cast<b128>(val);
+    return float128_t::from_integer(b);
 }
 
 
@@ -290,46 +230,46 @@ NT_ALWAYS_INLINE nt::type_traits::decay_t<To> convert(_From&& f){
     if constexpr (FromDType == ToDType){
         return std::forward<_From>(f);
     }
-    else if constexpr (std::is_same_v<From, Tensor>){
+    else if constexpr (type_traits::is_same_v<From, Tensor>){
         return std::forward<_From>(f).toScalar().template to<To>();
     }
-    else if constexpr (std::is_same_v<To, Tensor>){
+    else if constexpr (type_traits::is_same_v<To, Tensor>){
         return Tensor(Scalar(std::forward<_From>(f)));
     }
     //handling all complex cases
-    else if constexpr (::nt::details::is_sub_my_complex<From>::value && ::nt::details::is_sub_my_complex<To>::value){
-        if constexpr (std::is_same_v<typename From::value_type, double> && std::is_same_v<typename To::value_type, float16_t>){
+    else if constexpr (::nt::type_traits::is_complex<From>::value && ::nt::type_traits::is_complex<To>::value){
+        if constexpr (type_traits::is_same_v<typename From::value_type, double> && type_traits::is_same_v<typename To::value_type, float16_t>){
             To(details::safe_float16_from_double(std::get<0>(std::forward<_From>(f))), details::safe_float16_from_double(std::get<1>(std::forward<_From>(f))));
         }
         return To(std::forward<_From>(f));
     }
-    else if constexpr (::nt::details::is_sub_my_complex<From>::value){
+    else if constexpr (::nt::type_traits::is_complex<From>::value){
         return convert<To>(std::get<0>(std::forward<_From>(f)));
     }
-    else if constexpr (::nt::details::is_sub_my_complex<To>::value){
+    else if constexpr (::nt::type_traits::is_complex<To>::value){
         return To(convert<typename To::value_type>(std::forward<_From>(f)), typename To::value_type(0));
     }
     //handling bool cases:
-    else if constexpr (std::is_same_v<From, bool>){
+    else if constexpr (type_traits::is_same_v<From, bool>){
         return convert<To>(std::forward<_From>(f) ? float(1) : float(0));
     }
-    else if constexpr (std::is_same_v<From, uint_bool_t>){
+    else if constexpr (type_traits::is_same_v<From, uint_bool_t>){
         return convert<To>((std::forward<_From>(f).value == 1) ? float(1) : float(0));
     }
-    else if constexpr (std::is_same_v<To, bool>){
+    else if constexpr (type_traits::is_same_v<To, bool>){
         From zero(0);
         return zero < std::forward<_From>(f);
     }
-    else if constexpr (std::is_same_v<To, uint_bool_t>){
+    else if constexpr (type_traits::is_same_v<To, uint_bool_t>){
         From zero(0);
         return uint_bool_t(zero < std::forward<_From>(f));
     }
 
     //some specific use cases pre-defined
-    else if constexpr (std::is_same_v<From, float> && std::is_same_v<To, int128_t>){
+    else if constexpr (type_traits::is_same_v<From, float> && type_traits::is_same_v<To, int128_t>){
         return details::float32_to_int128(std::forward<_From>(f)); 
     }
-    else if constexpr (std::is_same_v<From, float> && std::is_same_v<To, uint128_t>){
+    else if constexpr (type_traits::is_same_v<From, float> && type_traits::is_same_v<To, uint128_t>){
         return details::float32_to_uint128(std::forward<_From>(f)); 
     }
     else if constexpr(FromDType == DType::Float16){
@@ -343,36 +283,50 @@ NT_ALWAYS_INLINE nt::type_traits::decay_t<To> convert(_From&& f){
         float sub_val = convert::convert<float>(std::forward<_From>(f));
         return _NT_FLOAT32_TO_FLOAT16_(sub_val);
     }
-    else if constexpr (DTypeFuncs::is_dtype_floating_v<FromDType> && std::is_same_v<To, int128_t>){
+    else if constexpr (DTypeFuncs::is_dtype_floating_v<FromDType> && type_traits::is_same_v<To, int128_t>){
         return details::float32_to_int128(convert<float>(std::forward<_From>(f)));
     }
-    else if constexpr (std::is_floating_point_v<From> && std::is_same_v<To, uint128_t>){
+    else if constexpr (std::is_floating_point_v<From> && type_traits::is_same_v<To, uint128_t>){
         return details::float32_to_uint128(convert<float>(std::forward<_From>(f)));
     }
+    else if constexpr (type_traits::is_same_v<To, float128_t>){
+        if constexpr (type_traits::is_decay_in_v<From, uint128_t, int128_t>){
+            return details::portable_128_int_to_floating<To>(std::forward<_From>(f));
+        }else if constexpr (type_traits::is_integral_v<From>){
+            int64_t b = convert<int64_t>(std::forward<_From>(f));
+            int64_t ab = b < 0 ? -b : b;
+            return b < 0 ? -float128_t::from_integer(b128(ab)) : float128_t::from_integer(b128(ab));
+        }
+        else{
+            return float128_t(convert<double>(std::forward<_From>(f)));
+        }
+    }
+    else if constexpr (type_traits::is_same_v<From, float128_t>){
+        if constexpr (type_traits::is_integral_v<To>){
+            return convert<To>(int64_t(f));
+        }else{
+            return convert<To>(double(f));
+        }
+    }
 #ifndef __SIZEOF_INT128__
-    else if constexpr (std::is_same_v<From, int128_t>){
+    else if constexpr (type_traits::is_same_v<From, int128_t>){
         return convert<To>(int64_t(std::forward<_From>(f)));
     }
-    else if constexpr (std::is_same_v<From, uint128_t>){
+    else if constexpr (type_traits::is_same_v<From, uint128_t>){
         return convert<To>(uint64_t(std::forward<_From>(f)));
     }
-    else if constexpr (std::is_same_v<To, int128_t>){
+    else if constexpr (type_traits::is_same_v<To, int128_t>){
         return int128_t(convert<int64_t>(std::forward<_From>(f)));
     }
-    else if constexpr (std::is_same_v<To, uint128_t>){
+    else if constexpr (type_traits::is_same_v<To, uint128_t>){
         return uint128_t(convert<uint64_t>(std::forward<_From>(f)));
     }
 #else
-    else if constexpr(std::is_same_v<From, int128_t>){
+    else if constexpr(type_traits::is_same_v<From, int128_t>){
         return convert<To>(int64_t(std::forward<_From>(f)));
     }
-    else if constexpr(std::is_same_v<From, uint128_t> && DTypeFuncs::is_dtype_floating_v<ToDType> ){
+    else if constexpr(type_traits::is_same_v<From, uint128_t> && DTypeFuncs::is_dtype_floating_v<ToDType> ){
         return details::portable_128_int_to_floating<To>(std::forward<_From>(f)); 
-    }
-#endif
-#ifdef BOOST_MP_STANDALONE
-    else if constexpr(std::is_same_v<To, float128_t>){
-        return float128_t(std::forward<_From>(f));
     }
 #endif
     else{

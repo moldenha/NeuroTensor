@@ -1,5 +1,5 @@
 #include "../../nt/utils/type_traits.h"
-
+#include <math.h>
 
 #define assert_true(val) static_assert(val, "Expected true");
 #define assert_false(val) static_assert(!val, "Expected false");
@@ -164,6 +164,80 @@ void decay_test(){
     );
 
 }
+
+
+#ifndef NT_GET_DEFINE_FLOATING_DTYPES_ 
+#define NT_GET_DEFINE_FLOATING_DTYPES_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(float, Float32, Float)\
+    NT_CUR_FUNC__(double, Float64, Double)\
+
+#define NT_GET_DEFINE_FLOATING_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(float, Float32, Float, __VA_ARGS__)\
+    NT_CUR_FUNC__(double, Float64, Double, __VA_ARGS__)\
+
+
+#endif
+ 
+#ifndef NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_ 
+
+#define NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_CUR_FUNC__)\
+    NT_CUR_FUNC__(int8_t, int8, Char)\
+    NT_CUR_FUNC__(int16_t, int16, Short)\
+    NT_CUR_FUNC__(int32_t, int32, Integer)\
+    NT_CUR_FUNC__(int64_t, int64, Long)\
+
+
+#define NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(int8_t, int8, Char, __VA_ARGS__)\
+    NT_CUR_FUNC__(int16_t, int16, Short, __VA_ARGS__)\
+    NT_CUR_FUNC__(int32_t, int32, Integer, __VA_ARGS__)\
+    NT_CUR_FUNC__(int64_t, int64, Long, __VA_ARGS__)\
+
+#endif
+
+
+namespace nt::math{
+
+template<typename T>
+T sqrt(const T& val){return std::sqrt(val);}
+
+template<typename T, typename U>
+T pow(const T& a, const U& b){
+    return std::pow(a, b);
+}
+
+}
+
+
+#define NT_CHECK_SQRT_FN_(type, name_a, name_b)\
+    static_assert(std::is_invocable_r_v<type, decltype(static_cast<type (*)(const type&)>(::nt::math::sqrt)), const type&>, \
+                  "Error, sqrt with type " #type " is not invocable!"); \
+
+NT_GET_DEFINE_FLOATING_DTYPES_(NT_CHECK_SQRT_FN_); 
+NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_CHECK_SQRT_FN_); 
+
+#define NT_CHECK_POW_FN_(type, name_a, name_b)\
+    static_assert(std::is_invocable_r_v<type, decltype(static_cast<type (*)(const type&, const type&)>(::nt::math::pow)),  \
+        const type&, const type&>, \
+        "Error, pow with type " #type " is not invocable!"); \
+
+#define NT_CHECK_POW_FN_RETURN_INTEGER_HELPER_(type, name_a, name_b, original_type)\
+    static_assert(std::is_invocable_r_v<original_type, decltype(static_cast<original_type (*)(const original_type&, const type&)>(::nt::math::pow)),  \
+        const type&, const type&>, \
+        "Error, pow with type " #original_type " and integer " #type "is not invocable!"); \
+
+#define NT_CHECK_POW_FN_RETURN_INTEGER_(type, name_a, name_b)\
+    NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_OTHER_(NT_CHECK_POW_FN_RETURN_INTEGER_HELPER_, type)\
+
+
+
+NT_GET_DEFINE_FLOATING_DTYPES_(NT_CHECK_POW_FN_); 
+NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_CHECK_POW_FN_); 
+NT_GET_DEFINE_FLOATING_DTYPES_(NT_CHECK_POW_FN_RETURN_INTEGER_); 
+NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_(NT_CHECK_POW_FN_RETURN_INTEGER_); 
+
+
+
 
 int main(){
     using namespace nt::type_traits;

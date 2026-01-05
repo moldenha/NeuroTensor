@@ -4,7 +4,7 @@
 #include "../../dtype/DType_enum.h"
 #include "../../dtype/Scalar.h"
 #include "../../refs/SizeRef.h"
-#include "../../types/math.h"
+#include "../../math/math.h"
 #include <random>
 #include "rand.h"
 
@@ -63,7 +63,7 @@ void _group_norm_(
                 }
                 var /= inner_size;
 
-                scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
                 mean_ptr[(n * num_groups) + g] = mean;
                 inv_ptr[(n * num_groups) + g] = inv_std;
 
@@ -126,7 +126,7 @@ void _group_norm_(
                 }
                 var /= inner_size;
 
-                scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
 
                 // normalize and apply affine
                 for (int64_t c = 0; c < C_per_G; ++c) {

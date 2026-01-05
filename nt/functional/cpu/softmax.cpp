@@ -3,9 +3,11 @@
 #include "../../mp/simde_traits.h"
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
+#include "../../utils/type_traits.h"
+#include "../../math/math.h"
 #include <algorithm>
 
-#include "128_bit_funcs.hpp"
+// #include "128_bit_funcs.hpp"
 
 
 namespace nt {
@@ -31,7 +33,7 @@ inline utils::IteratorBaseType_t<T> accumulate(T begin, T end, utils::IteratorBa
 
 template<typename T, typename U>
 inline void divide_num(T begin, T end, U out, utils::IteratorBaseType_t<T> num){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -51,7 +53,7 @@ inline void divide_num(T begin, T end, U out, utils::IteratorBaseType_t<T> num){
 
 template<typename T, typename O>
 inline void exp(T begin, T end, O out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -61,11 +63,11 @@ inline void exp(T begin, T end, O out){
 			it_storeu(out, c);
 		}
 		std::transform(begin, end, out,
-				[](base_type x) { return std::exp(x); });
+				[](base_type x) { return ::nt::math::exp(x); });
 	}
 	else{
 		std::transform(begin, end, out,
-				[](base_type x) { return std::exp(x); });
+				[](base_type x) { return ::nt::math::exp(x); });
 	}
 }
 
@@ -73,7 +75,7 @@ inline void exp(T begin, T end, O out){
 //softmax function
 template<typename T, typename U>
 inline void softmax(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	U end_out = out + (end - begin);
 	exp(begin, end, out);
@@ -83,7 +85,7 @@ inline void softmax(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void subtract_num(T begin, T end, U out, utils::IteratorBaseType_t<T> num){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -104,7 +106,7 @@ inline void subtract_num(T begin, T end, U out, utils::IteratorBaseType_t<T> num
 
 template<typename T, typename U>
 inline void softmax_stable(T begin, T end, U out, utils::IteratorBaseType_t<T> max){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	U end_out = out + (end - begin);
 	exp(begin, end, out);
@@ -119,7 +121,7 @@ inline void softmax_stable(T begin, T end, U out, utils::IteratorBaseType_t<T> m
 //derivative of softmax functions:
 template<typename T, typename U>
 inline utils::IteratorBaseType_t<T> inner_product(T begin, T end, U begin2, utils::IteratorBaseType_t<T> init){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -140,9 +142,9 @@ inline utils::IteratorBaseType_t<T> inner_product(T begin, T end, U begin2, util
 
 template<typename T, typename U, typename O>
 inline void multiply(T begin, T end, U begin2, O out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, 
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, 
     utils::IteratorBaseType_t<U> > && 
-    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, 
+    ::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, 
     "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
@@ -165,8 +167,8 @@ template<typename T, typename U, typename V>
 inline void Dsoftmax(T softmax_output, T softmax_output_end,
                      U dL_dY_begin, U dL_dY_end,
                      V out ){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >
-        && std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<V> >, 
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >
+        && ::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<V> >, 
         "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	V end_out = out + (softmax_output - softmax_output_end);
@@ -202,7 +204,7 @@ NT_ALWAYS_INLINE simde_type<base_type> sample_gumbel_noise(const simde_type<base
 
 template<typename T>
 NT_ALWAYS_INLINE T sample_gumbel_noise_r(const T& u){
-    return gumbel_clamp_r(-std::log(-std::log(u + T(1e-10)) + T(1e-10)));
+    return gumbel_clamp_r(-::nt::math::log(-::nt::math::log(u + T(1e-10)) + T(1e-10)));
 }
 
 
@@ -211,9 +213,9 @@ NT_ALWAYS_INLINE T sample_gumbel_noise_r(const T& u){
 // begin2 is the random uniform noise
 template<typename T, typename U, typename O>
 inline void gumbel_algorithm(T begin, T end, U begin2, O out, utils::IteratorBaseType_t<T> tau){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, 
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, 
     utils::IteratorBaseType_t<U> > && 
-    std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, 
+    ::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, 
     "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){

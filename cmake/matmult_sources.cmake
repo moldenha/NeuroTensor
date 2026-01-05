@@ -1,0 +1,21 @@
+include(${CMAKE_CURRENT_LIST_DIR}/base_dir.cmake)
+
+set(MATMULT_SOURCES
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_float.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_float16.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_double.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_float128.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_complex32.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_complex64.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_complex128.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_int128.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_uint128.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_int64.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_uint64.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_int32.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_uint32.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_int16.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_uint16.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_int8.cpp
+	${BASE_DIR}/nt/functional/cpu/matmult/nt_matmult_uint8.cpp
+)

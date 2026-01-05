@@ -1,0 +1,43 @@
+include(${CMAKE_CURRENT_LIST_DIR}/base_dir.cmake)
+
+set(FUNCTIONAL_CPU_SOURCES
+    ${BASE_DIR}/nt/functional/cpu/unfold1d.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfold2d.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfold3d.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfold1d_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfold2d_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfold3d_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfoldnd.cpp
+    ${BASE_DIR}/nt/functional/cpu/unfoldnd_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/fold1d.cpp
+    ${BASE_DIR}/nt/functional/cpu/fold1d_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/fold2d.cpp
+    ${BASE_DIR}/nt/functional/cpu/fold2d_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/fold3d.cpp
+    ${BASE_DIR}/nt/functional/cpu/fold3d_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/foldnd.cpp
+    ${BASE_DIR}/nt/functional/cpu/foldnd_backward.cpp
+    ${BASE_DIR}/nt/functional/cpu/rand.cpp
+    ${BASE_DIR}/nt/functional/cpu/fused.cpp
+    ${BASE_DIR}/nt/functional/cpu/operators.cpp
+    ${BASE_DIR}/nt/functional/cpu/normalize.cpp
+    ${BASE_DIR}/nt/functional/cpu/batch_norm.cpp
+    ${BASE_DIR}/nt/functional/cpu/group_norm.cpp
+    ${BASE_DIR}/nt/functional/cpu/instance_norm.cpp
+    ${BASE_DIR}/nt/functional/cpu/min_max.cpp
+    ${BASE_DIR}/nt/functional/cpu/compare.cpp
+    ${BASE_DIR}/nt/functional/cpu/convert.cpp
+    ${BASE_DIR}/nt/functional/cpu/softmax.cpp
+    ${BASE_DIR}/nt/functional/cpu/sum_exp_log.cpp
+    ${BASE_DIR}/nt/functional/cpu/fractional_pooling.cpp
+    ${BASE_DIR}/nt/functional/cpu/activation_functions.cpp
+    ${BASE_DIR}/nt/functional/cpu/trig.cpp
+    ${BASE_DIR}/nt/functional/cpu/sort.cpp
+    ${BASE_DIR}/nt/functional/cpu/sort_tensor.cpp
+    ${BASE_DIR}/nt/functional/cpu/unique.cpp
+    ${BASE_DIR}/nt/functional/cpu/complex.cpp
+    ${BASE_DIR}/nt/functional/cpu/dropout.cpp
+    ${BASE_DIR}/nt/functional/cpu/fill.cpp
+    ${BASE_DIR}/nt/functional/cpu/mesh.cpp
+    ${BASE_DIR}/nt/functional/cpu/round.cpp
+)

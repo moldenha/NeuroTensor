@@ -1,0 +1,94 @@
+include(${CMAKE_CURRENT_LIST_DIR}/base_dir.cmake)
+
+#this also includes autograds and layers
+set(AI_SOURCES
+    ${BASE_DIR}/nt/nn/AutoGrad.cpp
+    ${BASE_DIR}/nt/nn/BackwardFunc.cpp
+    ${BASE_DIR}/nt/nn/Layer.cpp
+    ${BASE_DIR}/nt/nn/LNN.cpp
+    ${BASE_DIR}/nt/nn/ScalarGrad.cpp
+    ${BASE_DIR}/nt/nn/functional/functional.cpp
+    ${BASE_DIR}/nt/nn/functional/pooling.cpp
+    ${BASE_DIR}/nt/nn/functional/activation_functions.cpp
+    ${BASE_DIR}/nt/nn/functional/colim_transform.cpp
+    ${BASE_DIR}/nt/nn/functional/conv.cpp
+    ${BASE_DIR}/nt/nn/functional/dilation.cpp
+    ${BASE_DIR}/nt/nn/functional/fill.cpp
+    ${BASE_DIR}/nt/nn/functional/flip.cpp
+    ${BASE_DIR}/nt/nn/functional/fused.cpp
+    ${BASE_DIR}/nt/nn/functional/index.cpp
+    ${BASE_DIR}/nt/nn/functional/min_max.cpp
+    ${BASE_DIR}/nt/nn/functional/matmult.cpp
+    ${BASE_DIR}/nt/nn/functional/normalize.cpp
+    ${BASE_DIR}/nt/nn/functional/operators.cpp
+    ${BASE_DIR}/nt/nn/functional/padding.cpp
+    ${BASE_DIR}/nt/nn/functional/repeat.cpp
+    ${BASE_DIR}/nt/nn/functional/round.cpp
+    ${BASE_DIR}/nt/nn/functional/split.cpp
+    ${BASE_DIR}/nt/nn/functional/stride.cpp
+    ${BASE_DIR}/nt/nn/functional/sort.cpp
+    ${BASE_DIR}/nt/nn/functional/sum_exp_log.cpp
+    ${BASE_DIR}/nt/nn/functional/transpose.cpp
+    ${BASE_DIR}/nt/nn/functional/trig.cpp
+    ${BASE_DIR}/nt/nn/functional/unique.cpp
+    ${BASE_DIR}/nt/nn/Loss.cpp
+    ${BASE_DIR}/nt/nn/Optimizers.cpp
+    ${BASE_DIR}/nt/nn/Module.cpp
+
+    #ncps sources
+    ${BASE_DIR}/nt/nn/ncps/lstm_cell.cpp
+    ${BASE_DIR}/nt/nn/ncps/wiring/wiring.cpp
+    ${BASE_DIR}/nt/nn/ncps/cfc/wired_cfc_cell.cpp
+    ${BASE_DIR}/nt/nn/ncps/cfc/cfc_cell.cpp
+    ${BASE_DIR}/nt/nn/ncps/cfc/cfc.cpp
+    ${BASE_DIR}/nt/nn/ncps/ltc/ltc.cpp
+    ${BASE_DIR}/nt/nn/ncps/ltc/ltc_cell.cpp
+    #individual layers
+    ${BASE_DIR}/nt/nn/layers/BatchNorm1D.cpp
+    ${BASE_DIR}/nt/nn/layers/Conv1D.cpp
+    ${BASE_DIR}/nt/nn/layers/Conv2D.cpp
+    ${BASE_DIR}/nt/nn/layers/Conv3D.cpp
+    ${BASE_DIR}/nt/nn/layers/ConvND.cpp
+    ${BASE_DIR}/nt/nn/layers/ConvTranspose1D.cpp
+    ${BASE_DIR}/nt/nn/layers/ConvTranspose2D.cpp
+    ${BASE_DIR}/nt/nn/layers/ConvTranspose3D.cpp
+    ${BASE_DIR}/nt/nn/layers/Dropout.cpp
+    ${BASE_DIR}/nt/nn/layers/Fold1D.cpp
+    ${BASE_DIR}/nt/nn/layers/Fold2D.cpp
+    ${BASE_DIR}/nt/nn/layers/Fold3D.cpp
+    ${BASE_DIR}/nt/nn/layers/FoldND.cpp
+    ${BASE_DIR}/nt/nn/layers/Functional.cpp
+    ${BASE_DIR}/nt/nn/layers/Identity.cpp
+    ${BASE_DIR}/nt/nn/layers/Linear.cpp
+    ${BASE_DIR}/nt/nn/layers/SymmetricBilinear.cpp
+    ${BASE_DIR}/nt/nn/layers/Softplus.cpp
+    ${BASE_DIR}/nt/nn/layers/Unfold1D.cpp
+    ${BASE_DIR}/nt/nn/layers/Unfold2D.cpp
+    ${BASE_DIR}/nt/nn/layers/Unfold3D.cpp
+    ${BASE_DIR}/nt/nn/layers/UnfoldND.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveAvgPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveAvgPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveAvgPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveLPPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveLPPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveLPPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveMaxPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveMaxPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/AdaptiveMaxPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/AvgPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/AvgPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/AvgPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/FractionalMaxPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/FractionalMaxPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/LPPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/LPPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/LPPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/MaxPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/MaxPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/MaxPool3D.cpp
+    ${BASE_DIR}/nt/nn/layers/MaxUnPool1D.cpp
+    ${BASE_DIR}/nt/nn/layers/MaxUnPool2D.cpp
+    ${BASE_DIR}/nt/nn/layers/MaxUnPool3D.cpp
+)
+
+

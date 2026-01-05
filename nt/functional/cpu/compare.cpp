@@ -7,13 +7,14 @@
 #include <atomic>
 #include "../../mp/simde_traits.h"
 #include "../../mp/simde_traits/simde_traits_iterators.h"
+#include "../../utils/type_traits.h"
 
 namespace nt{
 namespace mp{
 
 template<typename T, typename T2>
 inline void equal(T begin, T end, T2 begin2, bool* out){
-    static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<T2>>, "Expected to get base types the same for simde optimized routes [equal]");
+    static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<T2>>, "Expected to get base types the same for simde optimized routes [equal]");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -33,7 +34,7 @@ inline void equal(T begin, T end, T2 begin2, bool* out){
 
 template<typename T, typename T2>
 inline void not_equal(T begin, T end, T2 begin2, bool* out){
-    static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<T2>>, "Expected to get base types the same for simde optimized routes [not equal]");
+    static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<T2>>, "Expected to get base types the same for simde optimized routes [not equal]");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -54,7 +55,7 @@ inline void not_equal(T begin, T end, T2 begin2, bool* out){
 
 template<typename T, typename T2>
 inline void less_than_equal(T begin, T end, T2 begin2, bool* out){
-    static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<T2>>, "Expected to get base types the same for simde optimized routes [equal]");
+    static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<T2>>, "Expected to get base types the same for simde optimized routes [equal]");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;

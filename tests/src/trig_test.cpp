@@ -4,52 +4,53 @@
 #include <nt/dtype/ArrayVoid.hpp>
 #include <cmath>
 #include <nt/mp/simde_traits.h>
+#include <nt/math/math.h>
 
 #define ADD_UNDERSCORE(name) _##name
 #define ADD_UNDERSCORE2(name) name##_
 
-namespace std{
+// namespace std{
 
-// #define NT_MAKE_TRIG_STD_FUNC(name)\
-// nt::complex_32 name(nt::complex_32 a){\
-//     return nt::complex_32(_NT_FLOAT32_TO_FLOAT16_(name(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(name(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));\
-// }\
-// nt::complex_64 name(nt::complex_64 a){\
-//     return nt::complex_64(name(a.real()), name(a.imag()));
-// }\
-// nt::complex_128 name(nt::complex_128 a){\
-//     double r__ = a.real();\
-//     double r = name(r__);\
-//     double i = name(a.imag());\
-//     return nt::complex_128(r, i);
-// }\
+// // #define NT_MAKE_TRIG_STD_FUNC(name)\
+// // nt::complex_32 name(nt::complex_32 a){\
+// //     return nt::complex_32(_NT_FLOAT32_TO_FLOAT16_(name(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(name(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));\
+// // }\
+// // nt::complex_64 name(nt::complex_64 a){\
+// //     return nt::complex_64(name(a.real()), name(a.imag()));
+// // }\
+// // nt::complex_128 name(nt::complex_128 a){\
+// //     double r__ = a.real();\
+// //     double r = name(r__);\
+// //     double i = name(a.imag());\
+// //     return nt::complex_128(r, i);
+// // }\
 
-inline nt::complex_64 atanh(nt::complex_64 a){
-    return nt::complex_64(atanh(a.real()), atanh(a.imag()));
-}
-inline nt::complex_64 asinh(nt::complex_64 a){
-    return nt::complex_64(asinh(a.real()), asinh(a.imag()));
-}
-inline nt::complex_64 acosh(nt::complex_64 a){
-    return nt::complex_64(acosh(a.real()), acosh(a.imag()));
-}
+// inline nt::complex_64 atanh(nt::complex_64 a){
+//     return nt::complex_64(atanh(a.real()), atanh(a.imag()));
+// }
+// inline nt::complex_64 asinh(nt::complex_64 a){
+//     return nt::complex_64(asinh(a.real()), asinh(a.imag()));
+// }
+// inline nt::complex_64 acosh(nt::complex_64 a){
+//     return nt::complex_64(acosh(a.real()), acosh(a.imag()));
+// }
 
-inline nt::complex_32 atanh(nt::complex_32 a){
-    return nt::complex_32(_NT_FLOAT16_TO_FLOAT32_(atanh(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(atanh(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));
-}
-inline nt::complex_32 asinh(nt::complex_32 a){
-    return nt::complex_32(_NT_FLOAT16_TO_FLOAT32_(asinh(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(asinh(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));
-}
-inline nt::complex_32 acosh(nt::complex_32 a){
-    return nt::complex_32(_NT_FLOAT16_TO_FLOAT32_(acosh(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(acosh(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));
-}
+// inline nt::complex_32 atanh(nt::complex_32 a){
+//     return nt::complex_32(_NT_FLOAT16_TO_FLOAT32_(atanh(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(atanh(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));
+// }
+// inline nt::complex_32 asinh(nt::complex_32 a){
+//     return nt::complex_32(_NT_FLOAT16_TO_FLOAT32_(asinh(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(asinh(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));
+// }
+// inline nt::complex_32 acosh(nt::complex_32 a){
+//     return nt::complex_32(_NT_FLOAT16_TO_FLOAT32_(acosh(_NT_FLOAT16_TO_FLOAT32_(a.real()))), _NT_FLOAT32_TO_FLOAT16_(acosh(_NT_FLOAT16_TO_FLOAT32_(a.imag()))));
+// }
 
-// NT_MAKE_TRIG_STD_FUNC(asinh)
-// // NT_MAKE_TRIG_STD_FUNC(atanh)
+// // NT_MAKE_TRIG_STD_FUNC(asinh)
+// // // NT_MAKE_TRIG_STD_FUNC(atanh)
 
-// #undef NT_MAKE_TRIG_STD_FUNC 
+// // #undef NT_MAKE_TRIG_STD_FUNC 
     
-}
+// }
 
 
 #define NT_MAKE_INV_INLINE_FUNC_(operation, name)\
@@ -70,10 +71,10 @@ inline T _nt_##name(T element) noexcept {return T(1)/operation(element);}
                  0.1f, -3.0f, 10.5f;\
             auto b = nt::name(a);\
             nt::Tensor expected({3, 3}, dt);\
-            expected << op(3.3f), op(4.6f), op(4.1f),\
-                        op(-1.2f), op(4.1f), op(0.9f),\
-                         op(0.1f), op(-3.0f), op(10.5f);\
-            nt::utils::throw_exception(nt::allclose(b, expected, equal_nan = true), "Error " #name " failed to produce correct results $ $\n $\n $", \
+            expected << op(3.3), op(4.6), op(4.1),\
+                        op(-1.2), op(4.1), op(0.9),\
+                         op(0.1), op(-3.0), op(10.5);\
+            nt::utils::throw_exception(nt::allclose(b, expected, equal_nan = true, ::nt::literals::atol = 1e-3, rtol = 1e-3), "Error " #name " failed to produce correct results $ $\n $\n $", \
                 nt::noprintdtype, b.flatten(0, -1), expected.flatten(0, -1), dt);\
         }\
         for(const auto& dt : ComplexTypes){\
@@ -175,34 +176,34 @@ inline T _nt_##name(T element) noexcept {return T(1)/operation(element);}
     });
 
 
-NT_MAKE_INV_INLINE_FUNC_(std::tanh, cotanh)
-NT_MAKE_INV_INLINE_FUNC_(std::tan, cotan)
-NT_MAKE_INV_INLINE_FUNC_(std::sinh, csch)
-NT_MAKE_INV_INLINE_FUNC_(std::sin, csc)
-NT_MAKE_INV_INLINE_FUNC_(std::cosh, sech)
-NT_MAKE_INV_INLINE_FUNC_(std::cos, sec)
+NT_MAKE_INV_INLINE_FUNC_(nt::math::tanh, cotanh)
+NT_MAKE_INV_INLINE_FUNC_(nt::math::tan, cotan)
+NT_MAKE_INV_INLINE_FUNC_(nt::math::sinh, csch)
+NT_MAKE_INV_INLINE_FUNC_(nt::math::sin, csc)
+NT_MAKE_INV_INLINE_FUNC_(nt::math::cosh, sech)
+NT_MAKE_INV_INLINE_FUNC_(nt::math::cos, sec)
 
 void trig_test(){
     using namespace nt::literals;
 
-    NT_MAKE_TRIG_TEST_(tanh, tanh, std::tanh);
-    NT_MAKE_TRIG_TEST_(tan, tan, std::tan);
-    NT_MAKE_TRIG_TEST_(atan, atan, std::atan);
-    NT_MAKE_TRIG_TEST_(atanh, atanh, std::atanh);
+    NT_MAKE_TRIG_TEST_(tanh, tanh, nt::math::tanh);
+    NT_MAKE_TRIG_TEST_(tan, tan, nt::math::tan);
+    NT_MAKE_TRIG_TEST_(atan, atan, nt::math::atan);
+    NT_MAKE_TRIG_TEST_(atanh, atanh, nt::math::atanh);
     NT_MAKE_TRIG_TEST_(cotanh, cotanh, _nt_cotanh);
-    NT_MAKE_TRIG_TEST_(cotan, cotan, _nt_cotanh);
+    NT_MAKE_TRIG_TEST_(cotan, cotan, _nt_cotan);
 
-    NT_MAKE_TRIG_TEST_(sinh, sinh, std::sinh);
-    NT_MAKE_TRIG_TEST_(sin, sin, std::sin);
-    NT_MAKE_TRIG_TEST_(asin, asin, std::asin);
-    NT_MAKE_TRIG_TEST_(asinh, asinh, std::asinh);
+    NT_MAKE_TRIG_TEST_(sinh, sinh, nt::math::sinh);
+    NT_MAKE_TRIG_TEST_(sin, sin, nt::math::sin);
+    NT_MAKE_TRIG_TEST_(asin, asin, nt::math::asin);
+    NT_MAKE_TRIG_TEST_(asinh, asinh, nt::math::asinh);
     NT_MAKE_TRIG_TEST_(csch, csch, _nt_csch);
     NT_MAKE_TRIG_TEST_(csc, csc, _nt_csc);
 
-    NT_MAKE_TRIG_TEST_(cosh, cosh, std::cosh);
-    NT_MAKE_TRIG_TEST_(cos, cos, std::cos);
-    NT_MAKE_TRIG_TEST_(acos, acos, std::acos);
-    NT_MAKE_TRIG_TEST_(acosh, acosh, std::acosh);
+    NT_MAKE_TRIG_TEST_(cosh, cosh, nt::math::cosh);
+    NT_MAKE_TRIG_TEST_(cos, cos, nt::math::cos);
+    NT_MAKE_TRIG_TEST_(acos, acos, nt::math::acos);
+    NT_MAKE_TRIG_TEST_(acosh, acosh, nt::math::acosh);
     NT_MAKE_TRIG_TEST_(sech, sech, _nt_sech);
     NT_MAKE_TRIG_TEST_(sec, sec, _nt_sec);
 

@@ -20,7 +20,7 @@ ExternalProject_Add(cling_source
   GIT_REPOSITORY ${CLING_REPO}
   GIT_TAG ${CLING_TAG}
   PREFIX ${CMAKE_BINARY_DIR}/cling-source
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/cling-source/src
+  LIST_DIR ${CMAKE_BINARY_DIR}/cling-source/src
   UPDATE_COMMAND ""
   GIT_SHALLOW TRUE
   UPDATE_DISCONNECTED TRUE  # Prevent CMake from updating if not needed
@@ -35,7 +35,7 @@ ExternalProject_Add(cling
   GIT_REPOSITORY ${LLVM_PROJECT_REPO}
   GIT_TAG ${LLVM_PROJECT_TAG}
   PREFIX ${CMAKE_BINARY_DIR}/cling-llvm
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/cling-llvm/src
+  LIST_DIR ${CMAKE_BINARY_DIR}/cling-llvm/src
   BINARY_DIR ${CMAKE_BINARY_DIR}/cling-llvm/build
   UPDATE_COMMAND ""
   GIT_SHALLOW TRUE
@@ -48,7 +48,7 @@ ExternalProject_Add(cling
     -DLLVM_ENABLE_PROJECTS=clang
     -DLLVM_TARGETS_TO_BUILD=host
     -DLLVM_EXTERNAL_PROJECTS=cling
-    -DLLVM_EXTERNAL_CLING_SOURCE_DIR=${CMAKE_BINARY_DIR}/cling-source/src
+    -DLLVM_EXTERNAL_CLING_LIST_DIR=${CMAKE_BINARY_DIR}/cling-source/src
     -DLLVM_ENABLE_RTTI=ON
     -DLLVM_ENABLE_ASSERTIONS=ON
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON

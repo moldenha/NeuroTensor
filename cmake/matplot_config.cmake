@@ -1,0 +1,13 @@
+include(${CMAKE_CURRENT_LIST_DIR}/base_dir.cmake) 
+find_package(Matplot++ QUIET)
+
+ if (Matplot++_FOUND)
+     message(STATUS "Found system-installed Matplot++")
+     include_directories(${Matplot++_INCLUDE_DIRS})
+     set(MATPLOT_LIB Matplot++::matplot)
+ else()
+     message(STATUS "System-installed Matplot++ not found, using source")
+    include_directories(${BASE_DIR}/third_party/matplot/source)
+    add_subdirectory(${BASE_DIR}/third_party/matplot)
+     set(MATPLOT_LIB matplot)
+ endif()

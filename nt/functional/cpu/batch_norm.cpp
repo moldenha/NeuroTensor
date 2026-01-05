@@ -4,7 +4,7 @@
 #include "../../dtype/DType_enum.h"
 #include "../../dtype/Scalar.h"
 #include "../../refs/SizeRef.h"
-#include "../../types/math.h"
+#include "../../math/math.h"
 #include <random>
 #include "rand.h"
 
@@ -52,7 +52,7 @@ void _batch_norm_(ArrayVoid& input, ArrayVoid& running_mean, ArrayVoid& running_
                         var_ptr[c] =  (1 - momentum) * var_ptr[c]  + momentum * var;
                         // Here ends training only
 
-                        scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                        scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
                         scalar_t gamma = w_ptr[c];
                         scalar_t beta = b_ptr[c];
                         for(int64_t n = 0; n < N; ++n){
@@ -69,7 +69,7 @@ void _batch_norm_(ArrayVoid& input, ArrayVoid& running_mean, ArrayVoid& running_
                         scalar_t var = var_ptr[c];
                         scalar_t inv_m = 1.0 / (N * HW);
 
-                        scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                        scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
                         scalar_t gamma = w_ptr[c];
                         scalar_t beta = b_ptr[c];
                         for(int64_t n = 0; n < N; ++n){
@@ -135,7 +135,7 @@ void _batch_norm_(ArrayVoid& input, ArrayVoid& running_mean, ArrayVoid& running_
                         mean_ptr[c] = (1 - momentum) * mean_ptr[c] + momentum * mean;
                         var_ptr[c] =  (1 - momentum) * var_ptr[c]  + momentum * var;
                         // Here ends training only
-                        scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                        scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
                         scalar_t gamma = w_ptr[c];
                         scalar_t beta = b_ptr[c];
                         storing_mean_vals[c] = mean;
@@ -154,7 +154,7 @@ void _batch_norm_(ArrayVoid& input, ArrayVoid& running_mean, ArrayVoid& running_
                         scalar_t var = var_ptr[c];
                         scalar_t inv_m = 1.0 / (N * HW);
 
-                        scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                        scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
                         scalar_t gamma = w_ptr[c];
                         scalar_t beta = b_ptr[c];
                         storing_mean_vals[c] = mean;
@@ -201,7 +201,7 @@ void _batch_norm_backward_weight_bias_(ArrayVoid& grad_weight, ArrayVoid& grad_b
             int64_t stride_c = HW;
             for (int64_t c = 0; c < C; ++c) {
                 // scalar_t mean_val = mean_ptr[c];
-                // scalar_t inv_std = 1.0 / ::nt::sqrt(var_ptr[c] + eps);
+                // scalar_t inv_std = 1.0 / ::nt::math::sqrt(var_ptr[c] + eps);
                 const scalar_t& mean_val = stored_mean_ptr[c];
                 const scalar_t& inv_std = stored_inv_ptr[c];
                 scalar_t gw = 0, gb = 0;
@@ -256,7 +256,7 @@ void _batch_norm_backward_input_(ArrayVoid& grad_input, const ArrayVoid& grad_ou
                 // const scalar_t& var_val = var_ptr[c];
                 const scalar_t& gamma = w_ptr[c];
 
-                // scalar_t inv_std = 1.0 / ::nt::sqrt(var_val + eps);
+                // scalar_t inv_std = 1.0 / ::nt::math::sqrt(var_val + eps);
 
                 const scalar_t& mean_val = stored_mean_ptr[c];
                 const scalar_t& inv_std = stored_inv_ptr[c];

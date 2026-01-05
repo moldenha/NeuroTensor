@@ -4,7 +4,7 @@
 #include "../../dtype/DType_enum.h"
 #include "../../dtype/Scalar.h"
 #include "../../refs/SizeRef.h"
-#include "../../types/math.h"
+#include "../../math/math.h"
 #include <random>
 #include "rand.h"
 
@@ -130,7 +130,7 @@ void _instance_norm_(
                 scalar_t mean = 0, var = 0;
                 func(mean, var, x_ptr, inner_size, HW, C, N, c, n, run_mean_ptr, run_var_ptr, momentum);
 
-                scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
                 scalar_t gamma = w_ptr[c];
                 scalar_t beta  = b_ptr[c];
 
@@ -208,7 +208,7 @@ void _instance_norm_(
                 scalar_t mean = 0, var = 0;
                 func(mean, var, x_ptr, inner_size, HW, C, N, c, n, run_mean_ptr, run_var_ptr, momentum);
 
-                scalar_t inv_std = 1.0 / ::nt::sqrt(var + eps);
+                scalar_t inv_std = 1.0 / ::nt::math::sqrt(var + eps);
 
                 mean_ptr[(n * C) + c] = mean;
                 inv_ptr[(n * C) + c] = inv_std;

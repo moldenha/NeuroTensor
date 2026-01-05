@@ -9,487 +9,28 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 message(STATUS "Root path is " ${CMAKE_FIND_ROOT_PATH})
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tbb_config.cmake)
-
-
- find_package(Matplot++ QUIET)
-
- if (Matplot++_FOUND)
-     message(STATUS "Found system-installed Matplot++")
-     include_directories(${Matplot++_INCLUDE_DIRS})
-     set(MATPLOT_LIB Matplot++::matplot)
- else()
-     message(STATUS "System-installed Matplot++ not found, using source")
-     include_directories(third_party/matplot/source)
-     add_subdirectory(third_party/matplot)
-     set(MATPLOT_LIB matplot)
- endif()
-
-
-
-
 # ${CMAKE_BINARY_DIR}/third_party/matplot/source/matplot
-
-# Include directories
-include_directories(
-    # ${MKL_INCLUDE_DIR}
-    # ${TBB_INCLUDE_DIRS}
-    # ${Boost_INCLUDE_DIRS}
-    # ${CMAKE_SOURCE_DIR}/third_party/tbb/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/simde
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/half
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
-    #For matrix and vector linear algebra calculations
-    #This incorperates most of the nt::linalg namespace
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/znzlib
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/niftilib
-
-    #Boost files
-    #Mainly for 128 bit data types
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost_config/include/
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/multiprecision/include/
-
-)
-
-
-# Include NIfTI macros
-include(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/cmake/nifti_macros.cmake)
-
-# Add znzlib for compressed NIfTI support
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/znzlib)
-
-# Add NIfTI core library (creates niftiio target)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/nifti_clib/niftilib)
-
-
-
-set(CORE_SOURCES
-    nt/refs/ArrayRef.cpp
-    nt/refs/SizeRef.cpp
-    nt/utils/utils.cpp
-    nt/utils/optional.cpp
-    nt/utils/CommaOperator.cpp
-    nt/Tensor.cpp
-    nt/nn/TensorGrad.cpp
-)
-
-set(MATMULT_SOURCES
-	nt/functional/cpu/matmult/nt_matmult_float.cpp
-	nt/functional/cpu/matmult/nt_matmult_float16.cpp
-	nt/functional/cpu/matmult/nt_matmult_double.cpp
-	nt/functional/cpu/matmult/nt_matmult_float128.cpp
-	nt/functional/cpu/matmult/nt_matmult_complex32.cpp
-	nt/functional/cpu/matmult/nt_matmult_complex64.cpp
-	nt/functional/cpu/matmult/nt_matmult_complex128.cpp
-	nt/functional/cpu/matmult/nt_matmult_int128.cpp
-	nt/functional/cpu/matmult/nt_matmult_uint128.cpp
-	nt/functional/cpu/matmult/nt_matmult_int64.cpp
-	nt/functional/cpu/matmult/nt_matmult_uint64.cpp
-	nt/functional/cpu/matmult/nt_matmult_int32.cpp
-	nt/functional/cpu/matmult/nt_matmult_uint32.cpp
-	nt/functional/cpu/matmult/nt_matmult_int16.cpp
-	nt/functional/cpu/matmult/nt_matmult_uint16.cpp
-	nt/functional/cpu/matmult/nt_matmult_int8.cpp
-	nt/functional/cpu/matmult/nt_matmult_uint8.cpp
-)
-
-set(FUNCTIONAL_SOURCES
-	nt/functional/tensor_files/colim_transform.cpp
-	nt/functional/tensor_files/combine.cpp
-	nt/functional/tensor_files/conv.cpp
-	nt/functional/tensor_files/fill.cpp
-	nt/functional/tensor_files/fused.cpp
-	nt/functional/tensor_files/save_load.cpp
-	nt/functional/tensor_files/matmult.cpp
-	nt/functional/tensor_files/normalize.cpp
-	nt/functional/tensor_files/numpy.cpp
-	nt/functional/tensor_files/operators.cpp
-	nt/functional/tensor_files/rand.cpp
-	nt/functional/tensor_files/min_max.cpp
-	nt/functional/tensor_files/compare.cpp
-	nt/functional/tensor_files/ranges.cpp
-	nt/functional/tensor_files/softmax.cpp
-	nt/functional/tensor_files/sum_exp_log.cpp
-	nt/functional/tensor_files/mesh.cpp
-	nt/functional/tensor_files/repeat.cpp
-	nt/functional/tensor_files/stride.cpp
-	nt/functional/tensor_files/index.cpp
-	nt/functional/tensor_files/padding.cpp
-	nt/functional/tensor_files/dropout.cpp
-	nt/functional/tensor_files/activation_functions.cpp
-	nt/functional/tensor_files/trig.cpp
-	nt/functional/tensor_files/split.cpp
-	nt/functional/tensor_files/unique.cpp
-	nt/functional/tensor_files/combinations.cpp
-	nt/functional/tensor_files/print.cpp
-	nt/functional/tensor_files/transpose.cpp
-	nt/functional/tensor_files/complex.cpp
-	nt/functional/tensor_files/flip.cpp
-	nt/functional/tensor_files/dilate.cpp
-	nt/functional/tensor_files/convert.cpp
-	nt/functional/tensor_files/sort.cpp
-	nt/functional/tensor_files/round.cpp
-    nt/functional/tensor_files/pooling/avg_pool1d.cpp
-    nt/functional/tensor_files/pooling/avg_pool2d.cpp
-    nt/functional/tensor_files/pooling/avg_pool3d.cpp
-    nt/functional/tensor_files/pooling/lp_pool1d.cpp
-    nt/functional/tensor_files/pooling/lp_pool2d.cpp
-    nt/functional/tensor_files/pooling/lp_pool3d.cpp
-    nt/functional/tensor_files/pooling/max_pool1d.cpp
-    nt/functional/tensor_files/pooling/max_pool2d.cpp
-    nt/functional/tensor_files/pooling/max_pool3d.cpp
-    nt/functional/tensor_files/pooling/fractional.cpp
-    
-)
-
-set(FUNCTIONAL_CPU_SOURCES
-
-    nt/functional/cpu/unfold1d.cpp
-    nt/functional/cpu/unfold2d.cpp
-    nt/functional/cpu/unfold3d.cpp
-    nt/functional/cpu/unfold1d_backward.cpp
-    nt/functional/cpu/unfold2d_backward.cpp
-    nt/functional/cpu/unfold3d_backward.cpp
-    nt/functional/cpu/unfoldnd.cpp
-    nt/functional/cpu/unfoldnd_backward.cpp
-    nt/functional/cpu/fold1d.cpp
-    nt/functional/cpu/fold1d_backward.cpp
-    nt/functional/cpu/fold2d.cpp
-    nt/functional/cpu/fold2d_backward.cpp
-    nt/functional/cpu/fold3d.cpp
-    nt/functional/cpu/fold3d_backward.cpp
-    nt/functional/cpu/foldnd.cpp
-    nt/functional/cpu/foldnd_backward.cpp
-    nt/functional/cpu/rand.cpp
-    nt/functional/cpu/fused.cpp
-    nt/functional/cpu/operators.cpp
-    nt/functional/cpu/normalize.cpp
-    nt/functional/cpu/batch_norm.cpp
-    nt/functional/cpu/group_norm.cpp
-    nt/functional/cpu/instance_norm.cpp
-    nt/functional/cpu/min_max.cpp
-    nt/functional/cpu/compare.cpp
-    nt/functional/cpu/convert.cpp
-    nt/functional/cpu/softmax.cpp
-    nt/functional/cpu/sum_exp_log.cpp
-    nt/functional/cpu/fractional_pooling.cpp
-    nt/functional/cpu/activation_functions.cpp
-    nt/functional/cpu/trig.cpp
-    nt/functional/cpu/sort.cpp
-    nt/functional/cpu/sort_tensor.cpp
-    nt/functional/cpu/unique.cpp
-    nt/functional/cpu/complex.cpp
-    nt/functional/cpu/dropout.cpp
-    nt/functional/cpu/fill.cpp
-    nt/functional/cpu/mesh.cpp
-    nt/functional/cpu/round.cpp
-
-)
-
-
-#split linalg into different functions
-#this reduces compile times when specific functions need to be changed
-#would like to do this for all general function in the future and current 
-set(LINALG_SOURCES
-    nt/linalg/adjugate.cpp
-    nt/linalg/determinant.cpp
-    nt/linalg/norm.cpp
-    nt/linalg/pivots.cpp
-    nt/linalg/eye.cpp
-    nt/linalg/independent.cpp
-)
-
-set(NULL_SPACE_SOURCES
-    nt/linalg/null_space.cpp
-
-    # nt/linalg/process/null_space.cpp
-    # null_space broken up into different types for compilation reasons
-    nt/linalg/process/null_space/null_space_complex_double.cpp 
-    nt/linalg/process/null_space/null_space_double.cpp         
-    nt/linalg/process/null_space/null_space_int16.cpp          
-    nt/linalg/process/null_space/null_space_int64.cpp          
-    nt/linalg/process/null_space/null_space_uint16.cpp         
-    nt/linalg/process/null_space/null_space_uint8.cpp
-    nt/linalg/process/null_space/null_space_complex_float.cpp  
-    nt/linalg/process/null_space/null_space_float.cpp          
-    nt/linalg/process/null_space/null_space_int32.cpp          
-    nt/linalg/process/null_space/null_space_int8.cpp           
-    nt/linalg/process/null_space/null_space_uint32.cpp
-)
-
-set(COLUMN_SPACE_SOURCES
-    nt/linalg/column_space.cpp
-
-    # nt/linalg/process/column_space.cpp
-    # column_space broken up into different types for compilation reasons
-    nt/linalg/process/column_space/column_space_complex_double.cpp 
-    nt/linalg/process/column_space/column_space_double.cpp         
-    nt/linalg/process/column_space/column_space_int16.cpp          
-    nt/linalg/process/column_space/column_space_int64.cpp          
-    nt/linalg/process/column_space/column_space_uint16.cpp         
-    nt/linalg/process/column_space/column_space_uint8.cpp
-    nt/linalg/process/column_space/column_space_complex_float.cpp  
-    nt/linalg/process/column_space/column_space_float.cpp          
-    nt/linalg/process/column_space/column_space_int32.cpp          
-    nt/linalg/process/column_space/column_space_int8.cpp           
-    nt/linalg/process/column_space/column_space_uint32.cpp
-
-)
-
-set(INV_SOURCES
-    nt/linalg/inv.cpp
-
-    # nt/linalg/process/inv.cpp
-    # inv broken up into different types for compilation reasons
-    nt/linalg/process/inv/inv_complex_double.cpp 
-    nt/linalg/process/inv/inv_double.cpp         
-    nt/linalg/process/inv/inv_int16.cpp          
-    nt/linalg/process/inv/inv_int64.cpp          
-    nt/linalg/process/inv/inv_uint16.cpp         
-    nt/linalg/process/inv/inv_uint8.cpp
-    nt/linalg/process/inv/inv_complex_float.cpp  
-    nt/linalg/process/inv/inv_float.cpp          
-    nt/linalg/process/inv/inv_int32.cpp          
-    nt/linalg/process/inv/inv_int8.cpp           
-    nt/linalg/process/inv/inv_uint32.cpp
-
-)
-
-set(SVD_SOURCES
-    nt/linalg/SVD.cpp
-    #svd broken up into different types for compilation reasons
-    nt/linalg/process/svd/svd_complex_double.cpp 
-    nt/linalg/process/svd/svd_double.cpp         
-    nt/linalg/process/svd/svd_int16.cpp          
-    nt/linalg/process/svd/svd_int64.cpp          
-    nt/linalg/process/svd/svd_uint16.cpp         
-    nt/linalg/process/svd/svd_uint8.cpp
-    nt/linalg/process/svd/svd_complex_float.cpp  
-    nt/linalg/process/svd/svd_float.cpp          
-    nt/linalg/process/svd/svd_int32.cpp          
-    nt/linalg/process/svd/svd_int8.cpp           
-    nt/linalg/process/svd/svd_uint32.cpp
-)
-
-set(QR_SOURCES
-    nt/linalg/QR.cpp
-    
-    # nt/linalg/process/QR.cpp
-    #qr broken up into different types for compilation reasons
-    nt/linalg/process/qr/qr_complex_double.cpp 
-    nt/linalg/process/qr/qr_double.cpp         
-    nt/linalg/process/qr/qr_int16.cpp          
-    nt/linalg/process/qr/qr_int64.cpp          
-    nt/linalg/process/qr/qr_uint16.cpp         
-    nt/linalg/process/qr/qr_uint8.cpp
-    nt/linalg/process/qr/qr_complex_float.cpp  
-    nt/linalg/process/qr/qr_float.cpp          
-    nt/linalg/process/qr/qr_int32.cpp          
-    nt/linalg/process/qr/qr_int8.cpp           
-    nt/linalg/process/qr/qr_uint32.cpp
-
-) 
-
-set(FMRI_SOURCES
-    nt/fmri/tensor_files/save_load.cpp
-)
-
-set(TYPES_SOURCES
-    nt/dtype/ArrayVoid.cpp
-    nt/dtype/DType.cpp
-    nt/dtype/DType_operators.cpp
-    nt/dtype/ranges.cpp
-    nt/dtype/Scalar.cpp
-    nt/types/Types.cpp
-)
-
-# Check for compiler support for __uint128_t
-include(CheckCCompilerFlag)
-
-# Set a flag to check for __uint128_t support
-check_c_compiler_flag("-m128" HAS_UINT128)
-
-if(NOT HAS_UINT128)
-    # Check for GCC compiler
-    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        message(STATUS "Was gnu")
-
-        set(HAS_UINT128 TRUE)
-    else()
-        # Check if __SIZEOF_INT128__ is defined in C++ code
-        message(STATUS "Checking compilation")
-        check_cxx_source_compiles("#include <cstddef>\nint main() { return sizeof(__int128) > 0; }" HAS_UINT128)
-    endif()
-endif()
-
-if(NOT HAS_UINT128)
-    message(STATUS "Compiler does not support __uint128_t, using custom uint128_t library")
-
-    # Include the directory for the uint128_t header
-    include_directories(third_party/uint128_t)
-    list(APPEND TYPES_SOURCES 
-        third_party/uint128_t/uint128_t.cpp)
-else()
-    message(STATUS "Compiler supports __uint128_t")
-endif()
-
-
-#this also includes autograds and layers
-set(AI_SOURCES
-    nt/nn/AutoGrad.cpp
-    nt/nn/BackwardFunc.cpp
-    nt/nn/Layer.cpp
-    nt/nn/LNN.cpp
-    nt/nn/ScalarGrad.cpp
-    nt/nn/functional/functional.cpp
-    nt/nn/functional/pooling.cpp
-    nt/nn/functional/activation_functions.cpp
-    nt/nn/functional/colim_transform.cpp
-    nt/nn/functional/conv.cpp
-    nt/nn/functional/dilation.cpp
-    nt/nn/functional/fill.cpp
-    nt/nn/functional/flip.cpp
-    nt/nn/functional/fused.cpp
-    nt/nn/functional/index.cpp
-    nt/nn/functional/min_max.cpp
-    nt/nn/functional/matmult.cpp
-    nt/nn/functional/normalize.cpp
-    nt/nn/functional/operators.cpp
-    nt/nn/functional/padding.cpp
-    nt/nn/functional/repeat.cpp
-    nt/nn/functional/round.cpp
-    nt/nn/functional/split.cpp
-    nt/nn/functional/stride.cpp
-    nt/nn/functional/sort.cpp
-    nt/nn/functional/sum_exp_log.cpp
-    nt/nn/functional/transpose.cpp
-    nt/nn/functional/trig.cpp
-    nt/nn/functional/unique.cpp
-    nt/nn/Loss.cpp
-    nt/nn/Optimizers.cpp
-    nt/nn/Module.cpp
-
-    #ncps sources
-    nt/nn/ncps/lstm_cell.cpp
-    nt/nn/ncps/wiring/wiring.cpp
-    nt/nn/ncps/cfc/wired_cfc_cell.cpp
-    nt/nn/ncps/cfc/cfc_cell.cpp
-    nt/nn/ncps/cfc/cfc.cpp
-    nt/nn/ncps/ltc/ltc.cpp
-    nt/nn/ncps/ltc/ltc_cell.cpp
-    #individual layers
-    nt/nn/layers/BatchNorm1D.cpp
-    nt/nn/layers/Conv1D.cpp
-    nt/nn/layers/Conv2D.cpp
-    nt/nn/layers/Conv3D.cpp
-    nt/nn/layers/ConvND.cpp
-    nt/nn/layers/ConvTranspose1D.cpp
-    nt/nn/layers/ConvTranspose2D.cpp
-    nt/nn/layers/ConvTranspose3D.cpp
-    nt/nn/layers/Dropout.cpp
-    nt/nn/layers/Fold1D.cpp
-    nt/nn/layers/Fold2D.cpp
-    nt/nn/layers/Fold3D.cpp
-    nt/nn/layers/FoldND.cpp
-    nt/nn/layers/Functional.cpp
-    nt/nn/layers/Identity.cpp
-    nt/nn/layers/Linear.cpp
-    nt/nn/layers/SymmetricBilinear.cpp
-    nt/nn/layers/Softplus.cpp
-    nt/nn/layers/Unfold1D.cpp
-    nt/nn/layers/Unfold2D.cpp
-    nt/nn/layers/Unfold3D.cpp
-    nt/nn/layers/UnfoldND.cpp
-    nt/nn/layers/AdaptiveAvgPool1D.cpp
-    nt/nn/layers/AdaptiveAvgPool2D.cpp
-    nt/nn/layers/AdaptiveAvgPool3D.cpp
-    nt/nn/layers/AdaptiveLPPool1D.cpp
-    nt/nn/layers/AdaptiveLPPool2D.cpp
-    nt/nn/layers/AdaptiveLPPool3D.cpp
-    nt/nn/layers/AdaptiveMaxPool1D.cpp
-    nt/nn/layers/AdaptiveMaxPool2D.cpp
-    nt/nn/layers/AdaptiveMaxPool3D.cpp
-    nt/nn/layers/AvgPool1D.cpp
-    nt/nn/layers/AvgPool2D.cpp
-    nt/nn/layers/AvgPool3D.cpp
-    nt/nn/layers/FractionalMaxPool2D.cpp
-    nt/nn/layers/FractionalMaxPool3D.cpp
-    nt/nn/layers/LPPool1D.cpp
-    nt/nn/layers/LPPool2D.cpp
-    nt/nn/layers/LPPool3D.cpp
-    nt/nn/layers/MaxPool1D.cpp
-    nt/nn/layers/MaxPool2D.cpp
-    nt/nn/layers/MaxPool3D.cpp
-    nt/nn/layers/MaxUnPool1D.cpp
-    nt/nn/layers/MaxUnPool2D.cpp
-    nt/nn/layers/MaxUnPool3D.cpp
-)
-
-set(MP_SOURCES
-    nt/mp/Threading.cpp
-)
-
-set(TDA_SOURCES
-    nt/tda/old_tda/Simplex.cpp
-    nt/tda/old_tda/Simplex2d.cpp
-    nt/tda/old_tda/Shapes.cpp
-    nt/tda/old_tda/Basis.cpp
-    nt/tda/old_tda/Points.cpp
-    nt/tda/old_tda/Points2d.cpp
-    nt/tda/old_tda/KDTree.cpp
-    # nt/tda/old_tda/refinement/refine.cpp <- unreleased
-    nt/tda/old_tda/BatchBasis.cpp
-    nt/tda/old_tda/BatchKDTree.cpp
-    nt/tda/old_tda/BatchPoints.cpp
-    nt/tda/BasisOverlapping.cpp
-    nt/tda/Boundaries.cpp
-    nt/tda/Homology.cpp
-    nt/tda/MatrixReduction.cpp
-    nt/tda/cpu/MatrixReduction.cpp
-    nt/tda/PlotDiagrams.cpp
-    nt/tda/Points.cpp
-    nt/tda/SimplexConstruct.cpp
-    nt/tda/SimplexRadi.cpp
-    #learned persistent homology
-    nt/tda/nn/distance.cpp
-    nt/tda/nn/filtration.cpp
-    nt/tda/nn/laplacian.cpp
-    nt/tda/nn/boundaries.cpp
-    nt/tda/nn/loss.cpp
-)
-
-set(SPARSE_SOURCES
-    nt/sparse/SparseTensor.cpp
-    nt/sparse/SparseMatrix.cpp
-    nt/sparse/SparseDataMatrix.cpp
-)
-
-set(IMAGES_SOURCES
-    nt/images/image.cpp
-)
-
-set(MEMORY_SOURCES
-    nt/memory/bucket.cpp
-    nt/memory/device.cpp
-)
-
-
-
-# # Source files
-# set(SOURCES
-#     ${MATMULT_SOURCES}
-#     ${CORE_SOURCES}
-#     ${TYPES_SOURCES}
-#     ${FUNCTIONAL_SOURCES}
-#     ${LINALG_SOURCES}
-#     ${AI_SOURCES}
-#     ${MP_SOURCES}
-#     ${TDA_SOURCES}
-#     ${FMRI_SOURCES}
-#     ${SPARSE_SOURCES}
-#     ${IMAGES_SOURCES}
-#     ${MEMORY_SOURCES}
-# )
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/matplot_config.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/include_directories.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/core_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/matmult_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/functional_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/functional_cpu_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/linalg_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/null_space_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/column_space_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inv_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/svd_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/qr_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fmri_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/types_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/uint128_config.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ai_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/mp_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tda_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/sparse_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/images_sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/memory_sources.cmake)
 
 
 set(NEUROTENSOR_SOURCES_ALL
@@ -634,37 +175,26 @@ set(NEUROTENSOR_DEPS
     nt_fmri
 )
 
-#if(UNIX)
-##Generate full paths with prefix/suffix
-#foreach(dep IN LISTS NEUROTENSOR_DEPS)
-#    list(APPEND NEUROTENSOR_LIBS $<TARGET_FILE:${dep}>)
-#endforeach()
-#else()
+# This is going to make a list that contains all the filenames of the libraries that should be
+#   wrapped into neurotensor
+
 foreach(dep IN LISTS NEUROTENSOR_DEPS)
     list(APPEND NEUROTENSOR_LIBS
         "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${dep}${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
 endforeach()
-# endif()
-
-#Looking for tbb static library
-
-# file(GLOB_RECURSE FOUND_ALL_NEUROTENSOR_LIBRARY_FILES
-#     "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}tbb${CMAKE_STATIC_LIBRARY_SUFFIX}"
-#     "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}matplot${CMAKE_STATIC_LIBRARY_SUFFIX}"
-#     "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}znz${CMAKE_STATIC_LIBRARY_SUFFIX}"
-#     "${CMAKE_BINARY_DIR}/${CONFIG_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}niftiio${CMAKE_STATIC_LIBRARY_SUFFIX}"
-#     # If you had multiple patterns, you'd list them:
-#     # "${SEARCH_START_DIR}/another_pattern.log"
-#     # CONFIGURE_DEPENDS # Consider adding this for CMake 3.11+ for better re-configuration
-# )
 
 
-
+# This is going to look for all the library files that exist
+# if one of them doesn't -> then they don't all exist and mark which ones don't
+set(NEUROTENSOR_UNMADE_LIBRARY_FILES "") # empty list
+set(NEUROTENSOR_UNMADE_LIBRARIES "") # empty list
 set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST TRUE)
-foreach(file_path IN LISTS NEUROTENSOR_LIBS)
+foreach(file_path dep IN ZIP_LISTS NEUROTENSOR_LIBS NEUROTENSOR_DEPS)
     if(NOT EXISTS "${file_path}")
         set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST FALSE)
+        list(APPEND NEUROTENSOR_UNMADE_LIBRARY_FILES file_path) 
+        list(APPEND NEUROTENSOR_UNMADE_LIBRARIES dep) 
         message(STATUS "Cannot find file " ${file_path})
     endif()
 endforeach()
@@ -684,7 +214,8 @@ if(NEUROTENSOR_TBB_STATIC_LIBRARY_FILES)
     list(APPEND NEUROTENSOR_LIBS NEUROTENSOR_TBB_STATIC_LIBRARY_FILE)
     message(STATUS "Found tbb at " ${NEUROTENSOR_TBB_STATIC_LIBRARY_FILE}) 
 else()
-message(STATUS "TBB File not found")
+    list(APPEND NEUROTENSOR_UNMADE_LIBRARIES ${TBB_LIB})
+    message(STATUS "TBB File not found")
 endif()
 
 if(NEUROTENSOR_MATPLOT_STATIC_LIBRARY_FILES)
@@ -692,6 +223,7 @@ if(NEUROTENSOR_MATPLOT_STATIC_LIBRARY_FILES)
     list(APPEND NEUROTENSOR_LIBS NEUROTENSOR_MATPLOT_STATIC_LIBRARY_FILE)
     message(STATUS "Found matplot at " ${NEUROTENSOR_MATPLOT_STATIC_LIBRARY_FILE}) 
 else()
+    list(APPEND NEUROTENSOR_UNMADE_LIBRARIES ${MATPLOT_LIB})
 message(STATUS "matplot File not found")
 endif()
 
@@ -700,6 +232,7 @@ if(NEUROTENSOR_ZNZ_STATIC_LIBRARY_FILES)
     list(APPEND NEUROTENSOR_LIBS NEUROTENSOR_ZNZ_STATIC_LIBRARY_FILE)
     message(STATUS "Found znz at " ${NEUROTENSOR_ZNZ_STATIC_LIBRARY_FILE}) 
 else()
+    list(APPEND NEUROTENSOR_UNMADE_LIBRARIES znz)
 message(STATUS "znz File not found")
 endif()
 
@@ -708,78 +241,47 @@ if(NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILES)
     list(APPEND NEUROTENSOR_LIBS NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE)
     message(STATUS "Found niftiio at " ${NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE}) 
 else()
+    list(APPEND NEUROTENSOR_UNMADE_LIBRARIES niftiio)
     message(STATUS "Niftiio File not found")
 endif()
 
 option(BUILD_ARCHIVE_FORCE "Force the building of an archive even if all library files dont exist, build them" OFF)
 
+function(build_missing_neurotensor_deps)
+    # Inputs: list of dep names, list of files, boolean flag
+    set(all_exist ${NEUROTENSOR_ALL_LIBRARY_FILES_EXIST})
+
+    if(all_exist)
+        message(STATUS "All NeuroTensor libraries already built.")
+        return()
+    endif()
+
+    message(STATUS "Some NeuroTensor libraries are missing. Building missing ones...")
+
+    foreach(dep IN LISTS NEUROTENSOR_UNMADE_LIBRARIES)
+        if(TARGET ${dep})
+            message(STATUS "Building missing library target: ${dep}")
+
+            add_custom_target(build_${dep}
+                COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${dep}
+                COMMENT "Building missing dependency ${dep}"
+            )
+
+            # Run immediately when function is called
+            add_dependencies(build_missing_deps build_${dep})
+
+        else()
+            message(WARNING "Dependency target '${dep}' does not exist in this project!")
+        endif()
+    endforeach()
+endfunction()
+
+#If build archive force is true, it will build everything not already built, and then have the main target built
 if(BUILD_ARCHIVE_FORCE)
-    message(STATUS "Library files are being forced to be packaged")
-else()
-    message(STATUS "Library files are not being forced to be packaged")
+    build_missing_neurotensor_deps()
+    set(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST TRUE)
 endif()
-
-# if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST OR BUILD_ARCHIVE_FORCE)
-#     if(BUILD_ARCHIVE_FORCE AND NOT NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
-#         message(WARNING "Some library files were missing — BUILD_ARCHIVE_FORCE=ON, forcing rebuild and packaging.")
-#     else()
-#         message(STATUS "All library files found — building neurotensor from static libraries.")
-#     endif()
-
-#     # Determine object file extension
-#     if (WIN32)
-#         set(OBJECT_FILE_EXT "*.obj")
-#     else()
-#         set(OBJECT_FILE_EXT "*.o")
-#     endif()
-
-#     # Force build of dependencies if missing and BUILD_ARCHIVE_FORCE=ON
-#     if(BUILD_ARCHIVE_FORCE)
-#         message(STATUS "Forcing build of all dependency libraries before archiving...")
-#         add_custom_target(force_build_all_deps ALL DEPENDS ${NEUROTENSOR_DEPS})
-#     endif()
-
-#     # Collect all compiled object files
-#     file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
-#         RELATIVE "${CMAKE_BINARY_DIR}"
-#         "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
-#     )
-
-#     # Output archive name
-#     set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
-#     # Archive command
-#     add_custom_command(
-#         OUTPUT "${OUTPUT_ARCHIVE}"
-#         COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-#         DEPENDS ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-#         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-#         COMMENT "Archiving NeuroTensor object files into ${OUTPUT_ARCHIVE}"
-#         VERBATIM
-#     )
-#     add_custom_target(neurotensor_archive ALL DEPENDS "${OUTPUT_ARCHIVE}")
-
-#     add_library(neurotensor STATIC IMPORTED GLOBAL)
-#     set_target_properties(neurotensor PROPERTIES
-#         IMPORTED_LOCATION "${OUTPUT_ARCHIVE}"
-#         LINKER_LANGUAGE CXX
-#     )
-
-#     # add_custom_target(neurotensor_archive DEPENDS "${OUTPUT_ARCHIVE}")
-#     add_dependencies(neurotensor neurotensor_archive)
-
-# else()
-#     message(WARNING "Cannot find all library files, building dummy for neurotensor")
-#     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
-# endif()
-
-# if(NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILES)
-#     list(GET NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILES 0 NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE)
-#     list(APPEND NEUROTENSOR_LIBS NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE)
-#     message(STATUS "Found niftiio at " ${NEUROTENSOR_NIFTIIO_STATIC_LIBRARY_FILE}) 
-# else()
-#     message(STATUS "Niftiio File not found")
-# endif()
+    
 
 
 if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
@@ -825,213 +327,15 @@ if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
     #                    ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
     #                     )
     # set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
-elseif(BUILD_ARCHIVE_FORCE)
-    message(WARNING "BUILD_ARCHIVE_FORCE=ON — building any missing dependencies and combining all objects...")
-
-    # Determine object file extension
-    if(WIN32)
-        set(OBJECT_FILE_EXT "*.obj")
-    else()
-        set(OBJECT_FILE_EXT "*.o")
-    endif()
-
-    # --- Step 1: Force build any missing dependencies ---
-    set(_valid_deps "")
-    foreach(dep ${NEUROTENSOR_DEPS})
-        if(TARGET ${dep})
-            list(APPEND _valid_deps ${dep})
-        else()
-            message(WARNING "Dependency target '${dep}' does not exist yet — it will be skipped.")
-        endif()
-    endforeach()
-
-    if(_valid_deps)
-        message(STATUS "Forcing dependent targets to build before archiving...")
-        add_custom_target(force_build_all_deps ALL DEPENDS ${_valid_deps})
-    else()
-        message(WARNING "No valid dependency targets found for forced build.")
-    endif()
-
-    # --- Step 2: After deps build, collect all object files ---
-    add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/collect_objects.stamp"
-        COMMAND ${CMAKE_COMMAND} -E echo "Collecting all available object files..."
-        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/collect_objects.stamp"
-        DEPENDS force_build_all_deps
-        COMMENT "Ensuring all missing libraries are built before packaging"
-    )
-
-    file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
-        RELATIVE "${CMAKE_BINARY_DIR}"
-        "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
-    )
-
-    set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
-    # --- Step 3: Create the final archive from all object files ---
-    add_custom_command(
-        OUTPUT "${OUTPUT_ARCHIVE}"
-        COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-        DEPENDS "${CMAKE_BINARY_DIR}/collect_objects.stamp" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-        COMMENT "Building NeuroTensor static archive with forced dependency build"
-        VERBATIM
-    )
-
-    add_custom_target(neurotensor_archive ALL DEPENDS "${OUTPUT_ARCHIVE}")
-
-    # --- Step 4: Create an installable target ---
-    add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
-    add_dependencies(neurotensor neurotensor_archive)
 else()
     message(WARNING "Cannot find all library files, building dummy for neurotensor")
     add_library(neurotensor STATIC nt/utils/utils_systems/dummy.cpp)
 endif()
 
 
-# if(NEUROTENSOR_ALL_LIBRARY_FILES_EXIST OR BUILD_ARCHIVE_FORCE)
-#     message(STATUS "Building neurotensor from static libraries")
-#     message(STATUS "Looking for object files")
-#     if (WIN32)
-#         set(OBJECT_FILE_EXT "*.obj")
-#     else()
-#         set(OBJECT_FILE_EXT "*.o")
-#     endif()
-    
-
-#     # Collect object files
-#     file(GLOB_RECURSE NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES
-#         RELATIVE "${CMAKE_BINARY_DIR}"
-#         "${CMAKE_BINARY_DIR}/${OBJECT_FILE_EXT}"
-#     )
-
-#     # Output archive name (e.g., libneurotensor.a or neurotensor.lib)
-#     set(OUTPUT_ARCHIVE "${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}neurotensor${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
-#     # Create archive using CMAKE_AR
-#     add_custom_command(
-#         OUTPUT "${OUTPUT_ARCHIVE}"
-#         COMMAND "${CMAKE_AR}" rcs "${OUTPUT_ARCHIVE}" ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-#         DEPENDS ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-#         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-#         COMMENT "Archiving NeuroTensor object files into ${OUTPUT_ARCHIVE}"
-#         VERBATIM
-#     )
-
-#     # Declare IMPORTED static library target
-#     add_library(neurotensor STATIC IMPORTED GLOBAL)
-#     set_target_properties(neurotensor PROPERTIES
-#         IMPORTED_LOCATION "${OUTPUT_ARCHIVE}"
-#         LINKER_LANGUAGE CXX
-#     )
-
-#     # Trigger archive creation before the imported target is usable
-#     add_custom_target(neurotensor_archive DEPENDS "${OUTPUT_ARCHIVE}")
-#     add_dependencies(neurotensor neurotensor_archive)
-    # add_library(neurotensor STATIC
-    #                    ${NEUROTENSOR_COMPILED_STATIC_OBJECT_FILES}
-    #                     )
-    # set_target_properties(neurotensor PROPERTIES LINKER_LANGUAGE CXX)
-
-
-# Third-party libs (adapt path as needed)
-# These will be linked because they are built with neurotensor
-# list(APPEND NEUROTENSOR_LIBS
-#     $<TARGET_FILE:tbb>
-#     $<TARGET_FILE:niftiio>
-#     $<TARGET_FILE:znz>
-#     $<TARGET_FILE:matplot++>
-# )
-
-
-
-
-# message(STATUS "NEUROTENSOR_LIBS = ${NEUROTENSOR_LIBS}")
-
-# # Cross-platform merging of static libs into one archive
-# if(APPLE)
-#   add_custom_command(TARGET neurotensor POST_BUILD
-#     COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-#                                 ${NEUROTENSOR_LIBS}
-#                                     $<TARGET_FILE:tbb>
-#                                     $<TARGET_FILE:niftiio>
-#                                     $<TARGET_FILE:znz>
-#                                     $<TARGET_FILE:matplot>
-
-#     COMMENT "🔧 macOS: Merging static libraries into libneurotensor.a with libtool"
-#   )
-# elseif(UNIX)
-#   file(GLOB_RECURSE OBJECT_FILES "${CMAKE_BINARY_DIR}/*.o")
-#   add_custom_command(TARGET neurotensor POST_BUILD
-#     COMMAND rm -f $<TARGET_FILE:neurotensor>
-#     COMMAND ar crus $<TARGET_FILE:neurotensor> ${OBJECT_FILES}
-#     COMMAND echo "📦 Running ranlib on final archive"
-#     COMMAND ranlib $<TARGET_FILE:neurotensor>
-#     # COMMENT "🔧 Merging all .o files into libneurotensor.a with ar"    # Above command is to generate symbol index 
-#     # COMMENT "If you recieve an error that libtool is not installed run apt-get install libtool"
-#     # COMMAND libtool -static -o $<TARGET_FILE:neurotensor> 
-#     #                             ${NEUROTENSOR_LIBS}
-#     #                                 $<TARGET_FILE:tbb>
-#     #                                 $<TARGET_FILE:niftiio>
-#     #                                 $<TARGET_FILE:znz>
-#     #                                 $<TARGET_FILE:matplot>
-#     # COMMENT "🔧 Linux: Merged static libraries into libneurotensor.a with libtool"
-#   )
-# elseif(WIN32)
-#   add_custom_command(TARGET neurotensor POST_BUILD
-#     COMMAND lib.exe /OUT:$<TARGET_FILE:neurotensor> 
-#                         ${NEUROTENSOR_LIBS}
-#                         $<TARGET_FILE:tbb>
-#                         $<TARGET_FILE:niftiio>
-#                         $<TARGET_FILE:znz>
-#                         $<TARGET_FILE:matplot>
-
-#     COMMENT "🔧 Windows: Merging static libraries into libneurotensor.lib with lib.exe"
-#   )
-# endif()
-
-
-# target_link_libraries(neurotensor
-#     nt_core
-#     nt_types
-#     nt_functional
-#     nt_functional_cpu
-#     nt_matmult
-#     nt_linalg
-#     nt_svd
-#     nt_qr
-#     nt_inv
-#     nt_column_space
-#     nt_null_space
-#     nt_ai
-#     nt_tda
-#     nt_sparse
-#     nt_images
-#     nt_memory
-#     nt_multi_processing
-#     nt_fmri
-#     nt_third_party
-# )
-
-# target_include_directories(neurotensor PUBLIC ${CMAKE_SOURCE_DIR})
-
-# Optional: shared instead of static
-# add_library(neurotensor SHARED ${SOURCES})
-
-
 
 if( NEUROTENSOR_ALL_LIBRARY_FILES_EXIST)
 install(FILES "${OUTPUT_ARCHIVE}" DESTINATION lib)
-elseif(BUILD_ARCHIVE_FORCE)
-# Forced build mode — install the newly built archive
-message(STATUS "Installing forced-built NeuroTensor archive to lib/")
-install(FILES "${OUTPUT_ARCHIVE}" DESTINATION lib)
-
-# Optionally also install headers
-# install(DIRECTORY "${CMAKE_SOURCE_DIR}/nt/"
-#     DESTINATION include/nt
-#     FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
-
 else()
 # Install the library and headers
 install(TARGETS neurotensor

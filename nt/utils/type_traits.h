@@ -8,7 +8,7 @@
 //  - remove_cvref_t <- not in all versions, guarenteed here
 //  - is_in <- standard way to check if a type is contained in a parameter pack
 //  - is_decay_same <- if 2 types both decayed are the same
-//  - is_in_decay <- standard way to check if a type is contained in a parameter pack (but decay each type)
+//  - is_decay_in_v <- standard way to check if a type is contained in a parameter pack (but decay each type)
 //  
     
 
@@ -144,10 +144,14 @@ struct is_integral : is_in<remove_cv_t<T>, bool, char, char16_t, char32_t, wchar
 template<class T>
 inline constexpr bool is_integral_v = is_integral<T>::value;
 
+
+
 template<class T>
 struct is_floating_point : is_in<remove_cv_t<T>, float, double, long double> {};
 template<class T>
 inline constexpr bool is_floating_point_v = is_floating_point<T>::value;
+
+
 
 
 template<class T>
@@ -157,7 +161,7 @@ struct is_array<T[]> : true_type {};
 template<class T, std::size_t N>
 struct is_array<T[N]> : true_type {};
 template< class T >
-constexpr bool is_array_v = is_array<T>::value;
+inline constexpr bool is_array_v = is_array<T>::value;
 
 
 // to implement this natively, there are a lot of macros involved that are specific to each platform
@@ -167,7 +171,7 @@ constexpr bool is_array_v = is_array<T>::value;
 template<class T>
 struct is_enum : std::is_enum<T> {};
 template<class T>
-constexpr bool is_enum_v = is_enum<T>::value;
+inline constexpr bool is_enum_v = is_enum<T>::value;
 
 
 // to implement this natively, there are a lot of macros involved that are specific to each platform
@@ -177,7 +181,7 @@ constexpr bool is_enum_v = is_enum<T>::value;
 template<typename T>
 struct is_union : std::is_union<T> {};
 template<typename T>
-constexpr bool is_union_v = is_union<T>::value;
+inline constexpr bool is_union_v = is_union<T>::value;
 
 
 namespace is_class_detail{
@@ -397,6 +401,111 @@ struct is_decay_in : bool_constant<(is_decay_same_v<T, Ts> || ...)> {};
 
 template<class T, typename... Rest>
 inline constexpr bool is_decay_in_v = is_decay_in<T, Rest...>::value;
+
+
+template<class T>
+struct make_unsigned{
+    using type = T;
+};
+
+template<>
+struct make_unsigned<int8_t>{
+    using type = uint8_t;
+};
+
+template<>
+struct make_unsigned<int16_t>{
+    using type = uint16_t;
+};
+
+
+template<>
+struct make_unsigned<int32_t>{
+    using type = uint32_t;
+};
+
+template<>
+struct make_unsigned<int64_t>{
+    using type = uint64_t;
+};
+
+
+template<>
+struct make_unsigned<float>{
+    using type = uint32_t;
+};
+
+template<>
+struct make_unsigned<double>{
+    using type = uint64_t;
+};
+
+template<class T>
+using make_unsigned_t = typename make_unsigned<T>::type;
+
+template<class T>
+struct is_unsigned : integral_constant<bool,
+                        is_arithmetic_v<T> && T(0) < T(-1)> {};
+template<class T>
+inline constexpr bool is_unsigned_v = is_unsigned<T>::value;
+
+
+template<class T>
+struct make_signed{
+    using type = T;
+};
+
+template<>
+struct make_signed<uint8_t>{
+    using type = int8_t;
+};
+
+template<>
+struct make_signed<uint16_t>{
+    using type = int16_t;
+};
+
+
+template<>
+struct make_signed<uint32_t>{
+    using type = int32_t;
+};
+
+template<>
+struct make_signed<uint64_t>{
+    using type = int64_t;
+};
+
+
+template<>
+struct make_signed<float>{
+    using type = int32_t;
+};
+
+template<>
+struct make_signed<double>{
+    using type = int64_t;
+};
+
+template<class T>
+using make_signed_t = typename make_signed<T>::type;
+
+
+template<typename T>
+struct is_trivially_copyable : std::is_trivially_copyable<T> {};
+template<typename T>
+inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
+
+template<typename T>
+class numeric_limits : public std::numeric_limits<T> {};
+
+template<typename T>
+struct numeric_num_digits{
+    static constexpr std::size_t value = numeric_limits<T>::digits;
+};
+
+template<typename T>
+inline constexpr std::size_t numeric_num_digits_v = numeric_num_digits<T>::value;
 
 // make has tytpe
 //this is like std::reference_wrapper

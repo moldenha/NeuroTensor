@@ -283,6 +283,12 @@ class NEUROTENSOR_API Tensor final{
 		Tensor squeeze(utils::optional_list list = nullptr) const;
 		Tensor permute(std::vector<size_value_t>) const;
 		inline std::vector<size_value_t> strides() const {return shape().strides();}
+        inline const size_value_t* forceStrideStore(){
+            if(stored_strides)
+                return stored_strides.get();
+            this->set_stored_strides(this->strides());
+            return stored_strides.get();
+        }
 		inline std::vector<size_value_t> getChangedStrides() const {
 			if(stored_strides){
 				return std::vector<size_value_t>(stored_strides.get(), stored_strides.get() + (dims() + 1));

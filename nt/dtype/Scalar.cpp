@@ -1,6 +1,7 @@
 #include "../Tensor.h"
 #include "Scalar.h"
 #include "../types/Types.h"
+#include "../math/math.h"
 #include "../convert/Convert.h"
 #include "DType_enum.h"
 #include <limits>
@@ -9,100 +10,6 @@
 #include <type_traits>
 
 namespace nt{
-
-namespace details{
-template<typename T>
-inline constexpr T get_infinity(){
-    if constexpr (std::is_same_v<T, complex_32>){
-        return complex_32(get_infinity<float16_t>(), get_infinity<float16_t>());
-    }
-    else if constexpr(std::is_same_v<T, complex_64>){
-        return complex_64(get_infinity<float>(), get_infinity<float>());
-    }
-    else if constexpr(std::is_same_v<T, complex_128>){
-        return complex_128(get_infinity<double>(), get_infinity<double>());
-    }
-    else if constexpr (std::numeric_limits<T>::has_infinity){
-        return std::numeric_limits<T>::infinity();
-    }
-    else{
-        return std::numeric_limits<T>::max();
-    }
-}
-
-template<typename T>
-inline bool is_inf(T val){
-    if constexpr (std::is_same_v<T, complex_32>){
-        return is_inf(val.real()) && is_inf(val.imag());
-    }
-    else if constexpr(std::is_same_v<T, complex_64>){
-        return is_inf(val.real()) && is_inf(val.imag());
-    }
-    else if constexpr(std::is_same_v<T, complex_128>){
-        return is_inf(val.real()) && is_inf(val.imag());
-    }
-    else if constexpr (std::numeric_limits<T>::has_infinity){
-        return std::isinf(val) || std::isinf(-val);
-    }
-    else{
-        return std::numeric_limits<T>::max() == val || std::numeric_limits<T>::max() == (-val);
-    }
-}
-
-template<typename T>
-inline constexpr T get_nan(){
-    if constexpr (std::is_same_v<T, complex_32>){
-        return complex_32(get_nan<float16_t>(), get_nan<float16_t>());
-    }
-    else if constexpr(std::is_same_v<T, complex_64>){
-        return complex_64(get_nan<float>(), get_nan<float>());
-    }
-    else if constexpr(std::is_same_v<T, complex_128>){
-        return complex_128(get_nan<double>(), get_nan<double>());
-    }
-    else if constexpr(std::is_same_v<T, float>){
-        return std::nanf("");  
-    }else if constexpr (std::is_same_v<T, double>){
-        return std::nan("");
-    }else if constexpr (std::is_same_v<T, long double>){
-        return std::nanl("");
-    }
-#ifndef SIMDE_FLOAT16_IS_SCALAR
-    else if constexpr(std::is_same_v<T, float16_t>){
-        return half_float::nanh("");
-    }
-#else
-    else if constexpr(std::is_same_v<T, float16_t>){
-        return _NT_FLOAT32_TO_FLOAT16_(std::nanf(""));
-    }
-#endif
-    else{
-        return static_cast<T>(std::nanl(""));
-    }
-}
-
-template<typename T>
-inline bool is_nan(T val){
-    if constexpr (std::is_same_v<T, complex_32>){
-        return is_nan(val.real()) && is_inf(val.imag());
-    }
-    else if constexpr(std::is_same_v<T, complex_64>){
-        return is_nan(val.real()) && is_inf(val.imag());
-    }
-    else if constexpr(std::is_same_v<T, complex_128>){
-        return is_nan(val.real()) && is_inf(val.imag());
-    }else if constexpr(std::is_same_v<T, float16_t>){
-        return val != val; //for nan values they are not equal to themselves
-    }
-    else if constexpr (std::is_same_v<T, ::nt::int128_t>){
-        return false;
-    }
-    else{
-        return std::isnan(val);    
-    }
-}
-
-}
 
 Scalar::Scalar(const Scalar& s)
 	:dtype(s.dtype),
@@ -162,17 +69,17 @@ Scalar::Scalar(std::string _str)
     :dtype(DType::Float64)
 {
     if(_str == "inf"){
-        v.d = details::get_infinity<decltype(v.d)>();
+        v.d = math::inf<decltype(v.d)>();
     }else if(_str == "-inf"){
-        v.d = -details::get_infinity<decltype(v.d)>();
+        v.d = math::neg_inf<decltype(v.d)>();
     }
     else if(_str == "nan"){
-        v.d = details::get_nan<decltype(v.d)>();
+        v.d = math::nan<decltype(v.d)>();
     }
     else {
         // Try to convert string to a number
         try {
-            v.d = std::stod(_str);  // Convert the string to a double
+            v.d = (::nt::float128_func::from_string(_str));  // Convert the string to a double
         }
         catch (const std::invalid_argument& e) {
             // If conversion fails, throw an exception
@@ -184,11 +91,11 @@ Scalar::Scalar(std::string _str)
 
 bool Scalar::isInfinity() const {
     if(isFloatingPoint()){
-        return details::is_inf(v.d);
+        return math::isinf(v.d);
     }else if(isComplex()){
-        return details::is_inf(v.c);
+        return math::isinf(v.c);
     }else if(isIntegral()){
-        return details::is_inf(v.i);
+        return math::isinf(v.i);
     }
     return false;
 
@@ -197,11 +104,11 @@ bool Scalar::isInfinity() const {
 
 bool Scalar::isNan() const {
     if(isFloatingPoint()){
-        return details::is_nan(v.d);
+        return math::isnan(v.d);
     }else if(isComplex()){
-        return details::is_nan(v.c);
+        return math::isnan(v.c);
     }else if(isIntegral()){
-        return details::is_nan(v.i);
+        return math::isnan(v.i);
     }
     return false;
 }
@@ -406,12 +313,12 @@ Scalar Scalar::toComplex() const {
     if(isComplex()) return *this;
     else if(isInfinity()){
         if(isNegative()){
-            return Scalar(-details::get_infinity<decltype(v.c)>()); 
+            return Scalar(math::neg_inf<decltype(v.c)>()); 
         }
-        return Scalar(details::get_infinity<decltype(v.c)>()); 
+        return Scalar(math::inf<decltype(v.c)>()); 
     }
     else if(isNan()){
-        return Scalar(details::get_nan<decltype(v.c)>()); 
+        return Scalar(math::nan<decltype(v.c)>()); 
     }
     else if(isFloatingPoint()){
         return Scalar(decltype(v.c)(convert::convert<decltype(v.c)::value_type>(v.d), convert::convert<decltype(v.c)::value_type>(v.d)));
@@ -425,12 +332,12 @@ Scalar Scalar::toIntegral() const{
     if(isIntegral()) return *this;
     else if(isInfinity()){
         if(isNegative()){
-            return Scalar(-details::get_infinity<decltype(v.i)>()); 
+            return Scalar(math::neg_inf<decltype(v.i)>()); 
         }
-        return Scalar(details::get_infinity<decltype(v.i)>()); 
+        return Scalar(math::inf<decltype(v.i)>()); 
     }
     else if(isNan()){
-        return Scalar(details::get_nan<decltype(v.i)>()); 
+        return Scalar(math::nan<decltype(v.i)>()); 
     }
     else if(isComplex()){
         return Scalar(convert::convert<decltype(v.i)>(v.c));
@@ -444,12 +351,12 @@ Scalar Scalar::toFloatingPoint() const{
     if(isFloatingPoint()) return *this;
     else if(isInfinity()){
         if(isNegative()){
-            return Scalar(-details::get_infinity<decltype(v.d)>()); 
+            return Scalar(math::neg_inf<decltype(v.d)>()); 
         }
-        return Scalar(details::get_infinity<decltype(v.d)>()); 
+        return Scalar(math::inf<decltype(v.d)>()); 
     }
     else if(isNan()){
-        return Scalar(details::get_nan<decltype(v.d)>()); 
+        return Scalar(math::nan<decltype(v.d)>()); 
     }
     else if(isComplex()){
         return Scalar(convert::convert<decltype(v.d)>(v.c));
@@ -535,16 +442,17 @@ DType Scalar::type() const{
 
 template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_integer_v<DTypeFuncs::type_to_dtype<T>>, bool>>
 T Scalar::to() const{
+
     if(isInfinity()){
         if constexpr (!std::is_unsigned_v<T>){
             if(isNegative()){
-                return -details::get_infinity<T>();
+                return math::neg_inf<T>();
             }
         }
-        return details::get_infinity<T>();
+        return math::inf<T>();
     }
     else if(isNan()){
-        return details::get_nan<T>();
+        return math::nan<T>();
     }
     else if(isComplex())
 		return convert::convert<T>(v.c);
@@ -563,12 +471,12 @@ template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_complex_v<DTypeFuncs:
 T Scalar::to() const{
     if(isInfinity()){
         if(isNegative()){
-            return -details::get_infinity<T>();
+            return math::neg_inf<T>();
         }
-        return details::get_infinity<T>();
+        return math::inf<T>();
     }
     else if(isNan()){
-        return details::get_nan<T>();
+        return math::nan<T>();
     }
     else if(isComplex())
 		return T(v.c.real(), v.c.imag());
@@ -583,12 +491,13 @@ template<typename T, std::enable_if_t<DTypeFuncs::is_dtype_floating_v<DTypeFuncs
 T Scalar::to() const{
     if(isInfinity()){
         if(isNegative()){
-            return -details::get_infinity<T>();
+            return math::neg_inf<T>();
         }
-        return details::get_infinity<T>();
+        return math::inf<T>();
     }
     else if(isNan()){
-        return details::get_nan<T>();
+        // std::cout << "self is nan" << std::endl;
+        return math::nan<T>();
     }
     else if(isComplex())
 		return convert::convert<T>(v.c);

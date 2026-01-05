@@ -1,10 +1,10 @@
 #include "laplacian.h"
 #include "filtration.h"
 #include "boundaries.h"
-
 #include "../../nn/functional.h"
 #include "../../functional/functional.h" //zeros, abs, vector_to_tensor
 #include "../Boundaries.h"
+#include <queue>
 
 namespace nt {
 namespace tda {

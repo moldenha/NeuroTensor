@@ -38,6 +38,8 @@ nt/functional/cpu/matmult/miscellaneous
 nt/functional/old
 nt/fmri/tensor_files/making
 
+nt/types/float128/test.cpp
+nt/types/float128/test
 
 #seperate testing files
 files/

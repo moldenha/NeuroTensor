@@ -14,11 +14,16 @@ namespace nt{
 /* NOTE: In these macros, "1" means true, and "0" means false. */
 
 
-
+#ifndef _NT_EXPAND_
 #define _NT_EXPAND_(x) x
+#endif
 
+#ifndef __NT_GLUE
 #define __NT_GLUE(X,Y) X##Y
+#endif
+#ifndef _NT_GLUE_
 #define _NT_GLUE_(X,Y) __NT_GLUE(X,Y)
+#endif
 
 /* Returns the 100th argument. */
 #define _NT_ARG_100_(_,\

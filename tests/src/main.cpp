@@ -45,6 +45,7 @@
 #include "autograd_view_test.h"
 #include "operator_autograd_test.h"
 #include "normalize_autograd_test.h"
+#include "float128_test.h" 
 // Autograd tests to back-test against pytorch
 // While all of the functions are used for both nt::Tensor's and nt::TensorGrad's
 // The following just have functions with non-trivial autograds that need to be back-tested
@@ -117,5 +118,6 @@ int main(){
     view_autograd_test();
     operator_autograd_test();
     normalize_autograd_test();
+    float_128_test();
     return 0;
 }

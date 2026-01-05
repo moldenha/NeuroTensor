@@ -1,3 +1,9 @@
+// VLA's used here on supported platforms only
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
+
 #include "../../Tensor.h"
 #include "combine.h"
 #include "compare.h"
@@ -5,6 +11,7 @@
 #include "exceptions.hpp"
 #include "../../utils/macros.h"
 #include "../../dtype/ArrayVoid.hpp"
+
 
 namespace nt{
 namespace functional{
@@ -467,3 +474,7 @@ Tensor select(Tensor input, int64_t dim, int64_t index){
 
 }
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

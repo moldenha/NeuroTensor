@@ -13,12 +13,10 @@ void softmax_test(){
             x << nt::complex_64(1.124f), nt::complex_64(2.567f), nt::complex_64(4.762f),
                 nt::complex_64(-4.135f), nt::complex_64(3.41f), nt::complex_64(-5.887f),
                 nt::complex_64(-4.0f),  nt::complex_64(1.23f),  nt::complex_64(0.987);
-
+            
             auto out = nt::softmax(x);
-            
-            float summed = out.sum().toScalar().to<float>();
-            
-            nt::utils::throw_exception(summed > 0.9 && summed < 1.1, "Error, softmax did not normalize to 1 for $", dt);
+            nt::Tensor summed = out.sum();
+            nt::utils::throw_exception(nt::all(summed > nt::complex_128(0.9) && summed < nt::complex_128(1.1)), "Error, softmax did not normalize to 1 for $ got $", dt, summed);
         }
     });
     run_test("softmax - dim (-1)", [] {

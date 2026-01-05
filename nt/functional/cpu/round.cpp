@@ -7,132 +7,13 @@
 #include "../../refs/SizeRef.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include "../../convert/Convert.h"
-#include "../../types/math.h"
+#include "../../math/math.h"
 #include <cmath>
 
 #include "../../types/float128.h"
 #include "../../utils/always_inline_macro.h"
 
-//if this is defined
-//this means that for float128_t boost's 128 bit floating point is used
-#ifdef BOOST_MP_STANDALONE
-namespace std{
-NT_ALWAYS_INLINE ::nt::float128_t round(const ::nt::float128_t& x){
-    ::nt::float128_t int_part = trunc(x);  // integer part (toward zero)
-    ::nt::float128_t frac = x - int_part;  // fractional part
 
-    if (x >= 0) {
-        return frac < 0.5 ? int_part : int_part + 1;
-    } else {
-        return frac > -0.5 ? int_part : int_part - 1;
-    }
-}
-
-
-NT_ALWAYS_INLINE ::nt::float128_t trunc(const ::nt::float128_t& x) {
-    // Remove the fractional part by casting to integer type
-    // then back to float128
-    if (x >= 0)
-        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
-    else
-        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
-}
-
-NT_ALWAYS_INLINE ::nt::float128_t floor(const ::nt::float128_t& x) {
-    ::nt::float128_t int_part = trunc(x);
-    if (x < int_part) {
-        return int_part - 1;
-    }
-    return int_part;
-}
-
-NT_ALWAYS_INLINE ::nt::float128_t ceil(const ::nt::float128_t& x) {
-    ::nt::float128_t int_part = trunc(x);
-    if (x > int_part) {
-        return int_part + 1;
-    }
-    return int_part;
-}
-
-}
-
-#endif //BOOST_MP_STANDALONE
-
-#ifdef SIMDE_FLOAT16_IS_SCALAR
-namespace std{
-
-NT_ALWAYS_INLINE ::nt::float16_t floor(const ::nt::float16_t& x) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::floor(_NT_FLOAT16_TO_FLOAT32_(x)));
-}
-
-NT_ALWAYS_INLINE ::nt::float16_t ceil(const ::nt::float16_t& x) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::ceil(_NT_FLOAT16_TO_FLOAT32_(x)));
-}
-
-NT_ALWAYS_INLINE ::nt::float16_t trunc(const ::nt::float16_t& x) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::trunc(_NT_FLOAT16_TO_FLOAT32_(x)));
-}
-
-NT_ALWAYS_INLINE ::nt::float16_t round(const ::nt::float16_t& x) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::round(_NT_FLOAT16_TO_FLOAT32_(x)));
-}
-
-}
-#endif
-
-namespace std{
-
-NT_ALWAYS_INLINE ::nt::complex_32 floor(const ::nt::complex_32& x){
-    return ::nt::complex_32(floor(x.real()), floor(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_64 floor(const ::nt::complex_64& x){
-    return ::nt::complex_64(floor(x.real()), floor(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_128 floor(const ::nt::complex_128& x){
-    return ::nt::complex_128(floor(x.real()), floor(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_32 round(const ::nt::complex_32& x){
-    return ::nt::complex_32(round(x.real()), round(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_64 round(const ::nt::complex_64& x){
-    return ::nt::complex_64(round(x.real()), round(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_128 round(const ::nt::complex_128& x){
-    return ::nt::complex_128(round(x.real()), round(x.imag()));
-}
-
-
-NT_ALWAYS_INLINE ::nt::complex_32 ceil(const ::nt::complex_32& x){
-    return ::nt::complex_32(ceil(x.real()), ceil(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_64 ceil(const ::nt::complex_64& x){
-    return ::nt::complex_64(ceil(x.real()), ceil(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_128 ceil(const ::nt::complex_128& x){
-    return ::nt::complex_128(ceil(x.real()), ceil(x.imag()));
-}
-
-
-NT_ALWAYS_INLINE ::nt::complex_32 trunc(const ::nt::complex_32& x){
-    return ::nt::complex_32(trunc(x.real()), trunc(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_64 trunc(const ::nt::complex_64& x){
-    return ::nt::complex_64(trunc(x.real()), trunc(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_128 trunc(const ::nt::complex_128& x){
-    return ::nt::complex_128(trunc(x.real()), trunc(x.imag()));
-}
-
-}
 
 namespace nt::mp{
 
@@ -148,11 +29,11 @@ inline void round(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-            *out = std::round(*begin);
+            *out = ::nt::math::round(*begin);
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = std::round(*begin);
+            *out = ::nt::math::round(*begin);
         }
 	}
 }
@@ -163,7 +44,7 @@ inline void round_decimal(T begin, T end, U out, int64_t decimals){
 	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     base_type ten = base_type(10);
-    base_type mult = ::nt::pow(ten, decimals);
+    base_type mult = ::nt::math::pow(ten, decimals);
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
         simde_type<base_type> val = SimdTraits<base_type>::set1(mult);
@@ -176,11 +57,11 @@ inline void round_decimal(T begin, T end, U out, int64_t decimals){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-            *out = std::round(*begin * mult) / mult;
+            *out = ::nt::math::round(*begin * mult) / mult;
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = std::round(*begin * mult) / mult;
+            *out = ::nt::math::round(*begin * mult) / mult;
         }
 	}
 }
@@ -197,11 +78,11 @@ inline void truncate(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-            *out = std::trunc(*begin);
+            *out = ::nt::math::trunc(*begin);
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = std::trunc(*begin);
+            *out = ::nt::math::trunc(*begin);
         }
 	}
 }
@@ -219,11 +100,11 @@ inline void floor(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-            *out = std::floor(*begin);
+            *out = ::nt::math::floor(*begin);
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = std::floor(*begin);
+            *out = ::nt::math::floor(*begin);
         }
 	}
 }
@@ -240,11 +121,11 @@ inline void ceil(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-            *out = std::ceil(*begin);
+            *out = ::nt::math::ceil(*begin);
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = std::ceil(*begin);
+            *out = ::nt::math::ceil(*begin);
         }
 	}
 }

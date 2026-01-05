@@ -63,4 +63,35 @@
     NT_CUR_FUNC__(::nt::uint_bool_t, Bool, boolean)\
     NT_CUR_FUNC__(::nt::Tensor, TensorObj, TensorData)\
 
+#define NT_GET_DEFINE_FLOATING_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(::nt::float16_t, Float16, Half, __VA_ARGS__)\
+    NT_CUR_FUNC__(float, Float32, Float, __VA_ARGS__)\
+    NT_CUR_FUNC__(double, Float64, Double, __VA_ARGS__)\
+    NT_CUR_FUNC__(::nt::float128_t, Float128, LongDouble, __VA_ARGS__)\
+
+#define NT_GET_DEFINE_COMPLEX_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(::nt::complex_32, Complex32, cfloat16, __VA_ARGS__)\
+    NT_CUR_FUNC__(::nt::complex_64, Complex64, cfloat, __VA_ARGS__)\
+    NT_CUR_FUNC__(::nt::complex_128, Complex128, cdouble, __VA_ARGS__)
+
+
+#define NT_GET_DEFINE_SIGNED_INTEGER_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(int8_t, int8, Char, __VA_ARGS__)\
+    NT_CUR_FUNC__(int16_t, int16, Short, __VA_ARGS__)\
+    NT_CUR_FUNC__(int32_t, int32, Integer, __VA_ARGS__)\
+    NT_CUR_FUNC__(int64_t, int64, Long, __VA_ARGS__)\
+    NT_CUR_FUNC__(::nt::int128_t, int128, LongLong, __VA_ARGS__)\
+
+#define NT_GET_DEFINE_UNSIGNED_INTEGER_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(uint8_t, uint8, Byte, __VA_ARGS__)\
+    NT_CUR_FUNC__(uint16_t, uint16, UnsignedShort, __VA_ARGS__)\
+    NT_CUR_FUNC__(uint32_t, uint32, UnsignedInteger, __VA_ARGS__)\
+    NT_CUR_FUNC__(::nt::uint128_t, uint128, UnsignedLongLong, __VA_ARGS__)\
+
+
+#define NT_GET_DEFINE_OTHER_DTYPES_OTHER_(NT_CUR_FUNC__, ...)\
+    NT_CUR_FUNC__(::nt::uint_bool_t, Bool, boolean, __VA_ARGS__)\
+    NT_CUR_FUNC__(::nt::Tensor, TensorObj, TensorData, __VA_ARGS__)\
+
+
 #endif

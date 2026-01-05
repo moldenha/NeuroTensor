@@ -5,6 +5,7 @@
 #include "fill.h" //ones, arange
 #include "../functional.h" //softmax_
 #include "exceptions.hpp"
+#include <random>
 
 namespace nt{
 namespace functional{

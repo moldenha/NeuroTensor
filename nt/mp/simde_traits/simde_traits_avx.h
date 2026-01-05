@@ -457,7 +457,12 @@ struct SimdTraits_avx<int64_t> {
 
     /* static constexpr auto modulo = simde_mm_rem_epi64; */
     inline static constexpr auto multiply = [](const Type& a, const Type& b) -> Type{
-	return simde_mm_set_epi64x(simde_mm_extract_epi64(a, 0) * simde_mm_extract_epi64(b, 0), simde_mm_extract_epi64(a, 1) * simde_mm_extract_epi64(b, 1));
+        // uint64_t res_a[2];
+        // uint64_t res_b[2];
+        // simde_mm_storeu_si128((simde__m128i*)res_a, a);
+        // simde_mm_storeu_si128((simde__m128i*)res_b, b);
+        // return simde_mm_set_epi64x(res_a[0] * res_b[0], res_a[1] * res_b[1]);
+	return simde_mm_set_epi64x(simde_mm_extract_epi64(a, 1) * simde_mm_extract_epi64(b, 1), simde_mm_extract_epi64(a, 0) * simde_mm_extract_epi64(b, 0));
     };
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
@@ -598,7 +603,7 @@ struct SimdTraits_avx<uint32_t> {
     static constexpr auto subtract = simde_mm_sub_epi32;
     static constexpr auto divide = simde_mm_div_epu32;
     static constexpr auto add = simde_mm_add_epi32;
-    static constexpr auto multiply = simde_mm_mul_epu32;
+    static constexpr auto multiply = simde_mm_mullo_epi32;
     /* static constexpr auto modulo = simde_mm_rem_epu32; */
 	inline static constexpr auto negative = [](const Type& a) noexcept -> Type{
 		return subtract(zero(), a);
@@ -1465,22 +1470,28 @@ struct SimdTraits_avx<complex_32>{
 	inline static constexpr auto fmadd = [](const Type& a, const Type& b, Type& c) noexcept {
 		c = add(multiply(a,b),c);
         };
-	inline static constexpr auto sum_floatsC = [](const simde__m128& x) -> complex_32{
-		// x = ( x1.re, x1.im, x0.re, x0.im )
-		//loDual = (- , -, x0.re, x0.im) [x]
-		//hiDual = (-, -, x1.re, x1.im)
-		const simde__m128 hiDual = simde_mm_movehl_ps(x, x);
-		const simde__m128 sumDual = simde_mm_add_ps(x, hiDual);
-		complex_32 result[2];
-		simde_mm_storeu_ps(reinterpret_cast<float*>(result), sumDual);
-		return result[0];
-	
-	};
+
+    inline static constexpr auto sum_details = [](const simde__m128& x) -> simde__m128 {
+        // loDual = ( -, -, x1, x0 )
+        // const simde__m128 loDual = x;
+        // hiDual = ( -, -, x3, x2)
+        const simde__m128 hiDual = simde_mm_movehl_ps(x, x);
+        // sumDual = ( -, -, x1 + x3, x0 + x2)
+        const simde__m128 sumDual = simde_mm_add_ps(x, hiDual);
+        return sumDual;
+    };
     inline static constexpr auto sum = [](const Type& x) -> complex_32{
 	    simde__m128 low_a = simde_mm_cvtph_ps(x);
 	    simde__m128 high_a = simde_mm_cvtph_ps(simde_mm_shuffle_epi32(x, SIMDE_MM_SHUFFLE(1, 0, 3, 2)));
-	    return SimdTraits_avx<complex_32>::sum_floatsC(low_a) + SimdTraits_avx<complex_32>::sum_floatsC(high_a);
-       };
+        simde__m128 inner_sum_lower = SimdTraits_avx<complex_32>::sum_details(low_a);
+        simde__m128 inner_sum_higher = SimdTraits_avx<complex_32>::sum_details(high_a);
+        simde__m128 f32_out = simde_mm_add_ps(inner_sum_lower, inner_sum_higher);
+        simde__m128i f16_out = simde_mm_cvtps_ph(f32_out, 0);
+        complex_32 c32_out_ptr[4];
+        simde_mm_storeu_si128(reinterpret_cast<simde__m128i*>(c32_out_ptr), f16_out);
+        return c32_out_ptr[0];
+    };
+
     static constexpr auto min = SimdTraits_avx<float16_t>::min;
     static constexpr auto max = SimdTraits_avx<float16_t>::max;
 

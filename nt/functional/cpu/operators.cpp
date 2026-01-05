@@ -8,113 +8,34 @@
 #include <cmath>
 
 
-#include "../../types/float128.h"
 #include "../../utils/always_inline_macro.h"
+#include "../../math/functional/floor.hpp"
+#include "../../math/functional/fmod.hpp"
+#include "../../math/functional/trunc.hpp"
 
 
-//if this is defined
-//this means that for float128_t boost's 128 bit floating point is used
-#ifdef BOOST_MP_STANDALONE
-namespace std{
-
-NT_ALWAYS_INLINE ::nt::float128_t floor(const ::nt::float128_t& x) {
-    ::nt::float128_t int_part = trunc(x);
-    if (x < int_part) {
-        return int_part - 1;
-    }
-    return int_part;
-}
-
-NT_ALWAYS_INLINE ::nt::float128_t fmod(const ::nt::float128_t& x, const ::nt::float128_t& y) {
-    ::nt::float128_t r = (x / y);
-    ::nt::float128_t factor = trunc(r);
-    if (r < factor) {
-        factor -= 1;
-    }
-    return x - factor * y;
-}
-
-NT_ALWAYS_INLINE ::nt::float128_t trunc(const ::nt::float128_t& x) {
-    // Remove the fractional part by casting to integer type
-    // then back to float128
-    if (x >= 0)
-        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
-    else
-        return ::nt::float128_t(static_cast<::nt::int128_t>(x));
-}
-
-}
-
-#endif //BOOST_MP_STANDALONE
-
-
-#ifdef SIMDE_FLOAT16_IS_SCALAR
-namespace std{
-
-NT_ALWAYS_INLINE ::nt::float16_t floor(const ::nt::float16_t& x) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::floor(_NT_FLOAT16_TO_FLOAT32_(x)));
-}
-
-NT_ALWAYS_INLINE ::nt::float16_t trunc(const ::nt::float16_t& x) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::trunc(_NT_FLOAT16_TO_FLOAT32_(x)));
-}
-
-NT_ALWAYS_INLINE ::nt::float16_t fmod(const ::nt::float16_t& x, const ::nt::float16_t& y) {
-    return _NT_FLOAT16_TO_FLOAT32_(std::fmod(_NT_FLOAT16_TO_FLOAT32_(x), _NT_FLOAT16_TO_FLOAT32_(y)));
-}
-
-}
-#endif
-
-namespace std{
-NT_ALWAYS_INLINE ::nt::complex_32 fmod(const ::nt::complex_32& x, const ::nt::complex_32& y){
-    return ::nt::complex_32(fmod(x.real(), y.real()), fmod(x.imag(), y.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_64 fmod(const ::nt::complex_64& x, const ::nt::complex_64& y){
-    return ::nt::complex_64(fmod(x.real(), y.real()), fmod(x.imag(), y.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_128 fmod(const ::nt::complex_128& x, const ::nt::complex_128& y){
-    return ::nt::complex_128(fmod(x.real(), y.real()), fmod(x.imag(), y.imag()));
-}
-
-
-NT_ALWAYS_INLINE ::nt::complex_32 floor(const ::nt::complex_32& x){
-    return ::nt::complex_32(floor(x.real()), floor(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_64 floor(const ::nt::complex_64& x){
-    return ::nt::complex_64(floor(x.real()), floor(x.imag()));
-}
-
-NT_ALWAYS_INLINE ::nt::complex_128 floor(const ::nt::complex_128& x){
-    return ::nt::complex_128(floor(x.real()), floor(x.imag()));
-}
-
-}
 
 namespace nt {
 namespace mp {
 
 NT_ALWAYS_INLINE float128_t euclidean_remainder(float128_t a, float128_t b){
-    float128_t r = std::fmod(a, b);
+    float128_t r = ::nt::math::fmod(a, b);
     return ((r < 0 && b > 0 )|| (r > 0 && b < 0)) ? r + b : r;
 }
 
 NT_ALWAYS_INLINE double euclidean_remainder(double a, double b) {
-    double r = std::fmod(a, b);
+    double r = ::nt::math::fmod(a, b);
     return ((r < 0 && b > 0 )|| (r > 0 && b < 0)) ? r + b : r;
 }
 
 NT_ALWAYS_INLINE float euclidean_remainder(float a, float b){
-    float r = std::fmod(a, b);
+    float r = ::nt::math::fmod(a, b);
     return ((r < 0 && b > 0 )|| (r > 0 && b < 0)) ? r + b : r;
 }
 
 NT_ALWAYS_INLINE float16_t euclidean_remainder(float16_t a, float16_t b){
-    float r = std::fmod(_NT_FLOAT16_TO_FLOAT32_(a), _NT_FLOAT16_TO_FLOAT32_(b));
-    return ((r < 0 && b > 0 )|| (r > 0 && b < 0)) ? _NT_FLOAT32_TO_FLOAT16_(r + b) : _NT_FLOAT32_TO_FLOAT16_(r);
+    float16_t r = ::nt::math::fmod(a, b);
+    return ((r < 0 && b > 0 )|| (r > 0 && b < 0)) ? r + b : r;
 }
 
 
@@ -329,10 +250,10 @@ inline void fmod_backward(T begin, T end, U begin2, V grad_begin, W out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++begin2, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::trunc(base_type(*begin / *begin2));
+            *out = -(*grad_begin) * ::nt::math::trunc(base_type(*begin / *begin2));
 	}else{
 		for(;begin < end; ++begin, ++begin2, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::trunc(*begin / *begin2);
+            *out = -(*grad_begin) * ::nt::math::trunc(*begin / *begin2);
 	}	
 }
 
@@ -359,10 +280,10 @@ inline void fmod_backward_scalar(T begin, T end, U grad_begin, V out, W s){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::trunc(s / *begin);
+            *out = -(*grad_begin) * ::nt::math::trunc(s / *begin);
 	}else{
 		for(;begin < end; ++begin, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::trunc(s / *begin);
+            *out = -(*grad_begin) * ::nt::math::trunc(s / *begin);
 	}	
 }
 
@@ -387,10 +308,10 @@ inline void remainder_backward(T begin, T end, U begin2, V grad_begin, W out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++begin2, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::floor(base_type(*begin / *begin2));
+            *out = -(*grad_begin) * ::nt::math::floor(base_type(*begin / *begin2));
 	}else{
 		for(;begin < end; ++begin, ++begin2, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::floor(*begin / *begin2);
+            *out = -(*grad_begin) * ::nt::math::floor(*begin / *begin2);
 	}	
 }
 
@@ -417,10 +338,10 @@ inline void remainder_backward_scalar(T begin, T end, U grad_begin, V out, W s){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::floor(s / *begin);
+            *out = -(*grad_begin) * ::nt::math::floor(s / *begin);
 	}else{
 		for(;begin < end; ++begin, ++grad_begin, ++out)
-            *out = -(*grad_begin) * std::floor(s / *begin);
+            *out = -(*grad_begin) * ::nt::math::floor(s / *begin);
 	}	
 }
 
@@ -504,10 +425,10 @@ inline void fmod(T begin, T end, U begin2, V out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++begin2, ++out)
-            *out = std::fmod(*begin, *begin2);
+            *out = ::nt::math::fmod(*begin, *begin2);
 	}else{
 		for(;begin < end; ++begin, ++begin2, ++out)
-            *out = std::fmod(*begin, *begin2);
+            *out = ::nt::math::fmod(*begin, *begin2);
 	}	
 }
 
@@ -526,10 +447,10 @@ inline void fmod_scalar_second(T begin, T end, U scalar, V out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-            *out = std::fmod(*begin, scalar);
+            *out = ::nt::math::fmod(*begin, scalar);
 	}else{
 		for(;begin < end; ++begin, ++out)
-            *out = std::fmod(*begin, scalar);
+            *out = ::nt::math::fmod(*begin, scalar);
 	}	
 }
 
@@ -547,10 +468,10 @@ inline void fmod_scalar_first(T begin, T end, U scalar, V out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-            *out = std::fmod(scalar, *begin);
+            *out = ::nt::math::fmod(scalar, *begin);
 	}else{
 		for(;begin < end; ++begin, ++out)
-            *out = std::fmod(scalar, *begin);
+            *out = ::nt::math::fmod(scalar, *begin);
 	}	
 }
 

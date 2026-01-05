@@ -14,20 +14,17 @@ namespace nt{
 template<typename T, size_t N>
 class TensorAccessor{
     using size_value_t = Tensor::size_value_t;
-    std::shared_ptr<std::vector<size_value_t> > _stored_strides;
-    size_value_t* _strides, _shape ;
+    const size_value_t* _strides;
+    const size_value_t* _shape;
     T* data;
-    TensorAccessor(T* data, std::shared_ptr<std::vector<size_value_t>> _str, size_value_t* _sh, size_value_t* n_strides)
-    :data(data), _stored_strides(std::move(_str)), _strides(n_strides), _shape(_sh)
+    TensorAccessor(T* data, size_value_t* _sh, size_value_t* n_strides)
+    :data(data), _strides(n_strides), _shape(_sh)
     {}
 
-    TensorAccessor(T* data, std::shared_ptr<std::vector<size_value_t>> _str, size_value_t* _sh)
-    :data(data), _stored_strides(std::move(_str)), _strides(&(*_stored_strides)[0]), _shape(_sh)
-    {}
 public:
     static_assert(N >= 1, "Cannot make a TensorAccessor with a dimensionality less than 1");
     TensorAccessor(Tensor& inp)
-    :TensorAccessor(reinterpret_cast<T*>(inp.data_ptr()), std::make_shared<std::vector<size_value_t>>(inp.shape().strides().pop_front()), inp.shape().begin())
+    :TensorAccessor(reinterpret_cast<T*>(inp.data_ptr()), inp.forceStrideStore(), inp.shape().begin())
     {
         utils::throw_exception(inp.dims() == N, "Expected to get tensor of same dims as tensor accessor made of $ but got $", N, inp.dims());
     }

@@ -1,0 +1,50 @@
+include(${CMAKE_CURRENT_LIST_DIR}/base_dir.cmake)
+
+set(FUNCTIONAL_SOURCES
+	${BASE_DIR}/nt/functional/tensor_files/colim_transform.cpp
+	${BASE_DIR}/nt/functional/tensor_files/combine.cpp
+	${BASE_DIR}/nt/functional/tensor_files/conv.cpp
+	${BASE_DIR}/nt/functional/tensor_files/fill.cpp
+	${BASE_DIR}/nt/functional/tensor_files/fused.cpp
+	${BASE_DIR}/nt/functional/tensor_files/save_load.cpp
+	${BASE_DIR}/nt/functional/tensor_files/matmult.cpp
+	${BASE_DIR}/nt/functional/tensor_files/normalize.cpp
+	${BASE_DIR}/nt/functional/tensor_files/numpy.cpp
+	${BASE_DIR}/nt/functional/tensor_files/operators.cpp
+	${BASE_DIR}/nt/functional/tensor_files/rand.cpp
+	${BASE_DIR}/nt/functional/tensor_files/min_max.cpp
+	${BASE_DIR}/nt/functional/tensor_files/compare.cpp
+	${BASE_DIR}/nt/functional/tensor_files/ranges.cpp
+	${BASE_DIR}/nt/functional/tensor_files/softmax.cpp
+	${BASE_DIR}/nt/functional/tensor_files/sum_exp_log.cpp
+	${BASE_DIR}/nt/functional/tensor_files/mesh.cpp
+	${BASE_DIR}/nt/functional/tensor_files/repeat.cpp
+	${BASE_DIR}/nt/functional/tensor_files/stride.cpp
+	${BASE_DIR}/nt/functional/tensor_files/index.cpp
+	${BASE_DIR}/nt/functional/tensor_files/padding.cpp
+	${BASE_DIR}/nt/functional/tensor_files/dropout.cpp
+	${BASE_DIR}/nt/functional/tensor_files/activation_functions.cpp
+	${BASE_DIR}/nt/functional/tensor_files/trig.cpp
+	${BASE_DIR}/nt/functional/tensor_files/split.cpp
+	${BASE_DIR}/nt/functional/tensor_files/unique.cpp
+	${BASE_DIR}/nt/functional/tensor_files/combinations.cpp
+	${BASE_DIR}/nt/functional/tensor_files/print.cpp
+	${BASE_DIR}/nt/functional/tensor_files/transpose.cpp
+	${BASE_DIR}/nt/functional/tensor_files/complex.cpp
+	${BASE_DIR}/nt/functional/tensor_files/flip.cpp
+	${BASE_DIR}/nt/functional/tensor_files/dilate.cpp
+	${BASE_DIR}/nt/functional/tensor_files/convert.cpp
+	${BASE_DIR}/nt/functional/tensor_files/sort.cpp
+	${BASE_DIR}/nt/functional/tensor_files/round.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/avg_pool1d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/avg_pool2d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/avg_pool3d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/lp_pool1d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/lp_pool2d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/lp_pool3d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/max_pool1d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/max_pool2d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/max_pool3d.cpp
+    ${BASE_DIR}/nt/functional/tensor_files/pooling/fractional.cpp
+    
+)

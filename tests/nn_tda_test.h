@@ -12,7 +12,7 @@
 #include <random>
 #include <vector>
 #include <limits>
-
+#include <queue>
 
 void persistent_dist_mat_gradient(){
     

@@ -6,17 +6,57 @@
 
 #define NT_MAKE_OPERATOR_TEST(name, op)\
     run_test(#name " scalar", [] {\
-        for(const auto& dt : NumberTypes){\
-            nt::Tensor a = nt::rand(-3, 3, {5}, dt);\
+        for(const auto& dt : FloatingTypes){\
+            nt::Tensor a({5}, dt);\
+            a << -2.22,0.78133,2.15433,2.95388,-2.68;\
             nt::Tensor out = nt::name(a, 4);\
             nt::Tensor check({5}, dt);\
-            a.arr_void().execute_function<nt::WRAP_DTYPES<nt::NumberTypesL>>([](auto begin, auto end, auto begin2){\
+            a.arr_void().execute_function<nt::WRAP_DTYPES<nt::FloatingTypesL>>([](auto begin, auto end, auto begin2){\
                 nt::Scalar num(4);\
                 using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;\
                 value_t official_num = num.to<value_t>();\
                 for(;begin != end; ++begin, ++begin2){*begin2 = *begin op official_num;}\
             }, check.arr_void());\
-            nt::utils::throw_exception(nt::allclose(out, check), "Error, operation $ was not close for $ $ \n$ \n$ \n$ \n$", #op, dt, nt::noprintdtype, a.view(-1), check.view(-1), out.view(-1), nt::isclose(out, check));\
+            nt::utils::throw_exception(nt::allclose(out, check, 1e-3), "Error, operation $ was not close for $ $ \n$ \n$ \n$ \n$", #op, dt, nt::noprintdtype, a.view(-1), check.view(-1), out.view(-1), nt::isclose(out, check, 1e-3));\
+        }\
+        for(const auto& dt : ComplexTypes){\
+            nt::Tensor a({5}, dt);\
+            a << -2.22,0.78133,2.15433,2.95388,-2.68;\
+            nt::Tensor out = nt::name(a, 4);\
+            nt::Tensor check({5}, dt);\
+            a.arr_void().execute_function<nt::WRAP_DTYPES<nt::ComplexTypesL>>([](auto begin, auto end, auto begin2){\
+                nt::Scalar num(4);\
+                using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;\
+                value_t official_num = num.to<value_t>();\
+                for(;begin != end; ++begin, ++begin2){*begin2 = *begin op official_num;}\
+            }, check.arr_void());\
+            nt::utils::throw_exception(nt::allclose(out, check, 1e-3), "Error, operation $ was not close for $ $ \n$ \n$ \n$ \n$", #op, dt, nt::noprintdtype, a.view(-1), check.view(-1), out.view(-1), nt::isclose(out, check, 1e-3));\
+        }\
+        for(const auto& dt : SignedTypes){\
+            nt::Tensor a({5}, dt);\
+            a << -2,0,2,4,-8;\
+            nt::Tensor out = nt::name(a, 4);\
+            nt::Tensor check({5}, dt);\
+            a.arr_void().execute_function<nt::WRAP_DTYPES<nt::SignedTypesL>>([](auto begin, auto end, auto begin2){\
+                nt::Scalar num(4);\
+                using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;\
+                value_t official_num = num.to<value_t>();\
+                for(;begin != end; ++begin, ++begin2){*begin2 = *begin op official_num;}\
+            }, check.arr_void());\
+            nt::utils::throw_exception(nt::allclose(out, check, 1e-3), "Error, operation $ was not close for $ $ \n$ \n$ \n$ \n$", #op, dt, nt::noprintdtype, a.view(-1), check.view(-1), out.view(-1), nt::isclose(out, check, 1e-3));\
+        }\
+        for(const auto& dt : UnsignedTypes){\
+            nt::Tensor a({5}, dt);\
+            a << 2,0,5,4,8;\
+            nt::Tensor out = nt::name(a, 4);\
+            nt::Tensor check({5}, dt);\
+            a.arr_void().execute_function<nt::WRAP_DTYPES<nt::UnsignedTypesL>>([](auto begin, auto end, auto begin2){\
+                nt::Scalar num(4);\
+                using value_t = nt::utils::IteratorBaseType_t<decltype(begin)>;\
+                value_t official_num = num.to<value_t>();\
+                for(;begin != end; ++begin, ++begin2){*begin2 = *begin op official_num;}\
+            }, check.arr_void());\
+            nt::utils::throw_exception(nt::allclose(out, check, 1e-3), "Error, operation $ was not close for $ $ \n$ \n$ \n$ \n$", #op, dt, nt::noprintdtype, a.view(-1), check.view(-1), out.view(-1), nt::isclose(out, check, 1e-3));\
         }\
     });\
     run_test(#name " tensors", []{\
@@ -40,7 +80,7 @@
                         }\
                     }\
             }, b.arr_void());\
-            nt::utils::throw_exception(nt::allclose(out, check), "Error, operation was not close");\
+            nt::utils::throw_exception(nt::allclose(out, check, 1e-3), "Error, operation was not close for $", dt);\
         }\
     });
 

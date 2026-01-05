@@ -2,8 +2,10 @@
 #include "../../mp/simde_traits/simde_traits_iterators.h"
 #include "../../dtype/ArrayVoid_NTensor.hpp"
 #include "../../utils/numargs_macro.h"
+#include "../../utils/type_traits.h"
+#include "../../math/math.h"
 #include <algorithm>
-#include "128_bit_funcs.hpp"
+// #include "128_bit_funcs.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -11,54 +13,54 @@
 
 
 
-namespace std{
+//namespace std{
 
-#ifdef SIMDE_FLOAT16_IS_SCALAR
-#define NT_MAKE_FUNCTION_COMPATIBILITY(func_name)\
-inline ::nt::my_complex<float> func_name(::nt::my_complex<float> num) noexcept {\
-    return ::nt::my_complex<float>(func_name(num.real()), func_name(num.imag()));\
-}\
-inline ::nt::my_complex<double> func_name(::nt::my_complex<double> num) noexcept {\
-    return ::nt::my_complex<double>(func_name(num.real()), func_name(num.imag()));\
-}\
-inline ::nt::float16_t func_name(::nt::float16_t num) noexcept {\
-    using namespace ::nt;\
-    return _NT_FLOAT32_TO_FLOAT16_(func_name(_NT_FLOAT16_TO_FLOAT32_(num)));\
-}\
-inline ::nt::my_complex<::nt::float16_t> func_name(::nt::my_complex<::nt::float16_t> num) noexcept {\
-    return ::nt::my_complex<::nt::float16_t>(func_name(num.real()), func_name(num.imag()));\
-}\
-\
+//#ifdef SIMDE_FLOAT16_IS_SCALAR
+//#define NT_MAKE_FUNCTION_COMPATIBILITY(func_name)\
+//inline ::nt::my_complex<float> func_name(::nt::my_complex<float> num) noexcept {\
+//    return ::nt::my_complex<float>(func_name(num.real()), func_name(num.imag()));\
+//}\
+//inline ::nt::my_complex<double> func_name(::nt::my_complex<double> num) noexcept {\
+//    return ::nt::my_complex<double>(func_name(num.real()), func_name(num.imag()));\
+//}\
+//inline ::nt::float16_t func_name(::nt::float16_t num) noexcept {\
+//    using namespace ::nt;\
+//    return _NT_FLOAT32_TO_FLOAT16_(func_name(_NT_FLOAT16_TO_FLOAT32_(num)));\
+//}\
+//inline ::nt::my_complex<::nt::float16_t> func_name(::nt::my_complex<::nt::float16_t> num) noexcept {\
+//    return ::nt::my_complex<::nt::float16_t>(func_name(num.real()), func_name(num.imag()));\
+//}\
+//\
 
 
-#else
+//#else
 
-//ADL error because of the half_float::detail function names
-//look at <nt/types/float16.h> for how this was properly handled with std::pow
-//and after there were no ambiguity errors
-#define NT_MAKE_FUNCTION_COMPATIBILITY(func_name)\
-inline ::nt::my_complex<float> func_name(::nt::my_complex<float> num) noexcept {\
-    return ::nt::my_complex<float>(func_name(num.real()), func_name(num.imag()));\
-}\
-inline ::nt::my_complex<double> func_name(::nt::my_complex<double> num) noexcept {\
-    return ::nt::my_complex<double>(func_name(num.real()), func_name(num.imag()));\
-}\
-inline ::nt::float16_t func_name(half_float::half num){\
-    return half_float::half(half_float::detail::func_name(num));\
-}\
-inline ::nt::my_complex<::nt::float16_t> func_name(::nt::my_complex<::nt::float16_t> num) noexcept {\
-    return ::nt::my_complex<::nt::float16_t>(half_float::half(half_float::detail::func_name(num.real())), half_float::half(half_float::detail::func_name(num.imag())));\
-}\
-\
+////ADL error because of the half_float::detail function names
+////look at <nt/types/float16.h> for how this was properly handled with ::nt::math::pow
+////and after there were no ambiguity errors
+//#define NT_MAKE_FUNCTION_COMPATIBILITY(func_name)\
+//inline ::nt::my_complex<float> func_name(::nt::my_complex<float> num) noexcept {\
+//    return ::nt::my_complex<float>(func_name(num.real()), func_name(num.imag()));\
+//}\
+//inline ::nt::my_complex<double> func_name(::nt::my_complex<double> num) noexcept {\
+//    return ::nt::my_complex<double>(func_name(num.real()), func_name(num.imag()));\
+//}\
+//inline ::nt::float16_t func_name(half_float::half num){\
+//    return half_float::half(half_float::detail::func_name(num));\
+//}\
+//inline ::nt::my_complex<::nt::float16_t> func_name(::nt::my_complex<::nt::float16_t> num) noexcept {\
+//    return ::nt::my_complex<::nt::float16_t>(half_float::half(half_float::detail::func_name(num.real())), half_float::half(half_float::detail::func_name(num.imag())));\
+//}\
+//\
 
-#endif
-NT_MAKE_FUNCTION_COMPATIBILITY(asinh);
-NT_MAKE_FUNCTION_COMPATIBILITY(acosh);
-NT_MAKE_FUNCTION_COMPATIBILITY(atanh);
+//#endif
+//NT_MAKE_FUNCTION_COMPATIBILITY(asinh);
+//NT_MAKE_FUNCTION_COMPATIBILITY(acosh);
+//NT_MAKE_FUNCTION_COMPATIBILITY(atanh);
 
-#undef NT_MAKE_FUNCTION_COMPATIBILITY 
+//#undef NT_MAKE_FUNCTION_COMPATIBILITY 
 
-}
+//}
 
 namespace nt {
 namespace mp {
@@ -66,7 +68,7 @@ namespace mp {
 #define _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(func_name, simde_op, transform_op) \
 template<typename T, typename O>\
 inline void func_name(T begin, T end, O out){\
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");\
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<O>>, "Expected to get base types the same for simde optimized routes");\
 	using base_type = utils::IteratorBaseType_t<T>;\
 	if constexpr (simde_svml_supported_v<base_type>){\
 		static constexpr size_t pack_size = pack_size_v<base_type>;\
@@ -90,31 +92,31 @@ template<typename T>\
 NT_ALWAYS_INLINE T _nt_##name(T element) noexcept {return T(1)/operation(element);}
 
 
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tanh, tanh, std::tanh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tan, tan, std::tan);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(atan, atan, std::atan);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(atanh, atanh, std::atanh);
-_NT_MAKE_INV_INLINE_FUNC_(std::tanh, cotanh)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tanh, tanh, ::nt::math::tanh);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(tan, tan, ::nt::math::tan);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(atan, atan, ::nt::math::atan);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(atanh, atanh, ::nt::math::atanh);
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::tanh, cotanh)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotanh, cotanh, _nt_cotanh);
-_NT_MAKE_INV_INLINE_FUNC_(std::tan, cotan)
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotan, cotan, _nt_cotanh);
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::tan, cotan)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cotan, cotan, _nt_cotan);
 
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sinh, sinh, std::sinh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sin, sin, std::sin);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(asin, asin, std::asin);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(asinh, asinh, std::asinh);
-_NT_MAKE_INV_INLINE_FUNC_(std::sinh, csch)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sinh, sinh, ::nt::math::sinh);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sin, sin, ::nt::math::sin);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(asin, asin, ::nt::math::asin);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(asinh, asinh, ::nt::math::asinh);
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::sinh, csch)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(csch, csch, _nt_csch);
-_NT_MAKE_INV_INLINE_FUNC_(std::sin, csc)
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::sin, csc)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(csc, csc, _nt_csc);
 
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cosh, cosh, std::cosh);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cos, cos, std::cos);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(acos, acos, std::acos);
-_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(acosh, acosh, std::acosh);
-_NT_MAKE_INV_INLINE_FUNC_(std::cosh, sech)
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cosh, cosh, ::nt::math::cosh);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(cos, cos, ::nt::math::cos);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(acos, acos, ::nt::math::acos);
+_NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(acosh, acosh, ::nt::math::acosh);
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::cosh, sech)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sech, sech, _nt_sech);
-_NT_MAKE_INV_INLINE_FUNC_(std::cos, sec)
+_NT_MAKE_INV_INLINE_FUNC_(::nt::math::cos, sec)
 _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sec, sec, _nt_sec);
 
 
@@ -124,7 +126,7 @@ _NT_SIMDE_SVML_OP_TRANSFORM_EQUIVALENT_ONE_(sec, sec, _nt_sec);
 
 template<typename T, typename U>
 inline void dtan(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -137,13 +139,13 @@ inline void dtan(T begin, T end, U out){
 		}
         base_type base__Two(2);
 		for(;begin < end; ++begin, ++out){
-            base_type cs = std::cos(*begin);
-            base_type p = std::pow(cs, base__Two);
+            base_type cs = ::nt::math::cos(*begin);
+            base_type p = ::nt::math::pow(cs, base__Two);
 			*out = base_type(1.0) / p;
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-            *out = (base_type(1.0) / (std::pow(std::cos(*begin), 2)));
+            *out = (base_type(1.0) / (::nt::math::pow(::nt::math::cos(*begin), 2)));
         }
 	}
 }
@@ -151,7 +153,7 @@ inline void dtan(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dtanh(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -164,12 +166,12 @@ inline void dtanh(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-			base_type th = std::tanh(*begin);
+			base_type th = ::nt::math::tanh(*begin);
             *out = base_type(1) - (th * th);
         }
 	}else{
 		for(;begin != end; ++begin, ++out){
-			base_type th = std::tanh(*begin);
+			base_type th = ::nt::math::tanh(*begin);
             *out = base_type(1) - (th * th);
 		}
 	}
@@ -178,7 +180,7 @@ inline void dtanh(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dcos(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -189,17 +191,17 @@ inline void dcos(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out)
-			*out = -std::sin(*begin);
+			*out = -::nt::math::sin(*begin);
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = -std::sin(*begin);
+			*out = -::nt::math::sin(*begin);
         }
 	}
 }
 
 template<typename T, typename U>
 inline void dasin(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
 	if constexpr (simde_svml_supported_v<base_type>){
@@ -216,12 +218,12 @@ inline void dasin(T begin, T end, U out){
 		for(;begin < end; ++begin, ++out){
             base_type m = *begin * *begin;
             base_type s = base_type(1) - m;
-            base_type sq = std::sqrt(s);
+            base_type sq = ::nt::math::sqrt(s);
             *out = base_type(1) / sq;
         } 
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / std::sqrt(1.0 - (*begin * *begin));
+			*out = 1.0 / ::nt::math::sqrt(1.0 - (*begin * *begin));
         }
 	}
 }
@@ -229,7 +231,7 @@ inline void dasin(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dacos(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
 	if constexpr (simde_svml_supported_v<base_type>){
@@ -247,19 +249,19 @@ inline void dacos(T begin, T end, U out){
 		for(;begin < end; ++begin, ++out){
             base_type m = *begin * *begin;
             base_type s = base_type(1) - m;
-            base_type sq = std::sqrt(s);
+            base_type sq = ::nt::math::sqrt(s);
             *out = base_type(-1) / sq;
         }  
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = -1.0 / std::sqrt(1.0 - (*begin * *begin));
+			*out = -1.0 / ::nt::math::sqrt(1.0 - (*begin * *begin));
         }
 	}
 }
 
 template<typename T, typename U>
 inline void datan(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
 	if constexpr (simde_svml_supported_v<base_type>){
@@ -284,7 +286,7 @@ inline void datan(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dasinh(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
 	if constexpr (simde_svml_supported_v<base_type>){
@@ -301,12 +303,12 @@ inline void dasinh(T begin, T end, U out){
 		for(;begin < end; ++begin, ++out){
             base_type s = *begin * *begin;
             s += base_type(1);
-            base_type sq = std::sqrt(s);
+            base_type sq = ::nt::math::sqrt(s);
             *out = base_type(1) / sq;
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / std::sqrt((*begin * *begin) + 1.0);
+			*out = 1.0 / ::nt::math::sqrt((*begin * *begin) + 1.0);
         }
 	}
 }
@@ -314,7 +316,7 @@ inline void dasinh(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dacosh(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
 	if constexpr (simde_svml_supported_v<base_type>){
@@ -331,12 +333,12 @@ inline void dacosh(T begin, T end, U out){
 		for(;begin < end; ++begin, ++out){
             base_type s = *begin * *begin;
             s -= base_type(1);
-            base_type sq = std::sqrt(s);
+            base_type sq = ::nt::math::sqrt(s);
             *out = base_type(1) / sq;
         } 
 	}else{
         for(;begin != end; ++begin, ++out){
-			*out = 1.0 / std::sqrt((*begin * *begin) - 1.0);
+			*out = 1.0 / ::nt::math::sqrt((*begin * *begin) - 1.0);
         }
 	}
 }
@@ -344,7 +346,7 @@ inline void dacosh(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void datanh(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
     
 	if constexpr (simde_svml_supported_v<base_type>){
@@ -369,7 +371,7 @@ inline void datanh(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dcotan(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -397,7 +399,7 @@ inline void dcotan(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dcotanh(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -425,7 +427,7 @@ inline void dcotanh(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dcsc(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -451,7 +453,7 @@ inline void dcsc(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dcsch(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -479,7 +481,7 @@ inline void dcsch(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dsec(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -493,11 +495,11 @@ inline void dsec(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-		    *out = (_nt_sec(*begin) * std::tan(*begin));
+		    *out = (_nt_sec(*begin) * ::nt::math::tan(*begin));
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-		    *out = (_nt_sec(*begin) * std::tan(*begin));
+		    *out = (_nt_sec(*begin) * ::nt::math::tan(*begin));
         }
 	}
 }
@@ -506,7 +508,7 @@ inline void dsec(T begin, T end, U out){
 
 template<typename T, typename U>
 inline void dsech(T begin, T end, U out){
-	static_assert(std::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
+	static_assert(::nt::type_traits::is_same_v<utils::IteratorBaseType_t<T>, utils::IteratorBaseType_t<U> >, "Expected to get base types the same for simde optimized routes");
 	using base_type = utils::IteratorBaseType_t<T>;
 	if constexpr (simde_svml_supported_v<base_type>){
 		static constexpr size_t pack_size = pack_size_v<base_type>;
@@ -521,11 +523,11 @@ inline void dsech(T begin, T end, U out){
 			it_storeu(out, current);
 		}
 		for(;begin < end; ++begin, ++out){
-		    *out = -(_nt_sech(*begin) * std::tanh(*begin));
+		    *out = -(_nt_sech(*begin) * ::nt::math::tanh(*begin));
         }
 	}else{
         for(;begin != end; ++begin, ++out){
-		    *out = -(_nt_sech(*begin) * std::tanh(*begin));
+		    *out = -(_nt_sech(*begin) * ::nt::math::tanh(*begin));
         }
 	}
 }

@@ -1,8 +1,8 @@
 #include "DType.h"
 #include "DType_enum.h"
-#include "../convert/Convert.h"
 #include "compatible/DType_compatible.h"
 #include "compatible/DTypeDeclareMacros.h"
+#include "../convert/Convert.h"
 
 
 #include <complex>
