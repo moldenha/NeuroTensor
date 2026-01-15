@@ -1,5 +1,7 @@
 #include <iostream>
 #include "macros.h"
+#include NT_GET_HEADER_PATH(cpu, add)
+// #include NT_GET_HEADER_PATH(mkl, add)
 
 
 // #define example_macro(str)\
@@ -37,6 +39,9 @@ NT_REGISTER_OP(add)
 }
 
 
+#define HAS_CPU_ADD NT_GET_HEADER_PATH_SELECT_0(cpu, add)
+
+
 int main(){
     DeviceT d;
     d.d = Device::mkl;
@@ -49,6 +54,7 @@ int main(){
     NT_RUN_BARE_METAL_FUNC(overlap, out, d, 3.3);
     std::cout << "out device is "<<out.d << std::endl;
     std::cout << "d device is " << d.d << std::endl;
+    std::cout << HAS_CPU_ADD << std::endl;
     // static_assert(NT_CHECK_REGISTRY(cpu, add), "Error, add should be registered on the cpu");
     // static_assert(!NT_CHECK_REGISTRY(mkl, add), "Error, add should not be registered on mtl");
     // static_assert(!NT_CHECK_REGISTRY(cpu, mul), "Error, mul should not be registered");

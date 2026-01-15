@@ -16,19 +16,20 @@ namespace nt::math::kmath{
 
 NT_ALWAYS_INLINE constexpr float128_t round(float128_t arg) noexcept
 {
-    constexpr float128_t half = 0.5_f128;
+    constexpr float128_t half = ::nt::float128_t(::nt::float128_bits(::nt::b128(uint64_t(4611123068473966592), uint64_t(0))));
+    constexpr float128_t one = ::nt::float128_t(::nt::float128_bits(::nt::b128(uint64_t(4611404543450677248), uint64_t(0))));
 
     float128_t t = ::nt::math::kmath::trunc(arg);
     float128_t frac = ::nt::math::kmath::abs(arg - t);
 
     if (frac > half)
-        return t + (arg.get_bits().sign() ? float128_t(-1) : float128_t(1));
+        return t + (arg.get_bits().sign() ? -one : one);
 
     if (frac < half)
         return t;
 
     // frac == 0.5 → round away from zero
-    return t + (arg.get_bits().sign() ? float128_t(-1) : float128_t(1));
+    return t + (arg.get_bits().sign() ? -one : one);
 }
 
 

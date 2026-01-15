@@ -10,7 +10,6 @@ class float128_t;
 #include "../../utils/always_inline_macro.h"
 #include "../../utils/type_traits.h"
 #include "../../bit/bit_cast.h"
-#include "../../bit/float_bits.h"
 #include <cstddef>
 #include <vector>
 #include <exception>
@@ -35,7 +34,7 @@ namespace nt{
     \
     template<typename Float,\
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>\
-    NT_ALWAYS_INLINE constexpr float128_t& operator op (const Float& other){\
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR float128_t& operator op (const Float& other){\
         *this = (*this op other);\
         return *this;\
     }\
@@ -55,93 +54,11 @@ class float128_t{
     static constexpr b128 b128_1 = b128(1);
     static constexpr int MAX_EXP = 16383;
     
-    // this is a way to make it non-constexpr (faster than constexpr route during runtime)
-    inline static float128_bits nkfrom_double(double d) noexcept {
-        if(std::isnan(d)){
-            return float128_bits::make_nan();
-        }else if (std::isinf(d)){
-            return float128_bits::make_inf(d < 0);
-        }
-        uint64_t bits64 = ::nt::bit_cast<uint64_t>(d); 
-        uint16_t sign = (bits64 >> 63) & 1;
-        uint16_t exp  = (bits64 >> 52) & 0x7FF;
-        uint64_t frac = bits64 & 0xFFFFFFFFFFFFFull;
-
-        uint16_t new_exp = exp ? (exp - 1023 + 16383) : 0; 
-
-        uint64_t frac_hi48 = (frac >> 4) & 0xFFFFFFFFFFFFull;
-        uint64_t frac_lo64 = (frac << 60);
-
-        return float128_bits(b128::pack_ieee128(sign, new_exp, frac_hi48, frac_lo64));
- 
-    }
-
-
-    // inline constexpr float128_t ldexp(const float128_t& x, int n) noexcept {
-    //     const auto bits = x.bits;
-    //     if(bits.is_zero() || bits.is_nan() || bits.is_inf()) return x;
-
-    //     uint16_t exp = bits.exponent();
-    //     b128 mant = bits.mantissa_with_hidden_bit();
-    //     bool sign = bits.sign();
-
-    //     // If subnormal, normalize first
-    //     if (exp == 0) {
-    //         int lz = mant.clz();   // count leading zeros in 128-bit mantissa
-    //         int shift = lz - (128 - 113);
-    //         mant <<= shift;
-    //         exp = 1;
-    //         n -= shift;
-    //     }
-
-    //     // Apply exponent shift
-    //     int32_t new_exp = int32_t(exp) + n;
-
-    //     // Underflow into subnormal range?
-    //     if (new_exp <= 0) {
-    //         return float128_t(float128_bits::pack(
-    //             sign,
-    //             0,
-    //             underflow_to_subnormal(mant, new_exp)
-    //         ));
-    //     }
-
-    //     // Overflow → Inf
-    //     if (new_exp >= EXP_INF_NAN) {
-    //         return float128_t(float128_bits::pack(
-    //             sign,
-    //             EXP_INF_NAN,
-    //             b128(0,0)
-    //         ));
-    //     }
-
-    //     // Normal case: pack directly
-    //     return float128_t(float128_bits::pack(
-    //         sign,
-    //         uint16_t(new_exp),
-    //         mant
-    //     ));
-    // }
-
-    // inline static constexpr float128_t internal_ldexp(const float128_t& x, int n) {
-    //     if(x.bits.is_nan()) return float128_t{float128_bits::make_nan()};
-    //     if(x.bits.is_zero()) return float128_t{float128_bits::make_zero()};
-    //     if(x.bits.is_inf()) return x;
-    //     float128_bits bits = x.bits;
-        
-    //     int32_t e = int32_t(b.exponent()) + n;
-    //     if (e <= 0) return underflow_to_subnormal(...);
-    //     if (e >= MAX_EXP) return float128_t{float128_bits::make_inf(x.bits.sign());}
-
-    //     return float128_t{float128_bits::pack(b.sign(), uint16_t(e), b.mantissa())};
-    // }
-
-
 public:
     constexpr float128_t() : bits(b128_0) {};
     constexpr explicit float128_t(float128_bits b) : bits(b) {};
-    float128_t(double val) : bits(float128_t::nkfrom_double(val)) {}
-    float128_t(float val) : float128_t(double(val)) {}
+    NT_CPP20_CONSTEXPR float128_t(double val) : float128_t(float128_t::from_double(val)) {}
+    NT_CPP20_CONSTEXPR float128_t(float val) : float128_t(double(val)) {}
     template<typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
     constexpr float128_t(T val) : float128_t(float128_t::from_integer(val)) {}
     
@@ -158,7 +75,8 @@ public:
     
     // a constexpr way to convert from a float128_t to a double
     // This is not the default due to (math::kmath::frexp and math::kmath::ldexp being slower)
-    NT_ALWAYS_INLINE static constexpr float128_t from_double(double d) noexcept {
+    // a constexpr way to convert from a float128_t to a double
+    inline static NT_CPP20_CONSTEXPR float128_t from_double(double d) noexcept {
         if(d != d){ // constexpr check nan values do not equal themselves
             return float128_t::make_nan();
         }else if (d == std::numeric_limits<double>::infinity()){
@@ -166,7 +84,8 @@ public:
         }else if (d == -std::numeric_limits<double>::infinity()){
             return float128_t::make_inf(true);
         }
-        uint64_t bits64 = ::nt::float_bits<double>(d).get_tracker().lo_type(); 
+        
+        uint64_t bits64 = ::nt::bit_cast<uint64_t>(d); 
         uint16_t sign = (bits64 >> 63) & 1;
         uint16_t exp  = (bits64 >> 52) & 0x7FF;
         uint64_t frac = bits64 & 0xFFFFFFFFFFFFFull;
@@ -176,10 +95,11 @@ public:
         uint64_t frac_hi48 = (frac >> 4) & 0xFFFFFFFFFFFFull;
         uint64_t frac_lo64 = (frac << 60);
 
-        return float128_t{ float128_bits(b128::pack_ieee128(sign, new_exp, frac_hi48, frac_lo64)) };
+        return float128_t(float128_bits::pack(sign, new_exp, frac_hi48, frac_lo64));
+ 
     }
 
-    NT_ALWAYS_INLINE static constexpr float128_t from_double(float d) noexcept {
+    NT_ALWAYS_INLINE static NT_CPP20_CONSTEXPR float128_t from_double(float d) noexcept {
         return from_double(double(d));
     }
 
@@ -290,7 +210,7 @@ public:
     }
 
 
-    inline operator double() const noexcept {
+    inline NT_CPP20_CONSTEXPR operator double() const noexcept {
         if (bits.is_zero()) return 0.0;
         if (bits.is_nan())  return std::numeric_limits<double>::quiet_NaN();
         if (bits.is_inf())  return bits.sign() ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
@@ -316,12 +236,23 @@ public:
         int32_t exp_double = exp128 - 16383;
 
         // Compute final value
-        double result = std::ldexp(fraction, exp_double);
+#ifdef NT_CPP20_AVAILABLE_
+        if (std::is_constant_evaluated()) {
+            double result = ::nt::math::kmath::ldexp<double>(fraction, exp_double);
+            return sign ? -result : result;
+        }
+        else{
+            double result = std::ldexp(fraction, exp_double);
+            return sign ? -result : result;
+        }
+#else
 
+        double result = ::nt::math::kmath::ldexp(fraction, exp_double);
         return sign ? -result : result;
+#endif
     }
 
-    inline operator float() const noexcept { return float(double(*this)); }
+    inline NT_CPP20_CONSTEXPR operator float() const noexcept { return float(double(*this)); }
 
     inline constexpr operator int64_t() const noexcept {
         auto bits = this->get_bits();
@@ -683,16 +614,16 @@ public:
     //  for types that would be used by something like f + 2.13 for example
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr float128_t operator+(const Float& other) noexcept { return *this + float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR float128_t operator+(const Float& other) noexcept { return *this + float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr float128_t operator*(const Float& other) noexcept { return *this * float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR float128_t operator*(const Float& other) noexcept { return *this * float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr float128_t operator-(const Float& other) noexcept { return *this - float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR float128_t operator-(const Float& other) noexcept { return *this - float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr float128_t operator/(const Float& other) noexcept { return *this / float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR float128_t operator/(const Float& other) noexcept { return *this / float128_t::from_double(other); }
     
     template <typename Int, 
           typename = std::enable_if_t<std::is_integral_v<Int>>>
@@ -930,22 +861,22 @@ public:
 
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr bool operator==(const Float& other) noexcept { return *this == float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR bool operator==(const Float& other) noexcept { return *this == float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr bool operator!=(const Float& other) noexcept { return *this != float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR bool operator!=(const Float& other) noexcept { return *this != float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr bool operator<(const Float& other) noexcept { return *this < float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR bool operator<(const Float& other) noexcept { return *this < float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr bool operator>(const Float& other) noexcept { return *this > float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR bool operator>(const Float& other) noexcept { return *this > float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr bool operator<=(const Float& other) noexcept { return *this <= float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR bool operator<=(const Float& other) noexcept { return *this <= float128_t::from_double(other); }
     template<typename Float,
         typename std::enable_if_t<std::is_floating_point_v<Float>, bool> = true>
-    NT_ALWAYS_INLINE constexpr bool operator>=(const Float& other) noexcept { return *this >= float128_t::from_double(other); }
+    NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR bool operator>=(const Float& other) noexcept { return *this >= float128_t::from_double(other); }
     
     template <typename Int, 
           typename = std::enable_if_t<std::is_integral_v<Int>>>
@@ -1000,7 +931,7 @@ NT_ALWAYS_INLINE constexpr out_type operator op (const T& a, const ::nt::float12
 }\
 \
 template<typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>\
-NT_ALWAYS_INLINE out_type operator op (const T& a, const ::nt::float128_t& b) noexcept {\
+NT_ALWAYS_INLINE NT_CPP20_CONSTEXPR out_type operator op (const T& a, const ::nt::float128_t& b) noexcept {\
     return ::nt::float128_t(a) op b;\
 }\
 

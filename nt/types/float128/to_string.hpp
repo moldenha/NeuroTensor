@@ -1,11 +1,18 @@
 #ifndef NT_TYPES_FLOAT128_TO_STRING_HPP_
 #define NT_TYPES_FLOAT128_TO_STRING_HPP_
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wimplicitly-unsigned-literal"
+#endif
+
 #include "float128_impl.h"
 #include "b128.h"
 #include "b256.h"
 #include "kmath/trunc.hpp"
 #include "kmath/abs.hpp"
 #include "kmath/signbit.hpp"
+#include "from_string.hpp"
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -16,8 +23,8 @@ namespace nt::float128_func{
 
 
 inline std::string to_string(float128_t f){
-    constexpr float128_t div_by_ten = float128_t::from_double(0.1);
-    constexpr float128_t mul_by_ten(10);
+    constexpr float128_t div_by_ten = float128_t(float128_bits(b128(4610447528529861017, 11068046444225730970)));
+    constexpr float128_t mul_by_ten = float128_t(float128_bits(b128(4612319337124986880, 0)));
     int64_t int_part__ = int64_t(f);
     std::string integer_part = std::to_string(int_part__);
     int_part__ = std::abs(int_part__);
@@ -136,5 +143,8 @@ inline std::string to_string(float128_t f){
 
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif

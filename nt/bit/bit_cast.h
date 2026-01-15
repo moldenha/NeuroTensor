@@ -15,25 +15,40 @@
 #include "../utils/always_inline_macro.h"
 #include "../utils/type_traits.h"
 
+#if defined(__cpp_lib_bit_cast)
+    #define NT_CPP20_AVAILABLE_
+    #define NT_CPP20_CONSTEXPR constexpr
+#else
+    #define NT_CPP20_CONSTEXPR
+#endif
+
+
 namespace nt{
 
+#ifdef NT_CPP20_AVAILABLE_
+template<typename To, typename From>
+inline constexpr To bit_cast(const From& src) noexcept {
+    return std::bit_cast<To>(src);
+}
+#else
 template<class To, class From_>
-NT_ALWAYS_INLINE std::enable_if_t<
+inline std::enable_if_t<
     sizeof(To) == sizeof(From_) &&
-    type_traits::is_trivially_copyable_v<From_> &&
-    type_traits::is_trivially_copyable_v<To>,
+    std::is_trivially_copyable_v<From_> &&
+    std::is_trivially_copyable_v<To>,
     To>
 // constexpr support needs compiler magic
 bit_cast(const From_& src) noexcept
 {
-    using From = type_traits::remove_cvref_t<type_traits::decay_t<From_>>;
+    using From = std::decay_t<From_>;
     // the union is trivially constructible
     // Therefore From_ and To don't need to be
-    union u__{u__(){}; char bits[sizeof(From)]; type_traits::remove_cvref_t<To> dst;} u;
+    union u__{u__(){}; char bits[sizeof(From)]; std::decay_t<To> dst;} u;
     std::memcpy(&u.dst, &src, sizeof(From));
     return u.dst;
 }
 
+#endif
 
 }
 

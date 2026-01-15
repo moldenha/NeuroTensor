@@ -54,10 +54,9 @@ struct trig_reduction {
 
 NT_ALWAYS_INLINE constexpr trig_reduction reduce_trig(float128_t x) noexcept {
     float128_t kf = x * f128_constants::INV_PI_2;
-    constexpr float128_t half = 0.5_f128;
     // round-to-nearest
-    float128_t kf_rounded = kmath::floor(kf + half);
-    if (kf.get_bits().sign()) kf_rounded = kmath::ceil(kf - half);
+    float128_t kf_rounded = kmath::floor(kf + f128_constants::HALF);
+    if (kf.get_bits().sign()) kf_rounded = kmath::ceil(kf - f128_constants::HALF);
 
     int64_t k = static_cast<int64_t>(kf_rounded);
 

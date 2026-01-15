@@ -1,29 +1,5 @@
-// This is a header file designed to make the use of functions on different devices easier
-// Such that, it will automatically decide if there needs to be any device switching, and so on
-
-// So for example
-// If there is a function that is called for example add,
-// but lets say that you only have it implemented for the cpu, but the user wants to run it on cuda
-// This will automatically detect if the function has been made in cuda
-// After seeing that it hasn't it will switch all the devices to the cpu, and then run the cpu version,
-// then it will switch the result to the cuda device so that there is no issue for the user and returns expected behavior
-//
-// lets say that it is a += add, and again it has only been implemented on the cpu
-// Then it will switch both devices over to the cpu, then after the operation, back to their original device
-// As long as the functions in this header file are used properly, there should be no issue with device switching
-//
-// The reason for this header file:
-//  - Yes, all this could be implemented manually for each function with less typing per function 
-//          by manually checking if the function exists for that device
-//  - However, that manual checking invites bugs and human error, 
-//          that is what this header file is designed to avoid
-//  - Persistent bugs based on device switching would be an innevitable outcome if this header file isn't implemented
-//  
-//  - Also, once the functions are made for different devices (me as the programmer) will not have
-//      to worry about implementing this part in the tensor files, so it saves me some time and headache
-
-#ifndef NT_DEVICE_BARE_METAL_MACROS_H__
-#define NT_DEVICE_BARE_METAL_MACROS_H__
+#ifndef NT_DEVICE_BARE_METAL_REFLECTION_MACROS_H__
+#define NT_DEVICE_BARE_METAL_REFLECTION_MACROS_H__
 #include <initializer_list>
 #include <type_traits>
 #include <string_view>
@@ -31,68 +7,13 @@
 #include <exception>
 #include <tuple>
 
-#define NT_GET_DEVICES_FUNC(func, ...)\
-    func(cpu, __VA_ARGS__)\
-    func(mkl, __VA_ARGS__)\
-    func(cuda, __VA_ARGS__)
 
-#define NT_HEADER_PATH(device, op) "../"#device"/"#op".h"
-
-#define NT_STR_(n) #n
-
-#define NT_CHECK_HEADER_PATH(device, op) \
-    __has_include(NT_STR_(NT_HEADER_PATH(device, op)))
+#include "../../memory/DeviceEnum.h"
+#include "../../utils/type_traits.h"
+#include "../../Tensor.h"
 
 
-// #if __has_include("../cpu/add.h")
-//     #include "../cpu/add.h"
-// #endif
-
-// #if NT_CHECK_HEADER_PATH(cpu, add)
-//     #include NT_HEADER_PATH(cpu, add)
-// #endif
-
-#define CONCAT_IMPL(A, B) A##B
-#define CONCAT(A, B) CONCAT_IMPL(A, B)
-
-#define NT_GET_HEADER_PATH_SELECT_1(device, op) NT_HEADER_PATH(device, op)
-#define NT_GET_HEADER_PATH_SELECT_0(device, op) "nothing_header.h"
-
-#define NT_GET_HEADER_PATH_SELECT(cond, device, op) \
-    CONCAT(NT_GET_HEADER_PATH_SELECT_, cond)(device, op) 
-
-#define NT_GET_HEADER_PATH(device, op) \
-    NT_GET_HEADER_PATH_SELECT(NT_CHECK_HEADER_PATH(device, op), device, op)
-
-
-// #define NT_CHECK_HEADER(device, op)\
-//     #if NT_CHECK_HEADER_PATH(device, op)\
-//         #include NT_HEADER_PATH(device, op)\
-//     #endif
-
-// #define NT_CHECK_HEADER(device, op)\
-//     _Pragma("clang diagnostic push") \
-//     _Pragma("clang diagnostic ignored \"-Wunknown-pragmas\"") \
-//     #if NT_CHECK_HEADER_PATH(device, op) \
-//         #include "../" #device "/" #op ".h"\
-//     #endif\
-//     _Pragma("clang diagnostic pop")
-
-
-// this is designed to parse through all of the possible devices
-// and if the header with this name exists, include it
-// #define NT_INCLUDE_BARE_OP(op)\
-//     NT_GET_DEVICES_FUNC(NT_CHECK_HEADER, op)
-
-
-// this macro is designed to be used before a function definition
-#ifndef NEUROTENSOR_API
-#define NEUROTENSOR_API
-#endif // NEUROTENSOR_API
-
-#include "device.h"
-
-namespace reflect_device{
+namespace nt::reflect_device{
 template<char... Str>
 struct NT_ReflectDeviceStringLiteral_{
     template<char... Str2>
@@ -104,8 +25,6 @@ struct NT_ReflectDeviceStringLiteral_{
     }
 };
 
-
-
 namespace detail {
     template<std::size_t... I>
     constexpr auto to_reflect_device_string_literal_impl(const char* str, std::index_sequence<I...>) {
@@ -113,7 +32,7 @@ namespace detail {
     }
     
     template<std::size_t N>
-    using size_t_ = std::integral_constant<std::size_t, N>;
+    using size_t_ = type_traits::integral_constant<std::size_t, N>;
     
     template<std::size_t N>
     inline constexpr std::size_t string_literal_size(const char (&)[N]) {
@@ -160,8 +79,6 @@ namespace detail {
     };
 
 }
-
-
 
 inline constexpr auto first_letter(std::string_view s) {
     return s.empty() ? '\0' : s[0];
@@ -276,65 +193,54 @@ struct check_bare_metal_registry< \
     >, reflect_device::detail::string_literal_size(#name)>::type>::ptr
 
 
-template<class T>
-struct remove_cvref
-{
-    using type = std::remove_cv_t<std::remove_reference_t<T>>;
-};
-
-template<class T>
-using remove_cvref_t = typename remove_cvref<T>::type;
 
 template<typename T, typename... Ts>
-struct nt__has__devicet__{
-    static constexpr bool value = std::is_same_v<remove_cvref_t<T>, DeviceT> || nt__has__devicet__<Ts...>::value;
+struct nt__has__tensor__{
+    static constexpr bool value = type_traits::is_same_v<type_traits::remove_cvref_t<T>, Tensor> || nt__has__devicet__<Ts...>::value;
 };
 
 template<typename T>
-struct nt__has__devicet__<T>{
-    static constexpr bool value = std::is_same_v<remove_cvref_t<T>, DeviceT>;
+struct nt__has__tensor__<T>{
+    static constexpr bool value = type_traits::is_same_v<type_traits::remove_cvref_t<T>, Tensor>;
 };
 
 template<>
-struct nt__has__devicet__<int> : std::false_type{};
+struct nt__has__tensor__<int> : type_traits::false_type{};
 
 template<typename T>
-DeviceT get_device(const T& arg){
-    if constexpr (std::is_same_v<remove_cvref_t<T>, DeviceT>){
+Tensor get_tensor(const T& arg){
+    if constexpr (type_traits::is_same_v<type_traits::remove_cvref_t<T>, Tensor>){
         return arg;
     }
-    return DeviceT{Device::meta};
+    return Tensor::Null();
 }
-
 
 template<typename T, typename... Ts>
-DeviceT get_device(const T& arg, const Ts&... args){
-    if constexpr (std::is_same_v<remove_cvref_t<T>, DeviceT>){
+Tensor get_tensor(const T& arg, const Ts&... args){
+    if constexpr (type_traits::is_same_v<type_traits::remove_cvref_t<T>, Tensor>){
         return arg;
     }
-    return get_device(args...);
+    return get_tensor(args...);
 }
 
 template<typename T>
-void ensure_same_device_types(const Device& device, const T& arg){
-    if constexpr (std::is_same_v<remove_cvref_t<T>, DeviceT>){
-        if(!(device == arg.d)){
+void ensure_same_device_types(const DeviceType& device, const T& arg){
+    if constexpr (type_traits::is_same_v<type_traits::remove_cvref_t<T>, Tensor>){
+        if(!(device == arg.device())){
             throw std::logic_error("Error, given 2 different device types");
         }
     }
 }
 
 template<typename T, typename... Ts>
-void ensure_same_device_types(const Device& device, const T& arg, const Ts&... args){
-    if constexpr (std::is_same_v<remove_cvref_t<T>, DeviceT>){
-        if(!(device == arg.d)){
+void ensure_same_device_types(const DeviceType& device, const T& arg, const Ts&... args){
+    if constexpr (type_traits::is_same_v<type_traits::remove_cvref_t<T>, Tensor>){
+        if(!(device == arg.device())){
             throw std::logic_error("Error, given 2 different device types");
         }
     }
     ensure_same_device_types(device, args...);
 }
-
-
 
 template <std::size_t Index, typename NewType, typename Tuple, std::size_t... Is>
 auto transform_tuple_element_impl(Tuple&& t, NewType&& new_value, std::index_sequence<Is...>) {
@@ -347,7 +253,7 @@ auto transform_tuple_element_impl(Tuple&& t, NewType&& new_value, std::index_seq
 
 template <std::size_t Index, typename NewType, typename Tuple>
 auto transform_tuple_element(Tuple&& t, NewType&& new_value) {
-    constexpr std::size_t N = std::tuple_size<std::decay_t<Tuple>>::value;
+    constexpr std::size_t N = std::tuple_size<type_traits::decay_t<Tuple>>::value;
     static_assert(Index < N, "Index out of range in transform_tuple_element");
     return transform_tuple_element_impl<Index>(
         std::forward<Tuple>(t),
@@ -361,22 +267,21 @@ template<typename tuple_type, std::size_t index, typename... T>
 inline auto nt__run__device__func__choose__edit__one__cpu__(std::tuple<T...>& tup){
     if constexpr (index == sizeof...(T)){return;}
     else{
-        if constexpr (std::is_same_v<std::tuple_element_t<index, tuple_type>, DeviceT&>){
-            std::get<index>(tup).to_(Device::cpu);
-        }else if constexpr (std::is_same_v<remove_cvref_t<std::tuple_element_t<index, tuple_type>>, DeviceT>){
-            if constexpr (std::is_same_v<std::tuple_element_t<index, std::tuple<T...>>, DeviceT&>){
-                tup = transform_tuple_element<index, DeviceT>(tup, std::get<index>(tup).to(Device::cpu));
-            }else if constexpr (std::is_same_v<std::tuple_element_t<index, std::tuple<T...>>, const DeviceT&>){
-                tup = transform_tuple_element<index, DeviceT>(tup, std::get<index>(tup).to(Device::cpu));
+        if constexpr (type_traits::is_same_v<std::tuple_element_t<index, tuple_type>, Tensor&>){
+            std::get<index>(tup).to_(DeviceType::cpu);
+        }else if constexpr (type_traits::is_same_v<type_traits::remove_cvref_t<std::tuple_element_t<index, tuple_type>>, Tensor>){
+            if constexpr (type_traits::is_same_v<std::tuple_element_t<index, std::tuple<T...>>, Tensor&>){
+                tup = transform_tuple_element<index, Tensor>(tup, std::get<index>(tup).to(DeviceType::cpu));
+            }else if constexpr (std::is_same_v<std::tuple_element_t<index, std::tuple<T...>>, const Tensor&>){
+                tup = transform_tuple_element<index, Tensor>(tup, std::get<index>(tup).to(DeviceType::cpu));
             }else{
-                std::get<index>(tup) = std::get<index>(tup).to(Device::cpu);
+                std::get<index>(tup) = std::get<index>(tup).to(DeviceType::cpu);
             }
         }
         nt__run__device__func__choose__edit__one__cpu__<tuple_type, index+1, T...>(tup);
     }
 }
 
-// this changes it back to the original device type
 template<typename tuple_type, std::size_t index, typename... T>
 inline auto nt__run__device__func__choose__edit__one__original__(Device d, std::tuple<T...>& tup){
     if constexpr (index == sizeof...(T)){return;}
@@ -397,6 +302,7 @@ inline auto nt__run__device__func__choose__edit__one__original__(Device d, std::
     }
 }
 
+// needs to have non-void return
 template<typename... Tf, typename... T>
 inline void nt__run__device__func__choose__(Device original, 
                                             void(*cpu_func) (Tf...), 
@@ -415,42 +321,38 @@ inline void nt__run__device__func__choose__(Device original,
 
 template<typename out, typename... Tf, typename... T>
 inline out nt__run__device__func__(out(*cpu_func) (Tf...),
-                                    out(*mkl_func) (Tf...),
-                                    out(*cuda_func) (Tf...),
+                                    out(*metal_func) (Tf...),
                                    T&&... args){
     static_assert(nt__has__devicet__<T...>::value, "Error, not given a device");
-    DeviceT d = get_device(args...);
-    Device device = d.d;
+    Tensor d = get_tensor(args...);
+    DeviceType device = d.device();
     ensure_same_device_types(device, args...);
     if constexpr (std::is_void<out>::value){
-        switch(d.d){
-            case Device::meta:
+        switch(device){
+            case DeviceType::META:
                 throw std::logic_error("Error, given device type of meta");
                 return;
-            case Device::cpu:
+            case DeviceType::CPU:
                 cpu_func(std::forward<T>(args)...);
                 return;
-            case Device::mkl:
-                nt__run__device__func__choose__(device, cpu_func, mkl_func, std::forward<T>(args)...);
+            case DeviceType::CPUShared:
+                cpu_func(std::forward<T>(args)...);
                 return;
-            case Device::cuda:
-                if(cuda_func == nullptr){ cpu_func(std::forward<T>(args)...); break; }
-                cuda_func(std::forward<T>(args)...);
+            case DeviceType::METAL:
+                nt__run__device__func__choose__(device, cpu_func, metal_func, std::forward<T>(args)...);
                 return;
         }
     }else{
-        switch(d.d){
-            case Device::meta:
+        switch(device){
+            case DeviceType::META:
                 throw std::logic_error("Error, given device type of meta");
                 return cpu_func(std::forward<T>(args)...);
-            case Device::cpu:
+            case DeviceType::CPU:
                 return cpu_func(std::forward<T>(args)...);
-            case Device::mkl:
-                if(mkl_func == nullptr){ return cpu_func(std::forward<T>(args)...); }
-                return mkl_func(std::forward<T>(args)...);
-            case Device::cuda:
-                if(cuda_func == nullptr){ return cpu_func(d, std::forward<T>(args)...); }
-                return cuda_func(std::forward<T>(args)...);
+            case DeviceType::CPUShared:
+                return cpu_func(std::forward<T>(args)...);
+            case DeviceType::METAL:
+                return nt__run__device__func__choose__(device, cpu_func, metal_func, std::forward<T>(args)...);
         }
     }
 }
@@ -466,4 +368,8 @@ inline out nt__run__device__func__(out(*cpu_func) (Tf...),
 
 
 
-#endif //NT_DEVICE_BARE_METAL_MACROS_H__ 
+
+}
+
+
+#endif

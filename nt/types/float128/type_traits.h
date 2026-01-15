@@ -48,7 +48,7 @@ public:
     }
 
     static constexpr nt::float128_t round_error() noexcept {
-        return nt::float128_t::from_double(0.5);
+        return 0.5_f128;
     }
 
     static constexpr int min_exponent   = -16382; // unbiased

@@ -33,11 +33,11 @@ inline float128_t log(const float128_t& x) noexcept {
 
     // force m into [sqrt(1/2), sqrt(2)]
     if (m > f128_constants::SQRT2) {
-        m *= 0.5_f128;
+        m *= f128_constants::HALF;
         ++e;
     }
 
-    float128_t f = m - float128_t(1);
+    float128_t f = m - f128_constants::ONE;
 
     // log(1+f) polynomial
     float128_t term = f;

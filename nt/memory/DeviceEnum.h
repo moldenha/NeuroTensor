@@ -6,8 +6,12 @@ namespace nt{
 enum class DeviceType : int8_t{
 	META = -1, //this is the default device that has no memory associated with it, similar to how C10 does it
 	CPU = 0, //the normal CPU device
-	CPUShared = 2, //allocated with poisix shm class to make the memory shared acorss multiple cpu's
+	CPUShared = 1, //allocated with poisix shm class to make the memory shared acorss multiple cpu's
 };
+
+#define NT_GET_DEVICES_FUNC(func, ...)\
+    func(cpu, __VA_ARGS__)\
+
 
 constexpr DeviceType dCPU = DeviceType::CPU;
 constexpr DeviceType dCPUShared = DeviceType::CPUShared;
