@@ -124,7 +124,7 @@ void view_autograd_test(){
         auto d = c / 3;
         auto y = d[1];
         auto auto_grad = y.get_auto_grad();
-        auto path = auto_grad.get_path();
+        auto path = auto_grad.to_list();
         // for(const auto& Node : path)
         //     std::cout << Node->backwardFunc->get_name() << "->";
         // std::cout << "Done"<<std::endl;
@@ -168,7 +168,7 @@ void view_autograd_test(){
         auto d = c / 3;
         auto y = d[1];
         auto auto_grad = y.get_auto_grad();
-        auto path = auto_grad.get_path();
+        auto path = auto_grad.to_list();
         // for(const auto& Node : path)
         //     std::cout << Node->backwardFunc->get_name() << "->";
         // std::cout << "Done"<<std::endl;

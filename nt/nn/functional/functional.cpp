@@ -38,14 +38,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
     Tensor right = functional::matmult(input_saved->tensor, w1_saved->tensor, false, true);
     Tensor right_out = functional::matmult(right, w2_saved->tensor, false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(input, W1, W2);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, input, W1, W2);
     
     auto right_saved = make_intrusive<tensor_holder>(right);
     auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [w2_saved](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> input_saved,
            intrusive_ptr<tensor_holder> weight1_saved,
@@ -99,14 +98,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const Tensor& input, 
     Tensor right = functional::matmult(input_saved->tensor, W1.detach(), false, true);
     Tensor right_out = functional::matmult(right, w2_saved->tensor, false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(W1, W2);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, W1, W2);
     
     auto right_saved = make_intrusive<tensor_holder>(right);
     auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> input_saved,
            intrusive_ptr<tensor_holder> w2_saved,
@@ -157,14 +155,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
     Tensor right = functional::matmult(input.detach(), w1_saved->tensor, false, true);
     Tensor right_out = functional::matmult(right, w2_saved->tensor, false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(input, W2);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, input, W2);
     
     auto right_saved = make_intrusive<tensor_holder>(right);
     auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> w2_saved,
            intrusive_ptr<tensor_holder> w1_saved,
@@ -228,14 +225,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
     Tensor right = functional::matmult(input_saved->tensor, w1_saved->tensor, false, true);
     Tensor right_out = functional::matmult(right, w2_saved->tensor, false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(input, W1);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, input, W1);
     
     // auto right_saved = make_intrusive<tensor_holder>(right);
     // auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> input_saved,
            intrusive_ptr<tensor_holder> weight1_saved,
@@ -299,14 +295,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const Tensor& input, 
     Tensor right = functional::matmult(input, W1, false, true);
     Tensor right_out = functional::matmult(right, W2.detach(), false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(W2);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, W2);
     
     auto right_saved = make_intrusive<tensor_holder>(right);
     auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> right_saved,
            intrusive_ptr<tensor_holder> left_saved) {
@@ -362,14 +357,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const Tensor& input, 
     Tensor right = functional::matmult(input_saved->tensor, W1.detach(), false, true);
     Tensor right_out = functional::matmult(right, w2_saved->tensor, false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(W1);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, W1);
     
     // auto right_saved = make_intrusive<tensor_holder>(right);
     // auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> input_saved,
            intrusive_ptr<tensor_holder> w2_saved) {
@@ -426,14 +420,13 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
     Tensor right = functional::matmult(input.detach(), w1_saved->tensor, false, true);
     Tensor right_out = functional::matmult(right, w2_saved->tensor, false, true);
     
-    TensorGrad result(right_out + left_out, true);
-    result.track_tensors(input);
+    TensorGrad result = TensorGrad::create_read_node(right_out + left_out, input);
     
     // auto right_saved = make_intrusive<tensor_holder>(right);
     // auto left_saved = make_intrusive<tensor_holder>(left);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            // intrusive_ptr<tensor_holder> input_saved,
            intrusive_ptr<tensor_holder> weight1_saved,
@@ -491,11 +484,10 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
 //    auto right_saved = make_intrusive<tensor_holder>(right);
 //    auto left_saved = make_intrusive<tensor_holder>(left);
 
-//    TensorGrad result(symmetric_out, true);
-//    result.track_tensors(input, weight);
+//    TensorGrad result = TensorGrad::create_read_node(symmetric_out, input, weight);
 
 //    // Define backward function
-//    result.create_backward_function(
+//    result.create_read_backward_function(
 //        [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
 //           intrusive_ptr<tensor_holder> input_saved,
 //           intrusive_ptr<tensor_holder> weight_saved,
@@ -558,11 +550,10 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
 //    auto right_saved = make_intrusive<tensor_holder>(right);
 //    auto left_saved = make_intrusive<tensor_holder>(left);
 
-//    TensorGrad result(symmetric_out, true);
-//    result.track_tensors(input);
+//    TensorGrad result = TensorGrad::create_read_node(symmetric_out, input);
 
 //    // Define backward function
-//    result.create_backward_function(
+//    result.create_read_backward_function(
 //        [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
 //           /*intrusive_ptr<tensor_holder> input_saved,*/
 //           intrusive_ptr<tensor_holder> weight_saved,
@@ -621,11 +612,10 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
 //    auto right_saved = make_intrusive<tensor_holder>(right);
 //    auto left_saved = make_intrusive<tensor_holder>(left);
 
-//    TensorGrad result(symmetric_out, true);
-//    result.track_tensors(weight);
+//    TensorGrad result = TensorGrad::create_read_node(symmetric_out, weight);
 
 //    // Define backward function
-//    result.create_backward_function(
+//    result.create_read_backward_function(
 //        [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
 //           intrusive_ptr<tensor_holder> input_saved,
 //           intrusive_ptr<tensor_holder> weight_saved,
@@ -688,6 +678,8 @@ TensorGrad TensorGrad_Functional_Class::symmetric_bilinear(const TensorGrad& inp
 
 
 
+
+// NOTE: THIS IS THE START OF THE OLD CAT VEC WHEN MULTI-TENSOR AUTOGRAD VIEW WAS ALLOWED
 
 
 Tensor cat_vec(std::vector<TensorGrad> &tgs) {
@@ -754,101 +746,101 @@ Tensor cat_vec(std::vector<TensorGrad> &tgs, int64_t dim) {
     return Tensor(ArrayVoid::cat(arrVds), std::move(shape)).transpose(0, dim);
 }
 
-Tensor cat_vec_grad(std::vector<intrusive_ptr<TensorGrad>> &tgs) {
-    const typename SizeRef::value_type &num = tgs.size();
-    auto begin = tgs.begin();
-    auto end = tgs.end();
-    const SizeRef sh = (*begin)->shape();
-    const SizeRef sh_smaller = sh.pop_front();
-    int64_t n_dim_size = sh[0];
-    auto begin_cpy = begin;
-    ++begin;
-    for (; begin != end; ++begin) {
-        n_dim_size += (*begin)->shape()[0];
-        utils::THROW_EXCEPTION((*begin)->shape().pop_front() == sh_smaller,
-                                                     "Expected all shapes in concatenate to be the "
-                                                     "same, but got $ and $",
-                                                     (*begin)->shape().pop_front(), sh_smaller);
-    }
-    std::vector<typename SizeRef::value_type> vec = sh.Vec();
-    vec[0] = n_dim_size;
-    std::vector<std::reference_wrapper<const ArrayVoid>> arrVds;
-    arrVds.reserve(num); // okay because it is allocating a reference wrapper,
-                                             // putting a number there would cause an allocation error
-    begin = begin_cpy;
-    typename SizeRef::value_type i = 0;
-    for (typename SizeRef::value_type i = 0; begin != end; ++begin, ++i) {
-        arrVds.push_back(std::cref((*begin)->grad().arr_void()));
-    }
-    return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
-}
+// Tensor cat_vec_grad(std::vector<intrusive_ptr<TensorGrad>> &tgs) {
+//     const typename SizeRef::value_type &num = tgs.size();
+//     auto begin = tgs.begin();
+//     auto end = tgs.end();
+//     const SizeRef sh = (*begin)->shape();
+//     const SizeRef sh_smaller = sh.pop_front();
+//     int64_t n_dim_size = sh[0];
+//     auto begin_cpy = begin;
+//     ++begin;
+//     for (; begin != end; ++begin) {
+//         n_dim_size += (*begin)->shape()[0];
+//         utils::THROW_EXCEPTION((*begin)->shape().pop_front() == sh_smaller,
+//                                                      "Expected all shapes in concatenate to be the "
+//                                                      "same, but got $ and $",
+//                                                      (*begin)->shape().pop_front(), sh_smaller);
+//     }
+//     std::vector<typename SizeRef::value_type> vec = sh.Vec();
+//     vec[0] = n_dim_size;
+//     std::vector<std::reference_wrapper<const ArrayVoid>> arrVds;
+//     arrVds.reserve(num); // okay because it is allocating a reference wrapper,
+//                                              // putting a number there would cause an allocation error
+//     begin = begin_cpy;
+//     typename SizeRef::value_type i = 0;
+//     for (typename SizeRef::value_type i = 0; begin != end; ++begin, ++i) {
+//         arrVds.push_back(std::cref((*begin)->grad().arr_void()));
+//     }
+//     return Tensor(ArrayVoid::cat(arrVds), SizeRef(std::move(vec)));
+// }
 
 
 
-Tensor cat_vec_grad(std::vector<intrusive_ptr<TensorGrad>> &tgs, int64_t dim) {
-    if (dim == 0) {
-        return cat_vec_grad(tgs);
-    }
-    const typename SizeRef::value_type &num = tgs.size();
-    auto begin = tgs.begin();
-    auto end = tgs.end();
-    const SizeRef sh = (*begin)->shape().transpose(0, dim);
-    int64_t n_dim_size = sh[0];
-    const SizeRef sh_smaller = sh.pop_front();
-    auto begin_cpy = begin;
-    ++begin;
-    for (; begin != end; ++begin) {
-        n_dim_size += (*begin)->shape()[dim];
-        utils::THROW_EXCEPTION(
-                (*begin)->shape().transpose(0, dim).pop_front() == sh_smaller,
-                "Expected all shapes in concatenate to be the same, but got $ and "
-                "$",
-                (*begin)->shape(), sh);
-    }
-    std::vector<typename SizeRef::value_type> vec = sh.Vec();
-    vec[0] = n_dim_size;
-    std::vector<ArrayVoid> arrVds;
-    //arrVds.reserve(num); // okay because it is allocating a reference wrapper,
-                                             // putting a number there would cause an allocation error
-    begin = begin_cpy;
-    // typename SizeRef::value_type i = 0;
-    for (;begin != end; ++begin) {
-        arrVds.push_back((*begin)->grad().transpose(0, dim).arr_void());
-    }
-    SizeRef shape(std::move(vec));
-    return Tensor(ArrayVoid::cat(arrVds), std::move(shape)).transpose(0, dim);
-}
+// Tensor cat_vec_grad(std::vector<intrusive_ptr<TensorGrad>> &tgs, int64_t dim) {
+//     if (dim == 0) {
+//         return cat_vec_grad(tgs);
+//     }
+//     const typename SizeRef::value_type &num = tgs.size();
+//     auto begin = tgs.begin();
+//     auto end = tgs.end();
+//     const SizeRef sh = (*begin)->shape().transpose(0, dim);
+//     int64_t n_dim_size = sh[0];
+//     const SizeRef sh_smaller = sh.pop_front();
+//     auto begin_cpy = begin;
+//     ++begin;
+//     for (; begin != end; ++begin) {
+//         n_dim_size += (*begin)->shape()[dim];
+//         utils::THROW_EXCEPTION(
+//                 (*begin)->shape().transpose(0, dim).pop_front() == sh_smaller,
+//                 "Expected all shapes in concatenate to be the same, but got $ and "
+//                 "$",
+//                 (*begin)->shape(), sh);
+//     }
+//     std::vector<typename SizeRef::value_type> vec = sh.Vec();
+//     vec[0] = n_dim_size;
+//     std::vector<ArrayVoid> arrVds;
+//     //arrVds.reserve(num); // okay because it is allocating a reference wrapper,
+//                                              // putting a number there would cause an allocation error
+//     begin = begin_cpy;
+//     // typename SizeRef::value_type i = 0;
+//     for (;begin != end; ++begin) {
+//         arrVds.push_back((*begin)->grad().transpose(0, dim).arr_void());
+//     }
+//     SizeRef shape(std::move(vec));
+//     return Tensor(ArrayVoid::cat(arrVds), std::move(shape)).transpose(0, dim);
+// }
 
 
-TensorGrad TensorGrad_Functional_Class::cat(std::vector<TensorGrad> tgs, int64_t dim) {
-    bool track_grad = tgs[0].track_grad();
-    for (const auto &tg : tgs) {
-        utils::throw_exception(tg.track_grad() == track_grad,
-                                                     "Cannot concatenate tensors that are both tracking "
-                                                     "the gradient and are not");
-        utils::throw_exception(!tg.is_null(), "Cannot concatenate null tensors");
-    }
-    TensorGrad result(cat_vec(tgs, dim), track_grad);
-    if (!track_grad) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+// TensorGrad TensorGrad_Functional_Class::cat(std::vector<TensorGrad> tgs, int64_t dim) {
+//     bool track_grad = tgs[0].track_grad();
+//     for (const auto &tg : tgs) {
+//         utils::throw_exception(tg.track_grad() == track_grad,
+//                                                      "Cannot concatenate tensors that are both tracking "
+//                                                      "the gradient and are not");
+//         utils::throw_exception(!tg.is_null(), "Cannot concatenate null tensors");
+//     }
+//     TensorGrad result(cat_vec(tgs, dim), track_grad);
+//     if (!track_grad) {
+//         result.track_grad_(false);
+//         return std::move(result);
+//     }
 
-    // tracking the gradient itself
-    // rather than tracking each parent individually
-    for (const auto &tg : tgs) {
-        tg.Node->ensure_gradient_init();
-    }
-    result.track_tensors(tgs);
-    result.Node->ensure_backward_initialization();
-    std::vector<intrusive_ptr<TensorGrad> > parents;
-    parents.reserve(tgs.size());
-    for(const auto& tg : result.Node->parents){
-        parents.emplace_back(make_intrusive<TensorGrad>(tg.lock()));
-    }
-    result.grad() = cat_vec_grad(parents, dim);
-    return std::move(result);
-}
+//     // tracking the gradient itself
+//     // rather than tracking each parent individually
+//     for (const auto &tg : tgs) {
+//         tg.Node->ensure_gradient_init();
+//     }
+//     result.track_read_tensors(tgs);
+//     result.Node->ensure_backward_initialization();
+//     std::vector<intrusive_ptr<TensorGrad> > parents;
+//     parents.reserve(tgs.size());
+//     for(const auto& tg : result.Node->parents){
+//         parents.emplace_back(make_intrusive<TensorGrad>(tg.lock()));
+//     }
+//     result.grad() = cat_vec_grad(parents, dim);
+//     return std::move(result);
+// }
 
 // inline std::vector<Tensor> vectorize(Tensor& t){
 //     utils::throw_exception(t.dtype() == DType::TensorObj,
@@ -857,7 +849,61 @@ TensorGrad TensorGrad_Functional_Class::cat(std::vector<TensorGrad> tgs, int64_t
 //         ([](auto begin, auto end) -> std::vector<Tensor> {return std::vector<Tensor>(begin, end);});
 
 // }
+//
+// inline std::vector<TensorGrad> vectorize(TensorGrad& t){
+//     utils::throw_exception(t.dtype() == DType::TensorObj,
+//                            "can only vectorize tensor of tensors");
+    
 
+//     return t.detach().arr_void().cexecute_function<WRAP_DTYPES<DTypeEnum<DType::TensorObj > > >
+//     ([](auto begin, auto end) -> std::vector<TensorGrad> {
+//          return std::vector<TensorGrad>(begin, end);
+//     });
+
+// }
+//
+
+// NOTE: THIS IS THE END OF THE OLD CAT VEC WHEN MULTI-TENSOR AUTOGRAD VIEW WAS ALLOWED
+
+
+TensorGrad TensorGrad_Functional_Class::cat(std::vector<TensorGrad> tgs, int64_t dim){
+    Tensor out_tensor = cat_vec(tgs, dim).contiguous();
+    std::vector<TensorGrad> tracking_grads;
+    tracking_grads.reserve(tgs.size());
+    for(const auto& tg : tgs){
+        if(tg.track_grad()) tracking_grads.push_back(tg);
+    }
+    if(tracking_grads.size() == 0){
+        return TensorGrad(std::move(out_tensor), false);
+    }
+    Tensor tracks = Tensor::makeNullTensorArray(tgs.size());
+    Tensor* begin = reinterpret_cast<Tensor*>(tracks.data_ptr());
+    size_t i = 0;
+    int32_t cntr = 0;
+    for(size_t i = 0; i < tgs.size(); ++i, ++begin){
+        if(tgs[i].track_grad()){
+            *begin = ::nt::functional::nums(tgs[i].shape(), cntr, DType::int32);
+            ++cntr;
+        }else{
+            *begin = ::nt::functional::nums(tgs[i].shape(), -1, DType::int32);
+        }
+    }
+    Tensor where = ::nt::functional::cat(tracks, dim);
+    TensorGrad result = TensorGrad::create_read_node(out_tensor, tracking_grads);
+    // Define backward function
+    result.create_read_backward_function(
+        [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
+           intrusive_ptr<tensor_holder> location) {
+
+            const Tensor& where = location->tensor;
+            for(int32_t i = 0; i < parents.size(); ++i){
+                parents[i]->accumulate_gradient(grad[where == i]);
+            }
+        },
+        make_intrusive<tensor_holder>(where), "Cat"
+    );
+    return std::move(result);
+}
 
 TensorGrad TensorGrad_Functional_Class::cat(TensorGrad tgs, int64_t dim) {
     // std::cout << tgs << std::endl;
@@ -871,7 +917,40 @@ TensorGrad TensorGrad_Functional_Class::cat(TensorGrad tgs, int64_t dim) {
 
     // for(int64_t i = 0; i < tgs.numel(); ++i)
     //     first_cat[i] = tgs[i].detach();
-    TensorGrad result(::nt::functional::cat(tgs.detach(), dim), tgs.track_grad());
+    // TensorGrad tgs = tgs_.flatten(0, -1);
+
+    if(!tgs.track_grad()) return TensorGrad(::nt::functional::cat(tgs.detach(), dim).contiguous(), false);
+
+    Tensor track = Tensor::makeNullTensorArray(tgs.detach().numel());
+    Tensor* begin = reinterpret_cast<Tensor*>(track.data_ptr());
+    Tensor* end = reinterpret_cast<Tensor*>(track.data_ptr_end());
+    const Tensor* ibegin = reinterpret_cast<const Tensor*>(tgs.detach().data_ptr());
+    uint32_t cntr = 0;
+    for(;begin != end; ++begin, ++ibegin, ++cntr){
+        *begin = ::nt::functional::nums(ibegin->shape(), cntr, DType::uint32);
+    }
+    Tensor where = ::nt::functional::cat(track, dim);
+    SizeRef shape = tgs.shape().clone();
+    int64_t n = tgs.numel();
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::cat(tgs.detach(), dim).contiguous(), tgs);
+    result.create_read_backward_function(
+        [shape = std::move(shape), numel = n]
+        (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
+           intrusive_ptr<tensor_holder> location) {
+            const Tensor& where = location->tensor;
+
+            Tensor out = Tensor::makeNullTensorArray(numel).view(shape);
+            Tensor* begin = reinterpret_cast<Tensor*>(out.data_ptr());
+            Tensor* end = reinterpret_cast<Tensor*>(out.data_ptr_end());
+            int32_t cntr = 0;
+            for(;begin != end; ++begin, ++cntr){
+                *begin = grad[where == cntr];    
+            }
+            parents[0]->accumulate_gradient(out);
+        },
+        make_intrusive<tensor_holder>(where), "Cat"
+    );
+ 
 
     // if(tgs.grad == nullptr){
     //     std::cout << tgs.detach().dtype() << std::endl;
@@ -884,58 +963,120 @@ TensorGrad TensorGrad_Functional_Class::cat(TensorGrad tgs, int64_t dim) {
     //     std::cout << ::nt::functional::zeros_like(tgs.detach());
     // }
     
-    result.track_grad(tgs, [dim](Tensor &grad) {return ::nt::functional::cat(grad, dim); });
+    // result.track_grad(tgs, [dim](Tensor &grad) {return ::nt::functional::cat(grad, dim); });
     return std::move(result);
 }
 
 
 TensorGrad TensorGrad_Functional_Class::stack(std::vector<TensorGrad> tgs, int64_t dim) {
-    bool track_grad = tgs[0].track_grad();
+
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(tgs.size());
     for (const auto &tg : tgs) {
-        utils::throw_exception(tg.track_grad() == track_grad,
-                                                     "Cannot concatenate tensors that are both tracking "
-                                                     "the gradient and are not");
-        utils::throw_exception(!tg.is_null(), "Cannot concatenate null tensors");
+        if(tg.track_grad())
+            tracking.push_back(tg);
+        // utils::throw_exception(tg.track_grad() == track_grad,
+        //                                              "Cannot concatenate tensors that are both tracking "
+        //                                              "the gradient and are not");
+        utils::throw_exception(!tg.is_null(), "Cannot stack null tensors");
     }
+    bool track_grad = tracking.size() > 0;
     std::vector<std::reference_wrapper<Tensor>> tgs_data_ref;
     tgs_data_ref.reserve(tgs.size());
     for (int64_t i = 0; i < tgs.size(); ++i) {
         tgs_data_ref.push_back(std::ref(tgs[i].detach()));
     }
 
-    TensorGrad result(::nt::functional::stack(tgs_data_ref, dim), track_grad);
-    if (!track_grad) {
-        result.track_grad_(false);
-        return std::move(result);
+    if (!track_grad) { return TensorGrad(::nt::functional::stack(tgs_data_ref, dim).contiguous(), false); } 
+    
+    Tensor tracks = Tensor::makeNullTensorArray(tgs.size());
+    Tensor* begin = reinterpret_cast<Tensor*>(tracks.data_ptr());
+    size_t i = 0;
+    int32_t cntr = 0;
+    for(size_t i = 0; i < tgs.size(); ++i, ++begin){
+        if(tgs[i].track_grad()){
+            *begin = ::nt::functional::nums(tgs[i].shape(), cntr, DType::int32);
+            ++cntr;
+        }else{
+            *begin = ::nt::functional::nums(tgs[i].shape(), -1, DType::int32);
+        }
     }
-    std::vector<std::reference_wrapper<Tensor>> tgs_grad_ref;
-    tgs_grad_ref.reserve(tgs.size());
-    for (auto &tg : tgs) {
-        tg.Node->ensure_gradient_init();
-        tgs_grad_ref.push_back(std::ref(tg.grad()));
-    }
-    result.grad() = ::nt::functional::stack(tgs_grad_ref, dim);
-    result.track_tensors(tgs);
+    Tensor where = ::nt::functional::stack(tracks, dim);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::stack(tgs_data_ref, dim).contiguous(), tracking);
+    result.create_read_backward_function(
+        [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
+           intrusive_ptr<tensor_holder> location) {
+
+            const Tensor& where = location->tensor;
+            for(int32_t i = 0; i < parents.size(); ++i){
+                parents[i]->accumulate_gradient(grad[where == i]);
+            }
+        },
+        make_intrusive<tensor_holder>(where), "Stack"
+    );
     return std::move(result);
+
+
+    // std::vector<std::reference_wrapper<Tensor>> tgs_grad_ref;
+    // tgs_grad_ref.reserve(tgs.size());
+    // for (auto &tg : tgs) {
+    //     tg.Node->ensure_gradient_init();
+    //     tgs_grad_ref.push_back(std::ref(tg.grad()));
+    // }
+    // result.grad() = ::nt::functional::stack(tgs_grad_ref, dim);
+    // result.track_read_tensors(tgs);
+    // return std::move(result);
 }
+
+// TensorGrad TensorGrad_Functional_Class::stack(TensorGrad tgs, int64_t dim) {
+//     TensorGrad result(::nt::functional::stack(tgs.detach(), dim), tgs.track_grad());
+//     result.track_grad(tgs, [dim](Tensor &grad) { return ::nt::functional::stack(grad, dim); });
+//     return std::move(result);
+// }
+
 
 TensorGrad TensorGrad_Functional_Class::stack(TensorGrad tgs, int64_t dim) {
-    TensorGrad result(::nt::functional::stack(tgs.detach(), dim), tgs.track_grad());
-    result.track_grad(tgs, [dim](Tensor &grad) { return ::nt::functional::stack(grad, dim); });
+    
+    if(!tgs.track_grad()) return TensorGrad(::nt::functional::stack(tgs.detach(), dim).contiguous(), false); 
+    Tensor track = Tensor::makeNullTensorArray(tgs.detach().numel());
+    Tensor* begin = reinterpret_cast<Tensor*>(track.data_ptr());
+    Tensor* end = reinterpret_cast<Tensor*>(track.data_ptr_end());
+    const Tensor* ibegin = reinterpret_cast<const Tensor*>(tgs.detach().data_ptr());
+    uint32_t cntr = 0;
+    for(;begin != end; ++begin, ++ibegin, ++cntr){
+        *begin = ::nt::functional::nums(ibegin->shape(), cntr, DType::uint32);
+    }
+    Tensor where = ::nt::functional::stack(track, dim);
+    SizeRef shape = tgs.shape().clone();
+    int64_t n = tgs.numel();
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::stack(tgs.detach(), dim).contiguous(), tgs);
+    result.create_read_backward_function(
+        [shape = std::move(shape), numel = n]
+        (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
+           intrusive_ptr<tensor_holder> location) {
+            const Tensor& where = location->tensor;
+
+            Tensor out = Tensor::makeNullTensorArray(numel).view(shape);
+            Tensor* begin = reinterpret_cast<Tensor*>(out.data_ptr());
+            Tensor* end = reinterpret_cast<Tensor*>(out.data_ptr_end());
+            int32_t cntr = 0;
+            for(;begin != end; ++begin, ++cntr){
+                *begin = grad[where == cntr];    
+            }
+            parents[0]->accumulate_gradient(out);
+        },
+        make_intrusive<tensor_holder>(where), "Stack"
+    );
+ 
     return std::move(result);
 }
-
 
 
 TensorGrad TensorGrad_Functional_Class::real(const TensorGrad& tg){
-    TensorGrad result(::nt::functional::real(tg.detach()), tg.track_grad());
-    if(!tg.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!tg.track_grad()){ return TensorGrad(::nt::functional::real(tg.detach()), false); } 
     DType original = tg.dtype();
-    result.track_tensors(tg);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::real(tg.detach()), tg);
+    result.create_read_backward_function(
             [original](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 parents[0]->accumulate_gradient(::nt::functional::to_complex_from_real(grad).to(original));
             });
@@ -943,14 +1084,10 @@ TensorGrad TensorGrad_Functional_Class::real(const TensorGrad& tg){
 }
 
 TensorGrad TensorGrad_Functional_Class::to_complex_from_real(const TensorGrad& tg){
-    TensorGrad result(::nt::functional::to_complex_from_real(tg.detach()), tg.track_grad());
-    if(!tg.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!tg.track_grad()) return TensorGrad(::nt::functional::to_complex_from_real(tg.detach()), false);
     DType original = tg.dtype();
-    result.track_tensors(tg);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::to_complex_from_real(tg.detach()), tg);
+    result.create_read_backward_function(
             [original](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 parents[0]->accumulate_gradient(::nt::functional::real(grad).to(original));
             });
@@ -958,14 +1095,11 @@ TensorGrad TensorGrad_Functional_Class::to_complex_from_real(const TensorGrad& t
 }
 
 TensorGrad TensorGrad_Functional_Class::imag(const TensorGrad& tg){
-    TensorGrad result(::nt::functional::imag(tg.detach()), tg.track_grad());
-    if(!tg.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!tg.track_grad()) return TensorGrad(::nt::functional::imag(tg.detach()), false);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::imag(tg.detach()), tg);
+
     DType original = tg.dtype();
-    result.track_tensors(tg);
-    result.create_backward_function(
+    result.create_read_backward_function(
             [original](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 parents[0]->accumulate_gradient(::nt::functional::to_complex_from_imag(grad).to(original));
             });
@@ -973,14 +1107,11 @@ TensorGrad TensorGrad_Functional_Class::imag(const TensorGrad& tg){
 }
 
 TensorGrad TensorGrad_Functional_Class::to_complex_from_imag(const TensorGrad& tg){
-    TensorGrad result(::nt::functional::to_complex_from_imag(tg.detach()), tg.track_grad());
-    if(!tg.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!tg.track_grad()) return TensorGrad(::nt::functional::to_complex_from_imag(tg.detach()), false);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::to_complex_from_imag(tg.detach()), tg);
+
     DType original = tg.dtype();
-    result.track_tensors(tg);
-    result.create_backward_function(
+    result.create_read_backward_function(
             [original](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 parents[0]->accumulate_gradient(::nt::functional::imag(grad).to(original));
             });
@@ -996,11 +1127,10 @@ TensorGrad TensorGrad_Functional_Class::to_complex_from_imag(const TensorGrad& t
 TensorGrad TensorGrad_Functional_Class::softmax(const TensorGrad& inputs, bool stable){
     Tensor softmax_x = stable ? ::nt::functional::softmax_stable(inputs.detach()) : ::nt::functional::softmax(inputs.detach());
     intrusive_ptr<tensor_holder> sx_c = make_intrusive<tensor_holder>(softmax_x.conditional_mutate_clone());
-    TensorGrad result(std::move(softmax_x), inputs.track_grad());
     if(!inputs.track_grad())
-        return std::move(result);
-    result.track_tensors(inputs);
-    result.create_backward_function(
+        return TensorGrad(std::move(softmax_x), false);
+    TensorGrad result = TensorGrad::create_read_node(std::move(softmax_x), inputs);
+    result.create_read_backward_function(
         [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
            intrusive_ptr<tensor_holder> sx){
             parents[0]->accumulate_gradient(::nt::functional::dsoftmax(grad, sx->tensor)); 
@@ -1014,12 +1144,10 @@ TensorGrad TensorGrad_Functional_Class::softmax(const TensorGrad& inputs, typena
     Tensor softmax_x = stable ? ::nt::functional::softmax_stable(inputs.detach(), dim) : 
         ::nt::functional::softmax(inputs.detach(), dim);
     intrusive_ptr<tensor_holder> sx_c = make_intrusive<tensor_holder>(softmax_x.conditional_mutate_clone());
-    TensorGrad result(std::move(softmax_x), inputs.track_grad());
     if(!inputs.track_grad())
-        return std::move(result);
-
-    result.track_tensors(inputs);
-    result.create_backward_function(
+        return TensorGrad(std::move(softmax_x), false);
+    TensorGrad result = TensorGrad::create_read_node(std::move(softmax_x), inputs);
+    result.create_read_backward_function(
         [dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
            intrusive_ptr<tensor_holder> sx){
             parents[0]->accumulate_gradient(::nt::functional::dsoftmax(grad, sx->tensor, dim)); 
@@ -1057,13 +1185,10 @@ TensorGrad TensorGrad_Functional_Class::dropout(const TensorGrad &inputs, double
     Tensor bools = ::nt::functional::randbools(inputs.shape(), p);
     Tensor out = inputs.detach().clone();
     out[bools] = 0;
-    TensorGrad result(out, inputs.track_grad());
-    if (!inputs.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(inputs);
-    result.create_backward_function(
+    if(!inputs.track_grad()) return TensorGrad(out, false);
+    TensorGrad result = TensorGrad::create_read_node(out, inputs);
+
+    result.create_read_backward_function(
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> saved_bools) {
                 Tensor accumulation = grad.clone();
@@ -1080,13 +1205,9 @@ TensorGrad TensorGrad_Functional_Class::dropout2d(const TensorGrad &inputs, doub
     Tensor split = out.split_axis(-2);
     Tensor bools = randbools(split.shape(), p);
     split[bools] = 0;
-    TensorGrad result(out, inputs.track_grad());
-    if (!inputs.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(inputs);
-    result.create_backward_function(
+    if (!inputs.track_grad()) return TensorGrad(out, false); 
+    TensorGrad result = TensorGrad::create_read_node(out, inputs);
+    result.create_read_backward_function(
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> saved_bools) {
                 Tensor accumulation = grad.clone();
@@ -1102,13 +1223,10 @@ TensorGrad TensorGrad_Functional_Class::dropout3d(const TensorGrad &inputs, doub
     Tensor split = out.split_axis(-3);
     Tensor bools = randbools(split.shape(), p);
     split[bools] = 0;
-    TensorGrad result(out, inputs.track_grad());
-    if (!inputs.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(inputs);
-    result.create_backward_function(
+
+    if (!inputs.track_grad()) return TensorGrad(out, false);
+    TensorGrad result = TensorGrad::create_read_node(out, inputs);
+    result.create_read_backward_function(
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> saved_bools) {
                 Tensor accumulation = grad.clone();
@@ -1121,14 +1239,11 @@ TensorGrad TensorGrad_Functional_Class::dropout3d(const TensorGrad &inputs, doub
 
 
 TensorGrad TensorGrad_Functional_Class::to(const TensorGrad& x, DType dt){
-    TensorGrad result(::nt::functional::to(x.detach(), dt), x.track_grad());
-    if (!x.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+
+    if (!x.track_grad()) return TensorGrad(::nt::functional::to(x.detach(), dt), false); 
     DType original = x.dtype();
-    result.track_tensors(x);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::to(x.detach(), dt), x);
+    result.create_read_backward_function(
         [original](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient( grad.to(original));
@@ -1138,3 +1253,5 @@ TensorGrad TensorGrad_Functional_Class::to(const TensorGrad& x, DType dt){
 
 } // namespace functional
 } // namespace nt
+
+

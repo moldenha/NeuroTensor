@@ -94,8 +94,14 @@ void tensor_grad_test(){
         b[1 <nt::range> 3] = 0;
         x[2] *= 1000;
         auto o = x + y;
+        // auto autograd = o.get_auto_grad();
+        // for(const auto& node : autograd.to_list()){
+        //     std::cout << node->name() << "->";
+        // }
+        // // std::cout << "done" << std::endl;
         o.backward(nt::rand(0, 3, o.shape()));
         nt::Tensor& grad = x.grad();
+        // std::cout << "x grad: " << grad << std::endl;
         nt::utils::throw_exception(nt::sum(grad[2]).item<float>() > 1000, "Error, gradient [2] sum is expected to be greater than 1000");
         nt::utils::throw_exception(nt::all(grad[1][1][1 <nt::range> 3] == 0), "Error gradient [1][1][ 1 <nt::range> 3 ] is expected to be 0");
         nt::utils::throw_exception(nt::sum(grad[1][1]).item<float>() > 1000, "Error, expected gradient[1][1] sum to be greater than 1000");

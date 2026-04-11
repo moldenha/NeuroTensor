@@ -42,6 +42,8 @@ NT_ALWAYS_INLINE void set_grad_if_tracking(Tensor* begin, T&& first, Args&&... a
 
 }
 
+// will make a DType::Tensor -> this is to make sure that nothing breaks autograd wise
+
 template<typename T, typename... Args,
          std::enable_if_t<std::is_same_v<std::decay_t<T>, TensorGrad>, int>>
 inline TensorGrad list(T&& first, Args&&... rest){
@@ -54,31 +56,44 @@ inline TensorGrad list(T&& first, Args&&... rest){
         return TensorGrad(list(std::forward<T>(first).detach(), (std::forward<Args>(rest).detach())...), false);
     }
 
-    TensorGrad result(list(std::forward<T>(first).detach(), (std::forward<Args>(rest).detach()) ...),
-                        true);
+    TensorGrad result = TensorGrad::create_read_node(list(std::forward<T>(first).detach(), (std::forward<Args>(rest).detach()) ...),
+                        std::forward<T>(first), std::forward<Args>(rest)...);
+    std::vector<bool> indexes = {std::forward<T>(first).track_grad(), (std::forward<Args>(rest).track_grad()) ...};
+    result.create_read_backward_function(
+        [indexes = std::move(indexes)]
+        (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+            auto begin = parents.begin();
+            const Tensor* grad_index = reinterpret_cast<const Tensor*>(grad.data_ptr());
+            for(size_t i = 0; i < indexes.size(); ++i){
+                if(!indexes[i]) continue;
+                (*begin)->accumulate_gradient(grad_index[i]);
+                ++begin;
+            }
+        }
+    );
     // From here on out
     // If there is a tensor who's gradient is not being tracked
     // the result.grad()[i].item<Tensor>().is_null() == true
-    if(!result.Node->grad) result.Node->grad = make_intrusive<tensor_holder>(Tensor::makeNullTensorArray(sizeof...(Args) + 1));
-    else result.grad() = Tensor::makeNullTensorArray(sizeof...(Args) + 1);
-    // for fast access:
-    Tensor* grad_begin = reinterpret_cast<Tensor*>(result.grad().data_ptr());
-    Tensor* grad_end = reinterpret_cast<Tensor*>(result.grad().data_ptr_end());
-    if(std::forward<T>(first).track_grad()) std::forward<T>(first).Node->ensure_gradient_init();
+    //if(!result.Node->grad) result.Node->grad = make_intrusive<tensor_holder>(Tensor::makeNullTensorArray(sizeof...(Args) + 1));
+    //else result.grad() = Tensor::makeNullTensorArray(sizeof...(Args) + 1);
+    //// for fast access:
+    //Tensor* grad_begin = reinterpret_cast<Tensor*>(result.grad().data_ptr());
+    //Tensor* grad_end = reinterpret_cast<Tensor*>(result.grad().data_ptr_end());
+    //if(std::forward<T>(first).track_grad()) std::forward<T>(first).Node->ensure_gradient_init();
 
-    ((std::forward<Args>(rest).track_grad() ? (std::forward<Args>(rest).Node->ensure_gradient_init(), void()) : void()), ...);
+    //((std::forward<Args>(rest).track_grad() ? (std::forward<Args>(rest).Node->ensure_gradient_init(), void()) : void()), ...);
     
-    details::set_grad_if_tracking(grad_begin, std::forward<T>(first), std::forward<Args>(rest)...); 
+    //details::set_grad_if_tracking(grad_begin, std::forward<T>(first), std::forward<Args>(rest)...); 
 
-    ////create the gradient for the result
-    //result.grad = make_intrusive<tensor_holder>(
-    //    list(first.grad->tensor, (rest.grad->tensor) ...));
+    //////create the gradient for the result
+    ////result.grad = make_intrusive<tensor_holder>(
+    ////    list(first.grad->tensor, (rest.grad->tensor) ...));
   
-    // Only track if the gradient is supposed to be tracked
-    // There will not be a backward function anyways
-    if(std::forward<T>(first).track_grad()) result.track_tensors(std::forward<T>(first));
+    //// Only track if the gradient is supposed to be tracked
+    //// There will not be a backward function anyways
+    //if(std::forward<T>(first).track_grad()) result.track_read_tensors(std::forward<T>(first));
     
-    ((std::forward<Args>(rest).track_grad() ? (result.track_tensors(std::forward<Args>(rest)), void()) : void()), ...);
+    //((std::forward<Args>(rest).track_grad() ? (result.track_read_tensors(std::forward<Args>(rest)), void()) : void()), ...);
 
     return std::move(result);
 }

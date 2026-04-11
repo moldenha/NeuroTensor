@@ -101,6 +101,8 @@ public:
 		inline bool occupy_same_memory(const ArrayVoid& arr) const noexcept {
 			return bucket.occupy_same_memory(arr.bucket);
 		}
+        
+        inline uint64_t individual_storage_id() const noexcept { return this->bucket.individual_storage_id(); }
 
 		void swap(ArrayVoid&);
 		/* void** strides_cbegin() const; */

@@ -13,12 +13,11 @@ result_types::max<TensorGrad, Tensor> TensorGrad_Functional_Class::max(const Ten
     result_types::max<Tensor, Tensor> out = ::nt::functional::max(input.detach(), dim, keepdim);
     Tensor& indices = out.indices;
     Tensor& vals = out.values;
-    TensorGrad result(vals, input.track_grad());
     if(!input.track_grad()){
-        result.track_grad_(false);
-        return result_types::max<TensorGrad, Tensor>(result, indices);
+        return result_types::max<TensorGrad, Tensor>(TensorGrad(vals, false), indices);
     }
-    result.track_grad(input, [&indices](Tensor& grad){return grad[indices];});
+    TensorGrad result = input.create_view_node(vals);
+    result.create_view_backward_function(input, [&indices](Tensor& grad){return grad[indices];});
     return result_types::max<TensorGrad, Tensor>(result, indices);
 }
 
@@ -27,12 +26,11 @@ result_types::max<TensorGrad, Tensor> TensorGrad_Functional_Class::min(const Ten
     result_types::max<Tensor, Tensor> out = ::nt::functional::min(input.detach(), dim, keepdim);
     Tensor& indices = out.indices;
     Tensor& vals = out.values;
-    TensorGrad result(vals, input.track_grad());
     if(!input.track_grad()){
-        result.track_grad_(false);
-        return result_types::max<TensorGrad, Tensor>(result, indices);
+        return result_types::max<TensorGrad, Tensor>(TensorGrad(vals, false), indices);
     }
-    result.track_grad(input, [&indices](Tensor& grad){return grad[indices];});
+    TensorGrad result = input.create_view_node(vals);
+    result.create_view_backward_function(input, [&indices](Tensor& grad){return grad[indices];});
     return result_types::max<TensorGrad, Tensor>(result, indices);
 
 }
@@ -40,16 +38,13 @@ result_types::max<TensorGrad, Tensor> TensorGrad_Functional_Class::min(const Ten
 TensorGrad TensorGrad_Functional_Class::clamp(const TensorGrad &x,
                                                 std::optional<Scalar> min,
                                                 std::optional<Scalar> max) {
-    TensorGrad result(::nt::functional::clamp(x.detach(), min, max), x.track_grad());
-    if(!x.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!x.track_grad()) return TensorGrad(::nt::functional::clamp(x.detach(), min, max), false);
+    
     intrusive_ptr<tensor_holder> before = make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
-    result.track_tensors(x);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::clamp(x.detach(), min, max), x);
     intrusive_ptr<tensor_holder> after = make_intrusive<tensor_holder>(result.detach().clone());
 
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> before, intrusive_ptr<tensor_holder> after){
             Tensor where = (before->tensor != after->tensor);
@@ -73,7 +68,7 @@ TensorGrad& TensorGrad_Functional_Class::clamp_(TensorGrad &x,
     intrusive_ptr<tensor_holder> before = make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
     ::nt::functional::clamp_(x.detach(), min, max);
     intrusive_ptr<tensor_holder> after = make_intrusive<tensor_holder>(x.detach().clone());
-    x.track_self_mod_tensors( 
+    x.create_write_node( 
         [before, after](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
             Tensor where = (before->tensor != after->tensor);
             Tensor relu_grad = ::nt::functional::ones_like(grad);
@@ -123,8 +118,9 @@ TensorGrad TensorGrad_Functional_Class::maximum(const std::vector<TensorGrad>& t
     Tensor out = (do_scalars) ? ::nt::functional::maximum(all_tensors, ::nt::functional::maximum(std::move(ss))) 
                                 : ::nt::functional::maximum(all_tensors);
     intrusive_ptr<tensor_holder> result_th = make_intrusive<tensor_holder>(out.conditional_mutate_clone());
-    TensorGrad result(out, true);
-    result.track_tensors(const_cast<std::vector<TensorGrad>&>(tgs));
+
+    TensorGrad result = TensorGrad::create_read_node(out, const_cast<std::vector<TensorGrad>&>(tgs));
+
     intrusive_ptr<tensor_holder> holding = make_intrusive<tensor_holder>(Tensor::makeNullTensorArray(tgs.size()));
     Tensor* begin_h = reinterpret_cast<Tensor*>(holding->tensor.data_ptr());
     // Tensor* end_h = reinterpret_cast<Tensor*>(holding.data_ptr_end());
@@ -132,7 +128,7 @@ TensorGrad TensorGrad_Functional_Class::maximum(const std::vector<TensorGrad>& t
         *begin_h = begin->detach().conditional_mutate_clone();
     }
     //function requires non-const vector in order to make sure the gradients are tracked properly
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> tensors, intrusive_ptr<tensor_holder> result){
         Tensor* begin_h = reinterpret_cast<Tensor*>(tensors->tensor.data_ptr());
@@ -186,8 +182,7 @@ TensorGrad TensorGrad_Functional_Class::minimum(const std::vector<TensorGrad>& t
     Tensor out = (do_scalars) ? ::nt::functional::minimum(std::move(all_tensors), ::nt::functional::minimum(std::move(ss))) : ::nt::functional::minimum(std::move(all_tensors));
 
     intrusive_ptr<tensor_holder> result_th = make_intrusive<tensor_holder>(out.conditional_mutate_clone());
-    TensorGrad result(out, true);
-    result.track_tensors(const_cast<std::vector<TensorGrad>&>(tgs));
+    TensorGrad result = TensorGrad::create_read_node(out, const_cast<std::vector<TensorGrad>&>(tgs));
     intrusive_ptr<tensor_holder> holding = make_intrusive<tensor_holder>(Tensor::makeNullTensorArray(tgs.size()));
     Tensor* begin_h = reinterpret_cast<Tensor*>(holding->tensor.data_ptr());
     // Tensor* end_h = reinterpret_cast<Tensor*>(holding.data_ptr_end());
@@ -195,7 +190,7 @@ TensorGrad TensorGrad_Functional_Class::minimum(const std::vector<TensorGrad>& t
         *begin_h = begin->detach().conditional_mutate_clone();
     }
     //function requires non-const vector in order to make sure the gradients are tracked properly
-    result.create_backward_function(
+    result.create_read_backward_function(
         [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
            intrusive_ptr<tensor_holder> tensors, intrusive_ptr<tensor_holder> result){
         Tensor* begin_h = reinterpret_cast<Tensor*>(tensors->tensor.data_ptr());

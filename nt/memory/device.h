@@ -5,6 +5,7 @@
 #include "../utils/api_macro.h"
 #include <iostream>
 #include <string>
+#include <unordered_set>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -12,7 +13,10 @@
 
 namespace nt{
 
-
+inline uint64_t increment_global_storage_id() {
+    static std::atomic<uint64_t> counter{0};
+    return counter.fetch_add(1, std::memory_order_relaxed);
+}
 
 using DeleterFnPtr = void (*)(void*);
 NEUROTENSOR_API void deleteNothing(void*);
@@ -22,8 +26,12 @@ NEUROTENSOR_API void deleteAlignedArray(void* ptr);
 
 class NEUROTENSOR_API Device : public intrusive_ptr_target{
 	static constexpr DeviceType device_type = dMETA;
+    uint64_t storage_id_;
 	public:
 		virtual ~Device() = default;
+        Device()
+            :storage_id_(increment_global_storage_id())
+        {}
 		virtual void allocate_memory(const DType dt, const int64_t size) = 0;
 		virtual void release_memory() = 0;
 		virtual void* get_memory() = 0;
@@ -34,6 +42,7 @@ class NEUROTENSOR_API Device : public intrusive_ptr_target{
 		virtual inline const DeviceType& get_device_type() const noexcept {return device_type;}
 		virtual inline const bool is_same(const nt::intrusive_ptr<Device>& dev) const {return dev->get_memory() == get_memory();}
 		virtual inline const bool in_block(const void*) const {return false;}
+        inline const uint64_t& storage_id() const { return storage_id_; }
 };
 
 
@@ -106,12 +115,29 @@ class NEUROTENSOR_API DeviceHolder : public intrusive_ptr_target{
 	intrusive_ptr<Device>* devices;
 	public:
 		DeviceHolder() = delete;
-		explicit DeviceHolder(uint64_t num) : devices(MetaNewArr(intrusive_ptr<Device>,num)) {}
+		explicit DeviceHolder(uint64_t num) 
+            : devices(MetaNewArr(intrusive_ptr<Device>,num))
+              // storage_id_(increment_global_storage_id()) 
+        {}
 		inline ~DeviceHolder() {MetaFreeArr<intrusive_ptr<Device>>(devices);}
 		template<typename IntegerType, typename std::enable_if<std::is_integral<IntegerType>::value, int>::type = 0>
 		inline intrusive_ptr<Device>& operator[](IntegerType i){return devices[i];} 
 		template<typename IntegerType, typename std::enable_if<std::is_integral<IntegerType>::value, int>::type = 0>
-		inline const intrusive_ptr<Device>& operator[](IntegerType i) const {return devices[i];} 
+		inline const intrusive_ptr<Device>& operator[](IntegerType i) const {return devices[i];}
+        inline std::vector<uint64_t> storage_id(uint64_t size) const noexcept {
+            std::vector<uint64_t> out;
+            std::unordered_set<Device*> unique_devices;
+            std::transform(devices, devices + size,
+               std::inserter(unique_devices, unique_devices.end()),
+               [](const auto& dev) { return dev.get(); });
+            out.reserve(unique_devices.size());
+            for(auto& val : unique_devices)
+                out.push_back(val->storage_id());
+            return std::move(out);
+        }
+        inline uint64_t individual_storage_id() const noexcept {
+            return devices[0]->storage_id();
+        }
 
 };
 

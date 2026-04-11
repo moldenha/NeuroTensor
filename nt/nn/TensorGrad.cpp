@@ -12,22 +12,22 @@ namespace nt {
 // This is done to make it easier to remake aspects in the future
 // Also, it ensures that the Tensor (called by detach) value is always initialized
 TensorGrad::TensorGrad(const Tensor &t, bool grad_required)
-    : Node(grad_required ? make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(t))  
-           : make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(t), grad::utility::DontTrackGrad{}) ) , 
-            internal_allow_grad_tracking_(true) 
+    : Node(grad_required ? grad::utility::makeTrackingGraphNode(t) : grad::utility::makeNonTrackingGraphNode(t)) ,
+        Tape(make_intrusive<autograd_type>(Node)),
+        internal_allow_grad_tracking_(true) 
     {}
 
 TensorGrad::TensorGrad(Tensor &&t, bool grad_required)
-    : Node(grad_required ? make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(std::move(t)))  
-           : make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(std::move(t)), grad::utility::DontTrackGrad{}) )
-            , internal_allow_grad_tracking_(true)
+    : Node(grad_required ? grad::utility::makeTrackingGraphNode(t) : grad::utility::makeNonTrackingGraphNode(t)) ,
+        Tape(make_intrusive<autograd_type>(Node)),
+        internal_allow_grad_tracking_(true) 
     {}
 
 TensorGrad::TensorGrad(const TensorGrad& tg)
-    : Node(tg.Node), internal_allow_grad_tracking_(tg.internal_allow_grad_tracking_)  {}
+    : Node(tg.Node), Tape(tg.Tape), internal_allow_grad_tracking_(tg.internal_allow_grad_tracking_)  {}
 
 TensorGrad::TensorGrad(TensorGrad &&tg)
-    : Node(std::move(tg.Node)), internal_allow_grad_tracking_(tg.internal_allow_grad_tracking_) {
+    : Node(std::move(tg.Node)), Tape(std::move(tg.Tape)), internal_allow_grad_tracking_(tg.internal_allow_grad_tracking_) {
     // if(!tg.track_grad()){
     //     Node = std::move(tg.Node);
     //     return;
@@ -49,120 +49,133 @@ TensorGrad::TensorGrad(Scalar value, bool grad_required)
 TensorGrad::TensorGrad(std::nullptr_t, bool grad_required)
     : TensorGrad(Tensor::Null(), grad_required) {}
 
-
-
-void TensorGrad::track_tensors(std::vector<TensorGrad> &tgs, bool ignore_dont_track) {
-    if (!this->track_grad()) return;
-
-    this->Node->ensure_backward_initialization();
-    
-    for(const auto& tg : tgs){
-        if(ignore_dont_track && !tg.track_grad()) continue;
-        else{
-            utils::THROW_EXCEPTION(tg.track_grad(), "\nError: told to track tensor that is not tracking a gradient"
-                                                    ", this will cause a segmentation fault, please look at function implementation"
-                                                    "\nTry calling track_grad(std::vector<TensorGrad>, ignore_dont_track = true)");
-        }
-        tg.Node->ensure_backward_initialization();
-        this->Node->parents.emplace_back(tg.Node);
-        tg.Node->children.emplace_back(this->Node);
-    }
+TensorGrad::~TensorGrad(){
+    // std::cout << "destructing node" << std::endl;
+    this->Node.reset();
+    // std::cout << "destructing tape" << std::endl;
+    this->Tape.reset();
+    // std::cout << "destructed" << std::endl;
 }
+
+TensorGrad TensorGrad::create_read_node(const Tensor& output, std::vector<TensorGrad>& tgs){
+
+    std::vector<node_type> nodes(tgs.size(), node_type(nullptr));
+    for(size_t i =0; i < nodes.size(); ++i)
+        nodes[i] = tgs[i].Node;
+    
+    node_type new_node = ::nt::grad::utility::makeReadGraphNode(output, nodes);
+    intrusive_ptr<autograd_type> new_tape = make_intrusive<autograd_type>(new_node);
+
+    for(auto& arg : tgs){
+        new_tape->merge(arg.Tape);
+        // arg.Tape->add_node(new_node);
+    }
+    new_tape->add_node(new_node);
+    return TensorGrad(std::move(new_node), std::move(new_tape));
+    
+}
+
+
 
 void TensorGrad::swap(TensorGrad &tg) {
     this->Node.swap(tg.Node);
+    this->Tape.swap(tg.Tape);
     std::swap(this->internal_allow_grad_tracking_, tg.internal_allow_grad_tracking_);
 }
 
 TensorGrad &TensorGrad::operator=(const TensorGrad &tg) {
     this->internal_allow_grad_tracking_ = tg.internal_allow_grad_tracking_;
-    if (this == &tg) return *this;
-    if(tg.is_null()) return *this;
-    if(!tg.track_grad()){
-        return this->operator=(tg.detach());
-    }
-    if(this->track_grad() && tg.track_grad()){
-        // Make a brand new tensor grad that propogates to both
-        const Tensor& result = tg.detach();
-        this->detach() = result;
-        intrusive_ptr<grad::utility::GraphNode> new_node = make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(result));
-        new_node->ensure_backward_initialization(true);
-        intrusive_ptr<grad::utility::GraphNode> this_node = make_intrusive<grad::utility::GraphNode>();
-        *this_node = *this->Node;
-        this->Node.reset();
-        new_node->parents.emplace_back(this_node);
-        new_node->parents.emplace_back(tg.Node);
-        this_node->children.emplace_back(new_node);
-        tg.Node->children.emplace_back(new_node);
-        new_node->backwardFunc->set(
-            grad::utility::backward_func::func_type(
-            [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
-                // if(parents[0]->Node->grad && !parents[0]->Node->grad->tensor.is_null()){std::cout << parents[0]->grad().shape();}
-                // if(parents[1]->Node->grad && !parents[1]->Node->grad->tensor.is_null()){std::cout << parents[1]->grad().shape();}
-                parents[0]->accumulate_gradient(grad);
-                parents[1]->accumulate_gradient(grad);
-            }
-           )
-        );
-        new_node->backwardFunc->set_name("EqualOperator&");
-        this->Node = std::move(new_node);
-        return *this;
-    }
-    //!this->track_grad() && tg.track_grad()
     this->Node = tg.Node;
+    this->Tape = tg.Tape;
+    //if (this == &tg) return *this;
+    //if(tg.is_null()) return *this;
+    //if(!tg.track_grad()){
+    //    return this->operator=(tg.detach());
+    //}
+    //if(this->track_grad() && tg.track_grad()){
+    //    // Make a brand new tensor grad that propogates to both
+    //    const Tensor& result = tg.detach();
+    //    this->detach() = result;
+    //    intrusive_ptr<grad::utility::GraphNode> new_node = make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(result));
+    //    new_node->ensure_backward_initialization(true);
+    //    intrusive_ptr<grad::utility::GraphNode> this_node = make_intrusive<grad::utility::GraphNode>();
+    //    *this_node = *this->Node;
+    //    this->Node.reset();
+    //    new_node->parents.emplace_back(this_node);
+    //    new_node->parents.emplace_back(tg.Node);
+    //    this_node->children.emplace_back(new_node);
+    //    tg.Node->children.emplace_back(new_node);
+    //    new_node->backwardFunc->set(
+    //        grad::utility::backward_func::func_type(
+    //        [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+    //            // if(parents[0]->Node->grad && !parents[0]->Node->grad->tensor.is_null()){std::cout << parents[0]->grad().shape();}
+    //            // if(parents[1]->Node->grad && !parents[1]->Node->grad->tensor.is_null()){std::cout << parents[1]->grad().shape();}
+    //            parents[0]->accumulate_gradient(grad);
+    //            parents[1]->accumulate_gradient(grad);
+    //        }
+    //       )
+    //    );
+    //    new_node->backwardFunc->set_name("EqualOperator&");
+    //    this->Node = std::move(new_node);
+    //    return *this;
+    //}
+    ////!this->track_grad() && tg.track_grad()
+    //this->Node = tg.Node;
     return *this;
 }
 
 TensorGrad &TensorGrad::operator=(TensorGrad &&tg) {
     this->internal_allow_grad_tracking_ = tg.internal_allow_grad_tracking_; 
-    if (this == &tg) return *this;
-    if(tg.is_null()) return *this;
-    if(!tg.track_grad()){
-        return this->operator=(std::move(tg.Node->tensor->tensor));
-    }
-    if(this->track_grad() && tg.track_grad()){
-        // Make a brand new tensor grad that propogates to both
-        const Tensor& result = tg.detach();
-        this->detach() = result;
-        intrusive_ptr<grad::utility::GraphNode> new_node = make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(result));
-        new_node->ensure_backward_initialization(true);
-        intrusive_ptr<grad::utility::GraphNode> this_node = make_intrusive<grad::utility::GraphNode>();
-        *this_node = *this->Node;
-        this->Node.reset();
-        new_node->parents.emplace_back(this_node);
-        new_node->parents.emplace_back(tg.Node);
-        this_node->children.emplace_back(new_node);
-        tg.Node->children.emplace_back(new_node);
-        new_node->backwardFunc->set(
-            grad::utility::backward_func::func_type(
-            [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
-                // if(parents[0]->Node->grad && !parents[0]->Node->grad->tensor.is_null()){std::cout << parents[0]->grad().shape();}
-                // if(parents[1]->Node->grad && !parents[1]->Node->grad->tensor.is_null()){std::cout << parents[1]->grad().shape();}
-                parents[0]->accumulate_gradient(grad);
-                parents[1]->accumulate_gradient(grad);
-            }
-           )
-        );
-        new_node->backwardFunc->set_name("EqualOperator&&");
-        this->Node = std::move(new_node);
-        return *this;
-    }
-    //!this->track_grad() && tg.track_grad()
     this->Node = std::move(tg.Node);
+    this->Tape = std::move(tg.Tape);
+    //if (this == &tg) return *this;
+    //if(tg.is_null()) return *this;
+    //if(!tg.track_grad()){
+    //    return this->operator=(std::move(tg.Node->tensor->tensor));
+    //}
+    //if(this->track_grad() && tg.track_grad()){
+    //    // Make a brand new tensor grad that propogates to both
+    //    const Tensor& result = tg.detach();
+    //    this->detach() = result;
+    //    intrusive_ptr<grad::utility::GraphNode> new_node = make_intrusive<grad::utility::GraphNode>(make_intrusive<tensor_holder>(result));
+    //    new_node->ensure_backward_initialization(true);
+    //    intrusive_ptr<grad::utility::GraphNode> this_node = make_intrusive<grad::utility::GraphNode>();
+    //    *this_node = *this->Node;
+    //    this->Node.reset();
+    //    new_node->parents.emplace_back(this_node);
+    //    new_node->parents.emplace_back(tg.Node);
+    //    this_node->children.emplace_back(new_node);
+    //    tg.Node->children.emplace_back(new_node);
+    //    new_node->backwardFunc->set(
+    //        grad::utility::backward_func::func_type(
+    //        [](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+    //            // if(parents[0]->Node->grad && !parents[0]->Node->grad->tensor.is_null()){std::cout << parents[0]->grad().shape();}
+    //            // if(parents[1]->Node->grad && !parents[1]->Node->grad->tensor.is_null()){std::cout << parents[1]->grad().shape();}
+    //            parents[0]->accumulate_gradient(grad);
+    //            parents[1]->accumulate_gradient(grad);
+    //        }
+    //       )
+    //    );
+    //    new_node->backwardFunc->set_name("EqualOperator&&");
+    //    this->Node = std::move(new_node);
+    //    return *this;
+    //}
+    ////!this->track_grad() && tg.track_grad()
+    //this->Node = std::move(tg.Node);
     return *this;
 }
 
 TensorGrad &TensorGrad::operator=(Scalar s) {
     if (is_null()) {
         utils::throw_exception(this->Node != nullptr, "Error, trying to use TensorGrad with null node");
-        if(!this->Node->tensor){this->Node->tensor = make_intrusive<tensor_holder>(Tensor(s));}
-        else{
-            this->Node->tensor->tensor = s;
-        }
+        // generally unecessay because the node constructor makes sure the tensor ptr is constructed
+        utils::throw_exception(this->Node->detach().is_null(), "INTERNAL ERROR: Expected when null at this point tensor is null");
+        this->Node->detach() = Tensor(s);
         return *this;
     }
     detach() = s;
-    this->track_self_mod_tensors(
+
+    this->create_write_node(
         [](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
              parents[0]->accumulate_gradient(0);
@@ -174,26 +187,25 @@ TensorGrad &TensorGrad::operator=(Scalar s) {
 
 TensorGrad &TensorGrad::_unsafe_nullify() {
     this->Node.reset();
+    this->Tape.reset();
     return *this;
 }
 
 void TensorGrad::ensure_usable() const {
     utils::THROW_EXCEPTION(this->Node != nullptr, "Error: tried to use TensorGrad with null Node, making it unusable");
-    utils::THROW_EXCEPTION(this->Node->tensor != nullptr, "Error: tried to use TensorGrad with null Node, making it unusable");
 }
 
 TensorGrad &TensorGrad::set_(const Tensor &t) {
     if (is_null()) {
         utils::throw_exception(this->Node != nullptr, "Error, trying to use TensorGrad with null node");
-        if(!this->Node->tensor){this->Node->tensor = make_intrusive<tensor_holder>(t);}
-        else{
-            this->Node->tensor->tensor = t;
-        }
+        // generally unecessay because the node constructor makes sure the tensor ptr is constructed
+        utils::throw_exception(this->Node->detach().is_null(), "INTERNAL ERROR: Expected when null at this point tensor is null");
+        this->Node->detach() = t;
         return *this;
     }
 
     this->detach().set_(t);
-    this->track_self_mod_tensors(
+    this->create_write_node(
         [](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
              parents[0]->accumulate_gradient(0);
@@ -254,19 +266,16 @@ TensorGrad TensorGrad::operator+(const Scalar other) const {
 void TensorGrad::redefine_tracking(
     TensorGrad &tg, const TensorGrad &parent,
     std::function<void(const Tensor &, intrusive_ptr<TensorGrad> &)> func, const char* func_name) {
-    if (tg.is_null()) {
+    if (tg.is_null() || !tg.track_grad()) {
         return;
     }
-    tg.Node->parents.clear();
-    tg.Node->children.clear();
-    tg.Node->backwardFunc->set(nullptr);
-    tg.track_tensors(parent);
-    tg.create_backward_function(
+    tg.Node = ::nt::grad::utility::makeReadGraphNode(parent.Node);
+    tg.Node->set_func(nullptr);
+    tg.create_read_backward_function(
         [func](const Tensor &grad,
                std::vector<intrusive_ptr<TensorGrad>> &parents) {
             func(grad, parents[0]);
-        });
-    tg.Node->backwardFunc->set_name(std::string(func_name));
+        }, func_name);
     // tg.ensure_grads_initialized();
     // this will ensure there is no segmentation faults or anything if a
     // gradient has not been initialized
@@ -455,10 +464,7 @@ std::ostream &operator<<(std::ostream &out, const TensorGrad &tg) {
         return out << "Null";
     } else {
         out << tg.detach();
-        if(tg.Node->backwardFunc != nullptr){
-            return out << ", grad_fn = " << tg.Node->backwardFunc->get_name();
-        }
-        return out << ", grad_fn = None";
+        return out << ", grad_fn = " << tg.Node->name();
     }
 }
 
@@ -486,14 +492,9 @@ TensorGrad TensorGrad::mean(utils::optional_list list, bool keepdim) const {
     handle_null_tensors(*this);
     Tensor meaned = this->detach().mean(list, true);
     std::vector<int64_t> dims = meaned.shape().Vec();
-    TensorGrad result(keepdim ? meaned : meaned.squeeze());
-    if (!is_tracking_grad(*this)) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!is_tracking_grad(*this)) return TensorGrad(keepdim ? meaned : meaned.squeeze(), false);
 
-    // track the current tensor in the result for backward computation
-    result.track_tensors(*this);
+    TensorGrad result = TensorGrad::create_read_node(keepdim ? meaned : meaned.squeeze(), *this); 
     size_value_t dim_size;
     if (!list) {
         dim_size = numel();
@@ -505,7 +506,7 @@ TensorGrad TensorGrad::mean(utils::optional_list list, bool keepdim) const {
     }
 
     // define the backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [dims, dim_size](const Tensor &grad,
                          std::vector<intrusive_ptr<TensorGrad>> &parents) {
             // calculate the size of the dimension along which the mean was
@@ -549,34 +550,28 @@ TensorGrad &TensorGrad::exp_() {
 
 TensorGrad TensorGrad::to_dtype(DType dt) const {
     handle_null_tensors(*this);
-    TensorGrad result(this->detach().to(dt), this->track_grad());
-    if (!is_tracking_grad(*this)) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    DType cur_dtype = this->dtype();
+    if(!is_tracking_grad(*this)) return TensorGrad(this->detach().to(dt), false);
 
-    result.track_tensors(*this);
-    result.create_backward_function(
+    DType cur_dtype = this->dtype();
+    TensorGrad result = TensorGrad::create_read_node(this->detach().to(dt), *this);
+
+    result.create_read_backward_function(
         [cur_dtype](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(grad.to(cur_dtype));
-        });
+    });
     return std::move(result);
 }
 
 TensorGrad TensorGrad::to_device(DeviceType dt) const {
     handle_null_tensors(*this);
-    TensorGrad result(this->detach().to(dt), this->track_grad());
-    if (!is_tracking_grad(*this)) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    
-    DeviceType cur_device_type = this->device();
+    if (!is_tracking_grad(*this)) return TensorGrad(this->detach().to(dt), false);
 
-    result.track_tensors(*this);
-    result.create_backward_function(
+
+    DeviceType cur_device_type = this->device();
+    TensorGrad result = TensorGrad::create_read_node(this->detach().to(dt), *this);
+
+    result.create_read_backward_function(
         [cur_device_type](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(grad.to(cur_device_type));
@@ -586,14 +581,11 @@ TensorGrad TensorGrad::to_device(DeviceType dt) const {
 
 TensorGrad TensorGrad::contiguous() const {
     handle_null_tensors(*this);
-    TensorGrad result(this->detach().contiguous(), this->track_grad());
-    if (!is_tracking_grad(*this)) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!is_tracking_grad(*this)) return TensorGrad(this->detach().contiguous(), false); 
+    TensorGrad result = TensorGrad::create_read_node(this->detach().contiguous(), *this);
 
-    result.track_tensors(*this);
-    result.create_backward_function(
+
+    result.create_read_backward_function(
         [](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(grad);
@@ -603,14 +595,11 @@ TensorGrad TensorGrad::contiguous() const {
 
 TensorGrad TensorGrad::clone() const {
     handle_null_tensors(*this);
-    TensorGrad result(this->detach().clone(), this->track_grad());
-    if (!is_tracking_grad(*this)) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!is_tracking_grad(*this)) return TensorGrad(this->detach().clone(), false); 
+    TensorGrad result = TensorGrad::create_read_node(this->detach().clone(), *this);
 
-    result.track_tensors(*this);
-    result.create_backward_function(
+
+    result.create_read_backward_function(
         [](const Tensor &grad,
            std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(grad);
@@ -720,10 +709,14 @@ TensorGrad TensorGrad::undilate(std::vector<size_value_t> dil) const {
 #define TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(op, ...)                       \
     TensorGrad TensorGrad::op(COMBINE_ARGUMENTS(__VA_ARGS__)) const {          \
         handle_null_tensors(*this);                                            \
-        TensorGrad result(detach().op(EXTRACT_ODD_ARGUMENTS(__VA_ARGS__)),     \
-                          this->track_grad());                                 \
-        result.track_grad(                                                     \
-            *this, [EXTRACT_ODD_ARGUMENTS(__VA_ARGS__)](Tensor &grad) {        \
+        if(!this->track_grad())                                                \
+            return TensorGrad(detach().op(EXTRACT_ODD_ARGUMENTS(__VA_ARGS__)), \
+                    false);                                                    \
+        TensorGrad result = this->create_view_node(                            \
+                    detach().op(EXTRACT_ODD_ARGUMENTS(__VA_ARGS__))            \
+        );                                                                     \
+        result.create_view_backward_function(                                  \
+            *this, [EXTRACT_ODD_ARGUMENTS(__VA_ARGS__)](const Tensor &grad) {  \
                 return grad.op(EXTRACT_ODD_ARGUMENTS(__VA_ARGS__));            \
             });                                                                \
         return std::move(result);                                              \
@@ -742,18 +735,21 @@ TensorGrad TensorGrad::undilate(std::vector<size_value_t> dil) const {
 TensorGrad TensorGrad::operator[](size_value_t i) const {
     handle_null_tensors(*this);
     if (this->dtype() == DType::TensorObj && dims() == 1) {
-        bool grad_being_tracked = this->track_grad() && !(this->Node->grad->tensor[i].item<Tensor>().is_null());
-        // look above for rule
 
-        TensorGrad result(detach()[i].item<Tensor>(), grad_being_tracked);
-        if (!grad_being_tracked) {
-            result.track_grad_(false);
-            return std::move(result);
-        }
-        result.track_grad(*this, [i](Tensor& grad) { return grad[i].item<Tensor>(); });
+        if(!this->track_grad()) return TensorGrad(detach()[i].item<Tensor>(), false);
+        TensorGrad result = TensorGrad::create_read_node(detach()[i].item<Tensor>(), *this);
+
+        result.create_read_backward_function(
+        [index = i](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+            parents[0]->Node->ensure_gradient_init();
+            parents[0]->Node->gradient_()[index].item<Tensor>() += grad;
+        });
+        return std::move(result);
+
     }
-    TensorGrad result(detach()[i], this->track_grad());
-    result.track_grad(*this, [i](Tensor &grad) { return grad[i]; });
+    if(!this->track_grad()) return TensorGrad(detach()[i], false);
+    TensorGrad result = this->create_view_node(detach()[i]);
+    result.create_view_backward_function(*this, [i](Tensor &grad) { return grad[i]; });
     return std::move(result);
 }
 
@@ -763,23 +759,29 @@ TensorGrad TensorGrad::operator[](std::vector<size_value_t> vec) const {
     if(this->dtype() == DType::TensorObj){
         Tensor out = detach()[vec];
         if(out.numel() > 1){
-            TensorGrad result(out, this->track_grad());
-            result.track_grad(*this, [&vec](Tensor& grad) {return grad[vec];});
+            if(!this->track_grad()) return TensorGrad(out, false);
+            TensorGrad result = this->create_view_node(out);
+            result.create_view_backward_function(*this, [&vec](Tensor& grad) {return grad[vec];});
             return std::move(result);
         }
         if(!this->track_grad()){
             return TensorGrad(out.item<Tensor>(), false);
         }
         
-        Tensor grad = this->Node->grad->tensor[vec].item<Tensor>();
-        if(grad.is_null())
-            return TensorGrad(out.item<Tensor>(), false);
-        TensorGrad result(out.item<Tensor>(), true);
-        result.track_grad(*this, [&grad](Tensor& gr){return grad;});
+        // Tensor grad = this->Node->grad->tensor[vec].item<Tensor>();
+        // if(grad.is_null())
+        //     return TensorGrad(out.item<Tensor>(), false);
+        TensorGrad result = TensorGrad::create_read_node(out.item<Tensor>(), *this);
+        result.create_read_backward_function(
+        [index = std::move(vec)](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents){
+            parents[0]->Node->ensure_gradient_init();
+            parents[0]->Node->gradient_()[index].item<Tensor>() += grad;
+        });
         return std::move(result);
     }
-    TensorGrad result(detach()[vec], this->track_grad());
-    result.track_grad(*this, [&vec](Tensor &grad) { return grad[vec]; });
+    if(!this->track_grad()) return TensorGrad(detach()[vec], false);
+    TensorGrad result = this->create_view_node(detach()[vec]);
+    result.create_view_backward_function(*this, [&vec](Tensor &grad) { return grad[vec]; });
     return std::move(result);
 }
 
@@ -788,8 +790,9 @@ TensorGrad TensorGrad::transpose(size_value_t a, size_value_t b) const {
         return *this;
     }
     handle_null_tensors(*this);
-    TensorGrad result(detach().transpose(a, b), this->track_grad());
-    result.track_grad(*this,
+    if(!this->track_grad()) return TensorGrad(detach().transpose(a, b), false);
+    TensorGrad result = this->create_view_node(detach().transpose(a, b));
+    result.create_view_backward_function(*this,
                       [a, b](Tensor &grad) { return grad.transpose(a, b); });
     return std::move(result);
 }
@@ -849,34 +852,53 @@ TENSORGRAD_CHANGE_STRIDE_VIEW_OPERATION(expand, SizeRef, s)
 #undef EXTRACT_SELECT_MACRO
 #undef EXTRACT_ODD_ARGUMENTS
 
-grad::AutoGrad<std::unordered_set<intrusive_ptr<grad::utility::GraphNode>>> TensorGrad::get_auto_grad(bool validate){
-    return validate ? grad::AutoGrad(this->Node) : grad::AutoGrad(this->Node, grad::utility::DontValidateGraph{});
+inline intrusive_ptr<grad::utility::GraphNode> 
+    get_latest_write_child(
+        intrusive_ptr<grad::utility::GraphNode> current){
+        if(current->children.size() == 0) return current;
+        for(auto it = current->children.rbegin(); it != current->children.rend(); ++it){
+            if((*it)->edge_type() == grad::utility::EdgeType::Write)
+                return get_latest_write_child(*it);
+        }
+        return current;
+}
+
+TensorGrad::autograd_type& TensorGrad::get_auto_grad(bool validate){
+    this->Tape->set_start_node(get_latest_write_child(this->Node));
+    if(validate){this->Tape->to_list();}
+    return *(this->Tape);
 }
 
 
-void TensorGrad::backward() {
-    auto graph = this->get_auto_grad(/* validate = */ true);
-    graph.backward();
+void TensorGrad::backward(bool retain_graph) {
+    this->Tape->set_start_node(get_latest_write_child(this->Node));
+    this->Tape->backward();
+    if(!retain_graph) this->_erase_graph();
 }
 
-void TensorGrad::backward(const Tensor& initial_grad) {
-    auto graph = this->get_auto_grad(/* validate = */ true);
-    graph.backward(initial_grad);
+void TensorGrad::backward(const Tensor& initial_grad, bool retain_graph) {
+    this->Tape->set_start_node(get_latest_write_child(this->Node));
+    this->Tape->backward(initial_grad);
+    if(!retain_graph) this->_erase_graph();
 }
 
 void TensorGrad::zero_grad() {
     // No need to validate because validation in this case would make sure the gradient is define
     // and that the backward function is defined, and if not throw an exception
     // Zero grad will make sure the gradient is defined and zero anyways
-    auto graph = this->get_auto_grad(/* validate = */ false);
-    graph.zero_grad();
+    this->Tape->set_start_node(get_latest_write_child(this->Node));
+    this->Tape->zero_grad();
 }
 
 void TensorGrad::zero_self_grad_only() {
-    Node->zero_grad();
+    this->Node->zero_grad();
 }
 
 void TensorGrad::accumulate_gradient(const Tensor& in_grad){
+    if(in_grad.is_null()){
+        std::cout << "in gradient is null, and my name is "
+                << this->Node->name() << std::endl;
+    }
     this->Node->accumulate_gradient(in_grad);
 }
 
@@ -886,10 +908,11 @@ void TensorGrad::accumulate_gradient(Scalar num){
 
 void TensorGrad::update() {
     if(this->is_null()) return;
-    utils::throw_exception(this->Node->grad && !this->grad().is_null(), 
+    Tensor grad = this->Node->gradient();
+    utils::throw_exception(!grad.is_null(), 
                            "Error: Backward has not been run, gradient is not defined when running update()");
     handle_null_tensors(*this);
-    this->detach() -= this->grad();
+    this->detach() -= grad;
 }
 
 void TensorGrad::update_mutable(){
@@ -908,7 +931,7 @@ void TensorGrad::update_mutable(){
     //                        "Trying to update immutable tensor inside of tensor grad"
     //                        "But children are not empty"
     //                        "Could still potentially be being used by auto grad");
-    Tensor& grad = this->grad();
+    Tensor& grad = this->Node->gradient();
     this->detach().force_mutable_function(
         [&grad](Tensor& self){self -= grad;});
 }
@@ -917,8 +940,7 @@ void TensorGrad::update_mutable(){
 // just if any of the parent grads are not initialized
 // this will initialize them
 void TensorGrad::ensure_grads_initialized() {
-    auto graph = this->get_auto_grad(false);
-    for(const auto& node : graph.get_path()){
+    for(const auto& node : this->Tape->to_list()){
         node->ensure_backward_initialization(true);
     }
 }
@@ -927,7 +949,8 @@ void TensorGrad::ensure_grads_initialized() {
 void TensorGrad::_erase_graph(){
     this->Node->children.clear();
     this->Node->parents.clear();
-    this->Node->backwardFunc->set(nullptr);
+    this->Node->set_func(nullptr);
+    this->Tape->erase();
 }
 
 

@@ -30,11 +30,10 @@ TensorGrad TensorGrad_Functional_Class::matmult(const TensorGrad &a, const Tenso
             make_intrusive<tensor_holder>(a.detach().conditional_mutate_clone());
     intrusive_ptr<tensor_holder> b_c =
             make_intrusive<tensor_holder>(b.detach().conditional_mutate_clone());
-    TensorGrad result(::nt::functional::matmult(a_c->tensor, b_c->tensor, transpose_a, transpose_b), true);
-    result.track_tensors(a, b);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::matmult(a_c->tensor, b_c->tensor, transpose_a, transpose_b), a, b);
 
     // Define backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
             [transpose_a, transpose_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
                 if(transpose_a){
@@ -72,10 +71,9 @@ TensorGrad TensorGrad_Functional_Class::matmult(const Tensor &a, const TensorGra
         return std::move(result);
     }
     intrusive_ptr<tensor_holder> a_c = make_intrusive<tensor_holder>(a.conditional_mutate_clone());
-    TensorGrad result(::nt::functional::matmult(a_c->tensor, b.detach(), transpose_a, transpose_b), b.track_grad());
-    result.track_tensors(b);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::matmult(a_c->tensor, b.detach(), transpose_a, transpose_b), b);
 
-    result.create_backward_function(
+    result.create_read_backward_function(
             [transpose_a, transpose_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> a) {
                 if(transpose_b){
@@ -98,10 +96,9 @@ TensorGrad TensorGrad_Functional_Class::matmult(const TensorGrad &a, const Tenso
         return std::move(result);
     }
     intrusive_ptr<tensor_holder> b_c = make_intrusive<tensor_holder>(b.conditional_mutate_clone());
-    TensorGrad result(::nt::functional::matmult(a.detach(), b_c->tensor, transpose_a, transpose_b), a.track_grad());
-    result.track_tensors(a);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::matmult(a.detach(), b_c->tensor, transpose_a, transpose_b), a);
 
-    result.create_backward_function(
+    result.create_read_backward_function(
             [transpose_a, transpose_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> b) {
                 if(transpose_a){
@@ -148,7 +145,7 @@ TensorGrad& TensorGrad_Functional_Class::matmult(const TensorGrad &a, const Tens
     ::nt::functional::matmult(a_c->tensor, b_c->tensor, out.detach(), transpose_a, transpose_b);
 
     // Define backward function
-    out.track_self_mod_tensors(
+    out.create_write_node(
             [transpose_a, transpose_b, a = std::move(a_c), b = std::move(b_c)](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 if(transpose_a){
                     //this is what I am doing below:
@@ -187,7 +184,7 @@ TensorGrad& TensorGrad_Functional_Class::matmult(const Tensor &a, const TensorGr
     intrusive_ptr<tensor_holder> a_c = make_intrusive<tensor_holder>(a.conditional_mutate_clone());
     ::nt::functional::matmult(a_c->tensor, b.detach(), out.detach(), transpose_a, transpose_b);
 
-    out.track_self_mod_tensors(
+    out.create_write_node(
             [transpose_a, transpose_b, a = std::move(a_c)](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 if(transpose_b){
                     parents[0]->accumulate_gradient(
@@ -211,7 +208,7 @@ TensorGrad& TensorGrad_Functional_Class::matmult(const TensorGrad &a, const Tens
     intrusive_ptr<tensor_holder> b_c = make_intrusive<tensor_holder>(b.conditional_mutate_clone());
     ::nt::functional::matmult(a.detach(), b_c->tensor, out.detach(), transpose_a, transpose_b);
 
-    out.track_self_mod_tensors(
+    out.create_write_node(
             [transpose_a, transpose_b, b = std::move(b_c)](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
                 if(transpose_a){
                     //this is what I am doing below:
@@ -247,10 +244,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const TensorGrad& x, const Tensor
     intrusive_ptr<tensor_holder> x_tensor = make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
     intrusive_ptr<tensor_holder> w_tensor = make_intrusive<tensor_holder>(w.detach().conditional_mutate_clone());
     
-    TensorGrad result(::nt::functional::linear(x_tensor->tensor, w_tensor->tensor, b.detach(), trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(x, w, b);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x_tensor->tensor, w_tensor->tensor, b.detach(), trans_a, trans_b), x, w, b);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
             intrusive_ptr<tensor_holder> x, intrusive_ptr<tensor_holder> w)
         {
@@ -289,10 +285,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const Tensor& x, const TensorGrad
     }
     intrusive_ptr<tensor_holder> x_tensor = make_intrusive<tensor_holder>(x.conditional_mutate_clone());
     
-    TensorGrad result(::nt::functional::linear(x_tensor->tensor, w.detach(), b.detach(), trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(w, b);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x_tensor->tensor, w.detach(), b.detach(), trans_a, trans_b), w, b);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
             intrusive_ptr<tensor_holder> x)
         {
@@ -324,10 +319,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const TensorGrad& x, const Tensor
     }
     intrusive_ptr<tensor_holder> w_tensor = make_intrusive<tensor_holder>(w.conditional_mutate_clone());
     
-    TensorGrad result(::nt::functional::linear(x.detach(), w_tensor->tensor, b.detach(), trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(x, b);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x.detach(), w_tensor->tensor, b.detach(), trans_a, trans_b), x, b);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
             intrusive_ptr<tensor_holder> w)
         {
@@ -359,10 +353,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const TensorGrad& x, const Tensor
     intrusive_ptr<tensor_holder> x_tensor = make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
     intrusive_ptr<tensor_holder> w_tensor = make_intrusive<tensor_holder>(w.detach().conditional_mutate_clone());
     
-    TensorGrad result(::nt::functional::linear(x_tensor->tensor, w_tensor->tensor, b, trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(x, w);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x_tensor->tensor, w_tensor->tensor, b, trans_a, trans_b), x, w);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
             intrusive_ptr<tensor_holder> x, intrusive_ptr<tensor_holder> w)
         {
@@ -402,10 +395,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const TensorGrad& x, const Tensor
 
     intrusive_ptr<tensor_holder> w_tensor = make_intrusive<tensor_holder>(w.conditional_mutate_clone());
     
-    TensorGrad result(::nt::functional::linear(x.detach(), w_tensor->tensor, b, trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(x);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x.detach(), w_tensor->tensor, b, trans_a, trans_b), x);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
             intrusive_ptr<tensor_holder> w)
         {
@@ -437,10 +429,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const Tensor& x, const TensorGrad
 
     intrusive_ptr<tensor_holder> x_tensor = make_intrusive<tensor_holder>(x.conditional_mutate_clone());
     
-    TensorGrad result(::nt::functional::linear(x_tensor->tensor, w.detach(), b, trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(w);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x_tensor->tensor, w.detach(), b, trans_a, trans_b), w);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
             intrusive_ptr<tensor_holder> x)
         {
@@ -473,10 +464,9 @@ TensorGrad TensorGrad_Functional_Class::linear(const Tensor& x, const Tensor& w,
         return std::move(result);
     }
     
-    TensorGrad result(::nt::functional::linear(x, w, b.detach(), trans_a, trans_b), /*track_grad = */true);
-    result.track_tensors(b);
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::linear(x, w, b.detach(), trans_a, trans_b), b);
     
-        result.create_backward_function(
+    result.create_read_backward_function(
         [trans_a, trans_b](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents)
         {
             // grad w.r.t. b

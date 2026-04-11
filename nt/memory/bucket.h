@@ -370,6 +370,10 @@ class NEUROTENSOR_API Bucket{
 			return Bucket(buckets_, intrusive_tracked_list<void*>(n_stride_size), n_stride_size, bs, is_blocked, dtype);
 		}
 		Bucket copy_strides() const;
+        inline std::vector<uint64_t> storage_id() const noexcept { 
+            return this->is_null() ? std::vector<uint64_t>{} : buckets_->storage_id(this->bs); 
+        }
+        inline uint64_t individual_storage_id() const noexcept { return this->is_null() ? 0 : buckets_->individual_storage_id(); }
 };
 
 }

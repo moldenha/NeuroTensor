@@ -16,13 +16,9 @@ namespace functional{
 
 #define NT_MAKE_TRIG_FUNCTION_(func_name)\
 TensorGrad TensorGrad_Functional_Class::func_name(const TensorGrad &x) { \
-    TensorGrad result(::nt::functional::func_name(x.detach()), x.track_grad()); \
-    if (!x.track_grad()) { \
-        result.track_grad_(false); \
-        return std::move(result); \
-    } \
-    result.track_tensors(x); \
-    result.create_backward_function( \
+    if(!x.track_grad()) return TensorGrad(::nt::functional::func_name(x.detach()), false);\
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::func_name(x.detach()), x); \
+    result.create_read_backward_function( \
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents, \
                                                     intrusive_ptr<tensor_holder> saved_x) { \
                 parents[0]->accumulate_gradient(grad * _NT_GLUE_(::nt::functional::d, func_name)(saved_x->tensor)); \
@@ -39,7 +35,7 @@ TensorGrad& TensorGrad_Functional_Class::ADD_UNDERSCORE(func_name)(TensorGrad &x
     intrusive_ptr<tensor_holder> this_clone = \
         make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone()); \
     ::nt::functional::ADD_UNDERSCORE(func_name)(x.detach());\
-    x.track_self_mod_tensors( \
+    x.create_write_node( \
     [saved_x = std::move(this_clone)](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>> &parents) { \
         parents[0]->accumulate_gradient(grad * _NT_GLUE_(::nt::functional::d, func_name)(saved_x->tensor)); \
     }, #func_name "_"); \

@@ -9,7 +9,7 @@
 #include "../utils/tensor_holder.h"
 #include "ScalarGrad.h"
 #include "functional_class.h"
-#include "AutoGrad.h"
+#include "autograd/AutoGrad.h"
 #include <atomic>
 #include <functional>
 #include <iostream>
@@ -31,7 +31,10 @@ TensorGrad list(T &&first, Args &&...rest); // forward declaration
 
 class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     // friend classes:
-
+    public:
+        using node_type = intrusive_ptr<grad::utility::GraphNode>;
+        using autograd_type = grad::AutoGrad<std::unordered_set<node_type>>;
+    private:
     friend class ScalarGrad;
     template<class HashSetAny> friend class grad::AutoGrad;
     friend struct grad::utility::GraphNode;
@@ -40,58 +43,54 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     friend class intrusive_ptr<TensorGrad>;
 
     // Private variables:
-    mutable intrusive_ptr<grad::utility::GraphNode> Node;
+    mutable node_type Node;
+    mutable intrusive_ptr<autograd_type> Tape;
     // Node holds the tensor, grad, and the backwardFunc
     // to get the tensor:
-    //  - Node->tensor->tensor
+    //  - Node->detach()
     // to get the gradient:
-    //  - Node->grad->tensor
-    // to get the backward function:
-    //  - Node->backwardFunc
+    //  - Node->gradient()
     bool internal_allow_grad_tracking_;
     // This is a boolean generally set to true
     // However, in certain cases, when a layer doesn't want the tensor to be able to track the gradient
     // this can be set to false
     
     // Node-Specific constructors:
-    TensorGrad(const intrusive_ptr<grad::utility::GraphNode>& node__)
-    :Node(node__), internal_allow_grad_tracking_(true) {
-        if(!Node->tensor)
-            Node->tensor = make_intrusive<tensor_holder>(Tensor::Null());
-    }
-    TensorGrad(intrusive_ptr<grad::utility::GraphNode>&& node__)
-    :Node(std::move(node__)), internal_allow_grad_tracking_(true) {
-        if(!Node->tensor)
-            Node->tensor = make_intrusive<tensor_holder>(Tensor::Null());
-    }
+    TensorGrad(const intrusive_ptr<grad::utility::GraphNode>& node__,
+                const intrusive_ptr<autograd_type>& tape__)
+    :Node(node__), Tape(tape__), internal_allow_grad_tracking_(true) {}
+
+    TensorGrad(const intrusive_ptr<grad::utility::GraphNode>& node__,
+                intrusive_ptr<autograd_type>&& tape__)
+    :Node(node__), Tape(std::move(tape__)), internal_allow_grad_tracking_(true) {}
+
+    TensorGrad(intrusive_ptr<grad::utility::GraphNode>&& node__,
+                const intrusive_ptr<autograd_type>& tape__)
+    :Node(std::move(node__)), Tape(tape__), internal_allow_grad_tracking_(true) {}
+
+    TensorGrad(intrusive_ptr<grad::utility::GraphNode>&& node__,
+                intrusive_ptr<autograd_type>&& tape__)
+    :Node(std::move(node__)), Tape(std::move(tape__)), internal_allow_grad_tracking_(true) {}
 
   public:
     // Public variables:
     using size_value_t = Tensor::size_value_t;
     // This used to be a variable, but is now a function
-    inline bool track_grad() const noexcept {return bool(Node->grad);}
+    inline bool track_grad() const noexcept {return Node->is_tracking_grad();}
     inline void track_grad_(bool do_track_grad){
         if(track_grad() == do_track_grad) return;
         if(!internal_allow_grad_tracking_){
-            if(track_grad()){
-                Node->grad.reset();
-                Node->backwardFunc.reset();
-            }
+            this->Node->stop_grad_tracking();
             return;
         }
         if(do_track_grad){
-            if(Node->tensor->tensor.is_null())
-                Node->grad = make_intrusive<tensor_holder>(Tensor::Null());
-            else 
-                Node->grad = make_intrusive<tensor_holder>(nt::functional::zeros_like(Node->tensor->tensor));
-            Node->backwardFunc = make_intrusive<grad::utility::backward_func>();
+            this->Node->start_grad_tracking();
         }else{
-            Node->grad.reset();
-            Node->backwardFunc.reset();
+            this->Node->stop_grad_tracking();
         }
     }
 
-    inline void perm_disable_grad_tracking() {  internal_allow_grad_tracking_ = false; }
+    inline void perm_disable_grad_tracking() {  internal_allow_grad_tracking_ = false; this->Node->stop_grad_tracking();}
     // Public friend functions
     template <
         typename T, typename... Args,
@@ -116,43 +115,41 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     }
 
 
-    // Use of track tensors:
-    //  TensorGrad out(op(a, b), true);
-    //  out.track_tensors(a, b); <- now the gradient of a and b can be updated with the backward function
-    template <typename... Args>
-    void track_tensors(const TensorGrad &, const Args &...args);                   // TensorGrad.hpp
-    void track_tensors(const TensorGrad &);                                        // TensorGrad.hpp
-    void track_tensors(std::vector<TensorGrad> &, bool ignore_dont_track = false); // TensorGrad.cpp
-    template <typename BackFunc, typename... Args>
-    void track_self_mod_tensors(BackFunc&&, const char*, const TensorGrad &, const Args &...args);          // TensorGrad.hpp
-    template <typename BackFunc>
-    void track_self_mod_tensors(BackFunc&&, const char*);                                                 // TensorGrad.hpp
-    // function designed to track view and stride changes of gradient
-    //[when memory remains unmodified]
-    template <typename OutOperator>
-    void track_grad(const TensorGrad &t, OutOperator &&op,
-                    const char *func_name = __NT_FUNCTION_NAME__);                 // TensorGrad.hpp
+    
+    template<typename... Args>
+    static TensorGrad create_read_node(const Tensor& output_t, const Args&... args);
+    static TensorGrad create_read_node(const Tensor&, std::vector<TensorGrad>&);
+    template<typename BackFunc, typename... Args>
+    TensorGrad& create_write_node(BackFunc&& func, const char* name, const Args&... args);
+    TensorGrad create_view_node(const Tensor& output) const;
+
+
+        
+
     // create backward function for output
     template <typename backward_func>
-    void create_backward_function(backward_func &&func,
+    void create_read_backward_function(backward_func &&func,
                                   const char *func_name = __NT_FUNCTION_NAME__);   // TensorGrad.hpp
     template <typename backward_func, typename Arg1>
-    void create_backward_function(backward_func &&func, Arg1 &&arg1,
+    void create_read_backward_function(backward_func &&func, Arg1 &&arg1,
                                   const char *func_name = __NT_FUNCTION_NAME__);   // TensorGrad.hpp
     template <typename backward_func, typename Arg1, typename Arg2>
-    void create_backward_function(backward_func &&func, Arg1 &&arg1,
+    void create_read_backward_function(backward_func &&func, Arg1 &&arg1,
                                   Arg2 &&arg2,
                                   const char *func_name = __NT_FUNCTION_NAME__);   // TensorGrad.hpp
     template <typename backward_func, typename Arg1, typename Arg2,
               typename Arg3>
-    void create_backward_function(backward_func &&func, Arg1 &&arg1,
+    void create_read_backward_function(backward_func &&func, Arg1 &&arg1,
                                   Arg2 &&arg2, Arg3 &&arg3,
                                   const char *func_name = __NT_FUNCTION_NAME__);   // TensorGrad.hpp
     template <typename backward_func, typename Arg1, typename Arg2,
               typename Arg3, typename Arg4>
-    void create_backward_function(backward_func &&func, Arg1 &&arg1,
+    void create_read_backward_function(backward_func &&func, Arg1 &&arg1,
                                   Arg2 &&arg2, Arg3 &&arg3, Arg4 &&arg4,
                                   const char *func_name = __NT_FUNCTION_NAME__);   // TensorGrad.hpp
+    
+    template<typename BackFunc>
+    void create_view_backward_function(const TensorGrad&, BackFunc&& func, const char* func_name = __NT_FUNCTION_NAME__);
 
     // the next 3 are related to handling children and branching
     // and making sure that the gradient is calculated in the correct order of
@@ -168,11 +165,15 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
 
   public:
     
-    inline const DType &dtype() const { return detach().dtype(); }
-    inline Tensor &detach() { return this->Node->tensor->tensor; }
-    inline const Tensor &detach() const { return this->Node->tensor->tensor; }
-    inline Tensor &grad() { utils::THROW_EXCEPTION(this->track_grad(), "Error: Grad not being tracked, cannot access grad"); return this->Node->grad->tensor;}
-    inline const Tensor &grad() const { utils::THROW_EXCEPTION(this->track_grad(), "Error: Grad not being tracked, cannot access grad"); return this->Node->grad->tensor;}
+    inline const DType &dtype() const { return this->detach().dtype(); }
+    inline Tensor &detach() { return this->Node->detach(); }
+    inline const Tensor &detach() const { return this->Node->detach(); }
+    inline Tensor &grad() { 
+        return this->Node->gradient();
+    }
+    inline const Tensor& grad() const {
+        return this->Node->gradient();
+    }
 
 
     explicit TensorGrad(Scalar value, bool grad_required = true);
@@ -181,6 +182,7 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     explicit TensorGrad(std::nullptr_t, bool grad_required = true);
     TensorGrad(TensorGrad &&tg);
     TensorGrad(const TensorGrad &tg);
+    ~TensorGrad();
     TensorGrad &operator=(const TensorGrad &tg);
     TensorGrad &operator=(TensorGrad &&tg);
     TensorGrad &operator=(Scalar s);
@@ -236,8 +238,11 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     inline const size_value_t &numel() const { return detach().numel(); }
     template <typename... Args>
     inline TensorGrad view(int64_t i, Args &&...args) const {
-        TensorGrad result(detach().view(i, args...));
-        result.track_grad(*this, [i, args...](nt::Tensor &grad) {
+        if(!this->track_grad()) return TensorGrad(this->detach().view(i, args...), false);
+        TensorGrad result = this->create_view_node(detach().view(i, args...));
+        
+        result.create_view_backward_function(
+        *this, [i, args...](nt::Tensor &grad) {
             return grad.view(i, args...);
         });
         return result;
@@ -331,8 +336,8 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
         }
     }
     inline bool is_contiguous() const { return (this->detach().is_contiguous()); }
-    inline bool is_empty() const { return (this->Node == nullptr || this->Node->tensor == nullptr || this->Node->tensor->tensor.is_empty()); }
-    inline bool is_null() const { return (this->Node == nullptr || this->Node->tensor == nullptr || this->Node->tensor->tensor.is_null()); }
+    inline bool is_empty() const { return (this->Node == nullptr || this->Node->detach().is_empty()); }
+    inline bool is_null() const { return (this->Node == nullptr || this->Node->detach().is_null()); }
     inline int64_t contig_count() const { return this->detach().contig_count(); }
     inline std::vector<size_value_t> strides() const {
         return this->detach().strides();
@@ -461,14 +466,12 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     //          - Automatically builds a backward path tree for which tensors to have the backward pass called
     //          - Can call the backward pass
     //          - Zero all tracked gradients
-    grad::AutoGrad<std::unordered_set<intrusive_ptr<grad::utility::GraphNode>>> get_auto_grad(bool validate = true);
-    void backward();
-    void backward(const Tensor &);
+    autograd_type& get_auto_grad(bool validate = true);
+    void backward(bool retain_graph = false);
+    void backward(const Tensor &, bool retain_graph = false);
     void accumulate_gradient(const Tensor &);
     void accumulate_gradient(Scalar);
-    inline std::string backward_name() const {
-        return (this->Node->backwardFunc != nullptr) ? this->Node->backwardFunc->get_name() : "None";
-    }
+    inline std::string backward_name() const { return this->Node->name(); }
 
 
     // To be done after backward is called:

@@ -445,6 +445,8 @@ class NEUROTENSOR_API Tensor final{
 		inline static Tensor makeNullTensorArray(int64_t num){ return Tensor({num}, DType::TensorObj); }
 
 		inline static Tensor Null(){ return Tensor(nullptr); }
+        inline std::vector<uint64_t> storage_id() const noexcept { return this->_vals.get_bucket().storage_id(); }
+        inline uint64_t individual_storage_id() const noexcept { return this->_vals.individual_storage_id(); }
 };
 
 /* template<std::is_integral ...Ts> */

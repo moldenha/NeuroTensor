@@ -16,9 +16,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
         else if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a.detach(), b);
         else if(!b.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a, b.detach());
     }
-    TensorGrad result(::nt::functional::fused_multiply_add(c.detach(), a.detach(), b.detach()));
-    result.track_tensors(c, a, b);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c.detach(), a.detach(), b.detach()), c, a, b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
@@ -39,9 +38,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const Tensor& c, cons
         if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a.detach(), b);
         else if(!b.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a, b.detach());
     }
-    TensorGrad result(::nt::functional::fused_multiply_add(c, a.detach(), b.detach()));
-    result.track_tensors(a, b);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c, a.detach(), b.detach()), a, b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents, 
                 intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
@@ -55,14 +53,11 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const Tensor& c, cons
 
 }
 TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const Tensor& c, const Tensor& a, const TensorGrad& b){
-    TensorGrad result(::nt::functional::fused_multiply_add(c, a, b.detach()), b.track_grad());
 
-    if(!b.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(b);
-    result.create_backward_function(
+
+    if(!b.track_grad()){ return TensorGrad(::nt::functional::fused_multiply_add(c, a, b.detach()), false); }
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c, a, b.detach()), b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents, 
                 intrusive_ptr<tensor_holder> a) {
@@ -73,14 +68,11 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const Tensor& c, cons
     return std::move(result);
 }
 TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const Tensor& c, const TensorGrad& a, const Tensor& b){
-    TensorGrad result(::nt::functional::fused_multiply_add(c, a.detach(), b), a.track_grad());
+    
 
-    if(!a.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(a);
-    result.create_backward_function(
+    if(!a.track_grad()) return TensorGrad(::nt::functional::fused_multiply_add(c, a.detach(), b), false);   
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c, a.detach(), b), a);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents, 
                 intrusive_ptr<tensor_holder> b) {
@@ -96,9 +88,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
         if(!c.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c.detach(), a, b);
         else if(!b.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a, b.detach());
     }
-    TensorGrad result(::nt::functional::fused_multiply_add(c.detach(), a, b.detach()));
-    result.track_tensors(c, b);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c.detach(), a, b.detach()), c, b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents, 
                 intrusive_ptr<tensor_holder> a) {
@@ -113,13 +104,9 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
 
 
 TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, const Tensor& a, const Tensor& b){
-    TensorGrad result(::nt::functional::fused_multiply_add(c.detach(), a, b), c.track_grad());
-    if(!c.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(c);
-    result.create_backward_function(
+    if(!c.track_grad()) return TensorGrad( ::nt::functional::fused_multiply_add(c.detach(), a, b), false); 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c.detach(), a, b), c);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of C
@@ -135,9 +122,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
         if(!c.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c.detach(), a, b);
         else if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a.detach(), b);
     }
-    TensorGrad result(::nt::functional::fused_multiply_add(c.detach(), a.detach(), b));
-    result.track_tensors(c, a);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c.detach(), a.detach(), b), c, a);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> b) {
@@ -156,9 +142,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
         if(!c.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c.detach(), a, b);
         else if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_add(c, a.detach(), b);
     }
-    TensorGrad result(::nt::functional::fused_multiply_add(c.detach(), a.detach(), b));
-    result.track_tensors(c, a);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c.detach(), a.detach(), b), c, a);
+    result.create_read_backward_function(
         [b](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of C
@@ -171,14 +156,10 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
  
 }
 TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, const Tensor& a, Scalar b){
-    TensorGrad result(::nt::functional::fused_multiply_add(c.detach(), a, b), c.track_grad());
-    if(!c.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!c.track_grad()) return TensorGrad( ::nt::functional::fused_multiply_add(c.detach(), a, b), false);
 
-    result.track_tensors(c);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c.detach(), a, b), c);
+    result.create_read_backward_function(
         [b](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of C
@@ -189,14 +170,10 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const TensorGrad& c, 
 }
 
 TensorGrad TensorGrad_Functional_Class::fused_multiply_add(const Tensor& c, const TensorGrad& a, Scalar b){
-    TensorGrad result(::nt::functional::fused_multiply_add(c, a.detach(), b), a.track_grad());
-    if(!a.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!a.track_grad()) return TensorGrad(::nt::functional::fused_multiply_add(c, a.detach(), b), false);  
 
-    result.track_tensors(a);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_add(c, a.detach(), b), a);
+    result.create_read_backward_function(
         [b](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of A
@@ -246,7 +223,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_add_(TensorGrad& c, cons
     ::nt::functional::fused_multiply_add_(c.detach(), resolve_tensor(a), resolve_tensor(b));
     intrusive_ptr<tensor_holder> _a = make_intrusive<tensor_holder>(resolve_tensor(a));
     intrusive_ptr<tensor_holder> _b = make_intrusive<tensor_holder>(resolve_tensor(b));
-    c.track_self_mod_tensors([_a, _b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([_a, _b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * _b->tensor);
         parents[2]->accumulate_gradient(grad * _a->tensor);
@@ -264,7 +241,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_add_(TensorGrad& c, cons
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_add_(c.detach(), resolve_tensor(a), resolve_tensor(b));
     intrusive_ptr<tensor_holder> _a = make_intrusive<tensor_holder>(resolve_tensor(a));
-    c.track_self_mod_tensors([_a](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([_a](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * _a->tensor);
     }, __func__, b);
@@ -281,7 +258,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_add_(TensorGrad& c, cons
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_add_(c.detach(), resolve_tensor(a), resolve_tensor(b));
     intrusive_ptr<tensor_holder> _b = make_intrusive<tensor_holder>(resolve_tensor(b));
-    c.track_self_mod_tensors([_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * _b->tensor);
     }, __func__, a);
@@ -295,7 +272,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_add_(TensorGrad& c, cons
     }
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_add_(c.detach(), resolve_tensor(a), resolve_tensor(b));
-    c.track_self_mod_tensors([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
     }, __func__);
     return c;
@@ -311,7 +288,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_add_(TensorGrad& c, cons
     }
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_add_(c.detach(), a.detach(), b);
-    c.track_self_mod_tensors([b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * b);
     }, "FusedMultiplyAdd_", a);
@@ -325,7 +302,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_add_(TensorGrad& c, cons
     }
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_add_(c.detach(), a, b);
-    c.track_self_mod_tensors([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
     }, "FusedMultiplyAdd_");
     return c;
@@ -339,9 +316,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
         else if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a.detach(), b);
         else if(!b.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b.detach());
     }
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c.detach(), a.detach(), b.detach()));
-    result.track_tensors(c, a, b);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c.detach(), a.detach(), b.detach()), c, a, b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
@@ -362,9 +338,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const Tensor& c,
         if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a.detach(), b);
         else if(!b.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b.detach());
     }
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c, a.detach(), b.detach()));
-    result.track_tensors(a, b);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c, a.detach(), b.detach()), a, b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> a, intrusive_ptr<tensor_holder> b) {
@@ -378,14 +353,10 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const Tensor& c,
 
 }
 TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const Tensor& c, const Tensor& a, const TensorGrad& b){
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c, a, b.detach()), b.track_grad());
 
-    if(!b.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(b);
-    result.create_backward_function(
+    if(!b.track_grad()) return TensorGrad(::nt::functional::fused_multiply_subtract(c, a, b.detach()), false); 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c, a, b.detach()), b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> a) {
@@ -396,14 +367,9 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const Tensor& c,
     return std::move(result);
 }
 TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const Tensor& c, const TensorGrad& a, const Tensor& b){
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c, a.detach(), b), a.track_grad());
-
-    if(!a.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(a);
-    result.create_backward_function(
+    if(!a.track_grad()) return TensorGrad(::nt::functional::fused_multiply_subtract(c, a.detach(), b), false); 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c, a.detach(), b), a);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> b) {
@@ -419,9 +385,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
         if(!c.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c.detach(), a, b);
         else if(!b.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a, b.detach());
     }
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c.detach(), a, b.detach()));
-    result.track_tensors(c, b);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c.detach(), a, b.detach()), c, b);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> a) {
@@ -436,13 +401,9 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
 
 
 TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad& c, const Tensor& a, const Tensor& b){
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c.detach(), a, b), c.track_grad());
-    if(!c.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-    result.track_tensors(c);
-    result.create_backward_function(
+    if(!c.track_grad()) return TensorGrad(::nt::functional::fused_multiply_subtract(c.detach(), a, b), false); 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c.detach(), a, b), c);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of C
@@ -458,9 +419,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
         if(!c.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c.detach(), a, b);
         else if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a.detach(), b);
     }
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c.detach(), a.detach(), b));
-    result.track_tensors(c, a);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c.detach(), a.detach(), b), c, a);
+    result.create_read_backward_function(
         [](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents,
                 intrusive_ptr<tensor_holder> b) {
@@ -478,9 +438,8 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
         if(!c.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c.detach(), a, b);
         else if(!a.track_grad()) return TensorGrad_Functional_Class::fused_multiply_subtract(c, a.detach(), b);
     }
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c.detach(), a.detach(), b));
-    result.track_tensors(c, a);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c.detach(), a.detach(), b), c, a);
+    result.create_read_backward_function(
         [b](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of C
@@ -493,14 +452,10 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
  
 }
 TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad& c, const Tensor& a, Scalar b){
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c.detach(), a, b), c.track_grad());
-    if(!c.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!c.track_grad()) return TensorGrad(::nt::functional::fused_multiply_subtract(c.detach(), a, b), false); 
 
-    result.track_tensors(c);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c.detach(), a, b), c);
+    result.create_read_backward_function(
         [b](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of C
@@ -511,14 +466,10 @@ TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const TensorGrad
 }
 
 TensorGrad TensorGrad_Functional_Class::fused_multiply_subtract(const Tensor& c, const TensorGrad& a, Scalar b){
-    TensorGrad result(::nt::functional::fused_multiply_subtract(c, a.detach(), b), a.track_grad());
-    if(!a.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!a.track_grad()) return TensorGrad(::nt::functional::fused_multiply_subtract(c, a.detach(), b), false); 
 
-    result.track_tensors(a);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::fused_multiply_subtract(c, a.detach(), b), a);
+    result.create_read_backward_function(
         [b](const Tensor &grad,
                   std::vector<intrusive_ptr<TensorGrad>> &parents) {
             //parents[0]->grad->tensor is the gradient of A
@@ -541,7 +492,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_subtract_(TensorGrad& c,
     ::nt::functional::fused_multiply_subtract_(c.detach(), resolve_tensor(a), resolve_tensor(b));
     intrusive_ptr<tensor_holder> _a = make_intrusive<tensor_holder>(resolve_tensor(a));
     intrusive_ptr<tensor_holder> _b = make_intrusive<tensor_holder>(resolve_tensor(b));
-    c.track_self_mod_tensors([_a, _b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([_a, _b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * (-_b->tensor));
         parents[2]->accumulate_gradient(grad * (-_a->tensor));
@@ -561,7 +512,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_subtract_(TensorGrad& c,
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_subtract_(c.detach(), resolve_tensor(a), resolve_tensor(b));
     intrusive_ptr<tensor_holder> _a = make_intrusive<tensor_holder>(resolve_tensor(a));
-    c.track_self_mod_tensors([_a](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([_a](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * (-_a->tensor));
     }, __func__, b);
@@ -578,7 +529,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_subtract_(TensorGrad& c,
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_subtract_(c.detach(), resolve_tensor(a), resolve_tensor(b));
     intrusive_ptr<tensor_holder> _b = make_intrusive<tensor_holder>(resolve_tensor(b));
-    c.track_self_mod_tensors([_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([_b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * (-_b->tensor));
     }, __func__, a);
@@ -592,7 +543,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_subtract_(TensorGrad& c,
     }
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_subtract_(c.detach(), resolve_tensor(a), resolve_tensor(b));
-    c.track_self_mod_tensors([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
     }, __func__);
     return c;
@@ -608,7 +559,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_subtract_(TensorGrad& c,
     }
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_subtract_(c.detach(), a.detach(), b);
-    c.track_self_mod_tensors([b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([b](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
         parents[1]->accumulate_gradient(grad * (-b));
     }, "FusedMultiplySubtract_", a);
@@ -622,7 +573,7 @@ TensorGrad& TensorGrad_Functional_Class::fused_multiply_subtract_(TensorGrad& c,
     }
     handle_null_tensors(c, a, b, NT_INSIDE_FUNC_NAME);
     ::nt::functional::fused_multiply_subtract_(c.detach(), a, b);
-    c.track_self_mod_tensors([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
+    c.create_write_node([](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents){
         parents[0]->accumulate_gradient(grad);
     }, "FusedMultiplySubtract_");
     return c;

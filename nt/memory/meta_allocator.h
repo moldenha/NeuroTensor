@@ -148,15 +148,15 @@ NT_ALWAYS_INLINE void MetaFreeArr(T* arr){
 
 // Single Pointers
 #ifdef NT_DEBUG_MODE
-template<typename T, typename... Args>
-NT_ALWAYS_INLINE T* MetaNew_(const char* file, int line, Args&&... args){
-    T* ptr = new T(std::forward<Args>(args)...);
+template<typename T>
+NT_ALWAYS_INLINE T* MetaNew_(const char* file, int line, T* ptr){
+    // T* ptr = new T(std::forward<Args>(args)...);
     MetaMarkAllocation(ptr, sizeof(T), std::string(file), line);
     return ptr;
 }
 
-#define MetaNew_Empty_0(type, file, line, ...) MetaNew_<type>(file, line, __VA_ARGS__)
-#define MetaNew_Empty_1(type, file, line, ...) MetaNew_<type>(file, line)
+#define MetaNew_Empty_0(type, file, line, ...) MetaNew_<type>(file, line, new type(__VA_ARGS__))
+#define MetaNew_Empty_1(type, file, line, ...) MetaNew_<type>(file, line, new type())
 
 #define MetaNew(type, ...) _NT_GLUE_(MetaNew_Empty_, _NT_IS_EMPTY_(__VA_ARGS__))(type, __FILE__, __LINE__, __VA_ARGS__)
 

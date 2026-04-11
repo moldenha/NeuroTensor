@@ -1,5 +1,6 @@
 #define NT_DEBUG_MODE
 #define NT_DEFINE_PARAMETER_ARGUMENTS 
+#include <nt/nn/autograd/GraphNode.h>
 #include <nt/nt.h>
 #include "test_macros.h"
 #include <unordered_set>

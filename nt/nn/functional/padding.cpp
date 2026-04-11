@@ -9,14 +9,14 @@ namespace nt{
 namespace functional{
 
 TensorGrad TensorGrad_Functional_Class::pad(const TensorGrad& input, std::vector<Tensor::size_value_t> padding, const char* mode, Scalar value){
-    TensorGrad result(::nt::functional::pad(input.detach(), padding, mode, value), input.track_grad());
-    if(!input.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!input.track_grad()) return TensorGrad(::nt::functional::pad(input.detach(), padding, mode, value), false);
 
-    result.track_tensors(input);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(
+            ::nt::functional::pad(input.detach(), padding, mode, value), input
+    );
+
+
+    result.create_read_backward_function(
     [&padding](const Tensor& grad,
               std::vector<intrusive_ptr<TensorGrad>> &parents) {
         parents[0]->accumulate_gradient(::nt::functional::unpad(grad, padding, true)); //faster than copying memory
@@ -26,13 +26,10 @@ TensorGrad TensorGrad_Functional_Class::pad(const TensorGrad& input, std::vector
 
 
 TensorGrad TensorGrad_Functional_Class::unpad(const TensorGrad& input, std::vector<Tensor::size_value_t> padding, bool no_contiguous){
-    TensorGrad result(::nt::functional::unpad(input.detach(), padding, no_contiguous), input.track_grad());
-    if(!input.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!input.track_grad()) return TensorGrad(::nt::functional::unpad(input.detach(), padding, no_contiguous),  false);
+    TensorGrad result = input.create_view_node(::nt::functional::unpad(input.detach(), padding, no_contiguous));
 
-    result.track_grad(input,
+    result.create_view_backward_function(input,
         [&padding](const Tensor& grad){
         return ::nt::functional::unpad(grad, padding, true); // making it non-contiguous so the gradient can just be passed
     });

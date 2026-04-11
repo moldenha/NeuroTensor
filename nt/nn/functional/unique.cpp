@@ -26,11 +26,11 @@ TensorGrad TensorGrad_Functional_Class::unique(const TensorGrad& input, std::opt
             return input[indices];
         return functional::list(input[indices], TensorGrad(indices));
     }
-    TensorGrad result = TensorGrad(out, input.track_grad());
+    TensorGrad result = input.create_view_node(out);
     const auto& out_shape = out.shape();
     intrusive_ptr<tensor_holder> idx = make_intrusive<tensor_holder>(indices);
     const Tensor& __indices=  indices;
-    result.track_grad(input, [&__indices, &dim, &out_shape](const Tensor& grad){
+    result.create_view_backward_function(input, [&__indices, &dim, &out_shape](const Tensor& grad){
         Tensor i = ::nt::functional::transpose(grad, dim.value(), -1);
         Tensor splits = i.split_axis(-2);
         const Tensor* s_begin = reinterpret_cast<const Tensor*>(splits.data_ptr());

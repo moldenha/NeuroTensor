@@ -9,13 +9,9 @@ namespace nt{
 namespace functional{
 
 TensorGrad TensorGrad_Functional_Class::repeat_(const TensorGrad& input, Tensor::size_value_t dim, Tensor::size_value_t amt){
-    TensorGrad result(::nt::functional::repeat_(input.detach(), dim, amt), input.track_grad());
-    if(!input.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-
-    result.track_grad(input,
+    if(!input.track_grad()) return TensorGrad( ::nt::functional::repeat_(input.detach(), dim, amt),  false );
+    TensorGrad result = input.create_view_node(::nt::functional::repeat_(input.detach(), dim, amt));
+    result.create_view_backward_function(input,
         [&dim, &amt](const Tensor& grad){
         return ::nt::functional::repeat_(grad, dim, amt); 
     });
@@ -23,13 +19,10 @@ TensorGrad TensorGrad_Functional_Class::repeat_(const TensorGrad& input, Tensor:
 }
 
 TensorGrad TensorGrad_Functional_Class::repeat_(const TensorGrad& input, Tensor::size_value_t amt){
-    TensorGrad result(::nt::functional::repeat_(input.detach(), amt), input.track_grad());
-    if(!input.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!input.track_grad()) return TensorGrad(::nt::functional::repeat_(input.detach(), amt), false);
 
-    result.track_grad(input,
+    TensorGrad result = input.create_view_node(::nt::functional::repeat_(input.detach(), amt));
+    result.create_view_backward_function(input,
         [&amt](const Tensor& grad){
         return ::nt::functional::repeat_(grad, amt);
     });
@@ -38,13 +31,10 @@ TensorGrad TensorGrad_Functional_Class::repeat_(const TensorGrad& input, Tensor:
 
 
 TensorGrad TensorGrad_Functional_Class::expand(const TensorGrad& input, SizeRef size){
-       TensorGrad result(::nt::functional::expand(input.detach(), size), input.track_grad());
-    if(!input.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if(!input.track_grad()) return TensorGrad(::nt::functional::expand(input.detach(), size), false);
 
-    result.track_grad(input,
+    TensorGrad result = input.create_view_node(::nt::functional::expand(input.detach(), size));
+    result.create_view_backward_function(input,
         [&size](const Tensor& grad){
         return ::nt::functional::expand(grad, size);
     });

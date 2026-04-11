@@ -9,16 +9,18 @@ namespace nt{
 namespace functional{
 
 TensorGrad TensorGrad_Functional_Class::transpose(const TensorGrad& input, Tensor::size_value_t a, Tensor::size_value_t b){
-    TensorGrad result(::nt::functional::transpose(input.detach(), a, b), input.track_grad());
-    result.track_grad(input, [a, b](const Tensor& grad){
+    if(!input.track_grad()) return TensorGrad(::nt::functional::transpose(input.detach(), a, b), false);
+    TensorGrad result = input.create_view_node(::nt::functional::transpose(input.detach(), a, b));
+    result.create_view_backward_function(input, [a, b](const Tensor& grad){
         return ::nt::functional::transpose(grad, a, b);
     });
     return std::move(result);
 }
 
 TensorGrad TensorGrad_Functional_Class::permute(const TensorGrad& input, std::vector<Tensor::size_value_t> permutations){
-    TensorGrad result(::nt::functional::permute(input.detach(), permutations), input.track_grad());
-    result.track_grad(input, [&permutations](const Tensor& grad){
+    if(!input.track_grad()) return TensorGrad(::nt::functional::permute(input.detach(), permutations), false);
+    TensorGrad result = input.create_view_node(::nt::functional::permute(input.detach(), permutations));
+    result.create_view_backward_function(input, [&permutations](const Tensor& grad){
         return ::nt::functional::permute(grad, permutations);
     });
     return std::move(result);
@@ -29,7 +31,7 @@ TensorGrad& TensorGrad_Functional_Class::row_col_swap_(TensorGrad& input){
     if(!input.track_grad()){
         return input;
     }
-    input.track_self_mod_tensors(
+    input.create_write_node(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(::nt::functional::transpose(grad, -1, -2));
         }, __func__);

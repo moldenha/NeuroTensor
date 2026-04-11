@@ -16,9 +16,8 @@ TensorGrad  TensorGrad_Functional_Class::conv1d(const Tensor& image, const Tenso
     intrusive_ptr<tensor_holder> original_x = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv1d(image, kernel.detach(), stride, padding, dilation, groups, original_x));
-    result.track_tensors(kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv1d(image, kernel.detach(), stride, padding, dilation, groups, original_x), kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups]
                                 (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -36,9 +35,8 @@ TensorGrad  TensorGrad_Functional_Class::conv1d(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv1d(image.detach(), kernel, stride, padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv1d(image.detach(), kernel, stride, padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups]
                                 (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -64,9 +62,8 @@ TensorGrad  TensorGrad_Functional_Class::conv1d(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv1d(image.detach(), kernel.detach(), stride, padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv1d(image.detach(), kernel.detach(), stride, padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups]
                                     (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -91,9 +88,8 @@ TensorGrad  TensorGrad_Functional_Class::conv2d(const Tensor& image, const Tenso
     intrusive_ptr<tensor_holder> original_x = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv2d(image, kernel.detach(), stride, padding, dilation, groups, original_x));
-    result.track_tensors( kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv2d(image, kernel.detach(), stride, padding, dilation, groups, original_x),  kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups]
                                     (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -112,9 +108,8 @@ TensorGrad  TensorGrad_Functional_Class::conv2d(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv2d(image.detach(), kernel, stride, padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv2d(image.detach(), kernel, stride, padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups]
                                     (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -142,9 +137,8 @@ TensorGrad  TensorGrad_Functional_Class::conv2d(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv2d(image.detach(), kernel.detach(), stride, padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv2d(image.detach(), kernel.detach(), stride, padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img, intrusive_ptr<tensor_holder> kern){
@@ -169,9 +163,8 @@ TensorGrad  TensorGrad_Functional_Class::conv3d(const Tensor& image, const Tenso
     intrusive_ptr<tensor_holder> original_x = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv3d(image, kernel.detach(), stride, padding, dilation, groups, original_x));
-    result.track_tensors(kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv3d(image, kernel.detach(), stride, padding, dilation, groups, original_x), kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img){
@@ -189,9 +182,8 @@ TensorGrad  TensorGrad_Functional_Class::conv3d(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv3d(image.detach(), kernel, stride, padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv3d(image.detach(), kernel, stride, padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> kern){
@@ -216,9 +208,8 @@ TensorGrad  TensorGrad_Functional_Class::conv3d(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::conv3d(image.detach(), kernel.detach(), stride, padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv3d(image.detach(), kernel.detach(), stride, padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img, intrusive_ptr<tensor_holder> kern){
@@ -241,9 +232,8 @@ TensorGrad  TensorGrad_Functional_Class::convnd(const Tensor& image, const Tenso
     intrusive_ptr<tensor_holder> original_x = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::convnd(image, kernel.detach(), dim, stride, padding, dilation, groups, original_x));
-    result.track_tensors(kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::convnd(image, kernel.detach(), dim, stride, padding, dilation, groups, original_x), kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups, dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img){
@@ -261,9 +251,8 @@ TensorGrad  TensorGrad_Functional_Class::convnd(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::convnd(image.detach(), kernel, dim, stride, padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::convnd(image.detach(), kernel, dim, stride, padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups, dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> kern){
@@ -287,9 +276,8 @@ TensorGrad  TensorGrad_Functional_Class::convnd(const TensorGrad& image, const T
     intrusive_ptr<tensor_holder> original_w = make_intrusive<tensor_holder>(Tensor::Null());
     const SizeRef image_shape = image.shape().clone();
     const SizeRef kernel_shape = kernel.shape().clone();
-    TensorGrad result(::nt::functional::convnd(image.detach(), kernel.detach(), dim, stride, padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::convnd(image.detach(), kernel.detach(), dim, stride, padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), 
                                     dilation = std::move(dilation), groups, dim]
                         (const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
@@ -319,9 +307,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose1d(const Tensor& image, c
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 3 || kernel_shape.size() == 2, "Error for conv1d kernel shape must be 2 or 3 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 3 || image_shape.size() == 2, "Error for conv1d kernel shape must be 2 or 3 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose1d(image, kernel.detach(), stride, padding, output_padding, dilation, groups, original_x));
-    result.track_tensors(kernel);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose1d(image, kernel.detach(), stride, padding, output_padding, dilation, groups, original_x), kernel);
+    result.create_read_backward_function(
         [image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img){
         ::nt::functional::convt_dkernel(grad, img->tensor, parents[0]->grad(), {padding}, {image_shape[-1]}, groups, 1);
@@ -339,9 +326,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose1d(const TensorGrad& imag
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 3 || kernel_shape.size() == 2, "Error for conv1d kernel shape must be 2 or 3 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 3 || image_shape.size() == 2, "Error for conv1d kernel shape must be 2 or 3 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose1d(image.detach(), kernel, stride, padding, output_padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose1d(image.detach(), kernel, stride, padding, output_padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function(
         [image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> kern){
         ::nt::functional::convt_dimage(grad, kern->tensor, parents[0]->grad(),
@@ -368,9 +354,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose1d(const TensorGrad& imag
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 3 || kernel_shape.size() == 2, "Error for conv1d kernel shape must be 2 or 3 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 3 || image_shape.size() == 2, "Error for conv1d kernel shape must be 2 or 3 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose1d(image.detach(), kernel.detach(), stride, padding, output_padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose1d(image.detach(), kernel.detach(), stride, padding, output_padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img, intrusive_ptr<tensor_holder> kern){
         ::nt::functional::convt_dimage(grad, kern->tensor, parents[0]->grad(), 
                                      fix_conv_input_shape(kernel_shape.Vec(), 1),
@@ -395,9 +380,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose2d(const Tensor& image, c
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 4 || kernel_shape.size() == 3, "Error for conv2d kernel shape must be 4 or 3 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 4 || image_shape.size() == 3, "Error for conv2d kernel shape must be 4 or 3 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose2d(image, kernel.detach(), stride, padding, output_padding, dilation, groups, original_x));
-    result.track_tensors( kernel);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose2d(image, kernel.detach(), stride, padding, output_padding, dilation, groups, original_x),  kernel);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img){
           ::nt::functional::convt_dkernel(grad, img->tensor, parents[0]->grad(), {padding[0], padding[1]}, {image_shape[-2], image_shape[-3]}, groups, 2);
     }, original_x);
@@ -415,9 +399,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose2d(const TensorGrad& imag
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 4 || kernel_shape.size() == 3, "Error for conv2d kernel shape must be 4 or 3 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 4 || image_shape.size() == 3, "Error for conv2d kernel shape must be 4 or 3 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose2d(image.detach(), kernel, stride, padding, output_padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose2d(image.detach(), kernel, stride, padding, output_padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> kern){
         ::nt::functional::convt_dimage(grad, kern->tensor, parents[0]->grad(), 
                                      fix_conv_input_shape(kernel_shape.Vec(), 2),
@@ -445,9 +428,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose2d(const TensorGrad& imag
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 4 || kernel_shape.size() == 3, "Error for conv2d kernel shape must be 4 or 3 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 4 || image_shape.size() == 3, "Error for conv2d kernel shape must be 4 or 3 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose2d(image.detach(), kernel.detach(), stride, padding, output_padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose2d(image.detach(), kernel.detach(), stride, padding, output_padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img, intrusive_ptr<tensor_holder> kern){
         ::nt::functional::convt_dimage(grad, kern->tensor, parents[0]->grad(), 
                                      fix_conv_input_shape(kernel_shape.Vec(), 2),
@@ -473,9 +455,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose3d(const Tensor& image, c
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 4 || kernel_shape.size() == 5, "Error for conv3d kernel shape must be 4 or 5 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 4 || image_shape.size() == 5, "Error for conv3d kernel shape must be 4 or 5 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose3d(image, kernel.detach(), stride, padding, output_padding, dilation, groups, original_x));
-    result.track_tensors(kernel);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose3d(image, kernel.detach(), stride, padding, output_padding, dilation, groups, original_x), kernel);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img){
         ::nt::functional::convt_dkernel(grad, img->tensor, parents[0]->grad(), {padding[0], padding[1], padding[2]}, {image_shape[-3], image_shape[-2], image_shape[-3]}, groups, 3);
     }, original_x);
@@ -493,9 +474,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose3d(const TensorGrad& imag
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 4 || kernel_shape.size() == 5, "Error for conv3d kernel shape must be 4 or 5 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 4 || image_shape.size() == 5, "Error for conv3d kernel shape must be 4 or 5 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose3d(image.detach(), kernel, stride, padding, output_padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose3d(image.detach(), kernel, stride, padding, output_padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> kern){
         ::nt::functional::convt_dimage(grad, kern->tensor, parents[0]->grad(), 
                                      fix_conv_input_shape(kernel_shape.Vec(), 3),
@@ -521,9 +501,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transpose3d(const TensorGrad& imag
     const SizeRef kernel_shape = kernel.shape().clone();
     utils::throw_exception(kernel_shape.size() == 4 || kernel_shape.size() == 5, "Error for conv3d transpose kernel shape must be 4 or 5 dims but got $", kernel_shape);
     utils::throw_exception(image_shape.size() == 4 || image_shape.size() == 5, "Error for conv3d transpose kernel shape must be 4 or 5 dims but got $", image_shape);
-    TensorGrad result(::nt::functional::conv_transpose3d(image.detach(), kernel.detach(), stride, padding, output_padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transpose3d(image.detach(), kernel.detach(), stride, padding, output_padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape, kernel_shape, stride, padding, output_padding, dilation, groups](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img, intrusive_ptr<tensor_holder> kern){
         ::nt::functional::convt_dimage(grad, kern->tensor, parents[0]->grad(), 
                                      fix_conv_input_shape(kernel_shape.Vec(), 3),
@@ -554,9 +533,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transposend(const Tensor& image, c
     utils::throw_exception(image_shape.size() == dim+1 || image_shape.size() == dim+2, 
                            "Error for conv$d transpose kernel shape must be $ or $ dims but got $", 
                            dim, dim+1, dim+2, image_shape);
-    TensorGrad result(::nt::functional::conv_transposend(image, kernel.detach(), dim, stride, padding, output_padding, dilation, groups, original_x, nullptr));
-    result.track_tensors(kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transposend(image, kernel.detach(), dim, stride, padding, output_padding, dilation, groups, original_x, nullptr), kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), output_padding = std::move(output_padding), 
                                     dilation = std::move(dilation), groups, dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img){
@@ -584,9 +562,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transposend(const TensorGrad& imag
     utils::throw_exception(image_shape.size() == dim+1 || image_shape.size() == dim+2, 
                            "Error for conv$d transpose kernel shape must be $ or $ dims but got $", 
                            dim, dim+1, dim+2, image_shape);
-    TensorGrad result(::nt::functional::conv_transposend(image.detach(), kernel, dim, stride, padding, output_padding, dilation, groups, nullptr, original_w));
-    result.track_tensors(image);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transposend(image.detach(), kernel, dim, stride, padding, output_padding, dilation, groups, nullptr, original_w), image);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), output_padding = std::move(output_padding), 
                                     dilation = std::move(dilation), groups, dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> kern){
@@ -619,9 +596,8 @@ TensorGrad  TensorGrad_Functional_Class::conv_transposend(const TensorGrad& imag
     utils::throw_exception(image_shape.size() == dim+1 || image_shape.size() == dim+2, 
                            "Error for conv$d transpose kernel shape must be $ or $ dims but got $", 
                            dim, dim+1, dim+2, image_shape);
-    TensorGrad result(::nt::functional::conv_transposend(image.detach(), kernel.detach(), dim, stride, padding, output_padding, dilation, groups, original_x, original_w));
-    result.track_tensors(image, kernel);
-    result.create_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::conv_transposend(image.detach(), kernel.detach(), dim, stride, padding, output_padding, dilation, groups, original_x, original_w), image, kernel);
+    result.create_read_backward_function([image_shape = std::move(image_shape), kernel_shape = std::move(kernel_shape), 
                                     stride = std::move(stride), padding = std::move(padding), output_padding = std::move(output_padding), 
                                     dilation = std::move(dilation), groups, dim](const Tensor& grad, std::vector<intrusive_ptr<TensorGrad>>& parents,
 						intrusive_ptr<tensor_holder> img, intrusive_ptr<tensor_holder> kern){
@@ -639,3 +615,5 @@ TensorGrad  TensorGrad_Functional_Class::conv_transposend(const TensorGrad& imag
 
 }
 }
+
+

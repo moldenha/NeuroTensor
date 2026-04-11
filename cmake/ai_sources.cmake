@@ -2,11 +2,19 @@ include(${CMAKE_CURRENT_LIST_DIR}/base_dir.cmake)
 
 #this also includes autograds and layers
 set(AI_SOURCES
-    ${BASE_DIR}/nt/nn/AutoGrad.cpp
-    ${BASE_DIR}/nt/nn/BackwardFunc.cpp
     ${BASE_DIR}/nt/nn/Layer.cpp
     ${BASE_DIR}/nt/nn/LNN.cpp
     ${BASE_DIR}/nt/nn/ScalarGrad.cpp
+    ${BASE_DIR}/nt/nn/Loss.cpp
+    ${BASE_DIR}/nt/nn/Optimizers.cpp
+    ${BASE_DIR}/nt/nn/Module.cpp
+    
+    #autograd sources
+    ${BASE_DIR}/nt/nn/autograd/AutoGrad.cpp
+    ${BASE_DIR}/nt/nn/autograd/BackwardFunc.cpp
+    ${BASE_DIR}/nt/nn/autograd/GraphNode.cpp
+
+    # functional sources
     ${BASE_DIR}/nt/nn/functional/functional.cpp
     ${BASE_DIR}/nt/nn/functional/pooling.cpp
     ${BASE_DIR}/nt/nn/functional/activation_functions.cpp
@@ -31,9 +39,7 @@ set(AI_SOURCES
     ${BASE_DIR}/nt/nn/functional/transpose.cpp
     ${BASE_DIR}/nt/nn/functional/trig.cpp
     ${BASE_DIR}/nt/nn/functional/unique.cpp
-    ${BASE_DIR}/nt/nn/Loss.cpp
-    ${BASE_DIR}/nt/nn/Optimizers.cpp
-    ${BASE_DIR}/nt/nn/Module.cpp
+
 
     #ncps sources
     ${BASE_DIR}/nt/nn/ncps/lstm_cell.cpp

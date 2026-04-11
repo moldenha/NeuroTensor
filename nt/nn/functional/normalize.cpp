@@ -20,10 +20,9 @@ TensorGrad TensorGrad_Functional_Class::var(const TensorGrad &x,
     }
     intrusive_ptr<tensor_holder> x_c =
             make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
-    TensorGrad result(
-            ::nt::functional::var(x_c->tensor, dim, correction, keepdim), x.track_grad());
-    result.track_tensors(x);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(
+            ::nt::functional::var(x_c->tensor, dim, correction, keepdim), x);
+    result.create_read_backward_function(
             [dim, correction](const Tensor &grad,
                                                 std::vector<intrusive_ptr<TensorGrad>> &parents,
                                                 intrusive_ptr<tensor_holder> x) {
@@ -56,25 +55,24 @@ TensorGrad TensorGrad_Functional_Class::batch_norm(const TensorGrad& x, const Te
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
     intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor(running_var.shape(), running_var.dtype()));
     intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor(running_var.shape(), running_var.dtype()));
-    TensorGrad result(::nt::functional::no_grad::batch_norm(
+
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(3);
+    tracking.emplace_back(x);
+    if(get_weight_grad)
+        tracking.emplace_back(weight.value());
+    if(get_bias_grad)
+        tracking.emplace_back(bias.value());
+    // std::cout << "finished emplacing back on normalize and has a size of " << tracking.size() << std::endl;
+
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::no_grad::batch_norm(
         x.detach(), running_mean, running_var,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
         bool(bias) ? utils::optional_tensor(bias.value().detach()) : utils::optional_tensor(nullptr),
-        training, momentum, eps, stored_means, stored_inv), x.track_grad());
+        training, momentum, eps, stored_means, stored_inv), tracking);
 
-    if(get_weight_grad && get_bias_grad){
-        result.track_tensors(x, weight.value(), bias.value());
-    }
-    else if(get_weight_grad){
-        result.track_tensors(x, weight.value());
-    }
-    else if(get_bias_grad){
-        result.track_tensors(x, bias.value());
-    }else{
-        result.track_tensors(x);
-    }
 
-    result.create_backward_function(
+    result.create_read_backward_function(
         [get_weight_grad, get_bias_grad, momentum, eps]
         (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
          intrusive_ptr<tensor_holder> original_weight, intrusive_ptr<tensor_holder> original_input,
@@ -102,7 +100,7 @@ TensorGrad TensorGrad_Functional_Class::batch_norm(const TensorGrad& x, const Te
                 
             }
         }, std::move(original_weight), std::move(original_input), std::move(stored_means), std::move(stored_inv));
-
+    // std::cout << "destructing tracking..." << std::endl;
     return std::move(result);
 
 }
@@ -139,25 +137,20 @@ TensorGrad TensorGrad_Functional_Class::batch_norm(const Tensor& x, const Tensor
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(x.conditional_mutate_clone());
     intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor(running_var.shape(), running_var.dtype()));
     intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor(running_var.shape(), running_var.dtype()));
-    TensorGrad result(::nt::functional::no_grad::batch_norm(
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(2);
+    if(get_weight_grad)
+        tracking.emplace_back(weight.value());
+    if(get_bias_grad)
+        tracking.emplace_back(bias.value());
+    utils::THROW_EXCEPTION(tracking.size() > 0, "INTERNAL LOGIC ERROR");
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::no_grad::batch_norm(
         x, running_mean, running_var,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
         bool(bias) ? utils::optional_tensor(bias.value().detach()) : utils::optional_tensor(nullptr),
-        training, momentum, eps, stored_means, stored_inv), true);
+        training, momentum, eps, stored_means, stored_inv), tracking);
 
-    if(get_weight_grad && get_bias_grad){
-        result.track_tensors(weight.value(), bias.value());
-    }
-    else if(get_weight_grad){
-        result.track_tensors(weight.value());
-    }
-    else if(get_bias_grad){
-        result.track_tensors(bias.value());
-    }
-    else{
-        utils::THROW_EXCEPTION(false, "INTERNAL LOGIC ERROR");
-    }
-    result.create_backward_function(
+    result.create_read_backward_function(
             [get_weight_grad, get_bias_grad, 
             momentum, eps]
             (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
@@ -209,25 +202,22 @@ TensorGrad TensorGrad_Functional_Class::group_norm(const TensorGrad& input, int6
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(input.detach().conditional_mutate_clone());
     intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
     intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
-    TensorGrad result(::nt::functional::no_grad::group_norm(
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(3);
+    tracking.emplace_back(input);
+    if(get_weight_grad)
+        tracking.emplace_back(weight.value());
+    if(get_bias_grad)
+        tracking.emplace_back(bias.value());
+
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::no_grad::group_norm(
         input.detach(), num_groups,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
         bool(bias) ? utils::optional_tensor(bias.value().detach()) : utils::optional_tensor(nullptr),
-        eps, stored_means, stored_inv), input.track_grad());
+        eps, stored_means, stored_inv), tracking);
 
-    if(get_weight_grad && get_bias_grad){
-        result.track_tensors(input, weight.value(), bias.value());
-    }
-    else if(get_weight_grad){
-        result.track_tensors(input, weight.value());
-    }
-    else if(get_bias_grad){
-        result.track_tensors(input, bias.value());
-    }else{
-        result.track_tensors(input);
-    }
 
-    result.create_backward_function(
+    result.create_read_backward_function(
         [get_weight_grad, get_bias_grad, eps, num_groups]
         (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
          intrusive_ptr<tensor_holder> original_weight, intrusive_ptr<tensor_holder> original_input,
@@ -291,25 +281,21 @@ TensorGrad TensorGrad_Functional_Class::group_norm(const Tensor& input, int64_t 
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(input.conditional_mutate_clone());
     intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
     intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({num_groups * input.shape()[0]}, input.dtype()));
-    TensorGrad result(::nt::functional::no_grad::group_norm(
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(2);
+    if(get_weight_grad)
+        tracking.emplace_back(weight.value());
+    if(get_bias_grad)
+        tracking.emplace_back(bias.value());
+    utils::THROW_EXCEPTION(tracking.size() > 0, "INTERNAL LOGIC ERROR");
+
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::no_grad::group_norm(
         input, num_groups,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
         bool(bias) ? utils::optional_tensor(bias.value().detach()) : utils::optional_tensor(nullptr),
-        eps, stored_means, stored_inv), true);
+        eps, stored_means, stored_inv), tracking);
 
-    if(get_weight_grad && get_bias_grad){
-        result.track_tensors(weight.value(), bias.value());
-    }
-    else if(get_weight_grad){
-        result.track_tensors(weight.value());
-    }
-    else if(get_bias_grad){
-        result.track_tensors(bias.value());
-    }
-    else{
-        utils::THROW_EXCEPTION(false, "INTERNAL LOGIC ERROR");
-    }
-    result.create_backward_function(
+    result.create_read_backward_function(
             [get_weight_grad, get_bias_grad, eps, num_groups]
             (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
              intrusive_ptr<tensor_holder> original_weight, intrusive_ptr<tensor_holder> original_input,
@@ -372,25 +358,22 @@ TensorGrad TensorGrad_Functional_Class::instance_norm(const TensorGrad& x, utils
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
     intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({store_size}, x.dtype()));
     intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({store_size}, x.dtype()));
-    TensorGrad result(::nt::functional::no_grad::instance_norm(
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(3);
+    tracking.emplace_back(x);
+    if(get_weight_grad)
+        tracking.emplace_back(weight.value());
+    if(get_bias_grad)
+        tracking.emplace_back(bias.value());
+
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::no_grad::instance_norm(
         x.detach(), running_mean, running_var,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
         bool(bias) ? utils::optional_tensor(bias.value().detach()) : utils::optional_tensor(nullptr),
-        use_input_stats, momentum, eps, stored_means, stored_inv), x.track_grad());
+        use_input_stats, momentum, eps, stored_means, stored_inv), tracking);
 
-    if(get_weight_grad && get_bias_grad){
-        result.track_tensors(x, weight.value(), bias.value());
-    }
-    else if(get_weight_grad){
-        result.track_tensors(x, weight.value());
-    }
-    else if(get_bias_grad){
-        result.track_tensors(x, bias.value());
-    }else{
-        result.track_tensors(x);
-    }
 
-    result.create_backward_function(
+    result.create_read_backward_function(
         [get_weight_grad, get_bias_grad, momentum, eps]
         (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
          intrusive_ptr<tensor_holder> original_weight, intrusive_ptr<tensor_holder> original_input,
@@ -463,23 +446,21 @@ TensorGrad TensorGrad_Functional_Class::instance_norm(const Tensor& x, utils::op
     intrusive_ptr<tensor_holder> original_input = make_intrusive<tensor_holder>(x.conditional_mutate_clone());
     intrusive_ptr<tensor_holder> stored_means = make_intrusive<tensor_holder>(Tensor({store_size}, x.dtype()));
     intrusive_ptr<tensor_holder> stored_inv = make_intrusive<tensor_holder>(Tensor({store_size}, x.dtype()));
-    TensorGrad result(::nt::functional::no_grad::instance_norm(
+    std::vector<TensorGrad> tracking;
+    tracking.reserve(2);
+    if(get_weight_grad)
+        tracking.emplace_back(weight.value());
+    if(get_bias_grad)
+        tracking.emplace_back(bias.value());
+
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::no_grad::instance_norm(
         x, running_mean, running_var,
         bool(weight) ? utils::optional_tensor(weight.value().detach()) : utils::optional_tensor(nullptr),
         bool(bias) ? utils::optional_tensor(bias.value().detach()) : utils::optional_tensor(nullptr),
-        use_input_stats, momentum, eps, stored_means, stored_inv), false);
+        use_input_stats, momentum, eps, stored_means, stored_inv), tracking);
 
-    if(get_weight_grad && get_bias_grad){
-        result.track_tensors(weight.value(), bias.value());
-    }
-    else if(get_weight_grad){
-        result.track_tensors(weight.value());
-    }
-    else if(get_bias_grad){
-        result.track_tensors(bias.value());
-    }
 
-    result.create_backward_function(
+    result.create_read_backward_function(
         [get_weight_grad, get_bias_grad, momentum, eps]
         (const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
          intrusive_ptr<tensor_holder> original_weight, intrusive_ptr<tensor_holder> original_input,

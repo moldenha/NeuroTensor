@@ -25,7 +25,7 @@ TensorGrad TensorGrad_Functional_Class::nums_like(const TensorGrad& tg, Scalar s
 
 TensorGrad& TensorGrad_Functional_Class::fill_diagonal_(TensorGrad& tg, Scalar s){
     ::nt::functional::fill_diagonal_(tg.detach(), s);
-    tg.track_self_mod_tensors(
+    tg.create_write_node(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
             Tensor grad_ = grad.clone();
             ::nt::functional::fill_diagonal_(grad_, 0);
@@ -37,10 +37,10 @@ TensorGrad& TensorGrad_Functional_Class::fill_diagonal_(TensorGrad& tg, Scalar s
 TensorGrad& TensorGrad_Functional_Class::fill_(TensorGrad& tg, Scalar s){
     ::nt::functional::fill_(tg.detach(), s);
     std::cout << "fill forward called" << std::endl;
-    tg.track_self_mod_tensors(
+    tg.create_write_node(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
-        std::cout << "fill backward called" << std::endl;
-        std::cout << "fill backward with grad shape" << grad.shape() << std::endl;
+        // std::cout << "fill backward called" << std::endl;
+        // std::cout << "fill backward with grad shape" << grad.shape() << std::endl;
         parents[0]->accumulate_gradient(0);
         // gradient not propogated
         // ::nt::functional::fill_(parents[0]->grad->tensor, 0);
@@ -50,7 +50,7 @@ TensorGrad& TensorGrad_Functional_Class::fill_(TensorGrad& tg, Scalar s){
 
 TensorGrad& TensorGrad_Functional_Class::set_(TensorGrad& tg, const Tensor& t){
     ::nt::functional::set_(tg.detach(), t);
-    tg.track_self_mod_tensors(
+    tg.create_write_node(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
         parents[0]->accumulate_gradient(0);
         // gradient not propogated
@@ -61,7 +61,7 @@ TensorGrad& TensorGrad_Functional_Class::set_(TensorGrad& tg, const Tensor& t){
 
 TensorGrad& TensorGrad_Functional_Class::set_(TensorGrad& tg, const TensorGrad& t){
     ::nt::functional::set_(tg.detach(), t.detach());
-    tg.track_self_mod_tensors(
+    tg.create_write_node(
         [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
         parents[0]->accumulate_gradient(0);
         // gradient not propogated

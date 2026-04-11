@@ -18,9 +18,14 @@ TensorGrad TensorGrad_Functional_Class::sort(const TensorGrad& input, const Tens
     if(!return_sorted){
         return TensorGrad(_indices, false);
     }
-
-    TensorGrad result(input.detach().flatten(0, -1)[_indices.flatten(0, -1)], input.track_grad());
-    result.track_grad(input, [&_indices](const Tensor& grad){
+    if(!input.track_grad()){
+        if(!return_indices){
+            return TensorGrad(input.detach().flatten(0, -1)[_indices.flatten(0, -1)], false);
+        }
+        return functional::list(TensorGrad(input.detach().flatten(0, -1)[_indices.flatten(0, -1)], false), TensorGrad(_indices, false));
+    }
+    TensorGrad result = input.create_view_node(input.detach().flatten(0, -1)[_indices.flatten(0, -1)]);
+    result.create_view_backward_function(input, [&_indices](const Tensor& grad){
         return grad.flatten(0, -1)[_indices.flatten(0, -1)];
     });
     if(!return_indices){
@@ -41,9 +46,15 @@ TensorGrad TensorGrad_Functional_Class::coordsort(const TensorGrad& input, const
     }
     
     auto [sorted, _indices] = get<2>(::nt::functional::coordsort(input.detach(), dim, descending, /* return_sorted = */ true, /* return_indices = */ true));
-    nt::Tensor& __indices = _indices;
-    TensorGrad result(sorted, input.track_grad());
-    result.track_grad(input, [&__indices, &per_dim, &dim](const Tensor& grad){
+    Tensor& __indices = _indices;
+    if(!input.track_grad()){
+        if(!return_indices){
+            return TensorGrad(sorted, false);
+        }
+        return functional::list(TensorGrad(sorted, false), TensorGrad(_indices, false));
+    }
+    TensorGrad result = input.create_view_node(sorted);
+    result.create_view_backward_function(input, [&__indices, &per_dim, &dim](const Tensor& grad){
         Tensor split_grad = grad.split_axis(dim).view(-1, per_dim);
         Tensor sorted_grad = split_grad[__indices];
         return ::nt::functional::cat(std::move(sorted_grad));

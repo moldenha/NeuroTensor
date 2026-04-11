@@ -10,14 +10,10 @@ namespace nt{
 namespace functional{
 
 TensorGrad TensorGrad_Functional_Class::logsumexp(const TensorGrad& x, utils::optional_list list, bool keepdim){
-    TensorGrad result(::nt::functional::logsumexp(x.detach(), list, keepdim), x.track_grad());
-    if (!x.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if (!x.track_grad()) return TensorGrad(::nt::functional::logsumexp(x.detach(), list, keepdim), false); 
     
-    result.track_tensors(x);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::logsumexp(x.detach(), list, keepdim), x);
+    result.create_read_backward_function(
             [list](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> saved_x) {
                 parents[0]->accumulate_gradient(::nt::functional::dlogsumexp(grad, saved_x->tensor, list).view(parents[0]->shape()) );
@@ -27,14 +23,10 @@ TensorGrad TensorGrad_Functional_Class::logsumexp(const TensorGrad& x, utils::op
 }
 
 TensorGrad TensorGrad_Functional_Class::log(const TensorGrad& x){
-    TensorGrad result(::nt::functional::log(x.detach()), x.track_grad());
-    if (!x.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if (!x.track_grad()) TensorGrad(::nt::functional::log(x.detach()), false); 
     
-    result.track_tensors(x);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::log(x.detach()), x);
+    result.create_read_backward_function(
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> saved_x) {
                 parents[0]->accumulate_gradient(grad * ::nt::functional::dlog(saved_x->tensor));
@@ -52,7 +44,7 @@ TensorGrad& TensorGrad_Functional_Class::log_(TensorGrad& x){
     intrusive_ptr<tensor_holder> this_clone =
         make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
     ::nt::functional::log_(x.detach());
-    x.track_self_mod_tensors(
+    x.create_write_node(
         [a = std::move(this_clone)](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(::nt::functional::multiply(::nt::functional::dlog(a->tensor), grad));
         },
@@ -62,14 +54,10 @@ TensorGrad& TensorGrad_Functional_Class::log_(TensorGrad& x){
 
 
 TensorGrad TensorGrad_Functional_Class::exp(const TensorGrad& x){
-    TensorGrad result(::nt::functional::exp(x.detach()), x.track_grad());
-    if (!x.track_grad()) {
-        result.track_grad_(false);
-        return std::move(result);
-    }
+    if (!x.track_grad()) return TensorGrad(::nt::functional::exp(x.detach()), false); 
     
-    result.track_tensors(x);
-    result.create_backward_function(
+    TensorGrad result = TensorGrad::create_read_node(::nt::functional::exp(x.detach()), x);
+    result.create_read_backward_function(
             [](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents,
                  intrusive_ptr<tensor_holder> saved_x) {
                 parents[0]->accumulate_gradient(grad * saved_x->tensor);
@@ -90,7 +78,7 @@ TensorGrad& TensorGrad_Functional_Class::exp_(TensorGrad& x){
     // because the gradient of exp(x) is exp(x)
     intrusive_ptr<tensor_holder> this_clone =
         make_intrusive<tensor_holder>(x.detach().conditional_mutate_clone());
-    x.track_self_mod_tensors(
+    x.create_write_node(
         [a = std::move(this_clone)](const Tensor &grad, std::vector<intrusive_ptr<TensorGrad>> &parents) {
             parents[0]->accumulate_gradient(::nt::functional::multiply(a->tensor, grad));
         },
@@ -115,16 +103,11 @@ TensorGrad TensorGrad_Functional_Class::sum(const TensorGrad& input, utils::opti
         }
         out_shape = SizeRef(n_shape);
     }
-    TensorGrad result(summed.view(out_shape), input.track_grad());
-    if(!input.track_grad()){
-        result.track_grad_(false);
-        return std::move(result);
-    }
-
-    result.track_tensors(input);
+    if(!input.track_grad()) return TensorGrad(summed.view(out_shape), false);
+    TensorGrad result = TensorGrad::create_read_node(summed.view(out_shape), input);
     SizeRef original_shape = input.shape().clone();
     // define the backward function
-    result.create_backward_function(
+    result.create_read_backward_function(
         [dims, original_shape](const Tensor &grad,
                std::vector<intrusive_ptr<TensorGrad>> &parents) {
             // repeat the gradient along the summed dimension

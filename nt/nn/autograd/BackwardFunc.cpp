@@ -1,5 +1,7 @@
+#include "GraphNode.h"
+#include "../TensorGrad.h"
 #include "BackwardFunc.h"
-#include "TensorGrad.h"
+
 
 namespace nt::grad::utility {
 
@@ -15,7 +17,7 @@ void backward_func::run(const Tensor& grad, std::vector<intrusive_ptr<TensorGrad
         // Otherwise, this could cause errors (or un-made errors that become segfaults)
         utils::THROW_EXCEPTION(bool(parent), "Error, parent was nullptr and all strong references have disappeared");
         // if the Node has not gone out of scope already [otherwise no point]
-        if(parent->Node->tensor && !parent->Node->tensor->tensor.is_null())
+        if(parent->Node->tensor && !parent->Node->tensor->is_null())
             parent->Node->ensure_gradient_init();
     }
     this->Func(grad, v);
@@ -64,22 +66,22 @@ void backward_func::run(const Tensor& grad, std::vector<intrusive_ptr<TensorGrad
 //     return original_parent;
 // }
 
-void backward_func::run(const Tensor& grad, const std::vector<weak_intrusive_ptr<GraphNode>>& weak_parents){
+void backward_func::run(const Tensor& grad, const std::vector<std::pair<weak_intrusive_ptr<GraphNode>, uint64_t>>& weak_parents){
     if(Func == nullptr)
         return;
     std::vector<intrusive_ptr<TensorGrad>> parents;
     parents.reserve(weak_parents.size());
+    intrusive_ptr<TensorGrad::autograd_type> empty_tape(nullptr);
     // A specific constructor for TensorGrad that takes an intrusive_ptr<GraphNode>, and a bool to track the gradient
-    for(const auto& weak_parent : weak_parents){
+    for(const auto& [weak_parent, version] : weak_parents){
         if(auto lock = weak_parent.lock()){
-            parents.emplace_back(make_intrusive<TensorGrad>(lock));
+            parents.emplace_back(make_intrusive<TensorGrad>(lock, empty_tape));
         }else{
             // a little more tricky
             // but basically means that the calculation of the gradient doesn't matter because it is a temporary tensor
             // So, as such:
-            intrusive_ptr<GraphNode> temp_node = make_intrusive<GraphNode>(DontTrackGrad{}); // make a null tensor
-            temp_node->grad = make_intrusive<tensor_holder>(Tensor::Null()); // better to call error than potentially seg fault
-            parents.emplace_back(make_intrusive<TensorGrad>(std::move(temp_node)));
+            intrusive_ptr<GraphNode> temp_node = makeNonTrackingGraphNode(Tensor::Null()); // make a null tensor
+            parents.emplace_back(make_intrusive<TensorGrad>(std::move(temp_node), empty_tape));
         }
     }
     this->run(grad, parents);

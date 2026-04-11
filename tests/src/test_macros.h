@@ -66,16 +66,16 @@ inline std::vector<nt::DType> combine(const std::vector<nt::DType>& a, const std
 // std::cout << "\033[32mGreen text\033[0m\n";
 // std::cout << "\033[1;34mBold Blue text\033[0m\n";
 template<typename Func>
-inline void run_test(const std::string& name, Func&& f) {
+inline void run_test(const std::string& name, Func&& f, const char* file = __FILE__) {
     try {
         f(); // Run the test
         if(nt::utils::getAllocatedMemory(nt::DeviceType::CPU) != 0){
-            std::cout << "\033[1;31m[✗]\033[0m " << name << " worked but left with "<<nt::utils::getAllocatedMemory(nt::DeviceType::CPU)<<" bytes of memory allocated in CPU \n";
+            std::cout << "\033[1;31m[✗]\033[0m " << name << " at "<< file << " worked but left with "<<nt::utils::getAllocatedMemory(nt::DeviceType::CPU)<<" bytes of memory allocated in CPU \n";
             return;
             
         }
         if(nt::utils::getAllocatedMemory(nt::DeviceType::META) != 0){
-            std::cout << "\033[1;31m[✗]\033[0m " << name << " worked but left with "<<nt::utils::getAllocatedMemory(nt::DeviceType::META)<<" bytes of memory allocated in META \n";
+            std::cout << "\033[1;31m[✗]\033[0m " << name << " at "<< file  << " worked but left with "<<nt::utils::getAllocatedMemory(nt::DeviceType::META)<<" bytes of memory allocated in META \n";
             for(const auto& [key, val] : nt::utils::memory_details::getMetaRegistry().unsafe_get_cref()){
                 auto [size, file, line] = val;
                 std::cout << "\tMemory of "<<size<<" bytes was allocated in "<<file<<" on line" << line<<std::endl;
@@ -86,9 +86,9 @@ inline void run_test(const std::string& name, Func&& f) {
 
         std::cout << "\033[32m[✓]\033[0m " << name << " works \n";
     } catch (const std::exception& e) {
-        std::cout << "\033[1;31m[✗]\033[0m " << name << " did not work — " << e.what() << "\n";
+        std::cout << "\033[1;31m[✗]\033[0m " << name << " at "<< file << " did not work — " << e.what() << "\n";
     } catch (...) {
-        std::cout << "\033[1;31m[✗]\033[0m " << name << " did not work — unknown error\n";
+        std::cout << "\033[1;31m[✗]\033[0m " << name << " at "<< file << " did not work — unknown error\n";
     }
 }
 
