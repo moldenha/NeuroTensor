@@ -1,10 +1,13 @@
 #include "device.h"
 #include "../utils/utils.h"
+#include "../mtl/utils/mtl_general.h"
+#include "../mtl/abstraction.h"
 #include "../dtype/DType.h"
 #include "../Tensor.h"
 #include <iostream>
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "meta_allocator.h"
+#include <string>
 
 #include <cstdlib> // For std::aligned_alloc
 
@@ -103,15 +106,43 @@ void DeviceCPU::capture_deleter(DeleterFnPtr func){
 
 
 
-nt::intrusive_ptr<Device> make_device(const DeviceType dt){
+nt::intrusive_ptr<Device> make_device_(const DeviceType dt, const MemoryLayout layout){
 	switch(dt){
-		case DeviceType::CPU:
-			return make_intrusive<DeviceCPU>();
-		case DeviceType::CPUShared:
-			return make_intrusive<DeviceSharedCPU>();
+		case DeviceType::CPU:{
+            switch(layout){
+			    case MemoryLayout::Private:
+                    return make_intrusive<DeviceCPU>();
+                case MemoryLayout::Shared:
+                    return make_intrusive<DeviceSharedCPU>();
+                default:
+                    // none
+                    utils::throw_exception(false, "Error, got unsupported memory layout for making CPU memory $", layout);
+                    return intrusive_ptr<Device>(nullptr);
+            }
+        }
+#ifdef NT_MTL_SUPPORTED
+        case DeviceType::MTL:{
+            switch(layout){
+			    case MemoryLayout::Private:
+                    return make_intrusive<DeviceMTLPrivate>();
+                case MemoryLayout::Shared:
+                    return make_intrusive<DeviceMTLShared>();
+                default:
+                    // none
+                    utils::throw_exception(false, "Error, got unsupported memory layout for making MTL memory $", layout);
+                    return intrusive_ptr<Device>(nullptr);
+            }
+        }
+#endif
 		default:
+            utils::throw_exception(false, "Got unsupported device type $ to be made", dt);
 			return make_intrusive<DeviceCPU>(); //by default it will be put on the cpu
 	}
+}
+
+intrusive_ptr<DeviceHolder> make_device(const DeviceType dt, const MemoryLayout layout){
+    intrusive_ptr<DeviceHolder> out = nt::make_intrusive<DeviceHolder>(1);
+    out->get(0) = make_device_(dt, layout);
 }
 
 
@@ -122,5 +153,173 @@ DeviceType get_device_type(const intrusive_ptr<DeviceHolder>& ptr){
 	return ptr[0]->get_device_type();
 }
 
+MemoryLayout get_memory_layout(const intrusive_ptr<DeviceHolder>& ptr){
+	if(!bool(ptr)){
+		return MemoryLayout::None;
+	}
+	return ptr[0]->get_memory_layout();
+}
 
 }
+
+#ifdef NT_MTL_SUPPORTED
+namespace nt{
+// if mtl supported on this platform (Apple silicone, then define the device for it)
+DeviceMTLPrivate::DeviceMTLPrivate()
+    :memory(nullptr), size(0)
+{}
+
+DeviceMTLShared::DeviceMTLShared()
+    :memory(nullptr), size(0)
+{}
+
+void DeviceMTLPrivate::allocate_memory(const DType dt, const int64_t size){
+   utils::throw_exception(size >= 0, 
+           "Cannot allocate negative bytes of memory,"
+           " tried to allocate $ bytes", size);
+   utils::throw_exception(mtl::supported(dt),
+                "Error, dtype $ is not supported on MTL GPU's",
+                dt);
+   if(dt == DType::Float32 || dt == DType::Float16){
+        // then I want vectorized types to be by default available
+        // it is already guarenteed that size > 0 -> bitwise operations can be used
+        // n & 3 is equivalent to n % 4 for positive numbers
+        int64_t remainder = size & 3; 
+        int64_t to_add = (4 - remainder) % 4;
+        size += to_add; // if already divisible by 4 -> += 0
+   }
+   size_t dtype_size = DTypeFuncs::size_of_dtype(dt);
+   int64_t total_size = (static_cast<int64_t>(dtype_size) * size);
+   this->memory = make_intrusive<mtl::abs::MetalBuffer>(
+           mtl::abs::MetalContext::instance().device(),
+           total_size, dtype_size, MTL::ResourceStorageModePrivate
+   );
+   this->size = total_size;
+}
+
+void DeviceMTLShared::allocate_memory(const DType dt, const int64_t size){
+   utils::throw_exception(size >= 0, 
+           "Cannot allocate negative bytes of memory,"
+           " tried to allocate $ bytes", size);
+   utils::throw_exception(mtl::supported(dt),
+                "Error, dtype $ is not supported on MTL GPU's",
+                dt);
+   if(dt == DType::Float32 || dt == DType::Float16){
+        // then I want vectorized types to be by default available
+        // it is already guarenteed that size > 0 -> bitwise operations can be used
+        // n & 3 is equivalent to n % 4 for positive numbers
+        int64_t remainder = size & 3; 
+        int64_t to_add = (4 - remainder) % 4;
+        size += to_add; // if already divisible by 4 -> += 0
+   }
+   size_t dtype_size = DTypeFuncs::size_of_dtype(dt);
+   int64_t total_size = (static_cast<int64_t>(dtype_size) * size);
+   this->memory = make_intrusive<mtl::abs::MetalBuffer>(
+       mtl::abs::MetalContext::instance().device(),
+           total_size, dtype_size, MTL::ResourceStorageModeShared
+   );
+   this->size = total_size;
+}
+
+void DeviceMTLPrivate::allocate_memory(const int64_t size){
+   utils::throw_exception(size >= 0, 
+           "Cannot allocate negative bytes of memory,"
+           " tried to allocate $ bytes", size);
+   this->memory = make_intrusive<mtl::abs::MetalBuffer>(
+        mtl::abs::MetalContext::instance().device(),
+           size, 1, MTL::ResourceStorageModePrivate
+   );
+   this->size = size;
+}
+
+void DeviceMTLShared::allocate_memory(const int64_t size){
+   utils::throw_exception(size >= 0, 
+           "Cannot allocate negative bytes of memory,"
+           " tried to allocate $ bytes", size);
+   this->memory = make_intrusive<mtl::abs::MetalBuffer>(
+           mtl::abs::MetalContext::instance().device(),
+        size, 1, MTL::ResourceStorageModeShared
+   );
+
+   // this->memory = make_intrusive<mtl::abs::MetalBuffer>(
+   //         mtl::abs::MetalContext::instance().device()->newBuffer(
+   //      size, MTL::ResourceStorageModeShared)
+   // );
+   this->size = size;
+}
+
+void DeviceMTLPrivate::release_memory() {
+    this->memory->reset(nullptr);
+}
+
+void DeviceMTLShared::release_memory() {
+    this->memory->reset(nullptr);
+}
+
+
+// Consider removing these:
+namespace mtl{
+
+DeviceMTLPrivate mtl_shared_to_private(const DeviceMTLShared& device, MTL::CommandBuffer* buffer){
+    // Copy CPU → GPU buffer
+    DeviceMTLPrivate outBuffer;
+    outBuffer.allocate_memory(device.Size());
+    outBuffer.get_buffer()->typeBytes = device.get_buffer()->typeBytes;
+    MTL::BlitCommandEncoder* blit = buffer->blitCommandEncoder();
+    blit->copyFromBuffer(device.get_buffer()->buffer, 0, outBuffer.get_buffer()->buffer, 0, device.Size());
+    blit->endEncoding();
+    // buffer->commit();
+    // buffer->WaitUntilComplete();
+    return outBuffer;
+}
+
+DeviceMTLPrivate& mtl_shared_to_private(const DeviceMTLShared& device, MTL::CommandBuffer* buffer, DeviceMTLPrivate& out){
+    // Copy CPU → GPU buffer
+    MTL::BlitCommandEncoder* blit = buffer->blitCommandEncoder();
+    blit->copyFromBuffer(device.get_buffer()->buffer, 0, out.get_buffer()->buffer, 0, device.Size());
+    blit->endEncoding();
+    // buffer->commit();
+    // buffer->WaitUntilComplete();
+    return out;
+}
+
+DeviceMTLShared mtl_private_to_shared(const DeviceMTLPrivate& device, MTL::CommandBuffer* buffer){
+    // Copy GPU → CPU buffer
+    DeviceMTLShared outBuffer;
+    outBuffer.allocate_memory(device.Size());
+    outBuffer.memory->typeBytes = device.get_buffer()->typeBytes;
+    MTL::BlitCommandEncoder* blit = buffer->blitCommandEncoder();
+    blit->copyFromBuffer(device.get_buffer()->buffer, 0, outBuffer.get_buffer()->buffer, 0, device.Size());
+    blit->endEncoding();
+    // buffer->commit();
+    // buffer->WaitUntilComplete();
+    return outBuffer;
+}
+
+DeviceMTLShared& mtl_private_to_shared(const DeviceMTLPrivate& device, MTL::CommandBuffer* buffer, DeviceMTLShared& out){
+    // Copy GPU → CPU buffer
+    MTL::BlitCommandEncoder* blit = buffer->blitCommandEncoder();
+    blit->copyFromBuffer(device.get_buffer()->buffer, 0, out.get_buffer()->buffer, 0, device.Size());
+    blit->endEncoding();
+    // buffer->commit();
+    // buffer->WaitUntilComplete();
+    return out;
+}
+
+DeviceMTLShared cpu_to_mtl_shared(const DeviceCPU& device){
+    DeviceMTLShared shared;
+    std::ptrdiff_t total_size = device.get_end_memory() - device.get_memory();
+    shared.allocate_memory(total_size);
+    outBuffer.get_buffer()->typeBytes = 1;
+    std::memcpy(shared.get_memory(), device.get_memory(), total_size);
+}
+
+DeviceMTLPrivate cpu_to_mtl_private(const DeviceCPU& device, MTL::CommandBuffer* buffer){
+    DeviceMTLShared shared = cpu_to_mtl_shared(device);
+    DeviceMTLPrivate output = mtl_shared_to_private(shared, buffer);
+    return output;
+}
+
+}
+}
+#endif

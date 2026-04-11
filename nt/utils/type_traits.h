@@ -138,8 +138,19 @@ struct is_in : bool_constant<(is_same_v<T, Ts> || ...)> {};
 template<class T, typename... Rest>
 inline constexpr bool is_in_v = is_in<T, Rest...>::value;
 
+template<class T, class... Ts>
+struct count_in : integral_constant<std::size_t, (0 + ... + is_same_v<T, Ts>)> {};
+
+template<class T, class... Ts>
+inline constexpr std::size_t count_in_v = count_in<T, Ts...>::value;
+
 template<class T>
-struct is_integral : is_in<remove_cv_t<T>, bool, char, char16_t, char32_t, wchar_t, short, int, long, long long, int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t> {};
+struct is_integral : is_in<remove_cv_t<T>, bool, char, char16_t, 
+                                            char32_t, wchar_t, short, 
+                                            int, long, long long, 
+                                            int8_t, int16_t, int32_t, 
+                                            int64_t, uint8_t, uint16_t, 
+                                            uint32_t, uint64_t, size_t> {};
 
 template<class T>
 inline constexpr bool is_integral_v = is_integral<T>::value;
@@ -401,6 +412,12 @@ struct is_decay_in : bool_constant<(is_decay_same_v<T, Ts> || ...)> {};
 
 template<class T, typename... Rest>
 inline constexpr bool is_decay_in_v = is_decay_in<T, Rest...>::value;
+
+template<class T, class... Ts>
+struct count_decay_in : integral_constant<std::size_t, (0 + ... + is_decay_same_v<T, Ts>)> {};
+
+template<class T, class... Ts>
+inline constexpr std::size_t count_decay_in_v = count_decay_in<T, Ts...>::value;
 
 
 template<class T>

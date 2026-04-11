@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <thread>
 #include <functional>
+#include "../utils/always_inline_macro.h"
 
 #ifdef USE_PARALLEL
 	#include <tbb/parallel_for.h>
@@ -24,10 +25,17 @@
 
 namespace nt{
 
+namespace details{
+
+NT_ALWAYS_INLINE intrusive_ptr<BucketCPU> ensure_cpu_bucket(const intrusive_ptr<Bucket>& bkt) const noexcept {return intrusive_ptr<BucketCPU>(bkt);}
+
+}
+
 //this is to make it so it is not ambiguous with calling execute_function(func, args..);
 //the above is for all dtypes, this is for specific dtypes
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args){
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	using val_type = std::invoke_result_t<UnaryFunction, DTypeFuncs::dtype_to_type_t<dt>*, DTypeFuncs::dtype_to_type_t<dt>*, Args...>;
 	bool check = dtype() == dt || DTypeFuncs::is_in<dts...>(dtype());
 	if(!check){
@@ -68,6 +76,7 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 				DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value
 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args){
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction&&, DTypeFuncs::dtype_to_type_t<m_dtype>*, DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
@@ -118,6 +127,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, Args&&... args
 //DTypeFuncs::dtype_to_type_t<dt, dts...>*/DTypeFuncs::dtype_to_type_t<dt, dts...>*
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args){
+    utils::throw_exception(this->is_cpu() && inp_arr.is_cpu(), "Execute function only designed for CPU usage");
 	using val_type = std::invoke_result_t<UnaryFunction, 
 	      DTypeFuncs::dtype_to_type_t<dt, dts...>*, 
 	      DTypeFuncs::dtype_to_type_t<dt, dts...>*, 
@@ -160,6 +170,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 
 template<typename WrappedTypes, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args){
+    utils::throw_exception(this->is_cpu() && inp_arr.is_cpu(), "Execute function only designed for CPU usage");
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction, 
@@ -193,6 +204,7 @@ inline auto ArrayVoid::execute_function(UnaryFunction&& unary_op, ArrayVoid& inp
 //DTypeFuncs::dtype_to_type_t<dts...>*/DTypeFuncs::dtype_to_type_t<dts...>*
 template<DType dt, DType...dts>
 inline auto ArrayVoid::execute_function(bool throw_error, const char* func_name){
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(func_name, dtype()) : DTypeFuncs::is_in<dt, dts...>(dtype());
 	return [throw_error, func_name, this](auto&& unary_op, auto&&... args) -> std::invoke_result_t<decltype(unary_op), DTypeFuncs::dtype_to_type_t<dts...>*, DTypeFuncs::dtype_to_type_t<dts...>*, decltype(args)...>{
 			return this->execute_function<dt, dts...>(std::forward<decltype(unary_op)&&>(unary_op), std::forward<decltype(args)&&>(args)...);	
@@ -210,6 +222,7 @@ void throw_wrapped_types_error(const DType& dt, const char* func_name){
 
 template<typename WrappedTypes, std::enable_if_t<DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 inline auto ArrayVoid::execute_function(bool throw_error, const char* func_name){
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	if(throw_error){throw_wrapped_types_error<WrappedTypes>(dtype(), func_name);}
 	return [throw_error, func_name, this](auto&& unary_op, auto&&... args){
 			return execute_function<WrappedTypes>(std::forward<decltype(unary_op)&&>(unary_op), std::forward<decltype(args)&&>(args)...);	
@@ -221,19 +234,19 @@ inline void ArrayVoid::sub_handle_execute_function(UnaryFunction&& unary_op, Out
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		v = std::forward<UnaryFunction&&>(unary_op)(bucket.begin_contiguous<value_t>(),
-			bucket.end_contiguous<value_t>(), std::forward<Args&&>(args)...);	
+		v = std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_contiguous<value_t>(), std::forward<Args&&>(args)...);	
 	}
 	else if(type_a == 2){
-		v = std::forward<UnaryFunction&&>(unary_op)(bucket.begin_blocked<value_t>(),
-			bucket.end_blocked<value_t>(), std::forward<Args&&>(args)...);	
+		v = std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_blocked<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 	else if(type_a == 3){
-		v = std::forward<UnaryFunction&&>(unary_op)(bucket.begin_list<value_t>(),
-			bucket.end_list<value_t>(), std::forward<Args&&>(args)...);	
+		v = std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->begin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_list<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 }
@@ -243,57 +256,57 @@ inline void ArrayVoid::sub_handle_execute_function(UnaryFunction&& unary_op, Out
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
-		auto begin = bucket.begin_contiguous<value_t>();
-		auto end = bucket.end_contiguous<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_contiguous<value_t>();
 		if(type_b == 1){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_list<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 
 	}
 	else if(type_a == 2){
-		auto begin = bucket.begin_blocked<value_t>();
-		auto end = bucket.end_blocked<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_blocked<value_t>();
 		if(type_b == 1){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_list<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 	
 		
 	}
 	else if(type_a == 3){
-		auto begin = bucket.begin_list<value_t>();
-		auto end = bucket.end_list<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->begin_list<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_list<value_t>();
 		if(type_b == 1){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_list<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 	
 	}
@@ -304,19 +317,19 @@ inline void ArrayVoid::sub_handle_execute_function_void(UnaryFunction&& unary_op
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		std::forward<UnaryFunction&&>(unary_op)(bucket.begin_contiguous<value_t>(),
-			bucket.end_contiguous<value_t>(), std::forward<Args&&>(args)...);	
+		std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_contiguous<value_t>(), std::forward<Args&&>(args)...);	
 	}
 	else if(type_a == 2){
-		std::forward<UnaryFunction&&>(unary_op)(bucket.begin_blocked<value_t>(),
-			bucket.end_blocked<value_t>(), std::forward<Args&&>(args)...);	
+		std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_blocked<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 	else if(type_a == 3){
-		std::forward<UnaryFunction&&>(unary_op)(bucket.begin_list<value_t>(),
-			bucket.end_list<value_t>(), std::forward<Args&&>(args)...);	
+		std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->begin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_list<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 }
@@ -326,57 +339,57 @@ inline void ArrayVoid::sub_handle_execute_function_void(UnaryFunction&& unary_op
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
-		auto begin = bucket.begin_contiguous<value_t>();
-		auto end = bucket.end_contiguous<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_contiguous<value_t>();
 		if(type_b == 1){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_list<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 
 	}
 	else if(type_a == 2){
-		auto begin = bucket.begin_blocked<value_t>();
-		auto end = bucket.end_blocked<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_blocked<value_t>();
 		if(type_b == 1){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_list<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 	
 		
 	}
 	else if(type_a == 3){
-		auto begin = bucket.begin_list<value_t>();
-		auto end = bucket.end_list<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->begin_list<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_list<value_t>();
 		if(type_b == 1){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			std::forward<UnaryFunction&&>(unary_op)(begin, end,
-			inp_arr.bucket.begin_list<value_t>(), std::forward<Args&&>(args)...);
+			details::ensure_bucket_cpu(inp_arr.bucket)->begin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 	
 	}
@@ -388,7 +401,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1(UnaryFunction&& unary
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 			[&](const tbb::blocked_range<uint64_t>& r){
 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), std::forward<Args>(args)...);
@@ -401,8 +414,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3(UnaryFunction&& unary
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	/* uint32_t type_a = bucket.iterator_type(); */
-	auto begin = bucket.begin<3, value_t>();
+	/* uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type(); */
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 			[&](const tbb::blocked_range<uint64_t>& r){
 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), std::forward<Args>(args)...);
@@ -416,11 +429,11 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2(UnaryFunction&& unary
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin = bucket.begin<2, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
 	auto threadFunc = [&](value_t* b_ptr, value_t* e_ptr){
 		std::invoke(unary_op, b_ptr, e_ptr, std::forward<Args>(args)...);
 	};
-	auto end = bucket.end<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 
 	uint64_t diff = block_diff(begin, end);
 	if(diff == 0){
@@ -458,8 +471,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1(UnaryFunction&& unary
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto end = bucket.end<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<1, value_t>();
 	std::invoke(unary_op, begin, end, std::forward<Args>(args)...);
 }
 template<DType dt, typename UnaryFunction, typename... Args>
@@ -467,8 +480,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3(UnaryFunction&& unary
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto end = bucket.end<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<3, value_t>();
 	std::invoke(unary_op, begin, end, std::forward<Args>(args)...);
 }
 
@@ -478,8 +491,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2(UnaryFunction&& unary
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin = bucket.begin<2, value_t>();
-	auto end = bucket.end<2, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 	uint64_t diff = block_diff(begin, end);
 	if(diff == 0){
 		DTypeFuncs::dtype_to_type_t<dt>* begin_p = (DTypeFuncs::dtype_to_type_t<dt>*)begin;
@@ -508,6 +521,7 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 				DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value
 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline void ArrayVoid::execute_function_chunk(UnaryFunction&& unary_op, Args&&... args){
+    utils::throw_exception(this->is_cpu(), "Execute function chunk only designed for CPU usage");
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype() && WrappedTypes::done){
 		return;	
@@ -516,7 +530,7 @@ inline void ArrayVoid::execute_function_chunk(UnaryFunction&& unary_op, Args&&..
 		return execute_function_chunk<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...);
 	}
 	bool check = false;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
 		sub_handle_execute_function_chunk_1<m_dtype>(std::forward<UnaryFunction&&>(unary_op), check, std::forward<Args&&>(args)...);
 	}
@@ -537,8 +551,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_1(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<1, value_t>();
 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 			[&](const tbb::blocked_range<uint64_t>& r){
 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), begin_2 + r.begin(), std::forward<Args>(args)...);
@@ -551,8 +565,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_3(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<3, value_t>();
 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 			[&](const tbb::blocked_range<uint64_t>& r){
 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), begin_2 + r.begin(), std::forward<Args>(args)...);
@@ -565,8 +579,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_3(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<3, value_t>();
 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 			[&](const tbb::blocked_range<uint64_t>& r){
 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), begin_2 + r.begin(), std::forward<Args>(args)...);
@@ -579,8 +593,8 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_1(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<1, value_t>();
 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 			[&](const tbb::blocked_range<uint64_t>& r){
 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), begin_2 + r.begin(), std::forward<Args>(args)...);
@@ -595,12 +609,12 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_1(UnaryFunction&& una
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin_2 = inp_arr.bucket.begin<1, value_t>();
-	auto begin = bucket.begin<2, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
 	auto threadFunc = [&](value_t* b_ptr, value_t* e_ptr, value_t* b2_ptr){
 		std::invoke(unary_op, b_ptr, e_ptr, b2_ptr, std::forward<Args>(args)...);
 	};
-	auto end = bucket.end<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 
 	uint64_t diff = block_diff(begin, end);
 	if(diff == 0){
@@ -636,12 +650,12 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_3(UnaryFunction&& una
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin_2 = inp_arr.bucket.begin<3, value_t>();
-	auto begin = bucket.begin<2, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
 	auto threadFunc = [&](value_t* b_ptr, value_t* e_ptr, BucketIterator_list<value_t> b2_ptr){
 		std::invoke(unary_op, b_ptr, e_ptr, b2_ptr, std::forward<Args>(args)...);
 	};
-	auto end = bucket.end<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 
 	uint64_t diff = block_diff(begin, end);
 	if(diff == 0){
@@ -674,13 +688,13 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_2(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<2, value_t>();
-	auto end_2 = inp_arr.bucket.end<2, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<2, value_t>();
+	auto end_2 = details::ensure_bucket_cpu(inp_arr.bucket)->end<2, value_t>();
 	auto threadFunc = [&](BucketIterator_list<value_t> b_ptr, BucketIterator_list<value_t> e_ptr, value_t* b2_ptr){
 		std::invoke(unary_op, b_ptr, e_ptr, b2_ptr, std::forward<Args>(args)...);
 	};
-	auto end = bucket.end<3, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<3, value_t>();
 
 	uint64_t diff = block_diff(begin_2, end_2);
 	if(diff == 0){
@@ -713,13 +727,13 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_2(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<2, value_t>();
-	auto end_2 = inp_arr.bucket.end<2, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<2, value_t>();
+	auto end_2 = details::ensure_bucket_cpu(inp_arr.bucket)->end<2, value_t>();
 	auto threadFunc = [&](value_t* b_ptr, value_t* e_ptr, value_t* b2_ptr){
 		std::invoke(unary_op, b_ptr, e_ptr, b2_ptr, std::forward<Args>(args)...);
 	};
-	auto end = bucket.end<1, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<1, value_t>();
 
 	uint64_t diff = block_diff(begin_2, end_2);
 	if(diff == 0){
@@ -752,21 +766,21 @@ template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
 	if(called || dt != dtype()){return;}
 	called = true;
-	utils::THROW_EXCEPTION(inp_arr.size == size || inp_arr.bucket.buckets_amt() == bucket.buckets_amt(), "When chunking functions, the memory layout for 2 buckets specifies they must either have the same size, or the same number of buckets");
+	utils::THROW_EXCEPTION(inp_arr.size == size || details::ensure_bucket_cpu(inp_arr.bucket)->buckets_amt() == details::ensure_bucket_cpu(bucket)->buckets_amt(), "When chunking functions, the memory layout for 2 buckets specifies they must either have the same size, or the same number of buckets");
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin_2 = inp_arr.bucket.begin<2, value_t>();
-	auto begin = bucket.begin<2, value_t>();
-	auto end = bucket.end<2, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<2, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 	
 	uint64_t diff_a = block_diff(begin, end);
-	uint64_t diff_b = block_diff(begin_2, inp_arr.bucket.end<2,value_t>());
+	uint64_t diff_b = block_diff(begin_2, details::ensure_bucket_cpu(inp_arr.bucket)->end<2,value_t>());
 	auto threadFunc = [&](value_t* b_ptr, value_t* e_ptr, value_t* b2_ptr){
 		std::invoke(unary_op, b_ptr, e_ptr, b2_ptr, std::forward<Args>(args)...);
 	};
 	std::vector<std::thread> threads;
 	
-	if(inp_arr.bucket.buckets_amt() == bucket.buckets_amt()){
+	if(details::ensure_bucket_cpu(inp_arr.bucket)->buckets_amt() == details::ensure_bucket_cpu(bucket)->buckets_amt()){
 		//it is not possible for them to have a bucket_size == 1, or to have a dif == 0, so skipping that part
 		utils::THROW_EXCEPTION(diff_a == diff_b, "Expected to have same number of blocks for chunk operator");
 		while(!same_block(begin, end)){
@@ -780,7 +794,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& una
 		threads.emplace_back(threadFunc, (DTypeFuncs::dtype_to_type_t<dt>*)begin, begin.block_end(), (value_t*)begin_2);
 	}
 	else{
-		auto end_2 = inp_arr.bucket.end<2, value_t>();
+		auto end_2 = details::ensure_bucket_cpu(inp_arr.bucket)->end<2, value_t>();
 		value_t* p_begin = (value_t*)begin;
 		value_t* p_end = begin.block_end();
 		value_t* p_begin2 = (value_t*)begin_2;
@@ -833,9 +847,9 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_1(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto end = bucket.end<1, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<1, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<1, value_t>();
 	std::invoke(unary_op, begin, end, begin_2, std::forward<Args&&>(args)...);
 }
 
@@ -844,9 +858,9 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_3(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto end = bucket.end<1, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<1, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<3, value_t>();
 	std::invoke(unary_op, begin, end, begin_2, std::forward<Args&&>(args)...);
 
 }
@@ -856,9 +870,9 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_3(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto end = bucket.end<3, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<3, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<3, value_t>();
 	std::invoke(unary_op, begin, end, begin_2, std::forward<Args&&>(args)...);
 }
 
@@ -867,9 +881,9 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_1(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto end = bucket.end<3, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<3, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<1, value_t>();
 	std::invoke(unary_op, begin, end, begin_2, std::forward<Args&&>(args)...);
 }
 
@@ -880,9 +894,9 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_1(UnaryFunction&& una
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin_2 = inp_arr.bucket.begin<1, value_t>();
-	auto begin = bucket.begin<2, value_t>();
-	auto end = bucket.end<2, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 
 	uint64_t diff = block_diff(begin, end);
 	if(diff == 0){
@@ -908,9 +922,9 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_3(UnaryFunction&& una
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin_2 = inp_arr.bucket.begin<3, value_t>();
-	auto begin = bucket.begin<2, value_t>();
-	auto end = bucket.end<2, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 
 	uint64_t diff = block_diff(begin, end);
 	if(diff == 0){
@@ -934,10 +948,10 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_3_2(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<3, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<2, value_t>();
-	auto end_2 = inp_arr.bucket.end<2, value_t>();
-	auto end = bucket.end<3, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<2, value_t>();
+	auto end_2 = details::ensure_bucket_cpu(inp_arr.bucket)->end<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<3, value_t>();
 
 	uint64_t diff = block_diff(begin_2, end_2);
 	if(diff == 0){
@@ -960,10 +974,10 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_1_2(UnaryFunction&& una
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	auto begin = bucket.begin<1, value_t>();
-	auto begin_2 = inp_arr.bucket.begin<2, value_t>();
-	auto end_2 = inp_arr.bucket.end<2, value_t>();
-	auto end = bucket.end<1, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<2, value_t>();
+	auto end_2 = details::ensure_bucket_cpu(inp_arr.bucket)->end<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<1, value_t>();
 
 	uint64_t diff = block_diff(begin_2, end_2);
 	if(diff == 0){
@@ -987,17 +1001,17 @@ template<DType dt, typename UnaryFunction, typename... Args>
 inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& unary_op, ArrayVoid& inp_arr, bool& called, Args&&... args){
 	if(called || dt != dtype()){return;}
 	called = true;
-	utils::THROW_EXCEPTION(inp_arr.size == size || inp_arr.bucket.buckets_amt() == bucket.buckets_amt(), "When chunking functions, the memory layout for 2 buckets specifies they must either have the same size, or the same number of buckets");
+	utils::THROW_EXCEPTION(inp_arr.size == size || details::ensure_bucket_cpu(inp_arr.bucket)->buckets_amt() == details::ensure_bucket_cpu(bucket)->buckets_amt(), "When chunking functions, the memory layout for 2 buckets specifies they must either have the same size, or the same number of buckets");
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
 	//this is the blocked version
-	auto begin_2 = inp_arr.bucket.begin<2, value_t>();
-	auto begin = bucket.begin<2, value_t>();
-	auto end = bucket.end<2, value_t>();
+	auto begin_2 = details::ensure_bucket_cpu(inp_arr.bucket)->begin<2, value_t>();
+	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>();
+	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>();
 	
 	uint64_t diff_a = block_diff(begin, end);
-	uint64_t diff_b = block_diff(begin_2, inp_arr.bucket.end<2,value_t>());
+	uint64_t diff_b = block_diff(begin_2, details::ensure_bucket_cpu(inp_arr.bucket)->end<2,value_t>());
 	
-	if(inp_arr.bucket.buckets_amt() == bucket.buckets_amt()){
+	if(details::ensure_bucket_cpu(inp_arr.bucket)->buckets_amt() == details::ensure_bucket_cpu(bucket)->buckets_amt()){
 		//it is not possible for them to have a bucket_size == 1, or to have a dif == 0, so skipping that part
 		utils::THROW_EXCEPTION(diff_a == diff_b, "Expected to have same number of blocks for chunk operator");
 		while(!same_block(begin, end)){
@@ -1011,7 +1025,7 @@ inline void ArrayVoid::sub_handle_execute_function_chunk_2_2(UnaryFunction&& una
 		std::invoke(unary_op, (DTypeFuncs::dtype_to_type_t<dt>*)begin, begin.block_end(), (value_t*)begin_2, std::forward<Args&&>(args)...);
 	}
 	else{
-		auto end_2 = inp_arr.bucket.end<2, value_t>();
+		auto end_2 = details::ensure_bucket_cpu(inp_arr.bucket)->end<2, value_t>();
 		value_t* p_begin = (value_t*)begin;
 		value_t* p_end = begin.block_end();
 		value_t* p_begin2 = (value_t*)begin_2;
@@ -1061,6 +1075,7 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 				DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value
 				&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, ArrayVoid& inp_arr, Args&&... args){
+    utils::throw_exception(this->is_cpu() && inp_arr.is_cpu(), "Execute function only designed for CPU usage");
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype() && WrappedTypes::done){
 		return;	
@@ -1069,8 +1084,8 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 		return execute_function_chunk<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...);
 	}
 	bool check = false;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
 		if(type_b == 1){
 			sub_handle_execute_function_chunk_1_1<m_dtype>(std::forward<UnaryFunction&&>(unary_op), inp_arr, check, std::forward<Args&&>(args)...);
@@ -1115,7 +1130,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 /* 	if(called || dt != dtype()){return;} */
 /* 	called = true; */
 /* 	using value_t = DTypeFuncs::dtype_to_type_t<dt>; */
-/* 	auto begin = bucket.begin<1, value_t>(); */
+/* 	auto begin = details::ensure_bucket_cpu(bucket)->begin<1, value_t>(); */
 /* 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size), */
 /* 			[&](const tbb::blocked_range<uint64_t>& r){ */
 /* 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), std::forward<Args>(args)...); */
@@ -1128,11 +1143,11 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 /* 	called = true; */
 /* 	using value_t = DTypeFuncs::dtype_to_type_t<dt>; */
 /* 	//this is the blocked version */
-/* 	auto begin = bucket.begin<2, value_t>(); */
+/* 	auto begin = details::ensure_bucket_cpu(bucket)->begin<2, value_t>(); */
 /* 	auto threadFunc = [&](value_t* b_ptr, value_t* e_ptr){ */
 /* 		std::invoke(unary_op, b_ptr, e_ptr, std::forward<Args>(args)...); */
 /* 	}; */
-/* 	auto end = bucket.end<2, value_t>(); */
+/* 	auto end = details::ensure_bucket_cpu(bucket)->end<2, value_t>(); */
 /* 	uint64_t diff = block_diff(begin, end); */
 /* 	if(diff == 0){ */
 /* 		DTypeFuncs::dtype_to_type_t<dt>* begin_p = (DTypeFuncs::dtype_to_type_t<dt>*)begin; */
@@ -1215,8 +1230,8 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 /* 	if(called || dt != dtype()){return;} */
 /* 	called = true; */
 /* 	using value_t = DTypeFuncs::dtype_to_type_t<dt>; */
-/* 	/1* uint32_t type_a = bucket.iterator_type(); *1/ */
-/* 	auto begin = bucket.begin<3, value_t>(); */
+/* 	/1* uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type(); *1/ */
+/* 	auto begin = details::ensure_bucket_cpu(bucket)->begin<3, value_t>(); */
 /* 	tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size), */
 /* 			[&](const tbb::blocked_range<uint64_t>& r){ */
 /* 			std::invoke(unary_op, begin + r.begin(), begin + r.end(), std::forward<Args>(args)...); */
@@ -1237,7 +1252,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 /* 		return execute_function_parallel<typename WrappedTypes::next_wrapper>(std::forward<UnaryFunction&&>(unary_op), std::forward<Args&&>(args)...); */
 /* 	} */
 /* 	bool check = false; */
-/* 	uint32_t type_a = bucket.iterator_type(); */
+/* 	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type(); */
 /* 	if(type_a == 1){ */
 /* 		sub_handle_execute_function_void_parallel_1<m_dtype, UnaryFunction, Args...>(std::forward<UnaryFunction&&>(unary_op), check, std::forward<Args&&>(args)...); */
 /* 	} */
@@ -1253,6 +1268,7 @@ inline void ArrayVoid::execute_function_chunk_execute(UnaryFunction&& unary_op, 
 //const DTypeFuncs::dtype_to_type_t<dts...>*/const DTypeFuncs::dtype_to_type_t<dts...>*
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... args) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, Args...>;
 	bool check = DTypeFuncs::is_in<dt, dts...>(dtype());
 	if(!check){
@@ -1290,6 +1306,7 @@ template<typename WrappedTypes, typename UnaryFunction, typename... Args, std::e
 					DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value
 					&& !DTypeFuncs::is_wrapped_dtype<UnaryFunction>::value, bool>>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... args) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<m_dtype>*, const DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
@@ -1339,6 +1356,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, Args&&... arg
 //const DTypeFuncs::dtype_to_type_t<dts...>*/const DTypeFuncs::dtype_to_type_t<dts...>*
 template<DType dt, DType... dts, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVoid& inp_arr, Args&&... args) const{
+    utils::throw_exception(this->is_cpu() && inp_arr.is_cpu(), "Execute function only designed for CPU usage");
 	using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, Args...>;
 	bool check = DTypeFuncs::is_in<dt, dts...>(dtype());
 	if(!check){
@@ -1374,6 +1392,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVo
 
 template<typename WrappedTypes, typename UnaryFunction, typename... Args>
 inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVoid& inp_arr, Args&&... args) const{
+    utils::throw_exception(this->is_cpu() && inp_arr.is_cpu(), "Execute function only designed for CPU usage");
 	constexpr DType m_dtype = WrappedTypes::next;
 	if(m_dtype != dtype() && WrappedTypes::done){
 		using val_type = std::invoke_result_t<UnaryFunction, const DTypeFuncs::dtype_to_type_t<m_dtype>*, const DTypeFuncs::dtype_to_type_t<m_dtype>*, const DTypeFuncs::dtype_to_type_t<m_dtype>*, Args...>;
@@ -1402,6 +1421,7 @@ inline auto ArrayVoid::cexecute_function(UnaryFunction&& unary_op, const ArrayVo
 
 template<DType dt, DType...dts>
 inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	bool check = throw_error ? DTypeFuncs::check_dtypes<dt, dts...>(func_name, dtype()) : DTypeFuncs::is_in<dt, dts...>(dtype());
 	return [throw_error, func_name, this](auto&& unary_op, auto&&... args) -> std::invoke_result_t<decltype(unary_op), const DTypeFuncs::dtype_to_type_t<dts...>*, const DTypeFuncs::dtype_to_type_t<dts...>*, decltype(args)...>{
 			return this->cexecute_function<dt, dts...>(std::forward<decltype(unary_op)&&>(unary_op), std::forward<decltype(args)&&>(args)...);	
@@ -1413,6 +1433,7 @@ inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name
 
 template<typename WrappedTypes, std::enable_if_t<DTypeFuncs::is_wrapped_dtype<WrappedTypes>::value, bool>>
 inline auto ArrayVoid::cexecute_function(bool throw_error, const char* func_name) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	bool check = DTypeFuncs::is_in<WrappedTypes>(dtype());
 	if(!check){
 		if(throw_error)
@@ -1431,19 +1452,19 @@ inline void ArrayVoid::sub_handle_cexecute_function(UnaryFunction&& unary_op, Ou
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		v = std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_contiguous<value_t>(),
-			bucket.cend_contiguous<value_t>(), std::forward<Args&&>(args)...);	
+		v = std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), std::forward<Args&&>(args)...);	
 	}
 	else if(type_a == 2){
-		v = std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), std::forward<Args&&>(args)...);	
+		v = std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 	else if(type_a == 3){
-		v = std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), std::forward<Args&&>(args)...);	
+		v = std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 }
@@ -1453,57 +1474,57 @@ inline void ArrayVoid::sub_handle_cexecute_function(UnaryFunction&& unary_op, Ou
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
-		auto begin = bucket.cbegin_contiguous<value_t>();
-		auto end = bucket.cend_contiguous<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>();
 		if(type_b == 1){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_contiguous<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_blocked<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_list<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 
 	}
 	else if(type_a == 2){
-		auto begin = bucket.cbegin_blocked<value_t>();
-		auto end = bucket.cend_blocked<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>();
 		if(type_b == 1){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_contiguous<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_blocked<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_list<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 	
 		
 	}
 	else if(type_a == 3){
-		auto begin = bucket.cbegin_list<value_t>();
-		auto end = bucket.cend_list<value_t>();
+		auto begin = details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->cend_list<value_t>();
 		if(type_b == 1){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_contiguous<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_blocked<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
 			v = std::forward<UnaryFunction&&>(unary_op)(begin, end,
-				inp_arr.bucket.cend_list<value_t>(), std::forward<Args&&>(args)...);
+				details::ensure_bucket_cpu(inp_arr.bucket)->cend_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 		
 	}
@@ -1512,8 +1533,8 @@ inline void ArrayVoid::sub_handle_cexecute_function(UnaryFunction&& unary_op, Ou
 
 /*
 
-std::forward<UnaryFunction&&>(unary_op)((type_a == 1) ? bucket.cbegin_contiguous<value_t>() : (type_a == 2) ? bucket.cbegin_blocked<value_t>() : bucket.cbegin_list<value_t>(),\r
-\t\t\t(type_a == 1) ? bucket.cend_contiguous<value_t>() : (type_a == 2) ? bucket.cend_blocked<value_t>() : bucket.cend_list<value_t>(), std::forward<Args&&>(args)...);/
+std::forward<UnaryFunction&&>(unary_op)((type_a == 1) ? details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>() : (type_a == 2) ? details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>() : details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),\r
+\t\t\t(type_a == 1) ? details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>() : (type_a == 2) ? details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>() : details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), std::forward<Args&&>(args)...);/
 
 */
 
@@ -1522,19 +1543,19 @@ inline void ArrayVoid::sub_handle_cexecute_function_void(UnaryFunction&& unary_o
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_contiguous<value_t>(),
-			bucket.cend_contiguous<value_t>(), std::forward<Args&&>(args)...);	
+		std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), std::forward<Args&&>(args)...);	
 	}
 	else if(type_a == 2){
-		std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), std::forward<Args&&>(args)...);	
+		std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 	else if(type_a == 3){
-		std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), std::forward<Args&&>(args)...);	
+		std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), std::forward<Args&&>(args)...);	
 		
 	}
 }
@@ -1544,50 +1565,50 @@ inline void ArrayVoid::sub_handle_cexecute_function_void(UnaryFunction&& unary_o
 	if(called || dt != dtype()){return;}
 	called = true;
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
 		if(type_b == 1){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 	}
 	else if(type_a == 2){
 		if(type_b == 1){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 
 		
 	}
 	else if(type_a == 3){
 		if(type_b == 1){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 2){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), std::forward<Args&&>(args)...);
 		}
 		else if(type_b == 3){
-			std::forward<UnaryFunction&&>(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), std::forward<Args&&>(args)...);
+			std::forward<UnaryFunction&&>(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), std::forward<Args&&>(args)...);
 		}
 		
 	}
@@ -1599,6 +1620,7 @@ inline auto ArrayVoid::execute_function(UnaryOperator&& unary_op, Args&&... arg)
 }
 template<class UnaryOperator, class... Args>
 inline auto ArrayVoid::cexecute_function(UnaryOperator&& unary_op, Args&&... arg) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	return cexecute_function<WRAP_DTYPES<AllTypesL>>(std::forward<UnaryOperator&&>(unary_op), std::forward<Args&&>(arg)...);
 } 
 template<class UnaryOperator, class... Args>
@@ -1607,6 +1629,7 @@ auto ArrayVoid::execute_function(UnaryOperator&& unary_op, ArrayVoid& inp_arr, A
 } 
 template<class UnaryOperator, class... Args>
 inline auto ArrayVoid::cexecute_function(UnaryOperator&& unary_op, const ArrayVoid& inp_arr, Args&&... arg) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	return cexecute_function<WRAP_DTYPES<AllTypesL>>(std::forward<UnaryOperator&&>(unary_op), inp_arr, std::forward<Args&&>(arg)...);
 }  
 
@@ -1616,6 +1639,7 @@ inline auto ArrayVoid::execute_function_nbool(UnaryOperator&& unary_op, Args&&..
 }
 template<class UnaryOperator, class... Args>
 inline auto ArrayVoid::cexecute_function_nbool(UnaryOperator&& unary_op, Args&&... arg) const{
+    utils::throw_exception(this->is_cpu(), "Execute function only designed for CPU usage");
 	return cexecute_function<WRAP_DTYPES<AllTypesNBoolL>>(std::forward<UnaryOperator&&>(unary_op), std::forward<Args&&>(arg)...);
 } 
 template<class UnaryOperator, class... Args>
@@ -1624,6 +1648,7 @@ inline auto ArrayVoid::execute_function_nbool(UnaryOperator&& unary_op, ArrayVoi
 } 
 template<class UnaryOperator, class... Args>
 inline auto ArrayVoid::cexecute_function_nbool(UnaryOperator&& unary_op, const ArrayVoid& inp_arr, Args&&... arg) const{
+    utils::throw_exception(this->is_cpu() && inp_arr.is_cpu(), "Execute function only designed for CPU usage");
 	return cexecute_function<WRAP_DTYPES<AllTypesNBoolL>>(std::forward<UnaryOperator&&>(unary_op), inp_arr, std::forward<Args&&>(arg)...);
 }  
 
@@ -1891,19 +1916,19 @@ template<DType dt, class OutputIt, class UnaryOperation>
 void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, OutputIt& d_first) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		std::transform(bucket.cbegin_contiguous<value_t>(),
-			bucket.cend_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));	
+		std::transform(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));	
 	}
 	else if(type_a == 2){
-		std::transform(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));	
+		std::transform(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 	else if(type_a == 3){
-		std::transform(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));	
+		std::transform(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 }
@@ -1912,19 +1937,19 @@ template<DType dt, class InputIt2, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, InputIt2& inp2, OutputIt& d_first) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		std::transform(bucket.cbegin_contiguous<value_t>(),
-			bucket.cend_contiguous<value_t>(), inp_2, d_first, std::forward<UnaryOperation&&>(unary_op));	
+		std::transform(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), inp_2, d_first, std::forward<UnaryOperation&&>(unary_op));	
 	}
 	else if(type_a == 2){
-		std::transform(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(),inp_2, d_first, std::forward<UnaryOperation&&>(unary_op));	
+		std::transform(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(),inp_2, d_first, std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 	else if(type_a == 3){
-		std::transform(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_2, d_first, std::forward<UnaryOperation&&>(unary_op));	
+		std::transform(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), inp_2, d_first, std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 }
@@ -1934,50 +1959,50 @@ template<DType dt, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr, OutputIt& d_first) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
 		if(type_b == 1){
-			std::transform(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 2){
-			std::transform(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 3){
-			std::transform(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 	}
 	else if(type_a == 2){
 		if(type_b == 1){
-			std::transform(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 2){
-			std::transform(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 3){
-			std::transform(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 
 		
 	}
 	else if(type_a == 3){
 		if(type_b == 1){
-			std::transform(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 2){
-			std::transform(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 3){
-			std::transform(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), d_first, std::forward<UnaryOperation&&>(unary_op));
 		}
 		
 	}
@@ -1987,50 +2012,50 @@ template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr){
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
 		if(type_b == 1){
-			std::transform(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), bucket.begin_contiguous<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 2){
-			std::transform(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), bucket.begin_contiguous<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 3){
-			std::transform(unary_op)(bucket.cbegin_contiguous<value_t>(),
-				bucket.cend_contiguous<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), bucket.begin_contiguous<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+				details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 	}
 	else if(type_a == 2){
 		if(type_b == 1){
-			std::transform(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), bucket.begin_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 2){
-			std::transform(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), bucket.begin_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 3){
-			std::transform(unary_op)(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), bucket.begin_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 
 		
 	}
 	else if(type_a == 3){
 		if(type_b == 1){
-			std::transform(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_contiguous<value_t>(), bucket.begin_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>(), details::ensure_bucket_cpu(bucket)->begin_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 2){
-			std::transform(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_blocked<value_t>(), bucket.begin_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>(), details::ensure_bucket_cpu(bucket)->begin_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		else if(type_b == 3){
-			std::transform(unary_op)(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), inp_arr.bucket.cbegin_list<value_t>(), bucket.begin_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));
+			std::transform(unary_op)(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>(), details::ensure_bucket_cpu(bucket)->begin_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));
 		}
 		
 	}
@@ -2040,19 +2065,19 @@ template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_ceach(UnaryOperation&& unary_op) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		std::for_each(bucket.cbegin_contiguous<value_t>(),
-			bucket.cend_contiguous<value_t>(),std::forward<UnaryOperation&&>(unary_op));	
+		std::for_each(details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>(),std::forward<UnaryOperation&&>(unary_op));	
 	}
 	else if(type_a == 2){
-		std::for_each(bucket.cbegin_blocked<value_t>(),
-			bucket.cend_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
+		std::for_each(details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 	else if(type_a == 3){
-		std::for_each(bucket.cbegin_list<value_t>(),
-			bucket.cend_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
+		std::for_each(details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->cend_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 }
@@ -2061,19 +2086,19 @@ template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_each(UnaryOperation&& unary_op){
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		std::for_each(bucket.begin_contiguous<value_t>(),
-			bucket.end_contiguous<value_t>(),std::forward<UnaryOperation&&>(unary_op));	
+		std::for_each(details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_contiguous<value_t>(),std::forward<UnaryOperation&&>(unary_op));	
 	}
 	else if(type_a == 2){
-		std::for_each(bucket.begin_blocked<value_t>(),
-			bucket.end_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
+		std::for_each(details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_blocked<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 	else if(type_a == 3){
-		std::for_each(bucket.begin_list<value_t>(),
-			bucket.end_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
+		std::for_each(details::ensure_bucket_cpu(bucket)->begin_list<value_t>(),
+			details::ensure_bucket_cpu(bucket)->end_list<value_t>(), std::forward<UnaryOperation&&>(unary_op));	
 		
 	}
 }
@@ -2086,20 +2111,20 @@ template<DType dt, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, OutputIt& d_first) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		auto start = bucket.cbegin_contiguous<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>();
 		tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 				[&](tbb::blocked_range<uint64_t> r){std::transform(start + r.begin(), start + r.end(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 	}
 	else if(type_a == 2){
-		auto start = bucket.cbegin_blocked<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>();
 		tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 				[&](tbb::blocked_range<uint64_t> r){std::transform(start + r.begin(), start + r.end(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 
 	}
 	else{
-		auto start = bucket.cbegin_list<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>();
 		tbb::parallel_for(tbb::blocked_range<uint64_t>(0, size),
 				[&](tbb::blocked_range<uint64_t> r){std::transform(start + r.begin(), start + r.end(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 	}
@@ -2110,20 +2135,20 @@ template<DType dt, class InputIt2, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, InputIt2& inp2, OutputIt& d_first) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		auto start = bucket.cbegin_contiguous<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>();
 		tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp2 + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 	}
 	else if(type_a == 2){
-		auto start = bucket.cbegin_blocked<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>();
 		tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 			[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp2 + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 
 	}
 	else{
-		auto start = bucket.cbegin_list<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>();
 		tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 			[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp2 + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 	}
@@ -2134,59 +2159,59 @@ template<DType dt, class OutputIt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr, OutputIt& d_first) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
-		auto start = bucket.cbegin_contiguous<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>();
 		if(type_b == 1){
-			auto inp_start = inp_arr.bucket.cbegin_contiguous<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 		else if(type_b == 2){
-			auto inp_start = inp_arr.bucket.cbegin_blocked<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 		else{
-			auto inp_start = inp_arr.bucket.cbegin_list<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 	}
 	else if(type_a == 2){
-		auto start = bucket.cbegin_blocked<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>();
 		if(type_b == 1){
-			auto inp_start = inp_arr.bucket.cbegin_contiguous<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 		else if(type_b == 2){
-			auto inp_start = inp_arr.bucket.cbegin_blocked<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 		else{
-			auto inp_start = inp_arr.bucket.cbegin_list<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 
 	}
 	else{
-		auto start = bucket.cbegin_list<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>();
 		if(type_b == 1){
-			auto inp_start = inp_arr.bucket.cbegin_contiguous<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 		else if(type_b == 2){
-			auto inp_start = inp_arr.bucket.cbegin_blocked<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
 		else{
-			auto inp_start = inp_arr.bucket.cbegin_list<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size),
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), d_first + r.begin(), std::forward<UnaryOperation&&>(unary_op));});
 		}
@@ -2197,62 +2222,62 @@ template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_transform_function(UnaryOperation&& unary_op, const ArrayVoid& inp_arr){
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
-	uint32_t type_b = inp_arr.bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
+	uint32_t type_b = details::ensure_bucket_cpu(inp_arr.bucket)->iterator_type();
 	if(type_a == 1){
-		auto start = bucket.cbegin_contiguous<value_t>();
-		auto my_start = bucket.begin_contiguous<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>();
+		auto my_start = details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>();
 		if(type_b == 1){
-			auto inp_start = inp_arr.bucket.cbegin_contiguous<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 					[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 		else if(type_b == 2){
-			auto inp_start = inp_arr.bucket.cbegin_blocked<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 		else{
-			auto inp_start = inp_arr.bucket.cbegin_list<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 	}
 	else if(type_a == 2){
-		auto start = bucket.cbegin_blocked<value_t>();
-		auto my_start = bucket.begin_blocked<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>();
+		auto my_start = details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>();
 		if(type_b == 1){
-			auto inp_start = inp_arr.bucket.cbegin_contiguous<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 		else if(type_b == 2){
-			auto inp_start = inp_arr.bucket.cbegin_blocked<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 		else{
-			auto inp_start = inp_arr.bucket.cbegin_list<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 
 	}
 	else{
-		auto start = bucket.cbegin_list<value_t>();
-		auto my_start = bucket.begin_list<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>();
+		auto my_start = details::ensure_bucket_cpu(bucket)->begin_list<value_t>();
 		if(type_b == 1){
-			auto inp_start = inp_arr.bucket.cbegin_contiguous<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_contiguous<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 		else if(type_b == 2){
-			auto inp_start = inp_arr.bucket.cbegin_blocked<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_blocked<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
 		else{
-			auto inp_start = inp_arr.bucket.cbegin_list<value_t>();
+			auto inp_start = details::ensure_bucket_cpu(inp_arr.bucket)->cbegin_list<value_t>();
 			tbb::parallel_for(tbb::blocked_range<int64_t>(0, size), 
 				[&](tbb::blocked_range<int64_t> r){std::transform(start + r.begin(), start + r.end(), inp_start + r.begin(), my_start + r.begin(), unary_op);});
 		}
@@ -2264,21 +2289,21 @@ template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_ceach(UnaryOperation&& unary_op) const{
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		auto start = bucket.cbegin_contiguous<value_t>();
-		auto end = bucket.cend_contiguous<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_contiguous<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->cend_contiguous<value_t>();
 		tbb::parallel_for_each(start, end, std::forward<UnaryOperation&&>(unary_op));
 	}
 	else if(type_a == 2){
-		auto start = bucket.cbegin_blocked<value_t>();
-		auto end = bucket.cend_blocked<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_blocked<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->cend_blocked<value_t>();
 		tbb::parallel_for_each(start, end, std::forward<UnaryOperation&&>(unary_op));
 
 	}
 	else{
-		auto start = bucket.cbegin_list<value_t>();
-		auto end = bucket.cend_list<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->cbegin_list<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->cend_list<value_t>();
 		tbb::parallel_for_each(start, end, std::forward<UnaryOperation&&>(unary_op));
 	}
 }
@@ -2287,21 +2312,21 @@ template<DType dt, class UnaryOperation>
 inline void ArrayVoid::sub_for_each(UnaryOperation&& unary_op){
 	if(dt != dtype()){return;}
 	using value_t = DTypeFuncs::dtype_to_type_t<dt>;
-	uint32_t type_a = bucket.iterator_type();
+	uint32_t type_a = details::ensure_bucket_cpu(bucket)->iterator_type();
 	if(type_a == 1){
-		auto start = bucket.begin_contiguous<value_t>();
-		auto end = bucket.end_contiguous<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->begin_contiguous<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_contiguous<value_t>();
 		tbb::parallel_for_each(start, end, std::forward<UnaryOperation&&>(unary_op));
 	}
 	else if(type_a == 2){
-		auto start = bucket.begin_blocked<value_t>();
-		auto end = bucket.end_blocked<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->begin_blocked<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_blocked<value_t>();
 		tbb::parallel_for_each(start, end, std::forward<UnaryOperation&&>(unary_op));
 
 	}
 	else{
-		auto start = bucket.begin_list<value_t>();
-		auto end = bucket.end_list<value_t>();
+		auto start = details::ensure_bucket_cpu(bucket)->begin_list<value_t>();
+		auto end = details::ensure_bucket_cpu(bucket)->end_list<value_t>();
 		tbb::parallel_for_each(start, end, std::forward<UnaryOperation&&>(unary_op));
 	}
 }

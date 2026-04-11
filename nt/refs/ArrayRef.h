@@ -11,14 +11,15 @@
 #include <array>
 #include <initializer_list>
 #include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "intrusive_list.h"
 #include "../utils/type_traits.h"
 #include "../utils/api_macro.h"
 #include "../memory/meta_allocator.h"
 
 namespace nt{
 
-template<typename T>
-inline void ArrayRefDeleteNothing(T*){;}
+// template<typename T>
+// inline void ArrayRefDeleteNothing(T*){;}
 
 template<typename T>
 class ArrayRef;
@@ -28,45 +29,87 @@ NEUROTENSOR_API std::ostream& operator<<(std::ostream& os, const ArrayRef<T>& da
 
 template<typename T>
 class NEUROTENSOR_API ArrayRef{
-	std::unique_ptr<T[], void(*)(T*)> _vals;
-	size_t _total_size;
-	bool _empty;
+    intrusive_ptr<intrusive_list<T>> _vals;
+    template<size_t N>
+    inline intrusive_ptr<intrusive_list<T>> kmake_list() const noexcept {
+        if constexpr (N == 0){
+            return intrusive_ptr<intrusive_list<T>>(nullptr)
+        }else{
+            return make_intrusive<intrusive_list<T>>(N);
+        }
+    }
+	// std::unique_ptr<T[], void(*)(T*)> _vals;
+	// size_t _total_size;
+	// bool _empty;
 	public:
 		using iterator = const T*;
 		using const_iterator = const T*;
-		using size_type = size_t;
+		using size_type = int64_t;
 		using value_type = T;
 		using reverse_iterator = std::reverse_iterator<iterator>;
 		ArrayRef();
 		ArrayRef(const ArrayRef<T> &Arr);
 		ArrayRef(ArrayRef<T>&& Arr);
 		// Constructor for general types
-		template<typename U = T, typename std::enable_if_t<!std::is_same_v<U, std::nullptr_t> && std::is_convertible_v<U, T>, bool> = true>
+		template<typename U = T, 
+            typename std::enable_if_t<
+                !std::is_same_v<U, std::nullptr_t> 
+                && std::is_convertible_v<U, T>, bool> = true
+            >
 		ArrayRef(const U& OneEle)
-		:_vals(MetaNewArr(T, 1), MetaFreeArr<T>), _total_size(1), _empty(false)
-		{_vals[0] = OneEle;}
+        :_vals(
+            make_intrusive<intrusive_list<T>>(
+                /*elements = */ 1,
+                /*element = */ T(OneEle)
+            )
+        )
+        {}
 		// Constructor for nullptr type
-		template<typename U = T, typename std::enable_if_t<std::is_same_v<U, std::nullptr_t>, bool> = true>
+		template<typename U = T, 
+            typename std::enable_if_t<
+                std::is_same_v<U, std::nullptr_t>, 
+            bool> = true
+            >
 		ArrayRef(const U& OneEle)
-		:_vals(nullptr, ArrayRefDeleteNothing<T>), _total_size(0), _empty(true)
+		:_vals(nullptr)
 		{}
-		ArrayRef(const T *data, size_t length);
+		ArrayRef(const T *data, size_t length)
+        :_vals(
+            make_intrusive<intrusive_list<T>>(
+                data, length
+            )
+        )
+        {}
 		ArrayRef(const std::vector<T> &Vec);
 		template<size_t N>
-		ArrayRef(const std::array<T, N> &Arr);
+		ArrayRef(const std::array<T, N> &Arr)
+        :_vals(kmake_list<N>())
+        {
+            if constexpr (N > 0){
+                std::copy(Arr.cbegin(), Arr.cend(), _vals->ptr());
+            }
+        }
 		template<size_t N>
-		ArrayRef(const T (&Arr)[N]);
+		ArrayRef(const T (&Arr)[N])
+        :_vals(kmake_list<N>())
+        {
+            if constexpr (N > 0){
+                std::copy(&Arr[0], &Arr[N-1], _vals->ptr());
+            }
+        }
         template<typename U, typename std::enable_if_t<!std::is_same_v<U, T>, bool> = true>
         ArrayRef(const std::initializer_list<U> &Vec)
-        :_vals(MetaNewArr(T, Vec.size()), MetaFreeArr<T>), _total_size(Vec.size()), _empty(false)
+        :_vals(Vec.size() == 0 ? 
+                intrusive_ptr<intrusive_list<T>>(nullptr) :
+                make_intrusive<intrusive_list<T>>(Vec.size()))
         {
+            if(Vec.size() == 0) return;
             const U* begin = Vec.begin();
-            for(size_t i = 0; i < _total_size; ++i, ++begin)
-                _vals[i] = static_cast<T>(*begin);
+            T* out = _vals->ptr();
+            for(int64_t i = 0; i < _vals->size(); ++i, ++begin)
+                out[i] = static_cast<T>(*begin);
         }
 		ArrayRef(const std::initializer_list<T> &Vec);
-		ArrayRef(const std::unique_ptr<T[], void(*)(T*)>&, size_t);
-		ArrayRef(std::unique_ptr<T[], void(*)(T*)>&&, size_t);
 		ArrayRef<T>& operator=(const ArrayRef<T>&);
 		ArrayRef<T>& operator=(ArrayRef<T>&&);
 		bool operator==(const ArrayRef<T>&) const;

@@ -38,13 +38,15 @@ class NEUROTENSOR_API SizeRef{
 	public:
 		/* SizeRef(ArrayRefInt); */
 		SizeRef(const value_type &OneEle);
-		SizeRef(const ArrayRefInt::value_type *data, size_t length);
+		SizeRef(const ArrayRefInt::value_type *data, int64_t length);
 		SizeRef(const std::vector<ArrayRefInt::value_type> &Vec);
 		SizeRef(std::vector<value_type>&& Vec);
 		template<size_t N>
-		SizeRef(const std::array<ArrayRefInt::value_type, N> &Arr);
+		SizeRef(const std::array<ArrayRefInt::value_type, N> &Arr)
+        :_sizes(Arr) {}
 		template<size_t N>
-		SizeRef(const ArrayRefInt::value_type (&Arr)[N]);
+		SizeRef(const ArrayRefInt::value_type (&Arr)[N])
+        :_sizes(Arr) {}
         template<typename U, std::enable_if_t<!std::is_same_v<U, ArrayRefInt::value_type> && std::is_integral_v<U>, bool> = true>
 		SizeRef(const std::initializer_list<U> &Vec)
         :_sizes(Vec) {}

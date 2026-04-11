@@ -30,6 +30,11 @@ class intrusive_list : public intrusive_ptr_target{
 		{
 			std::copy(ls.begin(), ls.end(), _ptr);
 		}
+        intrusive_list(const T* data, int64_t length)
+            :intrusive_list(length)
+        {
+            std::memcpy(_ptr, data, length * sizeof(T));
+        }
 		intrusive_list(const intrusive_list& l)
 			:_ptr(l._ptr), _size(l._size)
 		{}
@@ -55,6 +60,10 @@ class intrusive_list : public intrusive_ptr_target{
 		inline const T* cend() const noexcept {return _ptr + _size;}
 		inline T& at(int64_t n) noexcept {return _ptr[n];}
 		inline const T& at(int64_t n) const noexcept {return _ptr[n];}
+        inline T& front() noexcept { return *_ptr; }
+        inline const T& front() const noexcept { return *_ptr; }
+        inline T& back() noexcept { return _ptr[_size-1]; }
+        inline const T& back() const noexcept { return _ptr[_size-1]; }
 		inline intrusive_list& operator=(std::initializer_list<T> ls) noexcept {
 			if(!empty()){
                 MetaFreeArr<T>(_ptr);

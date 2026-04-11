@@ -2,8 +2,7 @@
 #include "combine.h"
 #include "exceptions.hpp"
 
-namespace nt{
-namespace functional{
+namespace nt::functional{
 
 inline bool idx_is_total(const range_ &r, const SizeRef &shape,
                          const size_t idx) noexcept {
@@ -36,7 +35,7 @@ std::vector<std::pair<int64_t, int64_t>> split_pair(std::pair<int64_t, int64_t> 
 // it then recursively goes to the next dimension until all dimensions are completed
 std::vector<std::pair<int64_t, int64_t>> 
         make_range_vector(int64_t index, std::vector<range_> r, 
-                          std::vector<std::pair<int64_t, int64_t>> vec, SizeRef shape){
+                  std::vector<std::pair<int64_t, int64_t>> vec, SizeRef shape){
     if(index >= r.size()) return std::move(vec);
     r[index].fix(shape[0]);
     if(shape.size() == 1 && shape[0] == r[index].end && r[index].begin == 0){return std::move(vec);}
@@ -239,5 +238,4 @@ Tensor op_range(const Tensor& t, std::vector<range_> r){
     return std::move(out);
 }
 
-}
 }

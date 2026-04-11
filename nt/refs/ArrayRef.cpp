@@ -15,51 +15,39 @@
 #include <assert.h>
 #include <utility>
 #include "../utils/type_traits.h"
+#include "../intrusive_ptr/intrusive_ptr.hpp"
+#include "../intrusive_ptr/intrusive_tracked_list.hpp"
 
 namespace nt{
 
 template<typename T>
 ArrayRef<T>::ArrayRef()
-	:_vals(nullptr, ArrayRefDeleteNothing<T>), _total_size(0), _empty(true)
+	:_vals(nullptr)
 {}
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const ArrayRef<T> &Arr)
-	:_vals(MetaNewArr(T, Arr._total_size), MetaFreeArr<T>), _total_size(Arr._total_size), _empty(Arr._empty)
-{
-	if(Arr._empty)
-		_vals.reset(nullptr);
-	else
-		std::copy(Arr._vals.get(), Arr._vals.get() + _total_size, _vals.get());
-}
+	:_vals(Arr._vals)
+{}
 
 template<typename T>
 ArrayRef<T>::ArrayRef(ArrayRef<T>&& Arr)
-	:_vals(std::move(Arr._vals)), _total_size(std::exchange(Arr._total_size, 0)), _empty(std::exchange(Arr._empty, true))
+	:_vals(std::move(Arr._vals))
 {}
 
 
 template<typename T>
-ArrayRef<T>::ArrayRef(const T *data, size_t length)
-	:_vals(MetaNewArr(T, length), MetaFreeArr<T>), _total_size(length), _empty(false)
-{std::copy(data, data + length, _vals.get());}
-
-template<typename T>
 ArrayRef<T>::ArrayRef(const std::vector<T> &Vec)
-	:_vals(MetaNewArr(T, Vec.size()), MetaFreeArr<T>), _total_size(Vec.size()), _empty(Vec.size() == 0 ? true : false)
+	:_vals(
+            Vec.size() == 0 ?
+            intrusive_ptr<intrusive_list<T>>(nullptr) :
+            make_intrusive<intrusive_list<T>>(Vec.size())
+    )
 {
-	if(!_empty){std::copy(Vec.cbegin(), Vec.cend(), _vals.get());}
-	else{_vals.reset(nullptr);}
+	if(!_empty){std::copy(Vec.cbegin(), Vec.cend(), _vals->begin());}
+	else{_vals = nullptr;}
 }
 
-template<typename T>
-template<size_t N>
-ArrayRef<T>::ArrayRef(const std::array<T, N> &Arr)
-	:_vals(MetaNewArr(T, static_cast<int64_t>(N)), MetaFreeArr<T>), _total_size(N), _empty(N == 0 ? true : false)
-{
-	if(!_empty){std::copy(Arr.cbegin(), Arr.cend(), _vals.get());}
-	else{_vals.reset(nullptr);}
-}
 
 template<typename T>
 template<size_t N>
@@ -72,145 +60,125 @@ ArrayRef<T>::ArrayRef(const T (&Arr)[N])
 
 template<typename T>
 ArrayRef<T>::ArrayRef(const std::initializer_list<T> &Vec)
-	:_vals(MetaNewArr(T, Vec.size()), MetaFreeArr<T>), _total_size(Vec.size()), _empty(Vec.size() == 0 ? true : false)
-{std::copy(Vec.begin(), Vec.end(), _vals.get());}
-
-template<typename T>
-ArrayRef<T>::ArrayRef(const std::unique_ptr<T[], void(*)(T*)>& vals, size_t ts)
-	:_vals(MetaNewArr(T, ts), MetaFreeArr<T>),
-	_total_size(ts),
-	_empty(ts == 0)
-{
-	if(!_empty){std::copy(vals.get(), vals.get() + ts, _vals.get());}
-	else{_vals.reset(nullptr);}
-}
-
-template<typename T>
-ArrayRef<T>::ArrayRef(std::unique_ptr<T[], void(*)(T*)>&& vals, size_t ts)
-	:_vals(std::move(vals)),
-	_total_size(ts),
-	_empty(ts == 0)
+	:_vals(Vec.size() == 0 
+            ? intrusive_ptr<intrusive_list<T>>(nullptr)
+            : make_intrusive<intrusive_list<T>>(Vec)
+    )
 {}
 
 template<typename T>
 ArrayRef<T>& ArrayRef<T>::operator=(const ArrayRef<T>& Arr){
-	if(Arr._empty){
-		_vals.reset(nullptr);
-		_total_size = Arr._total_size;
-		_empty = Arr._empty;
-		return *this;
-	}
-	_vals = std::unique_ptr<T[], void(*)(T*)>(MetaNewArr(T, Arr._total_size), MetaFreeArr<T>);
-	std::copy(Arr._vals.get(), Arr._vals.get() + Arr._total_size, _vals.get());
-	_total_size = Arr._total_size;
-	_empty = Arr._empty;
+    _vals = Arr._vals;
 	return *this;
 }
 
 template<typename T>
 ArrayRef<T>& ArrayRef<T>::operator=(ArrayRef<T>&& Arr){
 	_vals = std::move(Arr._vals);
-	_total_size = std::exchange(Arr._total_size, 0);
-	_empty = std::exchange(Arr._empty, true);
-	return *this;
+    return *this;
 }
 
 template<typename T>
 bool ArrayRef<T>::operator==(const ArrayRef<T> &Arr) const {
 	if(Arr._vals == nullptr || _vals == nullptr){return false;}
-	if(Arr._total_size != _total_size)
-		return false;
-	if(Arr._empty != _empty)
+	if(Arr._vals->size() != _vals->size())
 		return false;
 	return std::equal(begin(), end(), Arr.begin());
 }
 
 template<typename T>
 bool ArrayRef<T>::operator!=(const ArrayRef<T> &Arr) const {
-	if(Arr._vals == nullptr || _vals == nullptr){return true;}
-	if(Arr._total_size != _total_size)
-		return true;
-	if(Arr._empty != _empty)
-		return true;
-	return !(std::equal(begin(), end(), Arr.begin()));
+    return !(*this == Arr);
 }
 
 template<typename T>
-const T* ArrayRef<T>::data() const{return _vals.get();}
+const T* ArrayRef<T>::data() const{return _vals->ptr();}
 template<typename T>
-size_t ArrayRef<T>::size() const {return _total_size;}
+size_t ArrayRef<T>::size() const {return _vals->size();}
 template<typename T>
-const T& ArrayRef<T>::front() const {return _vals[0];}
+const T& ArrayRef<T>::front() const {return _vals->front();}
 template<typename T>
-const T& ArrayRef<T>::back() const {return _vals[_total_size-1];}
+const T& ArrayRef<T>::back() const {return _vals->back();}
 
 template<typename T>
-T& ArrayRef<T>::front() {return _vals[0];}
+T& ArrayRef<T>::front() {return _vals->front();}
 template<typename T>
-T& ArrayRef<T>::back() {return _vals[_total_size-1];}
+T& ArrayRef<T>::back() {return _vals->back();}
 
 
 template<typename T>
-const T* ArrayRef<T>::begin() const {return &_vals[0];}
+const T* ArrayRef<T>::begin() const {return _vals->begin();}
 template<typename T>
-const T* ArrayRef<T>::end() const {return &_vals[_total_size];}
+const T* ArrayRef<T>::end() const {return _vals->end();}
 template<typename T>
-const T* ArrayRef<T>::cbegin() const {return begin();}
+const T* ArrayRef<T>::cbegin() const {return _vals->cbegin();}
 template<typename T>
-const T* ArrayRef<T>::cend() const {return end();}
+const T* ArrayRef<T>::cend() const {return _vals->cend();}
 template<typename T>
-typename ArrayRef<T>::reverse_iterator ArrayRef<T>::rbegin() const {return reverse_iterator(&_vals[_total_size]);}
+typename ArrayRef<T>::reverse_iterator ArrayRef<T>::rbegin() const {return reverse_iterator(_vals->end());}
 template<typename T>
-typename ArrayRef<T>::reverse_iterator ArrayRef<T>::rend() const {return reverse_iterator(&_vals[0]);}
+typename ArrayRef<T>::reverse_iterator ArrayRef<T>::rend() const {return reverse_iterator(_vals->begin());}
 template<typename T>
-bool ArrayRef<T>::empty() const {return _empty;}
+bool ArrayRef<T>::empty() const {return _vals == nullptr;}
 template<typename T>
 const T& ArrayRef<T>::operator[](size_t index) const{
 	index = index < 0 ? size() + index : index;
-	return _vals[index];
+	return _vals->at(index);
 }
 template<typename T>
 T& ArrayRef<T>::operator[](size_t index){
 	index = index < 0 ? size() + index : index;
-	return _vals[index];
+	return _vals->at(index);
 }
 
 template<typename T>
-const T& ArrayRef<T>::at(size_t index) const {assert(index < _total_size);return _vals[index];}
+const T& ArrayRef<T>::at(size_t index) const {
+    assert(index < _total_size);
+    return _vals->at(index);
+}
 
 template<typename T>
-std::vector<T> ArrayRef<T>::to_vec() const {return std::vector<T>(begin(), end());}
+std::vector<T> ArrayRef<T>::to_vec() const {
+    std::vector<T> out(this->size());
+    std::copy(this->cbegin(), this->cend(), out.begin());
+    return std::move(out);
+}
 
 template<typename T>
 ArrayRef<T> ArrayRef<T>::permute(const std::vector<uint32_t> &Vec) const {
-	assert(Vec.size() == _total_size);
-	std::vector<T> output(_total_size);
-	for(uint32_t i = 0; i < _total_size; ++i)
-		output[i] = at(Vec[i]);
-	return ArrayRef<T>(std::move(output));
+	assert(Vec.size() == this->size());
+    ArrayRef out(this->size());
+    T* out_ptr_ = out._vals->ptr();
+    for(int64_t i = 0; i < this->size(); ++i){
+        out_ptr_[i] = this->at(Vec[i]);
+    }
+    return std::move(out);	
 }
 
 
 
 template<typename T>
-T ArrayRef<T>::multiply() const{return std::accumulate(cbegin(), cend(), T(1), std::multiplies<T>());}
+T ArrayRef<T>::multiply() const{
+    return std::accumulate(cbegin(), cend(), 
+            T(1), std::multiplies<T>());
+}
 
 template<typename T>
 ArrayRef<T> ArrayRef<T>::pop_front() const {
-	if(_empty || size() == 1)
-		return ArrayRef<T>();
-	return ArrayRef<T>(data() + 1, _total_size - 1);
+    if(this->empty() || this->size() == 1)
+        return ArrayRef<T>();
+    return ArrayRef<T>(this->cbegin() + 1, this->size() - 1);
 }
 
 
 template<typename T>
 ArrayRef<T> ArrayRef<T>::clone() const {
-	return *this;
+    return ArrayRef<T>(this->cbegin(), this->size());
 }
 
 
 template<typename T>
-T* ArrayRef<T>::d_data(){return _vals.get();}
+T* ArrayRef<T>::d_data(){return _vals->ptr();}
 
 template<typename T>
 std::ostream& operator<<(std::ostream &out, const ArrayRef<T>& data) {

@@ -219,6 +219,14 @@ NT_ALWAYS_INLINE void* MetaMalloc_(int64_t size, const char* file, int line){
 
 #define MetaMalloc(size) MetaMalloc_(size, __FILE__, __LINE__)
 
+NT_ALWAYS_INLINE void* MetaRealloc_(void* ptr, int64_t n_size, const char* file, int line){
+    MetaMarkDeallocation(ptr);
+    ptr = std::realloc(ptr, n_size);
+    if(!ptr) throw std::bad_alloc();
+    MetaMarkAllocation(ptr, n_size, std::string(file), line);
+    return ptr;
+}
+
 NT_ALWAYS_INLINE void MetaCStyleFree(void* ptr){
     MetaMarkDeallocation(ptr);
     std::free(ptr); 
@@ -228,6 +236,7 @@ NT_ALWAYS_INLINE void MetaCStyleFree(void* ptr){
 #define MetaAlignedAlloc(alignment, size) untracked_aligned_alloc(alignment, size)
 #define MetaAlignedFree(ptr) untracked_free_aligned_alloc(ptr)
 #define MetaMalloc(size) std::malloc(size)
+#define MetaRealloc(ptr, size) std::realloc(ptr, size)
 #define MetaCStyleFree(ptr) std::free(ptr)
 #endif
 

@@ -35,6 +35,9 @@ struct IsFirstVectorArrayVoid<std::vector<std::reference_wrapper<const ArrayVoid
 // #include "../Tensor.h"
 #include "../intrusive_ptr/intrusive_ptr.hpp"
 #include "../memory/bucket.h"
+#include "../memory/bucket_gpu.h"
+#include "../memory/bucket_cpu.h"
+#include "../memory/bucket_mtl.h"
 #include "../memory/iterator.h"
 #include <type_traits>
 #include <functional>
@@ -47,7 +50,12 @@ namespace nt{
 
 class NEUROTENSOR_API ArrayVoid{
 	friend class Bucket;
-	Bucket bucket;
+    friend class BucketCPU;
+    friend class BucketGPU;
+#ifdef NT_MTL_SUPPORTED
+    friend class BucketMTL;
+#endif
+	intrusive_ptr<Bucket> bucket;
 	uint64_t size;
 
 
@@ -57,10 +65,11 @@ class NEUROTENSOR_API ArrayVoid{
 	const size_t dtype_size(DType) const;
 	/* ArrayVoid(intrusive_ptr<void*>&&, const std::size_t, const std::size_t, const std::size_t, DType); */
 	/* ArrayVoid(const intrusive_ptr<void*>&, const std::size_t, const std::size_t, const std::size_t, DType); */
-	ArrayVoid(Bucket&&, uint64_t, DType);
-	ArrayVoid(const Bucket&, uint64_t, DType);
-	ArrayVoid(const Bucket&);
-	ArrayVoid(Bucket&&);
+	ArrayVoid(intrusive_ptr<Bucket>&&, uint64_t);
+	ArrayVoid(const intrusive_ptr<Bucket>&, uint64_t);
+	ArrayVoid(intrusive_ptr<Bucket>&&);
+	ArrayVoid(const intrusive_ptr<Bucket>&);
+
 	inline static ArrayVoid catV(const std::vector<ArrayVoid>& v){
 		std::vector<std::reference_wrapper<const Bucket> > buckets;
 		buckets.reserve(v.size());
@@ -78,69 +87,73 @@ class NEUROTENSOR_API ArrayVoid{
 	}
 public:
 
-		ArrayVoid(int64_t, DType);
+		ArrayVoid(int64_t, DType, DeviceType, MemoryLayout mem_t = MemoryLayout::Private);
 		ArrayVoid(int64_t, DType, void*, DeleterFnPtr);
-#ifdef USE_PARALLEL
-		ArrayVoid(int64_t, DTypeShared);
-#endif
 		ArrayVoid& operator=(const ArrayVoid&);
 		ArrayVoid& operator=(ArrayVoid&&);
 		ArrayVoid(const ArrayVoid&);
 		ArrayVoid(ArrayVoid&&);
 		ArrayVoid(std::nullptr_t);
-		inline Bucket& get_bucket() {return bucket;}
-        inline const DType& dtype() const noexcept {return bucket.dtype;}
-		inline const DeviceType& device_type() const noexcept {return bucket.device_type();}
-		inline const Bucket& get_bucket() const {return bucket;}
-		inline void nullify() {size = 0; bucket.nullify();}
+		inline intrusive_ptr<Bucket>& get_bucket_ptr() noexcept {return bucket;}
+		inline const intrusive_ptr<Bucket>& get_bucket_ptr() const noexcept {return bucket;}
+        inline const DType& dtype() const noexcept {return bucket->dtype();}
+		inline const DeviceType& device_type() const noexcept {return bucket->device_type();}
+		inline const MemoryLayout& memory_layout() const noexcept {return bucket->memory_layout();}
+
+		inline void nullify() {size = 0; bucket->nullify();}
 		inline const uint64_t& Size() const {return size;}
-		inline const void* data_ptr() const {return bucket.data_ptr();}
-		inline void* data_ptr() {return bucket.data_ptr();}
+		inline const void* data_ptr() const {return bucket->data_ptr();}
+		inline void* data_ptr() {return bucket->data_ptr();}
 		const void* data_ptr_end() const;
 		void* data_ptr_end();
 		inline bool occupy_same_memory(const ArrayVoid& arr) const noexcept {
-			return bucket.occupy_same_memory(arr.bucket);
+            if(!this->bucket->is_cpu() || !arr.bucket->is_cpu()) return false;
+            intrusive_ptr<BucketCPU> a(this->bucket);
+            intrusive_ptr<BucketCPU> b(arr.bucket);
+            return a->occupy_same_memory(*b);
 		}
 
 		void swap(ArrayVoid&);
 		/* void** strides_cbegin() const; */
-		void** stride_begin() const {return bucket.stride_begin();}
+		// void** stride_begin() const {return bucket.stride_begin();}
 		/* void** strides_cend() const; */
-		void** stride_end() const {return bucket.stride_end();}
-		inline bool is_shared() const {return bucket.is_shared();}
+		// void** stride_end() const {return bucket.stride_end();}
+		inline bool is_shared() const {return bucket->is_shared();}
+		inline bool is_private() const {return bucket->is_private();}
 		inline bool is_empty() const {return size == 0;}
-		inline bool is_null() const {return bucket.is_null();}
+		inline bool is_null() const {return bucket->is_null();}
 		ArrayVoid& operator=(Scalar);
 		ArrayVoid& fill_(Scalar);
 		ArrayVoid share_array(uint64_t) const;
 		ArrayVoid share_array(uint64_t, uint64_t) const;
-		inline ArrayVoid force_contiguity(int64_t n_size=-1) const {return ArrayVoid(bucket.force_contiguity(n_size == -1 ? size : n_size));}
-		inline ArrayVoid bucket_all_indices() const {return ArrayVoid(bucket.bucket_all_indices(), size, dtype());}
+		inline ArrayVoid force_contiguity(int64_t n_size=-1) const {return ArrayVoid(bucket->force_contiguity(n_size == -1 ? size : n_size));}
+		inline ArrayVoid bucket_all_indices() const {return ArrayVoid(bucket->bucket_all_indices(), size);}
 		inline ArrayVoid force_contiguity_and_bucket() const {
-			Bucket b = bucket.force_contiguity_and_bucket();
-			int64_t n_size = b.size();
-			return ArrayVoid(std::move(b), n_size, dtype());
+			intrusive_ptr<Bucket> b = bucket->force_contiguity_and_bucket();
+			int64_t n_size = b->numel();
+			return ArrayVoid(std::move(b), n_size);
 		}
 		inline ArrayVoid bound_force_contiguity_bucket() const {
-			Bucket b = bucket.bound_force_contiguity_bucket();
-			int64_t n_size = b.size();
-			return ArrayVoid(std::move(b), n_size, dtype());
+			intrusive_ptr<Bucket> b = bucket->bound_force_contiguity_bucket();
+			int64_t n_size = b->numel();
+			return ArrayVoid(std::move(b), n_size);
 		}
+        inline bool is_cpu() const noexcept {return bucket->is_cpu();}
+        inline bool is_gpu() const noexcept {return bucket->is_gpu();}
+        inline bool is_mtl() const noexcept {return bucket->is_mtl();}
 
-		ArrayVoid change_stride(const std::vector<std::pair<uint64_t, uint64_t> >&) const;
-		ArrayVoid change_stride(const std::vector<uint64_t>&) const;
+		ArrayVoid change_stride(const std::vector<std::pair<int64_t, int64_t> >&) const;
+		ArrayVoid change_stride(const std::vector<int64_t>&) const;
 		ArrayVoid range(std::vector<range_>) const;
-		inline bool is_contiguous() const {return bucket.is_contiguous();}
-		inline ArrayVoid contiguous() const {return ArrayVoid(bucket.contiguous());}
-		inline ArrayVoid clone() const {return ArrayVoid(bucket.clone());}
+		inline bool is_contiguous() const {return bucket->is_contiguous();}
+		inline ArrayVoid contiguous() const {return ArrayVoid(bucket->contiguous());}
+		inline ArrayVoid clone() const {return ArrayVoid(bucket->clone());}
 		/* template<DType dt = DType::Integer> */
 		/* ArrayVoid copy_strides(bool copy=true) const; */ 
-		inline ArrayVoid new_strides(uint64_t nsize) const{return ArrayVoid(bucket.new_stride_size(nsize), nsize, dtype());}
+		inline ArrayVoid new_strides(uint64_t nsize) const{
+            return ArrayVoid(bucket->new_stride_size(nsize));
+        }
 		ArrayVoid copy_strides(bool copy=false) const;
-#ifdef USE_PARALLEL
-		ArrayVoid shared_memory() const; // this is going to use shmem to create a shared memory version of ArrayVoid so that the memory can be shared across multiple processes, making functions like Queue possible, enacting a shared-memory version of the pointers.
-		ArrayVoid from_shared_memory() const;
-#endif
 		/* static intrusive_ptr<void[]> MakeContiguousMemory(uint32_t _size, DType _type); */
 		/* static intrusive_ptr<void[]> MakeContiguousMemory(uint32_t _size, DType _type, Scalar s); */
 /* #ifdef USE_PARALLEL */
@@ -152,7 +165,7 @@ public:
 
 
 		inline static ArrayVoid makeEmptyArray(DType dtype = DType::Float32){
-			return ArrayVoid(Bucket::makeNullBucket(dtype), 0, dtype);
+			return ArrayVoid(make_intrusive<Bucket>(DType::Float32), 0);
 		}		
 		ArrayVoid& operator*=(Scalar);
 		ArrayVoid& operator/=(Scalar);
@@ -210,7 +223,7 @@ public:
 		/* dtype_list end(); */
 		/* const_dtype_list cbegin() const; */
 		/* const_dtype_list cend() const; */
-		inline int64_t use_count() const {return bucket.use_count();}
+		inline int64_t use_count() const {return bucket->use_count();}
 		ArrayVoid& iota(Scalar);
 		void copy(ArrayVoid&, unsigned long long i=0) const;
 
@@ -224,7 +237,10 @@ NT_GET_X_OTHER_DTYPES_
 #undef X
 
 		ArrayVoid to(DType) const;
-		ArrayVoid to(DeviceType) const;
+		ArrayVoid to(DeviceType, MemoryLayout mem_t = MemoryLayout::Private) const;
+        ArrayVoid to(memory_layout) const;
+        inline ArrayVoid cpu() const {return this->to(DeviceType::CPU);}
+        inline ArrayVoid mtl() const {return this->to(DeviceType::MTL);}
 		ArrayVoid exp() const;
 		ArrayVoid& exp_();
 		ArrayVoid& complex_();

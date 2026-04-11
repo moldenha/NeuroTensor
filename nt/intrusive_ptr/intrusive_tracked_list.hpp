@@ -8,7 +8,7 @@ namespace nt{
 
 namespace track_details{
 struct MakeTrackedListAligned {};
-template<typename T>
+template<typename T, bool track_aligned = true>
 class intrusive_tracked_list_sub : public intrusive_ptr_target {
     T* ptr;
     bool aligned;
@@ -43,6 +43,31 @@ public:
     inline const T* get() const & noexcept {return ptr;}
 
 };
+
+template<typename T>
+class intrusive_tracked_list_sub<T, false> : public intrusive_ptr_target {
+    T* ptr;
+    int64_t size;
+public:
+    intrusive_tracked_list_sub()
+    :ptr(nullptr), size(0) {}
+
+    intrusive_tracked_list_sub(int64_t amt)
+    :ptr(MetaNewArr(T, amt)), size(amt) {}
+
+    ~intrusive_tracked_list_sub() {
+        if(ptr != nullptr){
+            MetaFreeArr<T>(this->ptr);
+            size = 0;
+        }
+    }
+
+    inline T* get() & noexcept {return ptr;}
+    inline const T* get() const & noexcept {return ptr;}
+    inline const int64_t& get_size() const & noexcept {return size;}
+
+};
+
 
 }
 

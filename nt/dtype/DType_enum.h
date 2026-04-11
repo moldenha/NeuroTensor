@@ -19,13 +19,13 @@ enum class DType{
    NT_GET_X_OTHER_DTYPES_
 };
 
-enum class DTypeShared{
-   NT_GET_X_FLOATING_DTYPES_ 
-   NT_GET_X_COMPLEX_DTYPES_
-   NT_GET_X_SIGNED_INTEGER_DTYPES_
-   NT_GET_X_UNSIGNED_INTEGER_DTYPES_
-   NT_GET_X_OTHER_DTYPES_
-};
+// enum class DTypeShared{
+//    NT_GET_X_FLOATING_DTYPES_ 
+//    NT_GET_X_COMPLEX_DTYPES_
+//    NT_GET_X_SIGNED_INTEGER_DTYPES_
+//    NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+//    NT_GET_X_OTHER_DTYPES_
+// };
 
 #undef X
 
@@ -44,40 +44,40 @@ NT_GET_X_OTHER_DTYPES_
 
 #undef X
 
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    case DTypeShared::dtype_enum_a: return DType::dtype_enum_a;\
+// #define X(type, dtype_enum_a, dtype_enum_b)\
+//     case DTypeShared::dtype_enum_a: return DType::dtype_enum_a;\
 
-inline DType DTypeShared_DType(const DTypeShared& dt){
-	switch(dt){
-       NT_GET_X_FLOATING_DTYPES_ 
-       NT_GET_X_COMPLEX_DTYPES_
-       NT_GET_X_SIGNED_INTEGER_DTYPES_
-       NT_GET_X_UNSIGNED_INTEGER_DTYPES_
-       NT_GET_X_OTHER_DTYPES_
-       default:
-            return DType::Bool;
-	}
-}
+// inline DType DTypeShared_DType(const DTypeShared& dt){
+// 	switch(dt){
+//        NT_GET_X_FLOATING_DTYPES_ 
+//        NT_GET_X_COMPLEX_DTYPES_
+//        NT_GET_X_SIGNED_INTEGER_DTYPES_
+//        NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+//        NT_GET_X_OTHER_DTYPES_
+//        default:
+//             return DType::Bool;
+// 	}
+// }
 
-#undef X
+// #undef X
 
-#define X(type, dtype_enum_a, dtype_enum_b)\
-    case DType::dtype_enum_a: return DTypeShared::dtype_enum_a;\
+// #define X(type, dtype_enum_a, dtype_enum_b)\
+//     case DType::dtype_enum_a: return DTypeShared::dtype_enum_a;\
 
 
-inline DTypeShared DType_DTypeShared(const DType& dt){
-	switch(dt){
-       NT_GET_X_FLOATING_DTYPES_ 
-       NT_GET_X_COMPLEX_DTYPES_
-       NT_GET_X_SIGNED_INTEGER_DTYPES_
-       NT_GET_X_UNSIGNED_INTEGER_DTYPES_
-       NT_GET_X_OTHER_DTYPES_
-       default:
-            return DTypeShared::Bool;
-	}
-}
+// inline DTypeShared DType_DTypeShared(const DType& dt){
+// 	switch(dt){
+//        NT_GET_X_FLOATING_DTYPES_ 
+//        NT_GET_X_COMPLEX_DTYPES_
+//        NT_GET_X_SIGNED_INTEGER_DTYPES_
+//        NT_GET_X_UNSIGNED_INTEGER_DTYPES_
+//        NT_GET_X_OTHER_DTYPES_
+//        default:
+//             return DTypeShared::Bool;
+// 	}
+// }
 
-#undef X
+// #undef X
 
 inline const char* toString(const DType& dt){
     switch(dt){

@@ -9,7 +9,7 @@
 #include "../utils/tensor_holder.h"
 #include "ScalarGrad.h"
 #include "functional_class.h"
-#include "AutoGrad.h"
+#include "autograd/AutoGrad.h"
 #include <atomic>
 #include <functional>
 #include <iostream>
@@ -38,60 +38,63 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
     friend struct grad::utility::backward_func;
     friend class functional::TensorGrad_Functional_Class;
     friend class intrusive_ptr<TensorGrad>;
+    using node_type = intrusive_ptr<grad::utility::GraphNode>;
+    using autograd_type = grad::AutoGrad<std::unordered_set<node_type>>;
 
     // Private variables:
-    mutable intrusive_ptr<grad::utility::GraphNode> Node;
+    mutable node_type     Node;
+
     // Node holds the tensor, grad, and the backwardFunc
     // to get the tensor:
-    //  - Node->tensor->tensor
+    //  - Node->detach()
     // to get the gradient:
-    //  - Node->grad->tensor
+    //  - Node->gradient()
     // to get the backward function:
-    //  - Node->backwardFunc
+    //  - (you dont, either set_name, set_func, name())
+    
+    mutable intrusive_ptr<autograd_type> Tape;
     bool internal_allow_grad_tracking_;
     // This is a boolean generally set to true
     // However, in certain cases, when a layer doesn't want the tensor to be able to track the gradient
     // this can be set to false
     
     // Node-Specific constructors:
-    TensorGrad(const intrusive_ptr<grad::utility::GraphNode>& node__)
-    :Node(node__), internal_allow_grad_tracking_(true) {
-        if(!Node->tensor)
-            Node->tensor = make_intrusive<tensor_holder>(Tensor::Null());
-    }
-    TensorGrad(intrusive_ptr<grad::utility::GraphNode>&& node__)
-    :Node(std::move(node__)), internal_allow_grad_tracking_(true) {
-        if(!Node->tensor)
-            Node->tensor = make_intrusive<tensor_holder>(Tensor::Null());
-    }
+    TensorGrad(const node_type& node__, const autograd_type& tape__)
+    :Node(node__), Tape(tape__), internal_allow_grad_tracking_(true) 
+    {}
+
+    TensorGrad(node_type&& node__, const autograd_type& tape__)
+    :Node(std::move(node__)), Tape(tape__), internal_allow_grad_tracking_(true) 
+    {}
+    
+    TensorGrad(const node_type& node__, autograd_type&& tape__)
+    :Node(node__), Tape(std::move(tape__)), internal_allow_grad_tracking_(true) 
+    {}
+    
+    TensorGrad(node_type&& node__, autograd_type&& tape__)
+    :Node(std::move(node__)), Tape(std::move(tape__)), internal_allow_grad_tracking_(true) 
+    {}
+
 
   public:
     // Public variables:
     using size_value_t = Tensor::size_value_t;
     // This used to be a variable, but is now a function
-    inline bool track_grad() const noexcept {return bool(Node->grad);}
+    inline bool track_grad() const noexcept {return Node->is_tracking_grad();}
     inline void track_grad_(bool do_track_grad){
-        if(track_grad() == do_track_grad) return;
+        if(Node->is_tracking_grad() == do_track_grad) return;
         if(!internal_allow_grad_tracking_){
-            if(track_grad()){
-                Node->grad.reset();
-                Node->backwardFunc.reset();
-            }
+            Node->stop_tracking_grad();
             return;
         }
         if(do_track_grad){
-            if(Node->tensor->tensor.is_null())
-                Node->grad = make_intrusive<tensor_holder>(Tensor::Null());
-            else 
-                Node->grad = make_intrusive<tensor_holder>(nt::functional::zeros_like(Node->tensor->tensor));
-            Node->backwardFunc = make_intrusive<grad::utility::backward_func>();
+            Node->start_tracking_grad();
         }else{
-            Node->grad.reset();
-            Node->backwardFunc.reset();
+            Node->stop_tracking_grad();
         }
     }
 
-    inline void perm_disable_grad_tracking() {  internal_allow_grad_tracking_ = false; }
+    inline void perm_disable_grad_tracking() {  internal_allow_grad_tracking_ = false; this->track_grad_(false);}
     // Public friend functions
     template <
         typename T, typename... Args,
@@ -102,27 +105,33 @@ class NEUROTENSOR_API TensorGrad : public intrusive_ptr_target {
 
 
     inline static intrusive_ptr<tensor_holder>
-    make_tensor_holder(const TensorGrad &t) {
-        return nt::intrusive_ptr<tensor_holder>::make(
-            t.detach().conditional_mutate_clone());
+        make_tensor_holder(const TensorGrad &t) {
+            return nt::intrusive_ptr<tensor_holder>::make(
+                t.detach().conditional_mutate_clone()
+            );
     }
     inline static intrusive_ptr<tensor_holder>
-    make_tensor_holder(intrusive_ptr<tensor_holder> t) {
-        return t;
+        make_tensor_holder(intrusive_ptr<tensor_holder> t) {
+            return t;
     }
     inline static intrusive_ptr<tensor_holder>
-    make_tensor_holder(const Tensor &t) {
-        return intrusive_ptr<tensor_holder>::make(t.conditional_mutate_clone());
+        make_tensor_holder(const Tensor &t) {
+            return intrusive_ptr<tensor_holder>::make(t.conditional_mutate_clone());
     }
 
 
     // Use of track tensors:
     //  TensorGrad out(op(a, b), true);
     //  out.track_tensors(a, b); <- now the gradient of a and b can be updated with the backward function
-    template <typename... Args>
-    void track_tensors(const TensorGrad &, const Args &...args);                   // TensorGrad.hpp
-    void track_tensors(const TensorGrad &);                                        // TensorGrad.hpp
-    void track_tensors(std::vector<TensorGrad> &, bool ignore_dont_track = false); // TensorGrad.cpp
+    template<typename... Args> // in c++20 version make a requires(std::same_as<std::remove_cvref_t<Args>, TensorGrad> && ...)
+    static TensorGrad create_read_node(const Tensor&, const Args&... args);
+    template<typename BackFunc, typename... Args>
+    TensorGrad& create_write_node(BackFunc&&, const char*, const Args&... args);
+    TensorGrad create_view_node(const Tensor& output) const;
+    // template <typename... Args>
+    // void track_tensors(const TensorGrad &, const Args &...args);                   // TensorGrad.hpp
+    // void track_tensors(const TensorGrad &);                                        // TensorGrad.hpp
+    // void track_tensors(std::vector<TensorGrad> &, bool ignore_dont_track = false); // TensorGrad.cpp
     template <typename BackFunc, typename... Args>
     void track_self_mod_tensors(BackFunc&&, const char*, const TensorGrad &, const Args &...args);          // TensorGrad.hpp
     template <typename BackFunc>

@@ -74,13 +74,13 @@ SizeRef& SizeRef::operator=(SizeRef&& Arr){
 }
 
 SizeRef::SizeRef(const value_type &OneEle)
-	:_sizes({OneEle})
+	:_sizes(OneEle)
 {
 	// size_ref_check(*this);
 
 }
 
-SizeRef::SizeRef(const ArrayRefInt::value_type *data, size_t length)
+SizeRef::SizeRef(const ArrayRefInt::value_type *data, int64_t length)
 	:_sizes(data, length)
 {
 	// size_ref_check(*this);
@@ -88,36 +88,19 @@ SizeRef::SizeRef(const ArrayRefInt::value_type *data, size_t length)
 }
 
 SizeRef::SizeRef(const std::vector<ArrayRefInt::value_type> &Vec)
-	:_sizes(&Vec[0], Vec.size())
+	:_sizes(Vec)
 {
 	// size_ref_check(*this);
 
 }
 
 SizeRef::SizeRef(std::vector<ArrayRefInt::value_type>&& Vec)
-	:_sizes(&Vec[0], Vec.size())
+	:_sizes(Vec)
 {
 	// size_ref_check(*this);
 
 }
 
-
-template<size_t N>
-SizeRef::SizeRef(const std::array<value_type, N> &Arr)
-	:_sizes(Arr)
-{
-	// size_ref_check(*this);
-
-}
-
-
-template<size_t N>
-SizeRef::SizeRef(const value_type (&Arr)[N])
-	:_sizes(Arr)
-{
-	// size_ref_check(*this);
-
-}
 
 // SizeRef::SizeRef(const std::initializer_list<ArrayRefInt::value_type> &Vec)
 // 	:_sizes(Vec)
@@ -151,9 +134,13 @@ const typename SizeRef::ArrayRefInt::value_type& SizeRef::operator[](value_type 
 SizeRef SizeRef::operator[](range_ r) const{
 	/* std::cout <<"range: "<< r << std::endl; */
 	r.fix(size());
-	/* std::cout <<"range: "<< r << std::endl; */
-	std::vector<value_type> outp(cbegin() + r.begin, cbegin() + r.end);
-	return SizeRef(outp);
+    utils::throw_exception(r.begin >= 0 && r.end >= 0,
+            "Error, expected range begin and end to be greater than 0, but got $ and $",
+            r.begin, r.end);
+    utils::throw_exception(r.end <= size(),
+            "Error expected range $ to be less than size $",
+            r, size());
+    return SizeRef(ArrayRefInt(cbegin() + r.begin, cbegin() + r.end));
 }
 
 // Look into changing this function to make it be size() + (end+1) to make -1 a valid range
@@ -164,7 +151,13 @@ SizeRef SizeRef::range(value_type begin, value_type end) const{
 	begin = begin < 0 ? size() + begin : begin;
 	end = end < 0 ? size() + end : end;
 	if(begin > end){std::swap(begin, end);}
-	return SizeRef(std::vector<value_type>(cbegin() + begin, cbegin() + end));
+    utils::throw_exception(begin >= 0 && end >= 0,
+            "Error, expected begin and end to be greater than 0, but got $ and $",
+            begin, end);
+    utils::throw_exception(end <= size(),
+            "Error expected range end $ to be less than size $",
+            end, size());
+    return SizeRef(ArrayRefInt(cbegin() + begin, cbegin() + end));
 }
 
 /* typename SizeRef::ArrayRefInt::value_type& SizeRef::operator[](value_type x){ */
@@ -183,31 +176,30 @@ typename SizeRef::value_type SizeRef::unsigned_multiply(value_type i) const {
 }
 
 SizeRef SizeRef::permute(const std::vector<value_type> &Vec) const {
-	auto outp = this->Vec();
-    value_type max_size = static_cast<value_type>(_sizes.size());
-	for(value_type i = 0; i < max_size; ++i){
-		outp[i] = _sizes[Vec[i]];
-	}
-	return SizeRef(std::move(outp));
+    std::vector<uint32_t> permutations(Vec.size());
+    for(size_t i = 0; i < Vec.size(); ++i)
+        permutations[i] = static_cast<uint32_t>(Vec[i]);
+    return SizeRef(_sizes.permute(permutations));
 }
+
 SizeRef SizeRef::transpose(value_type _a, value_type _b) const{
 	_a = _a < 0 ? size() + _a : _a;
 	_b = _b < 0 ? size() + _b : _b;
-	auto vec = Vec();
-	std::swap(vec[_a], vec[_b]);
-	return SizeRef(std::move(vec));
+    ArrayRefInt out = _sizes.clone();
+    std::swap(out[_a], out[_b]);
+	return SizeRef(std::move(out));
 }
 
 SizeRef SizeRef::redo_index(value_type index, value_type val) const{
 	index = index < 0 ? size() + index : index;
-	auto vec = Vec();
-	vec[index] = val;
-	return SizeRef(std::move(vec));
+    ArrayRefInt out = _sizes.clone();
+    out[index] = val;
+	return SizeRef(std::move(out));
 }
 
 SizeRef SizeRef::delete_index(value_type index) const{
 	index = index < 0 ? size() + index : index;
-	std::vector<value_type> o(size()-1);
+    ArrayRefInt o(this->size() - 1);
 	for(value_type i = 0; i < index; ++i){
 		o[i] = _sizes[i];
 	}
@@ -324,7 +316,7 @@ SizeRef SizeRef::unflatten(value_type _a, value_type _b) const{
 }
 
 std::vector<typename SizeRef::value_type> SizeRef::Vec() const{
-	return std::vector<value_type>(cbegin(), cend());
+    return _sizes.to_vec();
 }
 
 std::ostream& operator<< (std::ostream &out, const SizeRef& obj) {
